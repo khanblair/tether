@@ -360,7 +360,7 @@ Two separate systems: the in-app quality gate that checks the user's code, and t
 
 Not in CI yet: instrumented and Compose UI tests on an emulator (run locally with `just test-device`), the `bench` job, and the nightly live provider smoke tests. Slop-lint does not yet check code comments or commit messages.
 
-Other workflows: `pr.yml` runs the `issue-link` check on every pull request and on every edit of its description. `pages.yml` builds and deploys the docs site on changes to docs, images, tokens, or the site tools. `release.yml` runs on a `vX.Y.Z` tag and opens a draft GitHub Release (see development.md section 13).
+Other workflows: `pr.yml` runs the `issue-link` check on every pull request and on every edit of its description. `pages.yml` builds and deploys the docs site on changes to docs, images, tokens, or the site tools. `release.yml` runs on every push to `main`. When the version in `core/Cargo.toml` has no tag yet, it publishes a signed GitHub Release (see development.md section 13).
 
 `tools/slop-lint` reuses the same rule data as the in-app gate, so the product and the repo follow one definition of AI slop.
 

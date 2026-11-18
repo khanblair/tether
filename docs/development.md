@@ -123,6 +123,7 @@ Only the four signing variables are used today. The provider and GitHub test var
 | `just packs` | Build sandbox runtime packs locally (planned, P5) |
 | `just linux-libs` | Build PRoot libraries for both ABIs (planned, P7) |
 | `just check` | `lint`, `slop`, `smells`, `smell-fixtures`, `test`, and a bindings diff check: run before every push |
+| `just release-signing` | One time: create the release keystore and store it as the four GitHub secrets (run it in your own terminal) |
 | `just release` | Build `assembleFullRelease` and `bundlePlayRelease` (needs the signing variables) |
 
 ## 8. Testing notes
@@ -167,7 +168,7 @@ Release builds enable R8 and resource shrinking. JNA and UniFFI classes are kept
 
 - `play`: upload key in the release keystore; Google Play App Signing holds the app signing key.
 - `full`: signed with the release keystore directly. Users update from GitHub Releases; the signature never changes.
-- No release keystore exists yet. Create one before the first tag, store it offline, and add the four `TETHER_*` signing secrets to the repository. `release.yml` fails with a clear message while any of them is missing.
+- Run `just release-signing` once, in your own terminal. It creates the keystore at `~/.tether-release/tether-release.keystore` (outside the repo) and stores it, with its password, as the four repository secrets `TETHER_KEYSTORE_BASE64`, `TETHER_KEYSTORE_PASSWORD`, `TETHER_KEY_ALIAS`, and `TETHER_KEY_PASSWORD`. The password is typed at the prompt and never printed. The script never overwrites an existing keystore. `release.yml` fails with a clear message while any secret is missing.
 - Back up the keystore and passwords in two separate offline places. Losing it means `full` users cannot update.
 - Runtime pack and root filesystem manifests are signed with `TETHER_MANIFEST_KEY`. The matching public key is compiled into the app; rotating it needs an app release first.
 
@@ -184,10 +185,10 @@ Release builds enable R8 and resource shrinking. JNA and UniFFI classes are kept
 2. Update `CHANGELOG.md` from merged PR titles; run `just slop CHANGELOG.md` on it.
 3. Bump the version in `core/Cargo.toml`. Gradle and the core both read it.
 4. Run `just check` and `just test-device` on the reference device.
-5. Tag `vX.Y.Z` on `main` and push the tag.
-6. `release.yml` checks that the tag equals the core version, builds both flavors, signs them with the keystore secrets, writes `SHA256SUMS`, and creates a draft GitHub Release with the `full` APK and the `play` bundle. Signing of runtime pack and root filesystem manifests is added with P5 and P7.
-7. Install the `full` APK from the draft release on a clean device and run the release smoke checklist (onboarding, one session per provider, sandbox run, CI run, Linux mode setup, rewind).
-8. Publish the GitHub Release.
+5. Merge the pull request that bumps the version into `main`. There is no manual tag.
+6. `release.yml` runs on every push to `main`. When `vX.Y.Z` has no tag yet, it builds both flavors, signs them with the keystore secrets, checks the signature with `apksigner`, writes `SHA256SUMS`, and publishes the GitHub Release with the `full` APK and the `play` bundle. A version below 1.0.0 is marked as a pre-release. A push that does not change the version releases nothing. Signing of runtime pack and root filesystem manifests is added with P5 and P7.
+7. Download the `full` APK from the release, install it on a clean device, and run the release smoke checklist (onboarding, one session per provider, sandbox run, CI run, Linux mode setup, rewind).
+8. If the smoke test fails, fix it and bump the patch version. Delete the bad release only if nobody installed it: `gh release delete vX.Y.Z --cleanup-tag`.
 9. Upload the `play` bundle to the internal track, then closed testing, then production with staged rollout at 10%, 50%, 100% over a week.
 10. Record the release in progress-tracker.md.
 

@@ -22,4 +22,4 @@ include(":core-bridge")
 include(":designsystem")
 
 // Proof that detekt fails on a long function. Built only by tools/check-smell-fixtures.sh.
-if (providers.gradleProperty("tether.smellFixtures").isPresent) include(":smell-fixtures")
+if (providers.gradleProperty("tether.smellFixtures").orNull == "true") include(":smell-fixtures")

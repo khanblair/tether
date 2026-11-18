@@ -1,6 +1,11 @@
 package fixture
 
-/** Proof that detekt enforces the 50 line limit in android/config/detekt.yml. */
+/**
+ * Proof that detekt enforces the 50 line limit in android/config/detekt.yml.
+ * The function is 56 lines: over the repo limit, under detekt's own default of 60.
+ * It fails only while the repo threshold applies.
+ */
+@Suppress("MagicNumber")
 fun longFunction(): Int {
     var total = 0
     total += 1
@@ -55,13 +60,5 @@ fun longFunction(): Int {
     total += 50
     total += 51
     total += 52
-    total += 53
-    total += 54
-    total += 55
-    total += 56
-    total += 57
-    total += 58
-    total += 59
-    total += 60
     return total
 }

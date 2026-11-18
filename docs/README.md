@@ -32,7 +32,7 @@ For people:
 6. code-standards.md and development.md
 7. build-plan.md and progress-tracker.md
 
-For AI coding agents, see the reading order in [project-overview.md](project-overview.md#reading-order-for-ai-agents). Agents read progress-tracker.md at the start of every session and update it at the end.
+For AI coding agents, start with [AGENTS.md](../AGENTS.md) at the repo root. It points to the reading order in [project-overview.md](project-overview.md#reading-order-for-ai-agents). Agents read progress-tracker.md at the start of every session and update it at the end.
 
 ## Reading online
 

@@ -71,7 +71,7 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 | P0-17 | Commit size check | Blair with Claude | Done | n/a | `tools/check-commit-size.sh`, `just commits`, and a `tooling` CI step on pull requests |
 | P0-19 | Publish a signed release automatically | Blair with Claude | Done | #134, #136 | Merged; `v0.0.1` published as the latest release, signed with the pinned key. Releases are never pre-releases (#136) |
 | P0-16 | Release workflow | Blair with Claude | Done | #134 | Ran on the merge of #134 and published `v0.0.1`; issue #4 closed |
-| P1-01 | `tether-types` message, part, event, usage, error types | Blair with Claude | In review | #138 | Issue #5. Types, 15 new events, and FFI views done; bindings regenerated; Android compiles against them. Sonnet review done and fixed; Codex review requested |
+| P1-01 | `tether-types` message, part, event, usage, error types | Blair with Claude | Done | #138 | Merged; issue #5 closed. Types, 15 new events, and FFI views; bindings regenerated. Sonnet and Codex reviews done |
 
 ## Decisions log
 
@@ -123,6 +123,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Who | What happened | Next |
 |---|---|---|---|
+| 2026-11-18 | Blair with Claude | Opened PR #139 with `AGENTS.md` and `CLAUDE.md`. A Sonnet review found wrong claims about what `just check` and `slop-lint` cover, commands that only run from a subfolder, and missing pointers to code-standards section 13; fixed | Merge #139 after review |
 | 2026-11-18 | Blair with Claude | Built P1-01 on `feat/p1-01-tether-types`: the shared types, the 15 new events, and their FFI views. Found that a UniFFI error enum becomes a Kotlin exception whose generated `message` clashes with a field of that name; made the error view a record instead. Sonnet review: fixed the doc, tests, and dead code it found | Sonnet review, then Blair's go to commit and open the pull request |
 | 2026-11-18 | Blair with Claude | Opened PR #134 for P0-19 (automatic release) after PR #132 merged and issue #3 closed on its own. A Sonnet review found the key could be replaced silently and the version was not validated; both fixed | Merge #134, which releases v0.0.1; download and test the APK; back up the keystore |
 | 2026-11-18 | Blair with Claude | Opened PR #132 for P0-13 (smell fixtures), the first task on its own issue and branch, with a Sonnet review before merge | Merge #132 and check that issue #3 closes |
@@ -133,6 +134,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Files | Change | PR |
 |---|---|---|---|
+| 2026-11-18 | `AGENTS.md`, `CLAUDE.md`, `docs/README.md`, `docs/project-structure.md`, `docs/progress-tracker.md` | Agent instruction files at the repo root, listed in the structure doc and linked from the docs README | #139 |
 | 2026-11-18 | `core/crates/tether-types/`, `core/crates/tether-ffi/src/views/`, `core/Cargo.*`, generated Kotlin bindings, `ProjectsScreen.kt`, `strings.xml` | Shared types, events, and FFI views for P1-01 | #138 |
 | 2026-11-18 | `.github/workflows/release.yml`, `docs/development.md`, `docs/progress-tracker.md` | Every release is published as the latest, never a pre-release; tracker brought up to date | #136 |
 | 2026-11-18 | Repo root, `core/`, `android/`, `tokens/`, `images/`, `tools/`, `.github/`, and placeholder READMEs | Created the P0 scaffold. The full list is in project-structure.md under Present now | n/a |
@@ -143,6 +145,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Doc | Change |
 |---|---|---|
+| 2026-11-18 | README, project-structure | `AGENTS.md` and `CLAUDE.md` added to both trees; the README sends agents to `AGENTS.md` first |
 | 2026-11-18 | architecture, project-structure, progress-tracker | Shared types and events as built: plain Rust types, `View` types in `tether-ffi`, `CoreError` shape, 15 events defined (D23) |
 | 2026-11-18 | mobile, build-plan | In-app updates for the full build: P1-20 added, M-Q2 decided (D22) |
 | 2026-11-18 | development, progress-tracker | Releases are always the latest, never pre-releases (D21 reworded); P0-16 and P0-19 marked Done after `v0.0.1` published |

@@ -19,6 +19,8 @@ Crates that show only `Cargo.toml` and `src/lib.rs` are empty libraries that hol
 ```
 tether/
 ├── README.md                  Landing page
+├── AGENTS.md                  Rules for coding agents: task flow, commits, done means
+├── CLAUDE.md                  Imports AGENTS.md; adds Claude Code subagent rules
 ├── .editorconfig  .gitattributes  .gitignore  .env.example
 ├── justfile                   Everyday commands
 ├── rust-toolchain.toml        Rust 1.99.1 with Android targets
@@ -77,6 +79,8 @@ Target layout from here on.
 ```
 tether/
 ├── README.md                  Repo landing page: what Tether is, how to build, link to docs/
+├── AGENTS.md                  Rules for coding agents: task flow, commits, done means
+├── CLAUDE.md                  Imports AGENTS.md; adds Claude Code subagent rules
 ├── LICENSE                    License text (not added yet: no license chosen, see product-scope Q5)
 ├── .editorconfig              Indentation and line endings for all editors
 ├── .gitignore                 Ignore build output, local.properties, keystores, .env

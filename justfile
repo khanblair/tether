@@ -100,6 +100,10 @@ check: lint slop smells smell-fixtures test
     tools/gen-bindings.sh
     git diff --exit-code -- android/core-bridge/src/main/kotlin/app/tether/core/generated
 
+# One-time: create the release keystore and store it, with its password, as GitHub secrets. Run in your own terminal.
+release-signing:
+    tools/setup-release-signing.sh
+
 # Build the signed release artifacts. Needs the signing variables from docs/development.md section 5.
 release:
     cd android && ./gradlew assembleFullRelease bundlePlayRelease

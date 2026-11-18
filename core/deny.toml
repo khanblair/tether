@@ -1,0 +1,47 @@
+# cargo-deny rules: licenses, banned crates, advisories.
+[graph]
+targets = [
+  "aarch64-linux-android",
+  "x86_64-linux-android",
+  "aarch64-apple-darwin",
+  "x86_64-unknown-linux-gnu",
+]
+
+[advisories]
+version = 2
+ignore = []
+
+[licenses]
+version = 2
+# Workspace crates set publish = false, so they carry no license field.
+private = { ignore = true }
+allow = [
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "MIT",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "MPL-2.0",
+  "Unicode-3.0",
+  "Zlib",
+  "CC0-1.0",
+]
+confidence-threshold = 0.9
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+# Path dependencies between our own private crates carry no version.
+allow-wildcard-paths = true
+# D6 and D7: no OpenSSL, no git binary wrappers.
+deny = [
+  { name = "openssl" },
+  { name = "openssl-sys" },
+  { name = "git2" },
+]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

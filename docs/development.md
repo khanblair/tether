@@ -116,6 +116,7 @@ Only the four signing variables are used today. The provider and GitHub test var
 | `just bindings` | Regenerate UniFFI Kotlin bindings |
 | `just tokens` | Regenerate `Tokens.kt` and the Android color resources from `tokens/tokens.json`; fails if a contrast pair is too low |
 | `just icons` | Render PNG brand assets from `images/logo.svg` |
+| `just prototype` | Serve the mobile UI prototype at http://127.0.0.1:4173/ |
 | `just site` | Build the docs site into `site-dist/` |
 | `just bench` | Core benchmarks (planned) |
 | `just packs` | Build sandbox runtime packs locally (planned, P5) |

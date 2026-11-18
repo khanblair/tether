@@ -59,6 +59,7 @@ tether/
 ├── tools/
 │   ├── slop-lint/             Rust CLI with its own workspace and tests
 │   ├── site/{build.ts, site.css}   Builds the Pages site from docs/
+│   ├── prototype/             Clickable mobile UI prototype (HTML, CSS, JavaScript; no build step)
 │   └── gen-bindings.sh  gen-icons.ts  check-file-length.sh  check-commit-size.sh  setup.sh
 └── .github/
     ├── workflows/{ci.yml, release.yml, pages.yml}
@@ -448,9 +449,10 @@ tools/
 ├── gen-bindings.sh          Regenerates UniFFI Kotlin bindings
 ├── gen-icons.ts             Renders PNG brand assets from images/logo.svg
 ├── setup.sh                 Toolchain check behind `just setup`
-└── site/
-    ├── build.ts             Builds the Pages site from docs/, tokens, and images
-    └── site.css             Site styles on top of the generated token CSS
+├── site/
+│   ├── build.ts             Builds the Pages site from docs/, tokens, and images
+│   └── site.css             Site styles on top of the generated token CSS
+└── prototype/               Clickable mobile UI prototype; see its README
 ```
 
 ## .github/

@@ -67,6 +67,7 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 | P0-13 | Smell fixtures for Clippy and detekt | | Not started | | Added during P0; only the file length check has a failing fixture so far |
 | P0-14 | Docs site on GitHub Pages | Blair with Claude | Done | n/a | Live at khanblair.github.io/tether; `pages.yml` deploys on docs, images, tokens, or site tool changes |
 | P0-15 | Brand assets and launcher icon | Blair with Claude | Done | n/a | Logo traced to `images/logo.svg`; adaptive and monochrome icons; PNG exports. Blair to check the launcher icon by eye |
+| P0-18 | Mobile UI prototype | Blair with Claude | Done | n/a | `tools/prototype`, run with `just prototype`. 102 screens in 12 areas; checked by a Node render test, not yet in a browser by Claude |
 | P0-17 | Commit size check | Blair with Claude | Done | n/a | `tools/check-commit-size.sh`, `just commits`, and a `tooling` CI step on pull requests |
 | P0-16 | Release workflow | Blair with Claude | In progress | n/a | `release.yml` written, not run. Needs a keystore, four secrets, and a tag |
 
@@ -132,6 +133,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Doc | Change |
 |---|---|---|
+| 2026-11-18 | project-structure, development, build-plan | Added `tools/prototype` and `just prototype`; P0-18 added |
 | 2026-11-18 | code-standards, architecture, development, project-structure, build-plan | Git workflow: rebase merge, 15 file commit limit with its CI check, model review before merge; P0-17 added |
 | 2026-11-18 | ui-tokens | Rewritten for Velvet Plum: design direction, every color table, contrast table from the checker, generated outputs, no CSS block copy |
 | 2026-11-18 | ui-rules, ui-registry | Amber replaced by the accent; P0 components marked Built; screenshot test rule scoped to P1 on |

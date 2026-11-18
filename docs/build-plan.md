@@ -46,6 +46,7 @@ Goal: an empty app that calls into the Rust core, with all repo tooling in place
 | P0-15 | Brand assets: logo, adaptive launcher icon, exported icons | n/a | The launcher shows the logo on a device; PNG exports exist for Play, web, and social cards | P0-04 |
 | P0-16 | Release workflow that opens a draft GitHub Release | n/a | A `vX.Y.Z` tag builds both flavors; the job fails with a clear message when signing secrets are missing | P0-09 |
 | P0-17 | Commit size check in CI and `just commits` | n/a | A 16 file commit fails the check (self test); pull requests run it | P0-09 |
+| P0-18 | Mobile UI prototype in `tools/prototype` | n/a | Every screen in ui-rules.md has a frame; Blair has reviewed it in a browser | P0-07 |
 
 Testing approach: build checks on every ABI; one instrumented test that loads the native library; the theme checked by hand in both modes (screenshot tests are P1-19); slop and smell fixtures that must fail.
 

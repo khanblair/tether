@@ -86,6 +86,11 @@ icons:
 site:
     node tools/site/build.ts
 
+# Serve the mobile UI prototype at http://127.0.0.1:4173/ (regenerates its token CSS first).
+prototype:
+    node tokens/generate.ts --css tools/prototype/tokens.css
+    python3 -m http.server 4173 --bind 127.0.0.1 --directory tools/prototype
+
 # Run before every push.
 check: lint slop smells test
     tools/gen-bindings.sh

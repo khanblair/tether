@@ -25,7 +25,7 @@ Last updated: 18 Nov 2026.
 
 ## Current phase
 
-**P0. Foundations: In progress.** The repo is public at github.com/khanblair/tether. CI is green on `main`, the docs site is live, and the app runs on an arm64 emulator. Open: the release workflow has not run (P0-16: needs a keystore, four secrets, and a tag) and the release has not been published yet (P0-19, #134; needs `just release-signing` once). Next phase: P1, providers and sessions.
+**P0. Foundations: In progress.** The repo is public at github.com/khanblair/tether. CI is green on `main`, the docs site is live, and the app runs on an arm64 emulator. Open: the release workflow has not run (P0-16: needs a keystore, four secrets, and a tag) and the first release is not published yet (P0-19, #134 merges it). Next phase: P1, providers and sessions.
 
 ## Phase status
 
@@ -69,7 +69,7 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 | P0-15 | Brand assets and launcher icon | Blair with Claude | Done | n/a | Logo traced to `images/logo.svg`; adaptive and monochrome icons; PNG exports. Blair to check the launcher icon by eye |
 | P0-18 | Mobile UI prototype | Blair with Claude | Done | n/a | `tools/prototype`, run with `just prototype`. 102 screens in 12 areas; checked by a Node render test, not yet in a browser by Claude |
 | P0-17 | Commit size check | Blair with Claude | Done | n/a | `tools/check-commit-size.sh`, `just commits`, and a `tooling` CI step on pull requests |
-| P0-19 | Publish a signed release automatically | Blair with Claude | In review | #134 | Closes #133. Release publishes when the version has no tag, with no manual tag and no draft. Needs `just release-signing` once. Closes P0-16 (#4) after the first release succeeds |
+| P0-19 | Publish a signed release automatically | Blair with Claude | In review | #134 | Closes #133. Release publishes when the version has no tag, with no manual tag and no draft. Signing secrets and the pinned fingerprint are set. Closes P0-16 (#4) after the first release succeeds |
 | P0-16 | Release workflow | Blair with Claude | In progress | n/a | `release.yml` written, not run. Needs a keystore, four secrets, and a tag |
 
 ## Decisions log
@@ -121,7 +121,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Who | What happened | Next |
 |---|---|---|---|
-| 2026-11-18 | Blair with Claude | Opened PR #134 for P0-19 (automatic release) after PR #132 merged and issue #3 closed on its own. A Sonnet review found the key could be replaced silently and the version was not validated; both fixed | Run `just release-signing`, merge #134, download and test the release |
+| 2026-11-18 | Blair with Claude | Opened PR #134 for P0-19 (automatic release) after PR #132 merged and issue #3 closed on its own. A Sonnet review found the key could be replaced silently and the version was not validated; both fixed | Merge #134, which releases v0.0.1; download and test the APK; back up the keystore |
 | 2026-11-18 | Blair with Claude | Opened PR #132 for P0-13 (smell fixtures), the first task on its own issue and branch, with a Sonnet review before merge | Merge #132 and check that issue #3 closes |
 | 2026-11-18 | Blair with Claude | Pushed 18 commits (15 files or fewer each) to `khanblair/tether`; CI green on the first run; Pages deployed; branch protection added with the four CI checks (admins not enforced, no review requirement). Earlier the same day: scaffolded the repo: Rust workspace with UniFFI, Android app with flavors and a Velvet Plum theme, logo and launcher icon, tokens pipeline, slop-lint, CI, release and Pages workflows, docs site. Updated every doc to match, added skills, memory, and the vault (F21 to F23, phase P11). Verified on a Pixel 9 arm64 emulator: core version and event path, navigation, theme switch, instrumented test | P0-13 and P0-16, then P1 |
 | 2026-11-18 | Blair with Claude | Defined the idea, made stack, provider, executor, platform, and name decisions; drafted all 14 docs | Review docs; create the repo (P0-01) |

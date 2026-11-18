@@ -300,6 +300,7 @@ Backups: `secrets/`, `linux/`, `runtimes/`, `blobs/`, `logs/`, and `cache/` are 
 | Prompt injection via repo files or web content | Network tools, pushes, and non-sandbox runs need approval below Bypass; tool results are marked as data in the prompt; no tool can change permission settings |
 | Destructive remote actions | Push to default branch, force push, and remote branch delete always ask (force push asks even in Bypass) |
 | Tampered runtime packs or root filesystem | Signed manifest (Ed25519, key in the app) lists SHA-256 for every download; mismatch aborts |
+| Tampered update APK | The Rust core downloads the APK and checks its SHA-256 against the release `SHA256SUMS`; the Kotlin layer then hands it to `PackageInstaller`, and Android rejects an APK signed with a different key |
 | Runaway cost | Budgets with pause; cost visible at all times |
 | Shoulder surfing and screenshots | Optional `FLAG_SECURE`; key reveal needs biometric |
 | Malicious MCP server | Servers added only by the user; each tool approval-gated by default; server output treated as data |

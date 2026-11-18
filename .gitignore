@@ -1,0 +1,35 @@
+# OS and editors
+.DS_Store
+.idea/
+*.iml
+.vscode/
+*.swp
+
+# Secrets. Never commit these. See docs/development.md section 5.
+.env
+.env.*
+!.env.example
+*.keystore
+*.jks
+keystore.properties
+local.properties
+*.pem
+
+# Rust
+target/
+
+# Android and Gradle (build output and caches at any depth)
+.gradle/
+.kotlin/
+build/
+.cxx/
+*.apk
+*.aab
+captures/
+
+# Node tooling and site output
+node_modules/
+site-dist/
+
+# Claude Code local state
+.claude/

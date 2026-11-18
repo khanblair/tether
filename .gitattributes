@@ -1,0 +1,20 @@
+* text=auto eol=lf
+
+# Generated files: collapse in diffs and exclude from language stats. CI checks they are current.
+android/core-bridge/src/main/kotlin/app/tether/core/generated/** linguist-generated=true -diff
+android/designsystem/src/main/kotlin/app/tether/design/tokens/Tokens.kt linguist-generated=true
+android/designsystem/src/main/res/values/tokens_colors.xml linguist-generated=true
+android/designsystem/src/main/res/values-night/tokens_colors.xml linguist-generated=true
+
+# Lockfiles
+core/Cargo.lock linguist-generated=true
+tools/slop-lint/Cargo.lock linguist-generated=true
+pnpm-lock.yaml linguist-generated=true
+
+# Binary
+*.png binary
+*.jpg binary
+*.ttf binary
+*.jar binary
+
+*.bat text eol=crlf

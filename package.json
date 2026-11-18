@@ -1,0 +1,20 @@
+{
+  "name": "tether-tooling",
+  "private": true,
+  "type": "module",
+  "description": "Repo tooling for Tether: design tokens, icon export, and the docs site. Not shipped in the app.",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "tokens": "node tokens/generate.ts",
+    "tokens:check": "node tokens/generate.ts --check",
+    "icons": "node tools/gen-icons.ts",
+    "site": "node tools/site/build.ts"
+  },
+  "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "marked": "^18.2.1"
+  },
+  "packageManager": "pnpm@11.4.0"
+}

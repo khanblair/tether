@@ -134,4 +134,5 @@ private fun describe(event: CoreEventView): String =
     when (event) {
         is CoreEventView.Ready -> stringResource(R.string.core_event_ready, event.version)
         is CoreEventView.Test -> stringResource(R.string.core_event_test, event.message)
+        else -> stringResource(R.string.core_event_other)
     }

@@ -36,11 +36,11 @@ tether/
 │   ├── Cargo.toml  Cargo.lock  deny.toml  clippy.toml  rustfmt.toml
 │   ├── fixtures/smells/       Crate with a function over the line limit; clippy must fail on it
 │   └── crates/
-│       ├── tether-types/      event.rs: CoreEvent
+│       ├── tether-types/      ids, message, session, usage, error, event (CoreEvent); no UniFFI code
 │       ├── tether-engine/     VERSION, EventSink, Core (emits Ready and Test events)
 │       ├── tether-ffi/        UniFFI surface, builds libtether_core.so
 │       │   ├── uniffi.toml
-│       │   └── src/{lib.rs, callbacks.rs, views.rs, bin/uniffi-bindgen.rs}
+│       │   └── src/{lib.rs, callbacks.rs, views/{mod,event,types,error}.rs, bin/uniffi-bindgen.rs}
 │       ├── tether-quality/    data/slop_words.txt and slop_patterns.toml (shared with slop-lint)
 │       └── tether-{providers,tools,workspace,vcs,sandbox,linux,ci,store,connectors,mcp,secrets,skills,memory}/
 │                              Empty libraries
@@ -141,14 +141,15 @@ core/
     │   ├── Cargo.toml
     │   └── src/
     │       ├── lib.rs         Re-exports
-    │       ├── ids.rs         ProjectId, SessionId, ToolCallId newtypes
-    │       ├── message.rs     Canonical message and part types
-    │       ├── tool.rs        Tool call and result types
+    │       ├── ids.rs         ProjectId, SessionId, MessageId, ToolCallId newtypes
+    │       ├── message.rs     Role, MessagePart, Message
+    │       ├── session.rs     PermissionMode, Executor, Provider, ModelRef, SessionStatus, ToolCallStatus, ConnectionStatus
+    │       ├── tool.rs        Tool call and result types (later)
     │       ├── event.rs       CoreEvent enum
-    │       ├── permission.rs  PermissionMode, ApprovalScope
-    │       ├── executor.rs    Executor enum and run types
-    │       ├── usage.rs       Token and cost types
-    │       └── error.rs       CoreError with kind and retryable flag
+    │       ├── permission.rs  ApprovalScope (later)
+    │       ├── executor.rs    Run types (later)
+    │       ├── usage.rs       UsageSnapshot
+    │       └── error.rs       CoreError: a variant per kind, with a retryable flag
     ├── tether-ffi/
     │   ├── Cargo.toml         Builds cdylib libtether_core.so
     │   ├── uniffi.toml        Binding names and package for Kotlin and Swift
@@ -156,7 +157,7 @@ core/
     │   └── src/
     │       ├── lib.rs         Exported TetherCore object
     │       ├── callbacks.rs   EventSink, SecretsPlatform, NotifyPlatform, NetworkPlatform
-    │       └── views.rs       Engine types to FFI view types
+    │       └── views/         Engine types to FFI view types: event.rs, types.rs, error.rs
     ├── tether-engine/
     │   └── src/
     │       ├── lib.rs         Engine entry point
@@ -524,6 +525,6 @@ tools/
 | `images/logo.svg` | Only master of the logo; the Android vector icons are traced from it by hand |
 | `android/app/src/main/res/values/strings.xml` | Only place user-facing English text lives |
 | `core/crates/tether-quality/data/*` | Shared by the in-app gate and `tools/slop-lint` |
-| `core/crates/tether-types/src/event.rs` | Changing it changes the FFI; regenerate bindings |
+| `core/crates/tether-types/src/*.rs` and `core/crates/tether-ffi/src/views/` | Changing a type the UI sees changes the FFI; regenerate bindings (`just bindings`) |
 | `rust-toolchain.toml` and `gradle.properties` | Toolchain pins; change only with a decisions log entry |
 | `runtimes/manifest.template.json` and `linux/rootfs-manifest.json` | Security-relevant; changes need review from CODEOWNERS |

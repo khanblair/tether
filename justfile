@@ -65,6 +65,10 @@ smells:
     tools/check-file-length.sh --self-test
     tools/check-file-length.sh
 
+# Prove Clippy and detekt fail on a function over the line limit.
+smell-fixtures:
+    tools/check-smell-fixtures.sh
+
 # Fail if a commit on this branch touches more than 15 files.
 commits:
     tools/check-commit-size.sh --self-test

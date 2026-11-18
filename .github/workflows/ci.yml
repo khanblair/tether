@@ -50,6 +50,8 @@ jobs:
           cargo deny check
           cargo deny --manifest-path ../tools/slop-lint/Cargo.toml --config deny.toml check
         working-directory: core
+      - name: Clippy fails on a function over the line limit
+        run: tools/check-smell-fixtures.sh rust
 
   tooling:
     name: tooling
@@ -139,6 +141,8 @@ jobs:
           testFullDebugUnitTest testPlayDebugUnitTest
           assembleFullDebug assemblePlayDebug
         working-directory: android
+      - name: detekt fails on a function over the line limit
+        run: tools/check-smell-fixtures.sh kotlin
       - uses: actions/upload-artifact@v7
         with:
           name: debug-apks

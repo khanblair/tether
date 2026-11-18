@@ -1,0 +1,10 @@
+[package]
+name = "tether-mcp"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+description = "MCP client: Streamable HTTP and stdio transports."
+
+[lints]
+workspace = true

@@ -1,0 +1,10 @@
+[package]
+name = "tether-quality"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+description = "Quality gate: code smell and AI slop rules."
+
+[lints]
+workspace = true

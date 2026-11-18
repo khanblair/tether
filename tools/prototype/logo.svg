@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 288 288" width="288" height="288" role="img" aria-label="Tether logo">
+  <defs>
+    <linearGradient id="stem" gradientUnits="userSpaceOnUse" x1="0" y1="54.6" x2="0" y2="105.8">
+      <stop offset="0" stop-color="#702587"/>
+      <stop offset="0.6" stop-color="#88218A"/>
+      <stop offset="0.82" stop-color="#84207F"/>
+      <stop offset="0.93" stop-color="#781A72"/>
+      <stop offset="1" stop-color="#641362"/>
+    </linearGradient>
+    <linearGradient id="bar" gradientUnits="userSpaceOnUse" x1="93" y1="0" x2="184" y2="0">
+      <stop offset="0" stop-color="#6B1C8E"/>
+      <stop offset="0.32" stop-color="#812089"/>
+      <stop offset="0.45" stop-color="#961E88"/>
+      <stop offset="0.58" stop-color="#A9208A"/>
+      <stop offset="0.71" stop-color="#BF228D"/>
+      <stop offset="0.85" stop-color="#D32388"/>
+      <stop offset="1" stop-color="#E8298E"/>
+    </linearGradient>
+    <linearGradient id="hook" gradientUnits="userSpaceOnUse" x1="0" y1="151.4" x2="0" y2="247.6">
+      <stop offset="0" stop-color="#AE1D87"/>
+      <stop offset="0.25" stop-color="#BB228E"/>
+      <stop offset="0.45" stop-color="#C5238A"/>
+      <stop offset="0.65" stop-color="#D7248A"/>
+      <stop offset="0.85" stop-color="#E0268B"/>
+      <stop offset="1" stop-color="#E5288C"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(-3 -7.1)">
+    <path fill="url(#stem)" d="M93 54.6H138.6V105.8H93Z"/>
+    <path fill="url(#bar)" d="M93 105.8H184V151.4H138.6Z"/>
+    <path fill="url(#hook)" d="M93 151.4H138.6V182A19.9 19.9 0 0 0 168.3 199.3L200.9 231.9A65.5 65.5 0 0 1 93 182Z"/>
+  </g>
+</svg>

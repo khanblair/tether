@@ -25,7 +25,7 @@ Last updated: 18 Nov 2026.
 
 ## Current phase
 
-**P0. Foundations: In progress.** The repo is public at github.com/khanblair/tether. CI is green on `main`, the docs site is live, and the app runs on an arm64 emulator. Open: the release workflow has not run (P0-16: needs a keystore, four secrets, and a tag) and the first release is not published yet (P0-19, #134 merges it). Next phase: P1, providers and sessions.
+**P0. Foundations: In progress.** The repo is public at github.com/khanblair/tether. CI is green on `main`, the docs site is live, and the app runs on an arm64 emulator. The first release, `v0.0.1`, is published and downloadable from GitHub Releases, signed with the pinned key. Open: the Android smoke test of that APK on a device. Next phase: P1, providers and sessions.
 
 ## Phase status
 
@@ -69,8 +69,8 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 | P0-15 | Brand assets and launcher icon | Blair with Claude | Done | n/a | Logo traced to `images/logo.svg`; adaptive and monochrome icons; PNG exports. Blair to check the launcher icon by eye |
 | P0-18 | Mobile UI prototype | Blair with Claude | Done | n/a | `tools/prototype`, run with `just prototype`. 102 screens in 12 areas; checked by a Node render test, not yet in a browser by Claude |
 | P0-17 | Commit size check | Blair with Claude | Done | n/a | `tools/check-commit-size.sh`, `just commits`, and a `tooling` CI step on pull requests |
-| P0-19 | Publish a signed release automatically | Blair with Claude | In review | #134 | Closes #133. Release publishes when the version has no tag, with no manual tag and no draft. Signing secrets and the pinned fingerprint are set. Closes P0-16 (#4) after the first release succeeds |
-| P0-16 | Release workflow | Blair with Claude | In progress | n/a | `release.yml` written, not run. Needs a keystore, four secrets, and a tag |
+| P0-19 | Publish a signed release automatically | Blair with Claude | Done | #134, #136 | Merged; `v0.0.1` published as the latest release, signed with the pinned key. Releases are never pre-releases (#136) |
+| P0-16 | Release workflow | Blair with Claude | Done | #134 | Ran on the merge of #134 and published `v0.0.1`; issue #4 closed |
 
 ## Decisions log
 
@@ -131,6 +131,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Files | Change | PR |
 |---|---|---|---|
+| 2026-11-18 | `.github/workflows/release.yml`, `docs/development.md`, `docs/progress-tracker.md` | Every release is published as the latest, never a pre-release; tracker brought up to date | #136 |
 | 2026-11-18 | Repo root, `core/`, `android/`, `tokens/`, `images/`, `tools/`, `.github/`, and placeholder READMEs | Created the P0 scaffold. The full list is in project-structure.md under Present now | n/a |
 | 2026-11-18 | `.github/workflows/release.yml`, `tools/setup-release-signing.sh`, `justfile` | Automatic release on a version with no tag; keystore and secrets setup script | #134 |
 | 2026-11-18 | `docs/*` (14 files) | Created | n/a |
@@ -140,6 +141,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 | Date | Doc | Change |
 |---|---|---|
 | 2026-11-18 | mobile, build-plan | In-app updates for the full build: P1-20 added, M-Q2 decided (D22) |
+| 2026-11-18 | development, progress-tracker | Releases are always the latest, never pre-releases (D21 reworded); P0-16 and P0-19 marked Done after `v0.0.1` published |
 | 2026-11-18 | development, architecture, project-structure, build-plan | Release publishes on a version bump; `just release-signing`; P0-19 added, P0-16 reworded |
 | 2026-11-18 | architecture, development, project-structure | Smell fixtures for Clippy and detekt (P0-13) |
 | 2026-11-18 | code-standards, architecture, project-structure | Pull requests must close an issue (`Closes #N`) or say `No issue`; `pr.yml` checks it |

@@ -65,6 +65,10 @@ smells:
     tools/check-file-length.sh --self-test
     tools/check-file-length.sh
 
+# Prove Clippy and detekt fail on a function over the line limit.
+smell-fixtures:
+    tools/check-smell-fixtures.sh
+
 # Fail if a commit on this branch touches more than 15 files.
 commits:
     tools/check-commit-size.sh --self-test
@@ -92,7 +96,7 @@ prototype:
     python3 -m http.server 4173 --bind 127.0.0.1 --directory tools/prototype
 
 # Run before every push.
-check: lint slop smells test
+check: lint slop smells smell-fixtures test
     tools/gen-bindings.sh
     git diff --exit-code -- android/core-bridge/src/main/kotlin/app/tether/core/generated
 

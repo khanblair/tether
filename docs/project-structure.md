@@ -59,7 +59,7 @@ tether/
 ├── tools/
 │   ├── slop-lint/             Rust CLI with its own workspace and tests
 │   ├── site/{build.ts, site.css}   Builds the Pages site from docs/
-│   └── gen-bindings.sh  gen-icons.ts  check-file-length.sh  setup.sh
+│   └── gen-bindings.sh  gen-icons.ts  check-file-length.sh  check-commit-size.sh  setup.sh
 └── .github/
     ├── workflows/{ci.yml, release.yml, pages.yml}
     └── pull_request_template.md  CODEOWNERS  dependabot.yml
@@ -444,6 +444,7 @@ tools/
 │   ├── Cargo.toml
 │   └── src/main.rs          Checks docs, strings.xml, comments, commit messages
 ├── check-file-length.sh     Fails on files over the limits in code-standards.md
+├── check-commit-size.sh     Fails on a commit that touches more than 15 files
 ├── gen-bindings.sh          Regenerates UniFFI Kotlin bindings
 ├── gen-icons.ts             Renders PNG brand assets from images/logo.svg
 ├── setup.sh                 Toolchain check behind `just setup`

@@ -94,9 +94,10 @@ Rules:
 
 - Trunk-based. `main` is always releasable. Short-lived branches: `feat/<id>-<slug>`, `fix/<id>-<slug>`, `docs/<slug>`, where `<id>` is the build-plan task ID.
 - Commit messages: Conventional Commits. `feat(session): add approval bar (P3-02)`. Imperative mood, under 72 characters for the subject. Body explains why.
-- Squash merge. The squash message follows the same format.
+- Rebase merge, never squash. A squash puts a whole pull request into one commit and breaks the 15 file limit below.
+- At most 15 files per commit. `tools/check-commit-size.sh` runs in CI on every pull request and fails when a commit goes over.
 - Every PR fills the template: task ID, what changed, how it was tested, docs updated, progress tracker updated.
-- At least one approving review. Security-relevant files need a CODEOWNERS review.
+- Every pull request is reviewed before merge by a different model than the one that wrote it: a fresh-context Sonnet review, plus `@codex review` for security-relevant code. The owner merges. Security-relevant files need a CODEOWNERS review. GitHub approvals are required once there is a second maintainer.
 - Never force push to `main`. Tags `v<major>.<minor>.<patch>` only from `main`.
 
 ## 11. Code smells

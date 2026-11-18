@@ -354,7 +354,7 @@ Two separate systems: the in-app quality gate that checks the user's code, and t
 | Job | Runs |
 |---|---|
 | `rust` | `cargo fmt --check`, `cargo clippy -D warnings` (which carries the smell thresholds), `cargo test`, `cargo check` for both Android targets, `cargo deny check` |
-| `tooling` | Token generation is current and every contrast pair passes; `tools/slop-lint` tests, then slop-lint over `docs/`, `README.md`, and `strings.xml`; the file length check and its self test; the docs site builds and every link between its pages resolves |
+| `tooling` | Token generation is current and every contrast pair passes; `tools/slop-lint` tests, then slop-lint over `docs/`, `README.md`, and `strings.xml`; the file length check and its self test; the commit size check self test, and on pull requests no commit touching more than 15 files; the docs site builds and every link between its pages resolves |
 | `bindings` | Regenerate UniFFI bindings and fail if they differ from committed output |
 | `android` | `ktlint` and `detekt` (through `qualityCheck`), Android lint with warnings as errors, unit tests, `assemble` both flavors; uploads the debug APKs |
 

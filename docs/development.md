@@ -111,6 +111,7 @@ Only the four signing variables are used today. The provider and GitHub test var
 | `just smoke` | Live provider smoke tests (planned, P1) |
 | `just lint` | rustfmt, clippy, ktlint, detekt, Android lint, token check |
 | `just slop` | `tools/slop-lint` over docs, README, and `strings.xml` |
+| `just commits` | Fail if a commit on this branch touches more than 15 files (compares with `origin/main`) |
 | `just smells` | File length script and its self test. Complexity and length thresholds run inside `just lint` through Clippy and detekt |
 | `just bindings` | Regenerate UniFFI Kotlin bindings |
 | `just tokens` | Regenerate `Tokens.kt` and the Android color resources from `tokens/tokens.json`; fails if a contrast pair is too low |

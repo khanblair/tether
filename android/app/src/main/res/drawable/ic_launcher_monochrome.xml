@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Single color Tether mark for Android 13 themed icons. The system tints it. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="0.31"
+        android:scaleY="0.31"
+        android:translateX="8.43"
+        android:translateY="7.16">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M93,54.6H138.6V105.8H93Z"/>
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M93,105.8H184V151.4H138.6Z"/>
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M93,151.4H138.6V182A19.9,19.9 0 0,0 168.3,199.3L200.9,231.9A65.5,65.5 0 0,1 93,182Z"/>
+    </group>
+</vector>

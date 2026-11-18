@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tether mark scaled to sit inside the 66 dp adaptive icon safe zone. Source: images/logo.svg -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="0.31"
+        android:scaleY="0.31"
+        android:translateX="8.43"
+        android:translateY="7.16">
+        <path android:pathData="M93,54.6H138.6V105.8H93Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:type="linear"
+                    android:startX="0" android:startY="54.6"
+                    android:endX="0" android:endY="105.8">
+                    <item android:offset="0.0" android:color="#702587"/>
+                    <item android:offset="0.6" android:color="#88218A"/>
+                    <item android:offset="0.82" android:color="#84207F"/>
+                    <item android:offset="0.93" android:color="#781A72"/>
+                    <item android:offset="1.0" android:color="#641362"/>
+                </gradient>
+            </aapt:attr>
+        </path>
+        <path android:pathData="M93,105.8H184V151.4H138.6Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:type="linear"
+                    android:startX="93" android:startY="0"
+                    android:endX="184" android:endY="0">
+                    <item android:offset="0.0" android:color="#6B1C8E"/>
+                    <item android:offset="0.32" android:color="#812089"/>
+                    <item android:offset="0.45" android:color="#961E88"/>
+                    <item android:offset="0.58" android:color="#A9208A"/>
+                    <item android:offset="0.71" android:color="#BF228D"/>
+                    <item android:offset="0.85" android:color="#D32388"/>
+                    <item android:offset="1.0" android:color="#E8298E"/>
+                </gradient>
+            </aapt:attr>
+        </path>
+        <path android:pathData="M93,151.4H138.6V182A19.9,19.9 0 0,0 168.3,199.3L200.9,231.9A65.5,65.5 0 0,1 93,182Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:type="linear"
+                    android:startX="0" android:startY="151.4"
+                    android:endX="0" android:endY="247.6">
+                    <item android:offset="0.0" android:color="#AE1D87"/>
+                    <item android:offset="0.25" android:color="#BB228E"/>
+                    <item android:offset="0.45" android:color="#C5238A"/>
+                    <item android:offset="0.65" android:color="#D7248A"/>
+                    <item android:offset="0.85" android:color="#E0268B"/>
+                    <item android:offset="1.0" android:color="#E5288C"/>
+                </gradient>
+            </aapt:attr>
+        </path>
+    </group>
+</vector>

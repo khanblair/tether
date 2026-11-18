@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 and lower. Same exclusions as data_extraction_rules.xml. The cache directory is never backed up. -->
+<full-backup-content>
+    <exclude domain="file" path="secrets" />
+    <exclude domain="file" path="linux" />
+    <exclude domain="file" path="runtimes" />
+    <exclude domain="file" path="workspaces" />
+    <exclude domain="file" path="blobs" />
+    <exclude domain="file" path="logs" />
+    <exclude domain="sharedpref" path="." />
+</full-backup-content>

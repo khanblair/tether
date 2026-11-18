@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Routes -->
+    <string name="route_onboarding_title">Welcome</string>
+    <string name="route_projects_title">Projects</string>
+    <string name="route_project_home_title">Project home</string>
+    <string name="route_session_title">Session</string>
+    <string name="route_diff_title">Diff</string>
+    <string name="route_files_title">Files</string>
+    <string name="route_runs_title">Runs</string>
+    <string name="route_linux_title">Linux shell</string>
+    <string name="route_settings_title">Settings</string>
+    <string name="route_cost_title">Cost</string>
+
+    <!-- Shared -->
+    <string name="nav_back_label">Back</string>
+    <string name="placeholder_body">This screen arrives in a later phase. See the build plan.</string>
+
+    <!-- Projects (P0 shell) -->
+    <string name="projects_intro_body">Phase P0 shell. The screens below are placeholders that prove navigation.</string>
+    <string name="projects_core_title">Rust core</string>
+    <string name="projects_core_version">Version %1$s</string>
+    <string name="projects_core_events_title">Recent events</string>
+    <string name="projects_core_events_empty">No events yet</string>
+    <string name="projects_core_send_test_action">Send test event</string>
+    <string name="projects_core_test_message">Hello from Kotlin</string>
+    <string name="projects_screens_title">Screens</string>
+    <string name="core_event_ready">Ready, core %1$s</string>
+    <string name="core_event_test">Test: %1$s</string>
+
+    <!-- Settings -->
+    <string name="settings_theme_title">Theme</string>
+    <string name="settings_theme_system">System</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_theme_note">The choice resets when the app restarts until settings storage ships in P1.</string>
+</resources>

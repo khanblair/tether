@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12 and later: the system splash screen uses the bg token too. -->
+    <style name="Theme.Tether" parent="android:Theme.DeviceDefault.DayNight">
+        <item name="android:windowBackground">@color/tt_bg</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowSplashScreenBackground">@color/tt_bg</item>
+    </style>
+</resources>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The window background is the bg token, so there is no white flash before Compose draws. -->
+    <style name="Theme.Tether" parent="android:Theme.DeviceDefault.DayNight">
+        <item name="android:windowBackground">@color/tt_bg</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>

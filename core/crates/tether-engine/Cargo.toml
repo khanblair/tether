@@ -1,0 +1,13 @@
+[package]
+name = "tether-engine"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+description = "Engine: sessions, turn loop, permissions, executor router, checkpoints."
+
+[dependencies]
+tether-types.workspace = true
+
+[lints]
+workspace = true

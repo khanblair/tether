@@ -1,0 +1,38 @@
+[package]
+name = "tether-ffi"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+description = "UniFFI surface of the core, built as libtether_core.so."
+
+[lib]
+name = "tether_core"
+crate-type = ["cdylib", "lib"]
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "src/bin/uniffi-bindgen.rs"
+required-features = ["cli"]
+
+[features]
+# Needed only to run the binding generator: `cargo run --features cli --bin uniffi-bindgen`.
+cli = ["uniffi/cli"]
+
+[dependencies]
+tether-engine.workspace = true
+tether-types.workspace = true
+uniffi.workspace = true
+
+# Not `workspace = true`: UniFFI scaffolding needs `unsafe` and generates undocumented items.
+[lints.rust]
+unreachable_pub = "warn"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+let_underscore_must_use = "warn"
+doc_markdown = "allow"
+too_many_lines = "warn"
+too_many_arguments = "warn"
+cognitive_complexity = "warn"
+excessive_nesting = "warn"

@@ -1,0 +1,438 @@
+# Architecture
+
+Status: draft 0.1, 18 Nov 2026.
+
+## 1. System diagram
+
+```
+┌──────────────────────────── Android device ─────────────────────────────┐
+│                                                                          │
+│  ┌──────────────── Tether app process ───────────────────────────────┐   │
+│  │                                                                    │   │
+│  │  Kotlin / Jetpack Compose                                          │   │
+│  │  ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────────────┐   │   │
+│  │  │ feature-* │ │designsys. │ │  service  │ │ platform adapters │   │   │
+│  │  │ screens + │ │ tokens +  │ │ foreground│ │ Keystore, speech, │   │   │
+│  │  │ViewModels │ │components │ │ + notifs  │ │ files, biometric  │   │   │
+│  │  └─────┬─────┘ └───────────┘ └─────┬─────┘ └─────────┬─────────┘   │   │
+│  │        │       core-bridge (UniFFI generated + Flow wrappers)      │   │
+│  │  ══════╪═══════════════════════════╪═════════════════╪═══════════  │   │
+│  │        ▼             libtether_core.so (Rust, tokio)  ▲             │   │
+│  │  ┌────────────────────────────────────────────────────┴─────────┐  │   │
+│  │  │ ffi → engine (sessions, turn loop, router, permissions)      │  │   │
+│  │  │   providers   tools   workspace   vcs   quality   store      │  │   │
+│  │  │   sandbox (Wasmtime)   linux (PRoot runner)   ci   mcp       │  │   │
+│  │  │   skills   memory (notes, vault)   connectors   secrets      │  │   │
+│  │  └──────┬───────────────────────┬───────────────────┬───────────┘  │   │
+│  └─────────┼───────────────────────┼───────────────────┼──────────────┘   │
+│            │ in-process WASM       │ child processes   │ HTTPS            │
+│            ▼                       ▼                   │                  │
+│   sandbox instances        libproot.so → Alpine rootfs │                  │
+│   (/workspace mounted)     (/workspace bind-mounted)   │                  │
+│                                                        │                  │
+│   App private storage: workspaces/, db/, blobs/, memory/, skills/, ...    │
+└────────────────────────────────────────────────────────┼──────────────────┘
+                                                         ▼
+          Anthropic · OpenAI · Gemini · DeepSeek · OpenRouter · GitHub (API, git, Actions)
+          MCP servers · Tether release manifests (static files on GitHub Releases)
+```
+
+There is no Tether backend. Every outbound call leaves from the Rust core.
+
+## 2. Processes and threads
+
+| Unit | What runs there | Lifetime |
+|---|---|---|
+| Main app process | Compose UI, ViewModels, the Rust core, sandbox instances | Android-managed; kept alive during runs by the foreground service |
+| `AgentService` (same process) | Foreground service of type `dataSync`/`specialUse` that holds the process during turns, owns the run notification | Starts with a turn, stops 30 s after the last turn ends |
+| Tokio runtime | One multi-thread runtime inside the core, worker count = min(4, CPU cores) | Created on first core call, lives with the process |
+| Blocking pool | File I/O, git operations, tree-sitter parsing, Wasmtime compilation | Tokio blocking threads, capped at 8 |
+| Sandbox instance | One Wasmtime store per `run`, on a blocking thread, with epoch-based interruption | One command |
+| Linux mode child | `libproot.so` process launched from `nativeLibraryDir`, then the command inside Alpine | One command or one interactive shell |
+
+Why one process: the core holds session state in memory and SQLite; splitting it across processes adds IPC for no benefit. Crash isolation for user code comes from Wasmtime (traps do not crash the host) and from Linux mode running in child processes.
+
+## 3. Modules and ownership
+
+### Rust core (`core/crates/`)
+
+| Crate | Owns | Depends on |
+|---|---|---|
+| `tether-types` | Shared types: messages, tool calls, events, IDs, errors | none |
+| `tether-ffi` | The UniFFI surface: exported functions, callback interfaces, type mapping | `tether-engine` |
+| `tether-engine` | Sessions, the turn loop, permission checks, executor router, compaction, checkpoints | most crates below |
+| `tether-providers` | One adapter per provider, streaming parsers, model catalog, usage and price math | `tether-types` |
+| `tether-tools` | Tool definitions, JSON schemas, argument validation, result formatting | `tether-workspace`, `tether-vcs` |
+| `tether-workspace` | Path guard, file ops, file index, search (glob and grep), file watcher | `tether-types` |
+| `tether-vcs` | Git through gitoxide: clone, status, diff, commit, branch, push | `tether-types` |
+| `tether-sandbox` | Wasmtime engine, runtime packs, WASI setup, limits | `tether-types` |
+| `tether-linux` | Root filesystem manager, PRoot command builder, process I/O | `tether-types` |
+| `tether-ci` | GitHub Actions: workflow file, dispatch, polling, log fetch, failure parsing | `tether-connectors` |
+| `tether-quality` | Tree-sitter parsing, smell rules, slop rules, report building | `tether-types` |
+| `tether-store` | SQLite schema, migrations, queries, blob store | `tether-types` |
+| `tether-connectors` | `Connector` trait; GitHub implementation; later Telegram, Discord, Google | `tether-types` |
+| `tether-mcp` | MCP client: Streamable HTTP transport, stdio transport through Linux mode | `tether-types` |
+| `tether-secrets` | Secret references; asks the platform to wrap and unwrap through a callback | `tether-types` |
+| `tether-skills` | `SKILL.md` parsing, discovery, on-demand loading, agent-authored skills, install, prune-only upkeep (section 14) | `tether-types` |
+| `tether-memory` | Capped agent and user notes, session search, the Obsidian-compatible vault and its link map (section 14) | `tether-types`, `tether-store` |
+
+Rule: only `tether-engine` coordinates other crates. Leaf crates never call each other except where the table lists the dependency.
+
+Status: at P0 only `tether-types`, `tether-engine`, and `tether-ffi` contain code. The other crates are empty libraries that hold their place in the workspace (see project-structure.md, Present now).
+
+### Android (`android/`)
+
+| Module | Owns |
+|---|---|
+| `app` | Activity, navigation graph, dependency setup, flavors, and the placeholder screens in `shell/` until feature modules exist |
+| `core-bridge` | Generated UniFFI Kotlin, the `CoreClient` wrapper that turns callbacks into `Flow`s, platform callback implementations |
+| `designsystem` | Theme, tokens (generated from `tokens/tokens.json`), bundled fonts, shared components |
+| `feature-onboarding` | First-run screens |
+| `feature-projects` | Project list, create, clone, import, project home |
+| `feature-session` | Transcript, composer, approvals, status line, pickers |
+| `feature-diff` | Diff view, hunk actions, checkpoints list |
+| `feature-files` | File tree, file viewer |
+| `feature-runs` | Run console, Linux mode setup, CI runs list |
+| `feature-settings` | All settings screens |
+| `service` | `AgentService`, notification channels, notification actions |
+| `platform` | Keystore wrapping, biometric prompt, speech input, file picker, share intents |
+
+Feature modules depend on `core-bridge` and `designsystem`, never on each other. Shared navigation routes live in `app`.
+
+Status: at P0 the app shell is an exception to the rule that composables never call the core and the core is never called on the main thread: `TetherApp` starts the core and the Projects screen reads the version and sends the test event directly. All three calls return at once. The first feature screens (P1-11) move core calls behind ViewModels and `Dispatchers.IO`. At P0 the Gradle build has three modules: `app`, `core-bridge`, and `designsystem`. The `feature-*`, `service`, and `platform` modules are added in the phase that first needs each one. Convention plugins live in `android/build-logic` as precompiled script plugins.
+
+## 4. Internal communication
+
+- **Kotlin to Rust:** UniFFI async functions on a `TetherCore` object. Kotlin calls them from coroutines; UniFFI bridges Rust futures to suspend functions.
+- **Rust to Kotlin:** one `EventSink` callback interface. The core sends `CoreEvent` values; `CoreClient` forwards them into a `MutableSharedFlow` with a 256-event buffer and `DROP_OLDEST` only for `TextDelta` events (other events never drop). ViewModels filter by session ID.
+- **Rust to platform services:** callback interfaces implemented in Kotlin: `SecretsPlatform` (wrap, unwrap with Keystore), `NotifyPlatform` (approval requests when backgrounded), `NetworkPlatform` (connectivity changes).
+- **Streaming text:** the core batches text deltas every 32 ms or 64 characters, whichever comes first, so Compose recomposes at most about 30 times a second.
+- **Inside the core:** tokio channels. Each session has one actor task that owns its state; commands arrive on an `mpsc` channel, which serializes all changes to a session.
+
+## 5. Key flows
+
+### 5.1 One turn
+
+1. UI calls `send_message(session_id, text, attachments)`.
+2. Session actor stores the message, builds the request: system prompt, instructions, tool schemas, context, message.
+3. Provider adapter streams the response. Text deltas become `TextDelta` events.
+4. For each tool call in the response: validate arguments against the schema; run the path guard; check permissions.
+   - Allowed: run the tool, emit `ToolStarted` and `ToolFinished`.
+   - Needs approval: emit `ApprovalRequired`; the actor waits for `approve` or `deny`.
+   - Blocked: return an error result to the model explaining the mode.
+5. If the tool calls included edits, close the edit batch: write the checkpoint, run the quality gate, emit `DiffReady` and `QualityReport`.
+6. Send tool results back to the model; repeat from step 3 until the model ends the turn or the user interrupts.
+7. Store usage; emit `TurnFinished` with tokens and cost.
+
+### 5.2 Approval while backgrounded
+
+1. Actor emits `ApprovalRequired`.
+2. `CoreClient` sees no foreground activity; calls `NotifyPlatform.show_approval`.
+3. Notification shows the action summary with Allow and Deny.
+4. Tapping an action sends a `PendingIntent` to `ApprovalReceiver`, which calls `approve` or `deny` on the core.
+5. Actor resumes the turn and updates the service notification.
+
+### 5.3 Executor routing
+
+1. `run` arrives with a command and optional executor.
+2. If an executor is named and available, use it.
+3. Else read `.tether/config.toml` `[exec]` rules: first matching pattern wins.
+4. Else use built-in rules: sandbox for commands whose program is in an installed runtime pack; Linux mode for package managers and compilers if installed; CI otherwise.
+5. If the chosen executor is unavailable (for example Linux mode not installed in the `play` flavor), fall to the next and include the reason in the tool result.
+
+### 5.4 CI run
+
+1. Ensure `.github/workflows/tether.yml` exists on the work branch; if not, propose adding it as an edit.
+2. Commit pending changes to the work branch (with approval per mode) and push.
+3. Dispatch the workflow with the command as input; read the run ID.
+4. Poll every 10 s with backoff up to 60 s; emit `RunProgress` per job step.
+5. On completion, fetch logs, trim to the failing step, parse file and line references, return the result to the model.
+
+### 5.5 Rewind
+
+1. User picks a checkpoint and a restore option.
+2. Actor stops any running turn.
+3. Files: write back each blob; delete files that did not exist at the checkpoint.
+4. Conversation: mark later messages as rewound (kept in the database, hidden from context).
+5. Emit `SessionRewound`; UI reloads the transcript.
+
+### 5.6 Linux mode setup
+
+1. User enables Linux mode in Settings (`full` flavor only).
+2. Core fetches the signed manifest, verifies the signature with the public key compiled into the app.
+3. Downloads the Alpine mini root filesystem, checks its SHA-256 against the manifest, extracts it under `linux/rootfs/alpine/`.
+4. Runs `apk add` for the base package list through PRoot, with network allowed for setup only.
+5. Marks the environment ready and stores the Alpine version.
+
+## 6. State machines
+
+### Session
+
+```
+Idle ──send──▶ Requesting ──first token──▶ Streaming
+Streaming ──tool call──▶ CheckingTool
+CheckingTool ──allowed──▶ RunningTool ──done──▶ Requesting
+CheckingTool ──needs approval──▶ AwaitingApproval ──approve──▶ RunningTool
+AwaitingApproval ──deny──▶ Requesting (with denial result)
+Streaming ──end of turn──▶ Idle
+any active state ──interrupt──▶ Idle (turn marked Interrupted)
+any active state ──network lost──▶ Paused ──network back──▶ previous state
+any active state ──process death──▶ (on relaunch) Interrupted ──resume──▶ Requesting
+any active state ──fatal error──▶ Failed ──retry──▶ Requesting
+```
+
+### Tool call
+
+`Proposed → (Allowed | AwaitingApproval) → (Running | Denied | Blocked) → (Succeeded | Failed | TimedOut | Cancelled)`
+
+### CI run
+
+`Preparing → Pushing → Dispatched → Queued → InProgress → (Succeeded | Failed | Cancelled | TimedOut)`
+
+### Linux environment
+
+`NotInstalled → Downloading → Verifying → Extracting → InstallingPackages → Ready`; any step can go to `Broken`, from which **Repair** restarts at `Downloading` and **Remove** returns to `NotInstalled`.
+
+### Provider connection
+
+`Unset → Testing → (Ok | BadKey | NetworkError | Blocked)`; editing the key returns to `Unset`.
+
+## 7. Data model
+
+SQLite database at `files/db/tether.db`, WAL mode, foreign keys on. IDs are ULIDs stored as text. Times are Unix milliseconds.
+
+| Table | Columns | Notes |
+|---|---|---|
+| `projects` | id, name, path, remote_url, default_branch, default_model, default_mode, created_at, opened_at | `path` is relative to `files/workspaces/` |
+| `sessions` | id, project_id, title, model, mode, status, created_at, updated_at, cost_micros, tokens_in, tokens_out | `cost_micros` is USD × 1,000,000 |
+| `messages` | id, session_id, role, seq, created_at, rewound | role: user, assistant, tool, system_note |
+| `message_parts` | id, message_id, seq, kind, body_json | kind: text, image_ref, tool_call, tool_result, thinking, compaction_summary |
+| `tool_calls` | id, message_id, tool, args_json, status, executor, started_at, finished_at, result_ref | `result_ref` points to a blob for large results |
+| `approvals` | id, tool_call_id, decision, reason, decided_at, via | via: app, notification |
+| `permission_rules` | id, project_id, tool, pattern, executor, created_at | from "Always allow this" |
+| `checkpoints` | id, session_id, message_id, created_at | one per edit batch |
+| `checkpoint_files` | checkpoint_id, path, blob_hash, existed | `existed = 0` means the file was created in the batch |
+| `quality_reports` | id, checkpoint_id, findings_json, blocking_count | |
+| `runs` | id, tool_call_id, executor, command, exit_code, duration_ms, output_ref, ci_run_id | |
+| `provider_configs` | provider, secret_ref, base_url, status, tested_at | no key material; `secret_ref` names the wrapped secret |
+| `models` | provider, model_id, context_window, input_price, output_price, caps_json, fetched_at | catalog cache |
+| `mcp_servers` | id, name, url, transport, secret_ref, enabled | |
+| `usage_daily` | day, provider, model, project_id, tokens_in, tokens_out, cost_micros | for charts and budgets |
+| `message_fts` | FTS5 virtual table over message text: session_id, message_id, body | session search (F22); bundled SQLite with FTS5, never the Android framework SQLite |
+| `vault_notes` | path, title, description, type, tags_json, updated_at, hash | rebuildable index of the vault folder |
+| `vault_links` | src_path, dst_path, heading, kind, resolved | wikilinks and backlinks; `resolved = 0` means the target note does not exist yet |
+| `skill_index` | name, scope, path, description, last_used_at, state | state: active, stale, archived; rebuildable from the skill folders |
+
+Blobs (file snapshots, large tool results, run output) live in `files/blobs/`, named by BLAKE3 hash, compressed with zstd. A blob is deleted when no row references it, by a cleanup job run on app start at most once a day.
+
+Migrations are numbered SQL files in `core/crates/tether-store/migrations/`, run in a transaction at core start.
+
+## 8. API
+
+The core's API is the UniFFI surface. There are no HTTP routes.
+
+### Commands (Kotlin calls Rust)
+
+| Function | Purpose |
+|---|---|
+| `init(config: CoreConfig, sink: EventSink, platform: PlatformCallbacks)` | Start the core |
+| `list_projects()` / `create_project(spec)` / `clone_project(url, opts)` / `import_zip(fd)` / `delete_project(id)` | Projects |
+| `list_sessions(project_id)` / `create_session(project_id, opts)` / `load_session(id)` | Sessions |
+| `send_message(session_id, input: UserInput)` | Start a turn |
+| `approve(tool_call_id, scope: ApprovalScope)` / `deny(tool_call_id, reason)` | Approvals |
+| `interrupt(session_id)` / `resume(session_id)` | Turn control |
+| `set_mode(session_id, mode)` / `set_model(session_id, model)` | Session settings |
+| `list_checkpoints(session_id)` / `rewind(checkpoint_id, what)` | Rewind |
+| `get_diff(project_id, scope)` / `apply_hunk_action(...)` | Diff review |
+| `run_command(project_id, cmd, executor)` | User-initiated run |
+| `set_provider_key(provider, key)` / `test_provider(provider)` / `list_models(provider)` | Providers |
+| `github_device_start()` / `github_device_poll(code)` / `github_set_token(token)` | GitHub auth |
+| `linux_install()` / `linux_repair()` / `linux_remove()` / `linux_status()` | Linux mode |
+| `runtime_packs()` / `install_runtime_pack(id)` | Sandbox runtimes |
+| `add_mcp_server(spec)` / `remove_mcp_server(id)` | MCP |
+| `usage(range, group_by)` | Cost data |
+| `export_session(id)` | Markdown export |
+
+### Events (Rust calls Kotlin through `EventSink.on_event`)
+
+`SessionUpdated`, `TextDelta`, `ThinkingDelta`, `ToolProposed`, `ApprovalRequired`, `ToolStarted`, `ToolOutput` (streaming run output), `ToolFinished`, `DiffReady`, `QualityReport`, `PlanReady`, `TodoUpdated`, `AskUser`, `RunProgress`, `CompactionDone`, `UsageUpdated`, `TurnFinished`, `TurnInterrupted`, `TurnFailed`, `SessionRewound`, `LinuxStatus`, `RuntimeStatus`, `ProviderStatus`, `NetworkPaused`, `NetworkResumed`.
+
+### Shared types
+
+Defined in `tether-types` and exported as UniFFI records and enums: `ProjectId`, `SessionId`, `ToolCallId` (newtypes over strings), `PermissionMode`, `Executor`, `Provider`, `ModelRef`, `UserInput`, `Attachment`, `ToolCallView`, `DiffSummary`, `Hunk`, `Finding`, `Severity`, `UsageSnapshot`, `CoreError` (enum with `kind`, `message`, `retryable`).
+
+Rule: every type the UI sees is a view type built for display. Internal engine types do not cross the FFI boundary.
+
+## 9. Files on disk
+
+All under the app's private `files/` directory unless noted.
+
+| Path | Contents |
+|---|---|
+| `workspaces/<project-id>/` | Project files and `.git` |
+| `db/tether.db` | SQLite database |
+| `blobs/<aa>/<hash>` | Content-addressed blobs |
+| `secrets/<ref>.bin` | Secrets encrypted with AES-GCM using a Keystore key |
+| `memory/MEMORY.md`, `memory/USER.md` | Agent notes and user profile, capped in size (F22) |
+| `memory/vault/` | The Obsidian-compatible vault: plain Markdown notes, `index.md`, `log.md` (F23) |
+| `skills/<category>/<name>/SKILL.md` | User skills, with optional `references/`, `templates/`, `scripts/`, `assets/` (F21) |
+| `skills/.quarantine/`, `skills/.archive/` | Skills awaiting approval; skills archived by the upkeep job |
+| `runtimes/<pack>/<version>/` | Runtime pack `.wasm` files and the precompiled `.cwasm` for this device |
+| `linux/rootfs/alpine/` | Alpine root filesystem (`full` flavor) |
+| `linux/tmp/` | PRoot temp directory |
+| `logs/core-<date>.log` | Rotating core logs, 7 days, 5 MB each, secrets redacted |
+| `cache/` (Android cache dir) | Model catalog, fetched web pages; Android may clear it |
+
+Backups: `secrets/`, `linux/`, `runtimes/`, `blobs/`, `logs/`, and `cache/` are excluded from Android backup and device transfer. Workspaces are excluded by default with a setting to include them. `memory/` and `skills/` are included, because they are the user's own notes; they never hold secrets (writes are scanned, section 14).
+
+## 10. Security model
+
+**Assets:** API keys and GitHub token; the user's code; the user's money (provider usage, Actions minutes); remote repos.
+
+**Threats and controls:**
+
+| Threat | Control |
+|---|---|
+| Key theft from storage | Keys encrypted with an AES-GCM key held in Android Keystore (StrongBox when available); never written in plaintext; excluded from backup |
+| Keys leaking into logs, transcripts, exports | Redaction layer in the logger and exporter matches known key formats and every stored secret; S7 test |
+| Agent-run code reading keys | Secrets never enter executor environments; sandbox sees only `/workspace`; Linux mode binds only the project folder and a temp folder |
+| Path escape | Path guard canonicalizes every path, rejects `..` outside the root, rejects symlinks pointing outside, rejects writes inside `.git/` |
+| Prompt injection via repo files or web content | Network tools, pushes, and non-sandbox runs need approval below Bypass; tool results are marked as data in the prompt; no tool can change permission settings |
+| Destructive remote actions | Push to default branch, force push, and remote branch delete always ask (force push asks even in Bypass) |
+| Tampered runtime packs or root filesystem | Signed manifest (Ed25519, key in the app) lists SHA-256 for every download; mismatch aborts |
+| Runaway cost | Budgets with pause; cost visible at all times |
+| Shoulder surfing and screenshots | Optional `FLAG_SECURE`; key reveal needs biometric |
+| Malicious MCP server | Servers added only by the user; each tool approval-gated by default; server output treated as data |
+
+Network: all HTTPS through rustls with platform roots. No cleartext traffic allowed in the Android network security config.
+
+## 11. Performance budgets
+
+| Area | Budget |
+|---|---|
+| Cold start to first frame | Under 800 ms on the reference device; core init is lazy and off the main thread |
+| Main thread | No FFI call on the main thread; all core calls from `Dispatchers.IO` or a dedicated dispatcher |
+| Event delivery | Core to UI under 16 ms at p95 |
+| Text streaming | Max 30 UI updates per second per session |
+| Transcript | `LazyColumn` with stable keys; message models immutable; code blocks highlighted once in the core and cached |
+| Sandbox | Engine and precompiled modules cached; instance creation under 100 ms p95 |
+| Search | Index in memory per open project; grep runs on the blocking pool with a 2 s cap and partial results |
+| Memory | Under 300 MB app total excluding Linux mode; tool results over 256 KB stored as blobs, not held in memory |
+| Database | Writes batched per event; no query over 20 ms on the main session paths |
+| APK size | Base APK under 35 MB per ABI; runtime packs downloaded on demand |
+
+## 12. Key decisions and trade-offs
+
+| Decision | Chosen | Alternatives | Trade-off accepted |
+|---|---|---|---|
+| Core language | Rust | Kotlin only; Go | More build complexity for a core that ports to iOS unchanged and runs Wasmtime and gitoxide natively |
+| UI | Native Compose, later SwiftUI | Compose Multiplatform; Flutter; React Native | Two UI codebases later, for the best platform behavior (services, notifications, text input) |
+| Bindings | UniFFI | Hand-written JNI | Some type-shape limits, for generated Kotlin and Swift from one definition |
+| Default executor | WASM sandbox | Linux mode by default | Narrower runtime support, for speed, isolation, and iOS portability |
+| Linux mode | PRoot + Alpine, opt-in, `full` flavor | No Linux mode; full VM | Platform and policy risk, for real tooling without a PC |
+| Heavy builds | GitHub Actions | Own cloud runners | Needs a GitHub repo and minutes, for zero infrastructure |
+| Git | gitoxide | libgit2 via `git2` | Some features still maturing in gitoxide, for a pure Rust build with no C dependency |
+| Storage | SQLite + blob files | An object database; flat JSON | Schema migrations to maintain, for queries and reliability |
+| Server | None | Relay server for chat connectors and sync | Chat connectors only work while the phone runs, for no hosting cost and no data custody |
+| Provider calls | From Rust | From Kotlin with OkHttp | Streaming code lives in Rust, so iOS reuses it |
+
+## 13. Automated quality checks
+
+Two separate systems: the in-app quality gate that checks the user's code, and the CI checks on Tether's own repo.
+
+### In-app quality gate (product feature F12)
+
+- Runs in `tether-quality` after each edit batch, on changed line ranges plus enclosing functions.
+- Tree-sitter grammars bundled for: Python, JavaScript, TypeScript, TSX, Rust, Go, Kotlin, Java, Swift, C, C++, Ruby, PHP, HTML, CSS, JSON, YAML, TOML, Markdown, Bash.
+- Rules are Rust structs implementing a `Rule` trait: `id`, `languages`, `default_severity`, `check(tree, source, changed_ranges) -> Vec<Finding>`.
+- Slop word lists are data files (`core/crates/tether-quality/data/slop_words.txt`, `slop_patterns.toml`) so they can update without code changes.
+- Budget: under 300 ms for a 20-file batch on the reference device; rules that exceed 50 ms on a file are skipped for that file and noted in the report.
+- Thresholds and severities are overridable in `.tether/config.toml` under `[quality]`.
+
+### Tether repo CI (`.github/workflows/ci.yml`)
+
+| Job | Runs |
+|---|---|
+| `rust` | `cargo fmt --check`, `cargo clippy -D warnings` (which carries the smell thresholds), `cargo test`, `cargo check` for both Android targets, `cargo deny check` |
+| `tooling` | Token generation is current and every contrast pair passes; `tools/slop-lint` tests, then slop-lint over `docs/`, `README.md`, and `strings.xml`; the file length check and its self test; the docs site builds and every link between its pages resolves |
+| `bindings` | Regenerate UniFFI bindings and fail if they differ from committed output |
+| `android` | `ktlint` and `detekt` (through `qualityCheck`), Android lint with warnings as errors, unit tests, `assemble` both flavors; uploads the debug APKs |
+
+Not in CI yet: instrumented and Compose UI tests on an emulator (run locally with `just test-device`), the `bench` job, and the nightly live provider smoke tests. Slop-lint does not yet check code comments or commit messages.
+
+Other workflows: `pages.yml` builds and deploys the docs site on changes to docs, images, tokens, or the site tools. `release.yml` runs on a `vX.Y.Z` tag and opens a draft GitHub Release (see development.md section 13).
+
+`tools/slop-lint` reuses the same rule data as the in-app gate, so the product and the repo follow one definition of AI slop.
+
+## 14. Skills, memory, and the vault
+
+Three features that let the agent keep what it learns. They borrow designs from Hermes Agent (MIT) and from the Obsidian vault format, and they stay inside the phone-only rule: all of it is plain files plus SQLite on the device.
+
+### Skills (F21, `tether-skills`)
+
+A skill is a folder with a `SKILL.md`: YAML frontmatter, then Markdown instructions. The format follows the open Agent Skills standard (agentskills.io), so skills written for other agents load unchanged.
+
+| Frontmatter field | Rule |
+|---|---|
+| `name` | Required. Up to 64 characters, lowercase letters, digits, and hyphens. Must equal the folder name |
+| `description` | Required. Up to 1,024 characters. Says what the skill does and when to use it |
+| `license`, `compatibility`, `allowed-tools` | Read and shown; not enforced |
+| `metadata` | String keys to string values. Tether-only settings use a `tether-` key prefix, so a skill stays valid elsewhere |
+
+Locations, in order of precedence: project skills in `<workspace>/.tether/skills/` and `<workspace>/.agents/skills/` (a project skill needs the user's trust approval before it loads), then user skills in `files/skills/`, then bundled skills.
+
+**Progressive disclosure keeps the prompt small.**
+1. The system prompt carries only an index: name, description, and category per skill, under a fixed token budget.
+2. `skill_view(name)` loads the full `SKILL.md`.
+3. `skill_view(name, path)` loads one reference file.
+
+A skill added mid-session is announced in the next user message instead of rewriting the system prompt, so the prompt cache stays valid.
+
+**The agent writes skills.** `skill_manage` supports `create`, `patch` (targeted find and replace, preferred), `rewrite`, `delete`, `write_file`, and `remove_file`. The system prompt tells the agent to save a skill after a multi-step workflow worth repeating, after an error it had to work around, and after the user corrects it. Rule for content: lessons, not logs. An advisory check warns when a skill body passes 24,000 characters or it has more than 60 reference files.
+
+**Writes need approval by default.** Unlike Hermes, Tether stages agent-authored skill writes and shows them as a diff in the approval flow (principle: show before doing). A setting turns this off.
+
+**Install.** A skill can be installed from a GitHub URL or a zip into `skills/.quarantine/`. Tether shows its files, runs a static scan (instructions to read secrets or send data elsewhere, shell downloads, hidden Unicode), and installs only on approval. Skill scripts never run outside the executors, and the router and permission modes apply to them like any command.
+
+**Upkeep.** A prune-only job marks a skill stale after 14 days unused and moves it to `skills/.archive/` after 30. It never deletes, never touches pinned or hand-written skills, and makes no model calls.
+
+### Memory (F22, `tether-memory`, `tether-store`)
+
+Two small files plus search.
+
+- **`MEMORY.md`** holds the agent's notes: environment facts, conventions, lessons. Capped at 2,200 characters. **`USER.md`** holds the user profile and preferences. Capped at 1,375 characters. Entries are separated by a section sign.
+- **The `memory` tool** has `add`, `patch`, and `remove`, each with a target of `memory` or `user`. There is no read action, because the content is already in the prompt. A write over the cap returns an error, and the agent must trim entries in the same turn. Exact duplicates are skipped. Every write is scanned for prompt-injection phrases, credential patterns, and invisible Unicode, and rejected on a hit.
+- **Frozen snapshot.** The files are read once at session start and placed in the system prompt. Writes reach disk at once but enter the prompt only at the next session. This keeps the cached prompt prefix stable, which lowers cost on every provider that caches.
+- **Session search.** Every message is indexed in SQLite FTS5 (`message_fts`). `session_search` returns the matching messages, not model summaries, and the agent can read around a hit. No model call is involved.
+
+There is no external user-modeling service. Tether keeps no server, and extra model passes would cost the user tokens.
+
+### Vault (F23, `tether-memory/vault`)
+
+Long-term notes that outgrow two capped files go into a vault: a folder of plain Markdown that follows Obsidian's format, so it opens in Obsidian or any editor.
+
+| Part | Rule |
+|---|---|
+| Notes | Markdown with YAML frontmatter. `description` is required. `type`, `tags`, `aliases`, `created`, and `updated` are used when present |
+| Links | `[[Note]]`, `[[Note#Heading]]`, and `[[Note|alias]]`. Backlinks are computed |
+| `index.md` | A catalog of notes by category, one line each. The agent reads it first |
+| `log.md` | Append-only, dated entries. A correction is a new entry, never an edit |
+| Map notes | A note with `type: moc` that only groups links for one area, such as a project. It gives the agent a bounded entry point instead of a vault-wide scan |
+| `.obsidian/` | Never written by Tether |
+
+**The map.** Tether parses every note into `vault_notes` and `vault_links`. Both tables can be rebuilt from the files at any time, so the folder is the source of truth. The vault tools are `vault_search` (full text, tags, and links), `vault_read`, `vault_write` and `vault_append`, `vault_links` (outlinks and backlinks of a note), `vault_orphans`, and `vault_map`, which returns the neighborhood of a note out to a given depth within a token budget. The app shows the same data as a list view of map notes and neighbors. A force-directed graph view is not planned.
+
+**Start of session.** A small injector adds a slice to the prompt: the head of `index.md`, the map note of the active project, and the last entries of `log.md`, within a fixed budget. The agent fetches full notes on demand.
+
+**Checks on every write.** The note must have a `description`. Links that point nowhere are recorded as unresolved, not rejected. Size is capped. A note that nothing links to is reported by `/vault lint`.
+
+**Where the vault lives.** The vault is in app-private storage (`files/memory/vault/`), because the Rust core cannot open Android content URIs and so cannot read a shared folder directly. Two ways in and out:
+1. Export and import as a zip through the system file picker.
+2. Folder sync: the user picks a shared folder (Storage Access Framework). The Kotlin platform layer copies changed files both ways, comparing hashes and modification times, when the user asks and after each turn that wrote to the vault. This lets Obsidian for Android open the same notes. The vault tools only ever see the private copy.
+
+**Trust.** Vault and memory text is data, not instructions. It enters the prompt inside labeled blocks, and the system prompt says to treat it as untrusted. Writes are scanned like memory writes. Secrets never go in: the redaction layer from the S7 test covers memory and vault files.
+
+### Phones are not desktops
+
+Not copied from the sources: Honcho-style user modeling, LLM consolidation passes, a skills hub with remote browsing, the Obsidian graph view, Dataview, the Local REST API plugin, and desktop hooks.
+

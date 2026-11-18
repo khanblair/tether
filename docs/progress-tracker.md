@@ -130,6 +130,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Files | Change | PR |
 |---|---|---|---|
+| 2026-11-18 | `AGENTS.md`, `CLAUDE.md`, `docs/project-structure.md` | Agent instruction files at the repo root, listed in the structure doc | |
 | 2026-11-18 | `.github/workflows/release.yml`, `docs/development.md`, `docs/progress-tracker.md` | Every release is published as the latest, never a pre-release; tracker brought up to date | #136 |
 | 2026-11-18 | Repo root, `core/`, `android/`, `tokens/`, `images/`, `tools/`, `.github/`, and placeholder READMEs | Created the P0 scaffold. The full list is in project-structure.md under Present now | n/a |
 | 2026-11-18 | `.github/workflows/release.yml`, `tools/setup-release-signing.sh`, `justfile` | Automatic release on a version with no tag; keystore and secrets setup script | #134 |
@@ -139,6 +140,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Doc | Change |
 |---|---|---|
+| 2026-11-18 | project-structure | `AGENTS.md` and `CLAUDE.md` added to both trees |
 | 2026-11-18 | mobile, build-plan | In-app updates for the full build: P1-20 added, M-Q2 decided (D22) |
 | 2026-11-18 | development, progress-tracker | Releases are always the latest, never pre-releases (D21 reworded); P0-16 and P0-19 marked Done after `v0.0.1` published |
 | 2026-11-18 | development, architecture, project-structure, build-plan | Release publishes on a version bump; `just release-signing`; P0-19 added, P0-16 reworded |

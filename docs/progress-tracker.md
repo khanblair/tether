@@ -64,7 +64,7 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 | P0-10 | `slop-lint` first version | Blair with Claude | Done | n/a | Fails on the bad fixture, passes on current docs, README, and `strings.xml` |
 | P0-11 | Smell checks in CI | Blair with Claude | Done | n/a | Thresholds match code-standards.md. File length self test proves the failure path |
 | P0-12 | `CoreClient` event bus skeleton | Blair with Claude | Done | n/a | "Send test event" on the emulator shows the event from Rust; `NativeLibraryTest` passes on the emulator |
-| P0-13 | Smell fixtures for Clippy and detekt | | Not started | | Added during P0; only the file length check has a failing fixture so far |
+| P0-13 | Smell fixtures for Clippy and detekt | Blair with Claude | In review | #132 | Closes #3. Fixture crate and module fail their gates; CI runs both through `tools/check-smell-fixtures.sh` |
 | P0-14 | Docs site on GitHub Pages | Blair with Claude | Done | n/a | Live at khanblair.github.io/tether; `pages.yml` deploys on docs, images, tokens, or site tool changes |
 | P0-15 | Brand assets and launcher icon | Blair with Claude | Done | n/a | Logo traced to `images/logo.svg`; adaptive and monochrome icons; PNG exports. Blair to check the launcher icon by eye |
 | P0-18 | Mobile UI prototype | Blair with Claude | Done | n/a | `tools/prototype`, run with `just prototype`. 102 screens in 12 areas; checked by a Node render test, not yet in a browser by Claude |
@@ -133,6 +133,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Doc | Change |
 |---|---|---|
+| 2026-11-18 | architecture, development, project-structure | Smell fixtures for Clippy and detekt (P0-13) |
 | 2026-11-18 | code-standards, architecture, project-structure | Pull requests must close an issue (`Closes #N`) or say `No issue`; `pr.yml` checks it |
 | 2026-11-18 | project-structure, development, build-plan | Added `tools/prototype` and `just prototype`; P0-18 added |
 | 2026-11-18 | code-standards, architecture, development, project-structure, build-plan | Git workflow: rebase merge, 15 file commit limit with its CI check, model review before merge; P0-17 added |

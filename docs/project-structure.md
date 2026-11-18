@@ -34,6 +34,7 @@ tether/
 │   └── generate.ts            Generates Tokens.kt, Android color XML, and the site CSS; checks contrast
 ├── core/                      Rust workspace
 │   ├── Cargo.toml  Cargo.lock  deny.toml  clippy.toml  rustfmt.toml
+│   ├── fixtures/smells/       Crate with a function over the line limit; clippy must fail on it
 │   └── crates/
 │       ├── tether-types/      event.rs: CoreEvent
 │       ├── tether-engine/     VERSION, EventSink, Core (emits Ready and Test events)
@@ -50,6 +51,7 @@ tether/
 │   │   └── src/main/kotlin/{tether.android.application, tether.android.library, tether.compose,
 │   │                        tether.quality, tether.rust-core}.gradle.kts, AndroidCommon.kt, CargoNdkTask.kt
 │   ├── config/{detekt.yml, lint.xml}
+│   ├── smell-fixtures/        Module with a function over the line limit; detekt must fail on it (built only with -Ptether.smellFixtures)
 │   ├── app/                   build.gradle.kts (flavors play and full; app version read from core/Cargo.toml), proguard-rules.pro
 │   │   └── src/{main, full, play, androidTest}   TetherApp, MainActivity, di/AppModule, nav/, shell/ (placeholder screens)
 │   ├── core-bridge/           CoreClient, EventBus, consumer-rules.pro, (gen) generated/tether_core.kt
@@ -60,13 +62,13 @@ tether/
 │   ├── slop-lint/             Rust CLI with its own workspace and tests
 │   ├── site/{build.ts, site.css}   Builds the Pages site from docs/
 │   ├── prototype/             Clickable mobile UI prototype (HTML, CSS, JavaScript; no build step)
-│   └── gen-bindings.sh  gen-icons.ts  check-file-length.sh  check-commit-size.sh  setup.sh
+│   └── gen-bindings.sh  gen-icons.ts  check-file-length.sh  check-commit-size.sh  check-smell-fixtures.sh  setup.sh
 └── .github/
     ├── workflows/{ci.yml, pr.yml, release.yml, pages.yml}
     └── pull_request_template.md  CODEOWNERS  dependabot.yml
 ```
 
-Not present yet: `LICENSE` (no license chosen, see Q5), `nightly.yml` (nothing to run until P1), `core/benches/`, the contents of `core/fixtures/`, feature modules, `service`, `platform`, the `full` and `play` Linux mode files, and the real code of every Rust crate except `tether-types`, `tether-engine`, and `tether-ffi`.
+Not present yet: `LICENSE` (no license chosen, see Q5), `nightly.yml` (nothing to run until P1), `core/benches/`, the rest of `core/fixtures/` (only `smells/` exists), feature modules, `service`, `platform`, the `full` and `play` Linux mode files, and the real code of every Rust crate except `tether-types`, `tether-engine`, and `tether-ffi`.
 
 ## Top level
 
@@ -131,6 +133,7 @@ core/
 │   ├── search.rs              Glob and grep over a 10,000-file fixture
 │   └── store.rs               Database write and query timings
 ├── fixtures/
+│   ├── smells/                Crate that must fail clippy (see tools/check-smell-fixtures.sh)
 │   ├── repos/                 Small sample repos for tests (Python, JS, Rust)
 │   └── provider-streams/      Recorded provider SSE streams for adapter tests
 └── crates/
@@ -446,6 +449,7 @@ tools/
 │   └── src/main.rs          Checks docs, strings.xml, comments, commit messages
 ├── check-file-length.sh     Fails on files over the limits in code-standards.md
 ├── check-commit-size.sh     Fails on a commit that touches more than 15 files
+├── check-smell-fixtures.sh  Proves Clippy and detekt fail on a function over the line limit
 ├── gen-bindings.sh          Regenerates UniFFI Kotlin bindings
 ├── gen-icons.ts             Renders PNG brand assets from images/logo.svg
 ├── setup.sh                 Toolchain check behind `just setup`

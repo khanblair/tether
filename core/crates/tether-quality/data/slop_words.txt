@@ -1,0 +1,49 @@
+# Words banned in docs, UI copy, commit messages and generated text.
+# One entry per line. Single words match whole words and common endings (s, es, d, ed, ing, ly).
+# Entries with a space match as phrases. Lines starting with # are comments.
+# Source of truth for the in-app quality gate and tools/slop-lint. Keep docs/project-overview.md in step.
+delve
+seamless
+robust
+leverage
+utilize
+unlock
+empower
+elevate
+supercharge
+streamline
+cutting-edge
+state-of-the-art
+game-changer
+game-changing
+revolutionize
+transformative
+next-generation
+world-class
+best-in-class
+holistic
+synergy
+tapestry
+testament
+realm
+landscape
+embark
+journey
+effortless
+intuitive
+powerful
+comprehensive
+crucial
+pivotal
+vital
+meticulous
+foster
+bolster
+showcase
+navigate
+in today's
+it's worth noting
+it's important to note
+let's dive in
+rest assured
+plays a key role

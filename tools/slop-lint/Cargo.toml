@@ -1,0 +1,20 @@
+[package]
+name = "slop-lint"
+version = "0.0.1"
+edition = "2024"
+rust-version = "1.90"
+publish = false
+description = "Checks docs, UI strings and commit messages for banned words and AI slop patterns."
+
+[workspace]
+
+[dependencies]
+regex = "1"
+serde = { version = "1", features = ["derive"] }
+toml = "0.9"
+
+[lints.clippy]
+too_many_lines = "warn"
+too_many_arguments = "warn"
+cognitive_complexity = "warn"
+excessive_nesting = "warn"

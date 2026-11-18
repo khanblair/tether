@@ -1,0 +1,5 @@
+# Thresholds from docs/code-standards.md section "Code smells and limits".
+too-many-lines-threshold = 50
+too-many-arguments-threshold = 5
+cognitive-complexity-threshold = 15
+excessive-nesting-threshold = 3

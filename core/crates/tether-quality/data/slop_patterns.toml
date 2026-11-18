@@ -1,0 +1,27 @@
+# Regex patterns for AI slop in prose. Case-insensitive. Source of truth for the in-app gate
+# and tools/slop-lint. Each entry has a name, a regex, and the advice shown to the writer.
+
+[[pattern]]
+name = "not-just-x-but-y"
+regex = "\\bnot just\\b[^.\\n]{1,60}\\bbut\\b"
+advice = "Say what it is."
+
+[[pattern]]
+name = "empty-closing-summary"
+regex = "^\\s*(in summary|in conclusion|to summarize),"
+advice = "End when the content ends."
+
+[[pattern]]
+name = "vague-intensifier"
+regex = "\\b(very|really|truly|incredibly|extremely)\\b"
+advice = "Use a number or nothing."
+
+[[pattern]]
+name = "condescending-simply"
+regex = "\\b(simply (configure|add|click|run|use|install|set)|just (configure|add|click|use|install|set))\\b"
+advice = "Write the plain instruction."
+
+[[pattern]]
+name = "restating-the-question"
+regex = "^\\s*great question"
+advice = "Start with the answer."

@@ -24,7 +24,7 @@ env:
 jobs:
   check:
     name: check
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && github.repository == 'khanblair/tether'
     runs-on: ubuntu-latest
     outputs:
       release: ${{ steps.version.outputs.release }}
@@ -39,6 +39,10 @@ jobs:
         name: Does this version already have a tag
         run: |
           version="$(sed -n 's/^version = "\([0-9.]*\)"$/\1/p' core/Cargo.toml | head -n 1)"
+          if ! printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Cannot read a MAJOR.MINOR.PATCH version from core/Cargo.toml."
+            exit 1
+          fi
           tag="v$version"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
@@ -72,11 +76,12 @@ jobs:
           TETHER_KEYSTORE_PASSWORD: ${{ secrets.TETHER_KEYSTORE_PASSWORD }}
           TETHER_KEY_ALIAS: ${{ secrets.TETHER_KEY_ALIAS }}
           TETHER_KEY_PASSWORD: ${{ secrets.TETHER_KEY_PASSWORD }}
+          TETHER_CERT_SHA256: ${{ vars.TETHER_CERT_SHA256 }}
         run: |
           missing=0
-          for name in TETHER_KEYSTORE_BASE64 TETHER_KEYSTORE_PASSWORD TETHER_KEY_ALIAS TETHER_KEY_PASSWORD; do
+          for name in TETHER_KEYSTORE_BASE64 TETHER_KEYSTORE_PASSWORD TETHER_KEY_ALIAS TETHER_KEY_PASSWORD TETHER_CERT_SHA256; do
             if [ -z "${!name}" ]; then
-              echo "::error::Repository secret $name is not set. Run 'just release-signing', then re-run this workflow. See docs/development.md section 11."
+              echo "::error::Repository secret or variable $name is not set. Run 'just release-signing', then run this workflow again. See docs/development.md section 11."
               missing=1
             fi
           done
@@ -111,9 +116,17 @@ jobs:
         run: ./gradlew --no-daemon assembleFullRelease bundlePlayRelease
         working-directory: android
 
-      - name: Verify the APK is signed
+      - name: Verify the APK is signed with the pinned key
+        env:
+          TETHER_CERT_SHA256: ${{ vars.TETHER_CERT_SHA256 }}
         run: |
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs android/app/build/outputs/apk/full/release/app-full-release.apk
+          out="$("$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs android/app/build/outputs/apk/full/release/app-full-release.apk)"
+          echo "$out"
+          actual="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' <<<"$out" | head -n 1)"
+          if [ "$actual" != "$TETHER_CERT_SHA256" ]; then
+            echo "::error::The APK is signed with a different key than the one pinned in TETHER_CERT_SHA256. Users could not update. Check the signing secrets."
+            exit 1
+          fi
 
       - name: Collect artifacts and checksums
         run: |

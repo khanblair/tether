@@ -71,7 +71,7 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 | P0-17 | Commit size check | Blair with Claude | Done | n/a | `tools/check-commit-size.sh`, `just commits`, and a `tooling` CI step on pull requests |
 | P0-19 | Publish a signed release automatically | Blair with Claude | Done | #134, #136 | Merged; `v0.0.1` published as the latest release, signed with the pinned key. Releases are never pre-releases (#136) |
 | P0-16 | Release workflow | Blair with Claude | Done | #134 | Ran on the merge of #134 and published `v0.0.1`; issue #4 closed |
-| P1-01 | `tether-types` message, part, event, usage, error types | Blair with Claude | In progress | | Issue #5. Types, 15 new events, and FFI views done; bindings regenerated; Android compiles against them. Waiting for review |
+| P1-01 | `tether-types` message, part, event, usage, error types | Blair with Claude | In review | #138 | Issue #5. Types, 15 new events, and FFI views done; bindings regenerated; Android compiles against them. Sonnet review done and fixed; Codex review requested |
 
 ## Decisions log
 
@@ -133,7 +133,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Files | Change | PR |
 |---|---|---|---|
-| 2026-11-18 | `core/crates/tether-types/`, `core/crates/tether-ffi/src/views/`, `core/Cargo.*`, generated Kotlin bindings, `ProjectsScreen.kt`, `strings.xml` | Shared types, events, and FFI views for P1-01 | |
+| 2026-11-18 | `core/crates/tether-types/`, `core/crates/tether-ffi/src/views/`, `core/Cargo.*`, generated Kotlin bindings, `ProjectsScreen.kt`, `strings.xml` | Shared types, events, and FFI views for P1-01 | #138 |
 | 2026-11-18 | `.github/workflows/release.yml`, `docs/development.md`, `docs/progress-tracker.md` | Every release is published as the latest, never a pre-release; tracker brought up to date | #136 |
 | 2026-11-18 | Repo root, `core/`, `android/`, `tokens/`, `images/`, `tools/`, `.github/`, and placeholder READMEs | Created the P0 scaffold. The full list is in project-structure.md under Present now | n/a |
 | 2026-11-18 | `.github/workflows/release.yml`, `tools/setup-release-signing.sh`, `justfile` | Automatic release on a version with no tag; keystore and secrets setup script | #134 |

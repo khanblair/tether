@@ -96,7 +96,7 @@ prototype:
     python3 -m http.server 4173 --bind 127.0.0.1 --directory tools/prototype
 
 # Run before every push.
-check: lint slop smells test
+check: lint slop smells smell-fixtures test
     tools/gen-bindings.sh
     git diff --exit-code -- android/core-bridge/src/main/kotlin/app/tether/core/generated
 

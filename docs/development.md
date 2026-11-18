@@ -122,7 +122,7 @@ Only the four signing variables are used today. The provider and GitHub test var
 | `just bench` | Core benchmarks (planned) |
 | `just packs` | Build sandbox runtime packs locally (planned, P5) |
 | `just linux-libs` | Build PRoot libraries for both ABIs (planned, P7) |
-| `just check` | `lint`, `slop`, `smells`, `test`, and a bindings diff check: run before every push |
+| `just check` | `lint`, `slop`, `smells`, `smell-fixtures`, `test`, and a bindings diff check: run before every push |
 | `just release` | Build `assembleFullRelease` and `bundlePlayRelease` (needs the signing variables) |
 
 ## 8. Testing notes

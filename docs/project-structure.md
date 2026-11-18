@@ -321,6 +321,7 @@ android/
 ├── config/
 │   ├── detekt.yml             Detekt rules and thresholds
 │   └── lint.xml               Android lint config
+├── smell-fixtures/            detekt must fail on its long function; included only with -Ptether.smellFixtures
 ├── app/
 │   ├── build.gradle.kts       Flavors: full, play; signing configs
 │   ├── proguard-rules.pro     Keep rules for JNA and UniFFI (core-bridge/consumer-rules.pro has the same rules)

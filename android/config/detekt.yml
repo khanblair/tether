@@ -1,0 +1,51 @@
+# Thresholds from docs/code-standards.md section "Code smells and limits".
+# detekt flags a value at or above its threshold, so each threshold is the documented maximum plus one.
+build:
+  maxIssues: 0
+
+complexity:
+  LongMethod:
+    active: true
+    threshold: 51
+    ignoreAnnotated:
+      - Composable
+  NestedBlockDepth:
+    active: true
+    threshold: 4
+  LongParameterList:
+    active: true
+    functionThreshold: 6
+    constructorThreshold: 6
+    ignoreDefaultParameters: true
+    ignoreDataClasses: true
+    ignoreAnnotated:
+      - Composable
+  CognitiveComplexMethod:
+    active: true
+    threshold: 16
+  TooManyFunctions:
+    active: true
+    thresholdInFiles: 21
+    thresholdInClasses: 21
+    thresholdInInterfaces: 21
+    thresholdInObjects: 21
+    thresholdInEnums: 21
+    ignoreOverridden: true
+
+naming:
+  FunctionNaming:
+    ignoreAnnotated:
+      - Composable
+
+style:
+  MagicNumber:
+    active: true
+    ignorePropertyDeclaration: true
+    ignoreCompanionObjectPropertyDeclaration: true
+    ignoreAnnotation: true
+    ignoreNamedArgument: true
+  MaxLineLength:
+    active: true
+    maxLineLength: 100
+  UnusedPrivateMember:
+    active: true

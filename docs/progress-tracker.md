@@ -25,7 +25,7 @@ Last updated: 18 Nov 2026.
 
 ## Current phase
 
-**P0. Foundations: In progress.** The repo is public at github.com/khanblair/tether. CI is green on `main`, the docs site is live, and the app runs on an arm64 emulator. The first release, `v0.0.1`, is published and downloadable from GitHub Releases, signed with the pinned key. Open: the Android smoke test of that APK on a device. Next phase: P1, providers and sessions.
+**P1. Providers and sessions: In progress** (started with P1-01). **P0. Foundations: In progress.** The repo is public at github.com/khanblair/tether. CI is green on `main`, the docs site is live, and the app runs on an arm64 emulator. The first release, `v0.0.1`, is published and downloadable from GitHub Releases, signed with the pinned key. Open: the Android smoke test of that APK on a device.
 
 ## Phase status
 
@@ -34,7 +34,7 @@ Phases run in numeric order except P11, which runs before P10 (see build-plan.md
 | Phase | Name | Status | Started | Finished |
 |---|---|---|---|---|
 | P0 | Foundations | In progress | 2026-11-18 | |
-| P1 | Providers and sessions | Not started | | |
+| P1 | Providers and sessions | In progress | 2026-11-18 | |
 | P2 | Workspace, tools, diffs | Not started | | |
 | P3 | Control | Not started | | |
 | P4 | Git and GitHub | Not started | | |
@@ -71,11 +71,13 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 | P0-17 | Commit size check | Blair with Claude | Done | n/a | `tools/check-commit-size.sh`, `just commits`, and a `tooling` CI step on pull requests |
 | P0-19 | Publish a signed release automatically | Blair with Claude | Done | #134, #136 | Merged; `v0.0.1` published as the latest release, signed with the pinned key. Releases are never pre-releases (#136) |
 | P0-16 | Release workflow | Blair with Claude | Done | #134 | Ran on the merge of #134 and published `v0.0.1`; issue #4 closed |
+| P1-01 | `tether-types` message, part, event, usage, error types | Blair with Claude | Done | #138 | Merged; issue #5 closed. Types, 15 new events, and FFI views; bindings regenerated. Sonnet and Codex reviews done |
 
 ## Decisions log
 
 | Date | ID | Decision | Why | Docs affected |
 |---|---|---|---|---|
+| 2026-11-18 | D23 | `tether-types` holds plain Rust types with no UniFFI code; `tether-ffi` converts the types the UI sees into `View` types, with ids as plain strings. `CoreError` is an enum with one variant per kind and a `retryable()` method. Its view is a record (`kind`, `message`, `retryable`), not an error enum, because a UniFFI error is a Kotlin exception: it cannot carry shared fields, compares by reference, and a field named `message` does not compile. Every session event carries `session_id`. P1-01 defines 15 of the 25 events; the other 10 arrive with the task that first emits them | Keeps UniFFI out of the engine crates and matches the P0 pattern. Doing it in `tether-types` would need external types across crates in UniFFI. Task P1-01, issue #5 | architecture, project-structure |
 | 2026-11-18 | D22 | The `full` build updates itself: Settings > About > Updates checks the latest GitHub Release, downloads the APK, verifies it against `SHA256SUMS`, and installs it over the running app. The `play` build links to Google Play. Releases are never marked as pre-releases, because the latest release lookup skips them. Risk: a release is offered to every `full` user as soon as it is published, with no staged rollout; a bad release is fixed by publishing a higher version | Owner's request. Replaces the default of notify only in M-Q2. Task P1-20, issue #135 | mobile, build-plan |
 | 2026-11-18 | D21 | Releases publish automatically when the version in `core/Cargo.toml` has no tag, from a merged pull request, with no manual tag and no draft; the release fails unless the APK is signed with the key whose fingerprint is pinned in `TETHER_CERT_SHA256` | Owner's decision: merge, then download and test. A failed release leaves no tag, so the next push retries | development, architecture, project-structure, build-plan |
 | 2026-11-18 | D20 | Build workflow: Codex writes core Rust tasks and Haiku subagents translate prototype screens to Compose, each task on its own issue and pull request; a fresh-context Sonnet subagent reviews every pull request before merge, with `@codex review` for security-relevant code; subagents never commit, run only the checks for their own files, and run at most 4 at a time; at most 15 files per commit; pull requests are rebase-merged, never squashed; `main` requires a pull request | Owner's decision. Small reviewed PRs catch bugs that a phase-sized diff hides, and a different model reviews than wrote | code-standards, architecture, development, project-structure, build-plan |
@@ -122,6 +124,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 | Date | Who | What happened | Next |
 |---|---|---|---|
 | 2026-11-18 | Blair with Claude | Opened PR #139 with `AGENTS.md` and `CLAUDE.md`. A Sonnet review found wrong claims about what `just check` and `slop-lint` cover, commands that only run from a subfolder, and missing pointers to code-standards section 13; fixed | Merge #139 after review |
+| 2026-11-18 | Blair with Claude | Built P1-01 on `feat/p1-01-tether-types`: the shared types, the 15 new events, and their FFI views. Found that a UniFFI error enum becomes a Kotlin exception whose generated `message` clashes with a field of that name; made the error view a record instead. Sonnet review: fixed the doc, tests, and dead code it found | Sonnet review, then Blair's go to commit and open the pull request |
 | 2026-11-18 | Blair with Claude | Opened PR #134 for P0-19 (automatic release) after PR #132 merged and issue #3 closed on its own. A Sonnet review found the key could be replaced silently and the version was not validated; both fixed | Merge #134, which releases v0.0.1; download and test the APK; back up the keystore |
 | 2026-11-18 | Blair with Claude | Opened PR #132 for P0-13 (smell fixtures), the first task on its own issue and branch, with a Sonnet review before merge | Merge #132 and check that issue #3 closes |
 | 2026-11-18 | Blair with Claude | Pushed 18 commits (15 files or fewer each) to `khanblair/tether`; CI green on the first run; Pages deployed; branch protection added with the four CI checks (admins not enforced, no review requirement). Earlier the same day: scaffolded the repo: Rust workspace with UniFFI, Android app with flavors and a Velvet Plum theme, logo and launcher icon, tokens pipeline, slop-lint, CI, release and Pages workflows, docs site. Updated every doc to match, added skills, memory, and the vault (F21 to F23, phase P11). Verified on a Pixel 9 arm64 emulator: core version and event path, navigation, theme switch, instrumented test | P0-13 and P0-16, then P1 |
@@ -132,6 +135,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 | Date | Files | Change | PR |
 |---|---|---|---|
 | 2026-11-18 | `AGENTS.md`, `CLAUDE.md`, `docs/README.md`, `docs/project-structure.md`, `docs/progress-tracker.md` | Agent instruction files at the repo root, listed in the structure doc and linked from the docs README | #139 |
+| 2026-11-18 | `core/crates/tether-types/`, `core/crates/tether-ffi/src/views/`, `core/Cargo.*`, generated Kotlin bindings, `ProjectsScreen.kt`, `strings.xml` | Shared types, events, and FFI views for P1-01 | #138 |
 | 2026-11-18 | `.github/workflows/release.yml`, `docs/development.md`, `docs/progress-tracker.md` | Every release is published as the latest, never a pre-release; tracker brought up to date | #136 |
 | 2026-11-18 | Repo root, `core/`, `android/`, `tokens/`, `images/`, `tools/`, `.github/`, and placeholder READMEs | Created the P0 scaffold. The full list is in project-structure.md under Present now | n/a |
 | 2026-11-18 | `.github/workflows/release.yml`, `tools/setup-release-signing.sh`, `justfile` | Automatic release on a version with no tag; keystore and secrets setup script | #134 |
@@ -142,6 +146,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 | Date | Doc | Change |
 |---|---|---|
 | 2026-11-18 | README, project-structure | `AGENTS.md` and `CLAUDE.md` added to both trees; the README sends agents to `AGENTS.md` first |
+| 2026-11-18 | architecture, project-structure, progress-tracker | Shared types and events as built: plain Rust types, `View` types in `tether-ffi`, `CoreError` shape, 15 events defined (D23) |
 | 2026-11-18 | mobile, build-plan | In-app updates for the full build: P1-20 added, M-Q2 decided (D22) |
 | 2026-11-18 | development, progress-tracker | Releases are always the latest, never pre-releases (D21 reworded); P0-16 and P0-19 marked Done after `v0.0.1` published |
 | 2026-11-18 | development, architecture, project-structure, build-plan | Release publishes on a version bump; `just release-signing`; P0-19 added, P0-16 reworded |
@@ -163,6 +168,9 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 ## Notes for later
 
+- P1-11 (event pipeline) owns three gaps found in the P1-01 review: Kotlin needs a way to read the session id of any `CoreEventView` without a per-variant `when` (add `CoreEvent::session_id()` in the engine and expose it); `EventBus` replays 16 events and drops the oldest of any kind, but architecture section 4 says only `TextDelta` drops, and `ApprovalRequired` and `TurnFinished` must not drop; and the 400-line file limit will need `views/event.rs` split by event group once about 10 more events land.
+- P1-02 owns the stored text form of `Role`, `SessionStatus`, `PermissionMode`, `Provider`, `Executor`, and `ToolCallStatus`, and what to do with an unknown part kind in `body_json`.
+- `ToolProposed` and `ApprovalRequired` carry only the tool and the target. The approval bar will also need the executor and the rule text for "Always allow"; add the fields in the task that builds that bar.
 - Consider sub-agents for read-only exploration early in v1.1; the turn engine should not assume one agent per session.
 - Scheduled tasks (v1.2) should only run while charging and on Wi-Fi by default.
 - Watch for a stable Node-compatible WASI runtime; it would move many JavaScript tasks from Linux mode into the sandbox.

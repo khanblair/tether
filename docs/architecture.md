@@ -122,7 +122,7 @@ Status: at P0 the app shell is an exception to the rule that composables never c
    - Blocked: return an error result to the model explaining the mode.
 5. If the tool calls included edits, close the edit batch: write the checkpoint, run the quality gate, emit `DiffReady` and `QualityReport`.
 6. Send tool results back to the model; repeat from step 3 until the model ends the turn or the user interrupts.
-7. Store usage; emit `TurnFinished` with tokens and cost.
+7. Store usage; emit `UsageUpdated`, then `TurnFinished`.
 
 ### 5.2 Approval while backgrounded
 
@@ -255,11 +255,19 @@ The core's API is the UniFFI surface. There are no HTTP routes.
 
 ### Events (Rust calls Kotlin through `EventSink.on_event`)
 
+Every event for one session carries its `session_id`, so ViewModels can filter on it. `SessionUpdated` is the source of truth for session state; the turn and network events add detail the state cannot hold, and the engine emits them from the same transition so they never disagree.
+
 `SessionUpdated`, `TextDelta`, `ThinkingDelta`, `ToolProposed`, `ApprovalRequired`, `ToolStarted`, `ToolOutput` (streaming run output), `ToolFinished`, `DiffReady`, `QualityReport`, `PlanReady`, `TodoUpdated`, `AskUser`, `RunProgress`, `CompactionDone`, `UsageUpdated`, `TurnFinished`, `TurnInterrupted`, `TurnFailed`, `SessionRewound`, `LinuxStatus`, `RuntimeStatus`, `ProviderStatus`, `NetworkPaused`, `NetworkResumed`.
+
+Status: P1-01 defines `Ready` and `Test` (from P0), `SessionUpdated`, `TextDelta`, `ThinkingDelta`, `ToolProposed`, `ApprovalRequired`, `ToolStarted`, `ToolOutput`, `ToolFinished`, `UsageUpdated`, `TurnFinished`, `TurnInterrupted`, `TurnFailed`, `NetworkPaused`, `NetworkResumed`, and `ProviderStatus`. `DiffReady`, `QualityReport`, `PlanReady`, `TodoUpdated`, `AskUser`, `RunProgress`, `CompactionDone`, `SessionRewound`, `LinuxStatus`, and `RuntimeStatus` arrive with the task that first emits them.
 
 ### Shared types
 
-Defined in `tether-types` and exported as UniFFI records and enums: `ProjectId`, `SessionId`, `ToolCallId` (newtypes over strings), `PermissionMode`, `Executor`, `Provider`, `ModelRef`, `UserInput`, `Attachment`, `ToolCallView`, `DiffSummary`, `Hunk`, `Finding`, `Severity`, `UsageSnapshot`, `CoreError` (enum with `kind`, `message`, `retryable`).
+Defined in `tether-types` as plain Rust with no UniFFI code. `tether-ffi` converts the types the UI sees into UniFFI view types with a `View` suffix (`CoreEventView`, `MessageView`, `ModelRefView`, and so on). Ids cross the boundary as plain strings, and the Kotlin layer wraps them in value classes where it keeps them.
+
+Present now: `ProjectId`, `SessionId`, `MessageId`, `ToolCallId` (newtypes over strings), `Role`, `MessagePart`, `Message`, `PermissionMode`, `Executor`, `Provider`, `ModelRef`, `SessionStatus`, `ToolCallStatus`, `ConnectionStatus`, `UsageSnapshot`, and `CoreError`. Later tasks add `UserInput`, `Attachment`, `ToolCallView`, `DiffSummary`, `Hunk`, `Finding`, and `Severity`.
+
+`CoreError` is an enum with one variant per kind: `Internal`, `Network`, `Auth`, `RateLimited`, `InvalidInput`, `NotFound`, and `Cancelled`. Each variant carries a `message`. `retryable()` is true for `Network` and `RateLimited`. Over the FFI it is `CoreErrorView`, a record with `kind`, `message`, and `retryable`. Events such as `TurnFailed` carry it. It is a record and not a Kotlin exception, so events compare by value. The error type that commands return arrives with the first command that fails.
 
 Rule: every type the UI sees is a view type built for display. Internal engine types do not cross the FFI boundary.
 

@@ -130,7 +130,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Files | Change | PR |
 |---|---|---|---|
-| 2026-11-18 | `AGENTS.md`, `CLAUDE.md`, `docs/project-structure.md` | Agent instruction files at the repo root, listed in the structure doc | |
+| 2026-11-18 | `AGENTS.md`, `CLAUDE.md`, `docs/project-structure.md` | Agent instruction files at the repo root, listed in the structure doc | #139 |
 | 2026-11-18 | `.github/workflows/release.yml`, `docs/development.md`, `docs/progress-tracker.md` | Every release is published as the latest, never a pre-release; tracker brought up to date | #136 |
 | 2026-11-18 | Repo root, `core/`, `android/`, `tokens/`, `images/`, `tools/`, `.github/`, and placeholder READMEs | Created the P0 scaffold. The full list is in project-structure.md under Present now | n/a |
 | 2026-11-18 | `.github/workflows/release.yml`, `tools/setup-release-signing.sh`, `justfile` | Automatic release on a version with no tag; keystore and secrets setup script | #134 |

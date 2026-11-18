@@ -121,6 +121,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Who | What happened | Next |
 |---|---|---|---|
+| 2026-11-18 | Blair with Claude | Opened PR #139 with `AGENTS.md` and `CLAUDE.md`. A Sonnet review found wrong claims about what `just check` and `slop-lint` cover, commands that only run from a subfolder, and missing pointers to code-standards section 13; fixed | Merge #139 after review |
 | 2026-11-18 | Blair with Claude | Opened PR #134 for P0-19 (automatic release) after PR #132 merged and issue #3 closed on its own. A Sonnet review found the key could be replaced silently and the version was not validated; both fixed | Merge #134, which releases v0.0.1; download and test the APK; back up the keystore |
 | 2026-11-18 | Blair with Claude | Opened PR #132 for P0-13 (smell fixtures), the first task on its own issue and branch, with a Sonnet review before merge | Merge #132 and check that issue #3 closes |
 | 2026-11-18 | Blair with Claude | Pushed 18 commits (15 files or fewer each) to `khanblair/tether`; CI green on the first run; Pages deployed; branch protection added with the four CI checks (admins not enforced, no review requirement). Earlier the same day: scaffolded the repo: Rust workspace with UniFFI, Android app with flavors and a Velvet Plum theme, logo and launcher icon, tokens pipeline, slop-lint, CI, release and Pages workflows, docs site. Updated every doc to match, added skills, memory, and the vault (F21 to F23, phase P11). Verified on a Pixel 9 arm64 emulator: core version and event path, navigation, theme switch, instrumented test | P0-13 and P0-16, then P1 |
@@ -130,7 +131,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Files | Change | PR |
 |---|---|---|---|
-| 2026-11-18 | `AGENTS.md`, `CLAUDE.md`, `docs/project-structure.md` | Agent instruction files at the repo root, listed in the structure doc | #139 |
+| 2026-11-18 | `AGENTS.md`, `CLAUDE.md`, `docs/README.md`, `docs/project-structure.md`, `docs/progress-tracker.md` | Agent instruction files at the repo root, listed in the structure doc and linked from the docs README | #139 |
 | 2026-11-18 | `.github/workflows/release.yml`, `docs/development.md`, `docs/progress-tracker.md` | Every release is published as the latest, never a pre-release; tracker brought up to date | #136 |
 | 2026-11-18 | Repo root, `core/`, `android/`, `tokens/`, `images/`, `tools/`, `.github/`, and placeholder READMEs | Created the P0 scaffold. The full list is in project-structure.md under Present now | n/a |
 | 2026-11-18 | `.github/workflows/release.yml`, `tools/setup-release-signing.sh`, `justfile` | Automatic release on a version with no tag; keystore and secrets setup script | #134 |
@@ -140,7 +141,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Doc | Change |
 |---|---|---|
-| 2026-11-18 | project-structure | `AGENTS.md` and `CLAUDE.md` added to both trees |
+| 2026-11-18 | README, project-structure | `AGENTS.md` and `CLAUDE.md` added to both trees; the README sends agents to `AGENTS.md` first |
 | 2026-11-18 | mobile, build-plan | In-app updates for the full build: P1-20 added, M-Q2 decided (D22) |
 | 2026-11-18 | development, progress-tracker | Releases are always the latest, never pre-releases (D21 reworded); P0-16 and P0-19 marked Done after `v0.0.1` published |
 | 2026-11-18 | development, architecture, project-structure, build-plan | Release publishes on a version bump; `just release-signing`; P0-19 added, P0-16 reworded |

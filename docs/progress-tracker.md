@@ -76,6 +76,7 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 
 | Date | ID | Decision | Why | Docs affected |
 |---|---|---|---|---|
+| 2026-11-18 | D22 | The `full` build updates itself: Settings > About > Updates checks the latest GitHub Release, downloads the APK, verifies it against `SHA256SUMS`, and installs it over the running app. The `play` build links to Google Play. Releases are never marked as pre-releases, because the latest release lookup skips them | Owner's request. Replaces the default of notify only in M-Q2. Task P1-20, issue #135 | mobile, build-plan |
 | 2026-11-18 | D21 | Releases publish automatically when the version in `core/Cargo.toml` has no tag, from a merged pull request, with no manual tag and no draft; a version below 1.0.0 is a pre-release; the release fails unless the APK is signed with the key whose fingerprint is pinned in `TETHER_CERT_SHA256` | Owner's decision: merge, then download and test. A failed release leaves no tag, so the next push retries | development, architecture, project-structure, build-plan |
 | 2026-11-18 | D20 | Build workflow: Codex writes core Rust tasks and Haiku subagents translate prototype screens to Compose, each task on its own issue and pull request; a fresh-context Sonnet subagent reviews every pull request before merge, with `@codex review` for security-relevant code; subagents never commit, run only the checks for their own files, and run at most 4 at a time; at most 15 files per commit; pull requests are rebase-merged, never squashed; `main` requires a pull request | Owner's decision. Small reviewed PRs catch bugs that a phase-sized diff hides, and a different model reviews than wrote | code-standards, architecture, development, project-structure, build-plan |
 | 2026-11-18 | D19 | The docs site is built from `docs/` by `tools/site/build.ts` and deployed with GitHub Pages | One source of truth; the build fails on a broken link. No new top-level folder | README, project-structure, development, architecture |
@@ -138,6 +139,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Doc | Change |
 |---|---|---|
+| 2026-11-18 | mobile, build-plan | In-app updates for the full build: P1-20 added, M-Q2 decided (D22) |
 | 2026-11-18 | development, architecture, project-structure, build-plan | Release publishes on a version bump; `just release-signing`; P0-19 added, P0-16 reworded |
 | 2026-11-18 | architecture, development, project-structure | Smell fixtures for Clippy and detekt (P0-13) |
 | 2026-11-18 | code-standards, architecture, project-structure | Pull requests must close an issue (`Closes #N`) or say `No issue`; `pr.yml` checks it |

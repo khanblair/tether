@@ -5,6 +5,7 @@
 ## Checklist
 
 - [ ] `just check` passes locally
+- [ ] Every commit touches 15 files or fewer (`just commits`)
 - [ ] Docs match the change (behavior, structure, a decision, a library, or a UI value)
 - [ ] `docs/progress-tracker.md` has a task status, log entry, and doc changes entry
 - [ ] No secrets, keys, or personal data in the diff

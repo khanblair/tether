@@ -65,6 +65,11 @@ smells:
     tools/check-file-length.sh --self-test
     tools/check-file-length.sh
 
+# Fail if a commit on this branch touches more than 15 files.
+commits:
+    tools/check-commit-size.sh --self-test
+    tools/check-commit-size.sh
+
 # Regenerate the UniFFI Kotlin bindings.
 bindings:
     tools/gen-bindings.sh

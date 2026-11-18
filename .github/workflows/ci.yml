@@ -1,0 +1,138 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  NDK_VERSION: 27.1.12297006
+
+jobs:
+  rust:
+    name: rust
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install the pinned toolchain and Android targets
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny
+      - name: Format
+        run: cargo fmt --all --check
+        working-directory: core
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+        working-directory: core
+      - name: Tests
+        run: cargo test --workspace
+        working-directory: core
+      - name: Check Android targets
+        run: |
+          cargo check --workspace --target aarch64-linux-android
+          cargo check --workspace --target x86_64-linux-android
+        working-directory: core
+      - name: Licenses and advisories
+        run: |
+          cargo deny check
+          cargo deny --manifest-path ../tools/slop-lint/Cargo.toml --config deny.toml check
+        working-directory: core
+
+  tooling:
+    name: tooling
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: tools/slop-lint
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: The NDK version in the workflows matches gradle.properties
+        run: test "$(sed -n 's/^tether.ndkVersion=//p' android/gradle.properties)" = "$NDK_VERSION"
+      - name: Tokens are current and every contrast pair passes
+        run: node tokens/generate.ts --check
+      - name: slop-lint tests and lint
+        run: |
+          cargo fmt --check
+          cargo clippy --all-targets -- -D warnings
+          cargo test
+        working-directory: tools/slop-lint
+      - name: Banned words and slop patterns
+        run: cargo run -q --manifest-path tools/slop-lint/Cargo.toml -- docs README.md android/app/src/main/res/values/strings.xml
+      - name: File length
+        run: |
+          tools/check-file-length.sh --self-test
+          tools/check-file-length.sh
+      - name: Docs site builds and its links resolve
+        run: node tools/site/build.ts
+
+  bindings:
+    name: bindings
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core
+      - name: Regenerate UniFFI Kotlin bindings
+        run: tools/gen-bindings.sh
+      - name: Fail if the committed bindings are stale
+        run: |
+          git add -N android/core-bridge
+          git diff --exit-code -- android/core-bridge/src/main/kotlin/app/tether/core/generated \
+            || { echo "Bindings are stale. Run 'just bindings' and commit."; exit 1; }
+
+  android:
+    name: android
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk --locked --version "^4"
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools platforms;android-37.0 build-tools;36.0.0 ndk;${{ env.NDK_VERSION }}
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Lint, unit tests, and both flavors
+        run: >
+          ./gradlew --no-daemon
+          qualityCheck lintFullDebug lintPlayDebug
+          :core-bridge:testDebugUnitTest :designsystem:testDebugUnitTest
+          testFullDebugUnitTest testPlayDebugUnitTest
+          assembleFullDebug assemblePlayDebug
+        working-directory: android
+      - uses: actions/upload-artifact@v7
+        with:
+          name: debug-apks
+          path: android/app/build/outputs/apk/*/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7

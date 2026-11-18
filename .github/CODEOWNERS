@@ -1,0 +1,7 @@
+# Review owners per folder. Security-relevant files need an owner review.
+*                                   @khanblair
+/runtimes/manifest.template.json    @khanblair
+/linux/rootfs-manifest.json         @khanblair
+/.github/                           @khanblair
+/core/crates/tether-secrets/        @khanblair
+/core/crates/tether-workspace/      @khanblair

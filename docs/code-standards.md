@@ -98,7 +98,7 @@ Rules:
 - At most 15 files per commit. `tools/check-commit-size.sh` runs in CI on every pull request and fails when a commit goes over.
 - Every PR fills the template: the issue it closes (`Closes #N`, or `No issue: <reason>`), what changed, how it was tested, docs updated, progress tracker updated. The `issue-link` check fails a PR whose description has neither.
 - Every pull request is reviewed before merge by a different model than the one that wrote it: a fresh-context Sonnet review, plus `@codex review` for security-relevant code. The owner merges. Security-relevant files need a CODEOWNERS review. GitHub approvals are required once there is a second maintainer.
-- Never force push to `main`. Tags `v<major>.<minor>.<patch>` only from `main`.
+- Never force push to `main`. Never push release tags by hand: `release.yml` creates `v<major>.<minor>.<patch>` when it publishes a release, and a tag that already exists stops that version from releasing.
 
 ## 11. Code smells
 

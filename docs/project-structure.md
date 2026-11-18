@@ -62,7 +62,7 @@ tether/
 │   ├── slop-lint/             Rust CLI with its own workspace and tests
 │   ├── site/{build.ts, site.css}   Builds the Pages site from docs/
 │   ├── prototype/             Clickable mobile UI prototype (HTML, CSS, JavaScript; no build step)
-│   └── gen-bindings.sh  gen-icons.ts  check-file-length.sh  check-commit-size.sh  check-smell-fixtures.sh  setup.sh
+│   └── gen-bindings.sh  gen-icons.ts  check-file-length.sh  check-commit-size.sh  check-smell-fixtures.sh  setup.sh  setup-release-signing.sh
 └── .github/
     ├── workflows/{ci.yml, pr.yml, release.yml, pages.yml}
     └── pull_request_template.md  CODEOWNERS  dependabot.yml
@@ -451,6 +451,7 @@ tools/
 ├── check-file-length.sh     Fails on files over the limits in code-standards.md
 ├── check-commit-size.sh     Fails on a commit that touches more than 15 files
 ├── check-smell-fixtures.sh  Proves Clippy and detekt fail on a function over the line limit
+├── setup-release-signing.sh One-time: create the release keystore and store it as GitHub secrets
 ├── gen-bindings.sh          Regenerates UniFFI Kotlin bindings
 ├── gen-icons.ts             Renders PNG brand assets from images/logo.svg
 ├── setup.sh                 Toolchain check behind `just setup`
@@ -469,7 +470,7 @@ tools/
 │   ├── pr.yml               issue-link check on every pull request and description edit
 │   ├── nightly.yml          Benchmarks and live provider smoke tests (planned, P1)
 │   ├── pages.yml            Builds and deploys the docs site to GitHub Pages
-│   └── release.yml          Build, sign, and open a draft GitHub Release for both flavors
+│   └── release.yml          Build, sign, and publish a GitHub Release for both flavors when the core version has no tag
 ├── pull_request_template.md Checklist including docs and progress tracker
 ├── dependabot.yml           Weekly dependency update PRs
 └── CODEOWNERS               Review owners per folder

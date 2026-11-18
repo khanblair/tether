@@ -62,7 +62,7 @@ tether/
 │   ├── prototype/             Clickable mobile UI prototype (HTML, CSS, JavaScript; no build step)
 │   └── gen-bindings.sh  gen-icons.ts  check-file-length.sh  check-commit-size.sh  setup.sh
 └── .github/
-    ├── workflows/{ci.yml, release.yml, pages.yml}
+    ├── workflows/{ci.yml, pr.yml, release.yml, pages.yml}
     └── pull_request_template.md  CODEOWNERS  dependabot.yml
 ```
 
@@ -461,6 +461,7 @@ tools/
 .github/
 ├── workflows/
 │   ├── ci.yml               rust, tooling, bindings, android jobs
+│   ├── pr.yml               issue-link check on every pull request and description edit
 │   ├── nightly.yml          Benchmarks and live provider smoke tests (planned, P1)
 │   ├── pages.yml            Builds and deploys the docs site to GitHub Pages
 │   └── release.yml          Build, sign, and open a draft GitHub Release for both flavors

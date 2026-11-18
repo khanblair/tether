@@ -1,3 +1,9 @@
+## Issue
+
+Closes #
+
+<!-- Put the issue number after the #. If there is no issue, replace the line with the words "no issue", a colon, and your reason. -->
+
 ## What changed
 
 <!-- One or two sentences. Lead with the result. -->

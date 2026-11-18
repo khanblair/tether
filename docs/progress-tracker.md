@@ -133,6 +133,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Doc | Change |
 |---|---|---|
+| 2026-11-18 | code-standards, architecture, project-structure | Pull requests must close an issue (`Closes #N`) or say `No issue`; `pr.yml` checks it |
 | 2026-11-18 | project-structure, development, build-plan | Added `tools/prototype` and `just prototype`; P0-18 added |
 | 2026-11-18 | code-standards, architecture, development, project-structure, build-plan | Git workflow: rebase merge, 15 file commit limit with its CI check, model review before merge; P0-17 added |
 | 2026-11-18 | ui-tokens | Rewritten for Velvet Plum: design direction, every color table, contrast table from the checker, generated outputs, no CSS block copy |

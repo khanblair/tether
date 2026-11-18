@@ -27,6 +27,7 @@
     <string name="projects_screens_title">Screens</string>
     <string name="core_event_ready">Ready, core %1$s</string>
     <string name="core_event_test">Test: %1$s</string>
+    <string name="core_event_other">Core event</string>
 
     <!-- Settings -->
     <string name="settings_theme_title">Theme</string>

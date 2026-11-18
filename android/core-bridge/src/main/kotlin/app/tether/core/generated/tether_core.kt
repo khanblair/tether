@@ -869,7 +869,7 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_tether_core_checksum_method_tethercore_emit_test_event() and 0xFFFF) != 57350) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_tether_core_checksum_method_eventsink_on_event() and 0xFFFF) != 26203) {
+    if ((lib.uniffi_tether_core_checksum_method_eventsink_on_event() and 0xFFFF) != 54286) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_constructor_tethercore_new() and 0xFFFF) != 22145) {
@@ -1061,6 +1061,98 @@ private class JavaLangRefCleanable(
     val cleanable: java.lang.ref.Cleaner.Cleanable
 ) : UniffiCleaner.Cleanable {
     override fun clean() = cleanable.clean()
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterUInt: FfiConverter<UInt, Int> {
+    override fun lift(value: Int): UInt {
+        return value.toUInt()
+    }
+
+    override fun read(buf: ByteBuffer): UInt {
+        return lift(buf.getInt())
+    }
+
+    override fun lower(value: UInt): Int {
+        return value.toInt()
+    }
+
+    override fun allocationSize(value: UInt) = 4UL
+
+    override fun write(value: UInt, buf: ByteBuffer) {
+        buf.putInt(value.toInt())
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterULong: FfiConverter<ULong, Long> {
+    override fun lift(value: Long): ULong {
+        return value.toULong()
+    }
+
+    override fun read(buf: ByteBuffer): ULong {
+        return lift(buf.getLong())
+    }
+
+    override fun lower(value: ULong): Long {
+        return value.toLong()
+    }
+
+    override fun allocationSize(value: ULong) = 8UL
+
+    override fun write(value: ULong, buf: ByteBuffer) {
+        buf.putLong(value.toLong())
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterLong: FfiConverter<Long, Long> {
+    override fun lift(value: Long): Long {
+        return value
+    }
+
+    override fun read(buf: ByteBuffer): Long {
+        return buf.getLong()
+    }
+
+    override fun lower(value: Long): Long {
+        return value
+    }
+
+    override fun allocationSize(value: Long) = 8UL
+
+    override fun write(value: Long, buf: ByteBuffer) {
+        buf.putLong(value)
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterBoolean: FfiConverter<Boolean, Byte> {
+    override fun lift(value: Byte): Boolean {
+        return value.toInt() != 0
+    }
+
+    override fun read(buf: ByteBuffer): Boolean {
+        return lift(buf.get())
+    }
+
+    override fun lower(value: Boolean): Byte {
+        return if (value) 1.toByte() else 0.toByte()
+    }
+
+    override fun allocationSize(value: Boolean) = 1UL
+
+    override fun write(value: Boolean, buf: ByteBuffer) {
+        buf.put(lower(value))
+    }
 }
 
 /**
@@ -1725,7 +1817,293 @@ public object FfiConverterTypeTetherCore: FfiConverter<TetherCore, Long> {
 
 
 /**
- * FFI view of [`CoreEvent`].
+ * FFI view of [`CoreError`]. It is a plain record, not a Kotlin exception, so
+ * events that carry it compare by value and cost no stack trace.
+ */
+data class CoreErrorView (
+    /**
+     * What kind of failure it is.
+     */
+    var `kind`: ErrorKindView
+    , 
+    /**
+     * What went wrong, safe to show.
+     */
+    var `message`: kotlin.String
+    , 
+    /**
+     * True when the same request can succeed on a retry.
+     */
+    var `retryable`: kotlin.Boolean
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreErrorView: FfiConverterRustBuffer<CoreErrorView> {
+    override fun read(buf: ByteBuffer): CoreErrorView {
+        return CoreErrorView(
+            FfiConverterTypeErrorKindView.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CoreErrorView) = (
+            FfiConverterTypeErrorKindView.allocationSize(value.`kind`) +
+            FfiConverterString.allocationSize(value.`message`) +
+            FfiConverterBoolean.allocationSize(value.`retryable`)
+    )
+
+    override fun write(value: CoreErrorView, buf: ByteBuffer) {
+            FfiConverterTypeErrorKindView.write(value.`kind`, buf)
+            FfiConverterString.write(value.`message`, buf)
+            FfiConverterBoolean.write(value.`retryable`, buf)
+    }
+}
+
+
+
+/**
+ * FFI view of [`Message`].
+ */
+data class MessageView (
+    /**
+     * Message identifier.
+     */
+    var `id`: kotlin.String
+    , 
+    /**
+     * The session the message belongs to.
+     */
+    var `sessionId`: kotlin.String
+    , 
+    /**
+     * Who wrote it.
+     */
+    var `role`: RoleView
+    , 
+    /**
+     * Position in the session, starting at 0.
+     */
+    var `seq`: kotlin.UInt
+    , 
+    /**
+     * Creation time in Unix milliseconds.
+     */
+    var `createdAtMs`: kotlin.Long
+    , 
+    /**
+     * True when a rewind removed this message from the live transcript.
+     */
+    var `rewound`: kotlin.Boolean
+    , 
+    /**
+     * The parts in order.
+     */
+    var `parts`: List<MessagePartView>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeMessageView: FfiConverterRustBuffer<MessageView> {
+    override fun read(buf: ByteBuffer): MessageView {
+        return MessageView(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterTypeRoleView.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterSequenceTypeMessagePartView.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: MessageView) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`sessionId`) +
+            FfiConverterTypeRoleView.allocationSize(value.`role`) +
+            FfiConverterUInt.allocationSize(value.`seq`) +
+            FfiConverterLong.allocationSize(value.`createdAtMs`) +
+            FfiConverterBoolean.allocationSize(value.`rewound`) +
+            FfiConverterSequenceTypeMessagePartView.allocationSize(value.`parts`)
+    )
+
+    override fun write(value: MessageView, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`sessionId`, buf)
+            FfiConverterTypeRoleView.write(value.`role`, buf)
+            FfiConverterUInt.write(value.`seq`, buf)
+            FfiConverterLong.write(value.`createdAtMs`, buf)
+            FfiConverterBoolean.write(value.`rewound`, buf)
+            FfiConverterSequenceTypeMessagePartView.write(value.`parts`, buf)
+    }
+}
+
+
+
+/**
+ * FFI view of [`ModelRef`].
+ */
+data class ModelRefView (
+    /**
+     * The provider that serves the model.
+     */
+    var `provider`: ProviderView
+    , 
+    /**
+     * The provider's own model identifier.
+     */
+    var `modelId`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeModelRefView: FfiConverterRustBuffer<ModelRefView> {
+    override fun read(buf: ByteBuffer): ModelRefView {
+        return ModelRefView(
+            FfiConverterTypeProviderView.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ModelRefView) = (
+            FfiConverterTypeProviderView.allocationSize(value.`provider`) +
+            FfiConverterString.allocationSize(value.`modelId`)
+    )
+
+    override fun write(value: ModelRefView, buf: ByteBuffer) {
+            FfiConverterTypeProviderView.write(value.`provider`, buf)
+            FfiConverterString.write(value.`modelId`, buf)
+    }
+}
+
+
+
+/**
+ * FFI view of [`UsageSnapshot`].
+ */
+data class UsageSnapshotView (
+    /**
+     * Input tokens sent to the provider.
+     */
+    var `tokensIn`: kotlin.ULong
+    , 
+    /**
+     * Output tokens received from the provider.
+     */
+    var `tokensOut`: kotlin.ULong
+    , 
+    /**
+     * Cost in millionths of a US dollar.
+     */
+    var `costMicros`: kotlin.ULong
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeUsageSnapshotView: FfiConverterRustBuffer<UsageSnapshotView> {
+    override fun read(buf: ByteBuffer): UsageSnapshotView {
+        return UsageSnapshotView(
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: UsageSnapshotView) = (
+            FfiConverterULong.allocationSize(value.`tokensIn`) +
+            FfiConverterULong.allocationSize(value.`tokensOut`) +
+            FfiConverterULong.allocationSize(value.`costMicros`)
+    )
+
+    override fun write(value: UsageSnapshotView, buf: ByteBuffer) {
+            FfiConverterULong.write(value.`tokensIn`, buf)
+            FfiConverterULong.write(value.`tokensOut`, buf)
+            FfiConverterULong.write(value.`costMicros`, buf)
+    }
+}
+
+
+
+/**
+ * FFI view of [`ConnectionStatus`].
+ */
+
+enum class ConnectionStatusView {
+    
+    UNSET,
+    TESTING,
+    OK,
+    BAD_KEY,
+    NETWORK_ERROR,
+    BLOCKED;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeConnectionStatusView: FfiConverterRustBuffer<ConnectionStatusView> {
+    override fun read(buf: ByteBuffer) = try {
+        ConnectionStatusView.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: ConnectionStatusView) = 4UL
+
+    override fun write(value: ConnectionStatusView, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
+ * FFI view of [`CoreEvent`]. Ids are plain strings.
  */
 sealed class CoreEventView {
     
@@ -1759,6 +2137,307 @@ sealed class CoreEventView {
         companion object
     }
     
+    /**
+     * The session moved to a new state.
+     */
+    data class SessionUpdated(
+        /**
+         * The session that changed.
+         */
+        val `sessionId`: kotlin.String, 
+        /**
+         * Its new state.
+         */
+        val `status`: app.tether.core.generated.SessionStatusView) : CoreEventView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * A batch of reply text.
+     */
+    data class TextDelta(
+        /**
+         * The session the text belongs to.
+         */
+        val `sessionId`: kotlin.String, 
+        /**
+         * The assistant message being written.
+         */
+        val `messageId`: kotlin.String, 
+        /**
+         * The new text.
+         */
+        val `text`: kotlin.String) : CoreEventView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * A batch of model reasoning.
+     */
+    data class ThinkingDelta(
+        /**
+         * The session the text belongs to.
+         */
+        val `sessionId`: kotlin.String, 
+        /**
+         * The assistant message being written.
+         */
+        val `messageId`: kotlin.String, 
+        /**
+         * The new text.
+         */
+        val `text`: kotlin.String) : CoreEventView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * The model proposed a tool call.
+     */
+    data class ToolProposed(
+        /**
+         * The session that owns the call.
+         */
+        val `sessionId`: kotlin.String, 
+        /**
+         * The proposed call.
+         */
+        val `toolCallId`: kotlin.String, 
+        /**
+         * Tool name.
+         */
+        val `tool`: kotlin.String, 
+        /**
+         * The exact command, path, or URL the tool will touch.
+         */
+        val `target`: kotlin.String) : CoreEventView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * A tool call waits for the user to allow or deny it.
+     */
+    data class ApprovalRequired(
+        /**
+         * The session that owns the call.
+         */
+        val `sessionId`: kotlin.String, 
+        /**
+         * The call that needs approval.
+         */
+        val `toolCallId`: kotlin.String, 
+        /**
+         * Tool name.
+         */
+        val `tool`: kotlin.String, 
+        /**
+         * The exact command, path, or URL the tool will touch.
+         */
+        val `target`: kotlin.String) : CoreEventView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * A tool call started running.
+     */
+    data class ToolStarted(
+        /**
+         * The session that owns the call.
+         */
+        val `sessionId`: kotlin.String, 
+        /**
+         * The call that started.
+         */
+        val `toolCallId`: kotlin.String) : CoreEventView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * A chunk of output from a running tool call.
+     */
+    data class ToolOutput(
+        /**
+         * The session that owns the call.
+         */
+        val `sessionId`: kotlin.String, 
+        /**
+         * The call that produced the output.
+         */
+        val `toolCallId`: kotlin.String, 
+        /**
+         * The new output text.
+         */
+        val `chunk`: kotlin.String) : CoreEventView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * A tool call reached a final state.
+     */
+    data class ToolFinished(
+        /**
+         * The session that owns the call.
+         */
+        val `sessionId`: kotlin.String, 
+        /**
+         * The call that finished.
+         */
+        val `toolCallId`: kotlin.String, 
+        /**
+         * How it ended.
+         */
+        val `status`: app.tether.core.generated.ToolCallStatusView) : CoreEventView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * Session totals changed.
+     */
+    data class UsageUpdated(
+        /**
+         * The session the totals belong to.
+         */
+        val `sessionId`: kotlin.String, 
+        /**
+         * The new totals.
+         */
+        val `usage`: app.tether.core.generated.UsageSnapshotView) : CoreEventView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * The turn ended normally.
+     */
+    data class TurnFinished(
+        /**
+         * The session whose turn ended.
+         */
+        val `sessionId`: kotlin.String) : CoreEventView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * The user or the system stopped the turn.
+     */
+    data class TurnInterrupted(
+        /**
+         * The session whose turn stopped.
+         */
+        val `sessionId`: kotlin.String) : CoreEventView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * The turn ended with an error.
+     */
+    data class TurnFailed(
+        /**
+         * The session whose turn failed.
+         */
+        val `sessionId`: kotlin.String, 
+        /**
+         * What went wrong.
+         */
+        val `error`: app.tether.core.generated.CoreErrorView) : CoreEventView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * The network went down and the session paused.
+     */
+    data class NetworkPaused(
+        /**
+         * The session that paused.
+         */
+        val `sessionId`: kotlin.String) : CoreEventView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * The network came back and the session resumed.
+     */
+    data class NetworkResumed(
+        /**
+         * The session that resumed.
+         */
+        val `sessionId`: kotlin.String) : CoreEventView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * A provider connection changed state.
+     */
+    data class ProviderStatus(
+        /**
+         * The provider that changed.
+         */
+        val `provider`: app.tether.core.generated.ProviderView, 
+        /**
+         * Its new state.
+         */
+        val `status`: app.tether.core.generated.ConnectionStatusView) : CoreEventView()
+        
+    {
+        
+
+        companion object
+    }
+    
 
     
 
@@ -1781,6 +2460,70 @@ public object FfiConverterTypeCoreEventView : FfiConverterRustBuffer<CoreEventVi
             2 -> CoreEventView.Test(
                 FfiConverterString.read(buf),
                 )
+            3 -> CoreEventView.SessionUpdated(
+                FfiConverterString.read(buf),
+                FfiConverterTypeSessionStatusView.read(buf),
+                )
+            4 -> CoreEventView.TextDelta(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                )
+            5 -> CoreEventView.ThinkingDelta(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                )
+            6 -> CoreEventView.ToolProposed(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                )
+            7 -> CoreEventView.ApprovalRequired(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                )
+            8 -> CoreEventView.ToolStarted(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                )
+            9 -> CoreEventView.ToolOutput(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                )
+            10 -> CoreEventView.ToolFinished(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                FfiConverterTypeToolCallStatusView.read(buf),
+                )
+            11 -> CoreEventView.UsageUpdated(
+                FfiConverterString.read(buf),
+                FfiConverterTypeUsageSnapshotView.read(buf),
+                )
+            12 -> CoreEventView.TurnFinished(
+                FfiConverterString.read(buf),
+                )
+            13 -> CoreEventView.TurnInterrupted(
+                FfiConverterString.read(buf),
+                )
+            14 -> CoreEventView.TurnFailed(
+                FfiConverterString.read(buf),
+                FfiConverterTypeCoreErrorView.read(buf),
+                )
+            15 -> CoreEventView.NetworkPaused(
+                FfiConverterString.read(buf),
+                )
+            16 -> CoreEventView.NetworkResumed(
+                FfiConverterString.read(buf),
+                )
+            17 -> CoreEventView.ProviderStatus(
+                FfiConverterTypeProviderView.read(buf),
+                FfiConverterTypeConnectionStatusView.read(buf),
+                )
             else -> throw RuntimeException("invalid enum value, something is very wrong!!")
         }
     }
@@ -1800,6 +2543,130 @@ public object FfiConverterTypeCoreEventView : FfiConverterRustBuffer<CoreEventVi
                 + FfiConverterString.allocationSize(value.`message`)
             )
         }
+        is CoreEventView.SessionUpdated -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`sessionId`)
+                + FfiConverterTypeSessionStatusView.allocationSize(value.`status`)
+            )
+        }
+        is CoreEventView.TextDelta -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`sessionId`)
+                + FfiConverterString.allocationSize(value.`messageId`)
+                + FfiConverterString.allocationSize(value.`text`)
+            )
+        }
+        is CoreEventView.ThinkingDelta -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`sessionId`)
+                + FfiConverterString.allocationSize(value.`messageId`)
+                + FfiConverterString.allocationSize(value.`text`)
+            )
+        }
+        is CoreEventView.ToolProposed -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`sessionId`)
+                + FfiConverterString.allocationSize(value.`toolCallId`)
+                + FfiConverterString.allocationSize(value.`tool`)
+                + FfiConverterString.allocationSize(value.`target`)
+            )
+        }
+        is CoreEventView.ApprovalRequired -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`sessionId`)
+                + FfiConverterString.allocationSize(value.`toolCallId`)
+                + FfiConverterString.allocationSize(value.`tool`)
+                + FfiConverterString.allocationSize(value.`target`)
+            )
+        }
+        is CoreEventView.ToolStarted -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`sessionId`)
+                + FfiConverterString.allocationSize(value.`toolCallId`)
+            )
+        }
+        is CoreEventView.ToolOutput -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`sessionId`)
+                + FfiConverterString.allocationSize(value.`toolCallId`)
+                + FfiConverterString.allocationSize(value.`chunk`)
+            )
+        }
+        is CoreEventView.ToolFinished -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`sessionId`)
+                + FfiConverterString.allocationSize(value.`toolCallId`)
+                + FfiConverterTypeToolCallStatusView.allocationSize(value.`status`)
+            )
+        }
+        is CoreEventView.UsageUpdated -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`sessionId`)
+                + FfiConverterTypeUsageSnapshotView.allocationSize(value.`usage`)
+            )
+        }
+        is CoreEventView.TurnFinished -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`sessionId`)
+            )
+        }
+        is CoreEventView.TurnInterrupted -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`sessionId`)
+            )
+        }
+        is CoreEventView.TurnFailed -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`sessionId`)
+                + FfiConverterTypeCoreErrorView.allocationSize(value.`error`)
+            )
+        }
+        is CoreEventView.NetworkPaused -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`sessionId`)
+            )
+        }
+        is CoreEventView.NetworkResumed -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`sessionId`)
+            )
+        }
+        is CoreEventView.ProviderStatus -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterTypeProviderView.allocationSize(value.`provider`)
+                + FfiConverterTypeConnectionStatusView.allocationSize(value.`status`)
+            )
+        }
     }
 
     override fun write(value: CoreEventView, buf: ByteBuffer) {
@@ -1814,11 +2681,734 @@ public object FfiConverterTypeCoreEventView : FfiConverterRustBuffer<CoreEventVi
                 FfiConverterString.write(value.`message`, buf)
                 Unit
             }
+            is CoreEventView.SessionUpdated -> {
+                buf.putInt(3)
+                FfiConverterString.write(value.`sessionId`, buf)
+                FfiConverterTypeSessionStatusView.write(value.`status`, buf)
+                Unit
+            }
+            is CoreEventView.TextDelta -> {
+                buf.putInt(4)
+                FfiConverterString.write(value.`sessionId`, buf)
+                FfiConverterString.write(value.`messageId`, buf)
+                FfiConverterString.write(value.`text`, buf)
+                Unit
+            }
+            is CoreEventView.ThinkingDelta -> {
+                buf.putInt(5)
+                FfiConverterString.write(value.`sessionId`, buf)
+                FfiConverterString.write(value.`messageId`, buf)
+                FfiConverterString.write(value.`text`, buf)
+                Unit
+            }
+            is CoreEventView.ToolProposed -> {
+                buf.putInt(6)
+                FfiConverterString.write(value.`sessionId`, buf)
+                FfiConverterString.write(value.`toolCallId`, buf)
+                FfiConverterString.write(value.`tool`, buf)
+                FfiConverterString.write(value.`target`, buf)
+                Unit
+            }
+            is CoreEventView.ApprovalRequired -> {
+                buf.putInt(7)
+                FfiConverterString.write(value.`sessionId`, buf)
+                FfiConverterString.write(value.`toolCallId`, buf)
+                FfiConverterString.write(value.`tool`, buf)
+                FfiConverterString.write(value.`target`, buf)
+                Unit
+            }
+            is CoreEventView.ToolStarted -> {
+                buf.putInt(8)
+                FfiConverterString.write(value.`sessionId`, buf)
+                FfiConverterString.write(value.`toolCallId`, buf)
+                Unit
+            }
+            is CoreEventView.ToolOutput -> {
+                buf.putInt(9)
+                FfiConverterString.write(value.`sessionId`, buf)
+                FfiConverterString.write(value.`toolCallId`, buf)
+                FfiConverterString.write(value.`chunk`, buf)
+                Unit
+            }
+            is CoreEventView.ToolFinished -> {
+                buf.putInt(10)
+                FfiConverterString.write(value.`sessionId`, buf)
+                FfiConverterString.write(value.`toolCallId`, buf)
+                FfiConverterTypeToolCallStatusView.write(value.`status`, buf)
+                Unit
+            }
+            is CoreEventView.UsageUpdated -> {
+                buf.putInt(11)
+                FfiConverterString.write(value.`sessionId`, buf)
+                FfiConverterTypeUsageSnapshotView.write(value.`usage`, buf)
+                Unit
+            }
+            is CoreEventView.TurnFinished -> {
+                buf.putInt(12)
+                FfiConverterString.write(value.`sessionId`, buf)
+                Unit
+            }
+            is CoreEventView.TurnInterrupted -> {
+                buf.putInt(13)
+                FfiConverterString.write(value.`sessionId`, buf)
+                Unit
+            }
+            is CoreEventView.TurnFailed -> {
+                buf.putInt(14)
+                FfiConverterString.write(value.`sessionId`, buf)
+                FfiConverterTypeCoreErrorView.write(value.`error`, buf)
+                Unit
+            }
+            is CoreEventView.NetworkPaused -> {
+                buf.putInt(15)
+                FfiConverterString.write(value.`sessionId`, buf)
+                Unit
+            }
+            is CoreEventView.NetworkResumed -> {
+                buf.putInt(16)
+                FfiConverterString.write(value.`sessionId`, buf)
+                Unit
+            }
+            is CoreEventView.ProviderStatus -> {
+                buf.putInt(17)
+                FfiConverterTypeProviderView.write(value.`provider`, buf)
+                FfiConverterTypeConnectionStatusView.write(value.`status`, buf)
+                Unit
+            }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
     }
 }
 
 
+
+
+
+/**
+ * What kind of failure a [`CoreErrorView`] reports.
+ */
+
+enum class ErrorKindView {
+    
+    /**
+     * A bug in Tether.
+     */
+    INTERNAL,
+    /**
+     * The network failed or timed out.
+     */
+    NETWORK,
+    /**
+     * A provider or GitHub rejected the credentials.
+     */
+    AUTH,
+    /**
+     * A provider asked the client to slow down.
+     */
+    RATE_LIMITED,
+    /**
+     * The request itself was wrong.
+     */
+    INVALID_INPUT,
+    /**
+     * The thing asked for does not exist.
+     */
+    NOT_FOUND,
+    /**
+     * The user or the system cancelled the work.
+     */
+    CANCELLED;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeErrorKindView: FfiConverterRustBuffer<ErrorKindView> {
+    override fun read(buf: ByteBuffer) = try {
+        ErrorKindView.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: ErrorKindView) = 4UL
+
+    override fun write(value: ErrorKindView, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
+ * FFI view of [`Executor`].
+ */
+
+enum class ExecutorView {
+    
+    SANDBOX,
+    LINUX,
+    CI;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeExecutorView: FfiConverterRustBuffer<ExecutorView> {
+    override fun read(buf: ByteBuffer) = try {
+        ExecutorView.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: ExecutorView) = 4UL
+
+    override fun write(value: ExecutorView, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
+ * FFI view of [`MessagePart`]. Ids are plain strings.
+ */
+sealed class MessagePartView {
+    
+    /**
+     * Plain text.
+     */
+    data class Text(
+        /**
+         * The text.
+         */
+        val `text`: kotlin.String) : MessagePartView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * An image held in the blob store.
+     */
+    data class ImageRef(
+        /**
+         * BLAKE3 hash that names the blob.
+         */
+        val `blobHash`: kotlin.String, 
+        /**
+         * Media type, such as `image/png`.
+         */
+        val `mediaType`: kotlin.String) : MessagePartView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * A tool call the model proposed.
+     */
+    data class ToolCall(
+        /**
+         * The call this part describes.
+         */
+        val `id`: kotlin.String, 
+        /**
+         * Tool name.
+         */
+        val `tool`: kotlin.String, 
+        /**
+         * Arguments as JSON text.
+         */
+        val `argsJson`: kotlin.String) : MessagePartView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * The result of a tool call.
+     */
+    data class ToolResult(
+        /**
+         * The call this result answers.
+         */
+        val `toolCallId`: kotlin.String, 
+        /**
+         * True when the tool failed.
+         */
+        val `isError`: kotlin.Boolean, 
+        /**
+         * Result text, cut when it is large.
+         */
+        val `text`: kotlin.String, 
+        /**
+         * Blob hash of the full output when the text was cut.
+         */
+        val `resultRef`: kotlin.String?) : MessagePartView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * Model reasoning shown to the user.
+     */
+    data class Thinking(
+        /**
+         * The reasoning text.
+         */
+        val `text`: kotlin.String) : MessagePartView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * A summary that replaced older messages during compaction.
+     */
+    data class CompactionSummary(
+        /**
+         * The summary text.
+         */
+        val `text`: kotlin.String) : MessagePartView()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeMessagePartView : FfiConverterRustBuffer<MessagePartView>{
+    override fun read(buf: ByteBuffer): MessagePartView {
+        return when(buf.getInt()) {
+            1 -> MessagePartView.Text(
+                FfiConverterString.read(buf),
+                )
+            2 -> MessagePartView.ImageRef(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                )
+            3 -> MessagePartView.ToolCall(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                )
+            4 -> MessagePartView.ToolResult(
+                FfiConverterString.read(buf),
+                FfiConverterBoolean.read(buf),
+                FfiConverterString.read(buf),
+                FfiConverterOptionalString.read(buf),
+                )
+            5 -> MessagePartView.Thinking(
+                FfiConverterString.read(buf),
+                )
+            6 -> MessagePartView.CompactionSummary(
+                FfiConverterString.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: MessagePartView): ULong = when(value) {
+        is MessagePartView.Text -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`text`)
+            )
+        }
+        is MessagePartView.ImageRef -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`blobHash`)
+                + FfiConverterString.allocationSize(value.`mediaType`)
+            )
+        }
+        is MessagePartView.ToolCall -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`id`)
+                + FfiConverterString.allocationSize(value.`tool`)
+                + FfiConverterString.allocationSize(value.`argsJson`)
+            )
+        }
+        is MessagePartView.ToolResult -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`toolCallId`)
+                + FfiConverterBoolean.allocationSize(value.`isError`)
+                + FfiConverterString.allocationSize(value.`text`)
+                + FfiConverterOptionalString.allocationSize(value.`resultRef`)
+            )
+        }
+        is MessagePartView.Thinking -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`text`)
+            )
+        }
+        is MessagePartView.CompactionSummary -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`text`)
+            )
+        }
+    }
+
+    override fun write(value: MessagePartView, buf: ByteBuffer) {
+        when(value) {
+            is MessagePartView.Text -> {
+                buf.putInt(1)
+                FfiConverterString.write(value.`text`, buf)
+                Unit
+            }
+            is MessagePartView.ImageRef -> {
+                buf.putInt(2)
+                FfiConverterString.write(value.`blobHash`, buf)
+                FfiConverterString.write(value.`mediaType`, buf)
+                Unit
+            }
+            is MessagePartView.ToolCall -> {
+                buf.putInt(3)
+                FfiConverterString.write(value.`id`, buf)
+                FfiConverterString.write(value.`tool`, buf)
+                FfiConverterString.write(value.`argsJson`, buf)
+                Unit
+            }
+            is MessagePartView.ToolResult -> {
+                buf.putInt(4)
+                FfiConverterString.write(value.`toolCallId`, buf)
+                FfiConverterBoolean.write(value.`isError`, buf)
+                FfiConverterString.write(value.`text`, buf)
+                FfiConverterOptionalString.write(value.`resultRef`, buf)
+                Unit
+            }
+            is MessagePartView.Thinking -> {
+                buf.putInt(5)
+                FfiConverterString.write(value.`text`, buf)
+                Unit
+            }
+            is MessagePartView.CompactionSummary -> {
+                buf.putInt(6)
+                FfiConverterString.write(value.`text`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+/**
+ * FFI view of [`PermissionMode`].
+ */
+
+enum class PermissionModeView {
+    
+    PLAN,
+    ASK,
+    ACCEPT_EDITS,
+    AUTO,
+    BYPASS;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypePermissionModeView: FfiConverterRustBuffer<PermissionModeView> {
+    override fun read(buf: ByteBuffer) = try {
+        PermissionModeView.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: PermissionModeView) = 4UL
+
+    override fun write(value: PermissionModeView, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
+ * FFI view of [`Provider`].
+ */
+
+enum class ProviderView {
+    
+    ANTHROPIC,
+    OPEN_AI,
+    GEMINI,
+    DEEP_SEEK,
+    OPEN_ROUTER;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeProviderView: FfiConverterRustBuffer<ProviderView> {
+    override fun read(buf: ByteBuffer) = try {
+        ProviderView.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: ProviderView) = 4UL
+
+    override fun write(value: ProviderView, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
+ * FFI view of [`Role`].
+ */
+
+enum class RoleView {
+    
+    USER,
+    ASSISTANT,
+    TOOL,
+    SYSTEM_NOTE;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeRoleView: FfiConverterRustBuffer<RoleView> {
+    override fun read(buf: ByteBuffer) = try {
+        RoleView.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: RoleView) = 4UL
+
+    override fun write(value: RoleView, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
+ * FFI view of [`SessionStatus`].
+ */
+
+enum class SessionStatusView {
+    
+    IDLE,
+    REQUESTING,
+    STREAMING,
+    CHECKING_TOOL,
+    RUNNING_TOOL,
+    AWAITING_APPROVAL,
+    PAUSED,
+    INTERRUPTED,
+    FAILED;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeSessionStatusView: FfiConverterRustBuffer<SessionStatusView> {
+    override fun read(buf: ByteBuffer) = try {
+        SessionStatusView.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: SessionStatusView) = 4UL
+
+    override fun write(value: SessionStatusView, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
+ * FFI view of [`ToolCallStatus`].
+ */
+
+enum class ToolCallStatusView {
+    
+    PROPOSED,
+    ALLOWED,
+    AWAITING_APPROVAL,
+    RUNNING,
+    DENIED,
+    BLOCKED,
+    SUCCEEDED,
+    FAILED,
+    TIMED_OUT,
+    CANCELLED;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeToolCallStatusView: FfiConverterRustBuffer<ToolCallStatusView> {
+    override fun read(buf: ByteBuffer) = try {
+        ToolCallStatusView.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: ToolCallStatusView) = 4UL
+
+    override fun write(value: ToolCallStatusView, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalString: FfiConverterRustBuffer<kotlin.String?> {
+    override fun read(buf: ByteBuffer): kotlin.String? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterString.read(buf)
+    }
+
+    override fun allocationSize(value: kotlin.String?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterString.allocationSize(value)
+        }
+    }
+
+    override fun write(value: kotlin.String?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterString.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeMessagePartView: FfiConverterRustBuffer<List<MessagePartView>> {
+    override fun read(buf: ByteBuffer): List<MessagePartView> {
+        val len = buf.getInt()
+        return List<MessagePartView>(len) {
+            FfiConverterTypeMessagePartView.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<MessagePartView>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeMessagePartView.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<MessagePartView>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeMessagePartView.write(it, buf)
+        }
+    }
+}
         /**
          * Returns the core version. It equals the app version.
          */ fun `version`(): kotlin.String {

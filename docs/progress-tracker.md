@@ -25,7 +25,7 @@ Last updated: 18 Nov 2026.
 
 ## Current phase
 
-**P0. Foundations: In progress.** The repo, Rust workspace, Android app, tokens, brand assets, CI files, and docs site are in place and verified locally. Open: CI must go green on `main` (P0-09), the release workflow has not run (P0-16), and the smell fixtures are not written (P0-13). Next phase: P1, providers and sessions.
+**P0. Foundations: In progress.** The repo is public at github.com/khanblair/tether. CI is green on `main`, the docs site is live, and the app runs on an arm64 emulator. Open: the release workflow has not run (P0-16: needs a keystore, four secrets, and a tag) and the smell fixtures are not written (P0-13). Next phase: P1, providers and sessions.
 
 ## Phase status
 
@@ -60,12 +60,12 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 | P0-06 | Token pipeline | Blair with Claude | Done | n/a | `tokens/generate.ts` writes `Tokens.kt` and color XML, checks about 50 contrast pairs in both themes |
 | P0-07 | TetherTheme | Blair with Claude | Done | n/a | Light and dark follow the system; in-app override works. Screenshot tests moved to P1-19 |
 | P0-08 | Navigation shell | Blair with Claude | Done | n/a | All 10 routes reachable on the emulator; back returns to Projects |
-| P0-09 | CI workflow | Blair with Claude | In progress | n/a | `ci.yml` has four jobs. Becomes Done when green on `main` after the first push |
+| P0-09 | CI workflow | Blair with Claude | Done | n/a | `ci.yml` has four jobs (rust, tooling, bindings, android). First run on `main` was green. Branch protection requires all four |
 | P0-10 | `slop-lint` first version | Blair with Claude | Done | n/a | Fails on the bad fixture, passes on current docs, README, and `strings.xml` |
 | P0-11 | Smell checks in CI | Blair with Claude | Done | n/a | Thresholds match code-standards.md. File length self test proves the failure path |
 | P0-12 | `CoreClient` event bus skeleton | Blair with Claude | Done | n/a | "Send test event" on the emulator shows the event from Rust; `NativeLibraryTest` passes on the emulator |
 | P0-13 | Smell fixtures for Clippy and detekt | | Not started | | Added during P0; only the file length check has a failing fixture so far |
-| P0-14 | Docs site on GitHub Pages | Blair with Claude | In progress | n/a | Site builds with all links resolving. Deploys after the first push enables Pages |
+| P0-14 | Docs site on GitHub Pages | Blair with Claude | Done | n/a | Live at khanblair.github.io/tether; `pages.yml` deploys on docs, images, tokens, or site tool changes |
 | P0-15 | Brand assets and launcher icon | Blair with Claude | Done | n/a | Logo traced to `images/logo.svg`; adaptive and monochrome icons; PNG exports. Blair to check the launcher icon by eye |
 | P0-16 | Release workflow | Blair with Claude | In progress | n/a | `release.yml` written, not run. Needs a keystore, four secrets, and a tag |
 
@@ -116,7 +116,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Who | What happened | Next |
 |---|---|---|---|
-| 2026-11-18 | Blair with Claude | Scaffolded the repo: Rust workspace with UniFFI, Android app with flavors and a Velvet Plum theme, logo and launcher icon, tokens pipeline, slop-lint, CI, release and Pages workflows, docs site. Updated every doc to match, added skills, memory, and the vault (F21 to F23, phase P11). Verified on a Pixel 9 arm64 emulator: core version and event path, navigation, theme switch, instrumented test | Push to `khanblair/tether`, watch CI to green, add branch protection, enable Pages; then P0-13 and P1 |
+| 2026-11-18 | Blair with Claude | Pushed 18 commits (15 files or fewer each) to `khanblair/tether`; CI green on the first run; Pages deployed; branch protection added with the four CI checks (admins not enforced, no review requirement). Earlier the same day: scaffolded the repo: Rust workspace with UniFFI, Android app with flavors and a Velvet Plum theme, logo and launcher icon, tokens pipeline, slop-lint, CI, release and Pages workflows, docs site. Updated every doc to match, added skills, memory, and the vault (F21 to F23, phase P11). Verified on a Pixel 9 arm64 emulator: core version and event path, navigation, theme switch, instrumented test | P0-13 and P0-16, then P1 |
 | 2026-11-18 | Blair with Claude | Defined the idea, made stack, provider, executor, platform, and name decisions; drafted all 14 docs | Review docs; create the repo (P0-01) |
 
 ## File changes log

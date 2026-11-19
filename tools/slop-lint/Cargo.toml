@@ -11,7 +11,7 @@ description = "Checks docs, UI strings and commit messages for banned words and 
 [dependencies]
 regex = "1"
 serde = { version = "1", features = ["derive"] }
-toml = "0.9"
+toml = "1.2"
 
 [lints.clippy]
 too_many_lines = "warn"

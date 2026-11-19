@@ -4,6 +4,7 @@ use std::fs::{self, File, OpenOptions};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::{PlatformError, Secret, SecretRef, SecretsError, SecretsPlatform};
 
@@ -12,6 +13,9 @@ const MAGIC: &[u8; 4] = b"TSEC";
 
 /// The file format version after the magic bytes.
 const FORMAT_VERSION: u8 = 1;
+
+/// Makes each temporary file name unique within this process.
+static NEXT_TEMP: AtomicU64 = AtomicU64::new(0);
 
 /// Length of the header: magic plus version.
 const HEADER_LEN: usize = MAGIC.len() + 1;
@@ -125,10 +129,22 @@ fn strip_header(bytes: &[u8]) -> Option<&[u8]> {
     (header.starts_with(MAGIC) && header.last() == Some(&FORMAT_VERSION)).then_some(wrapped)
 }
 
+/// A temporary file name in the target's folder that no other write uses, so two writers to
+/// one reference never share a file. The process id keeps it apart from files a crashed run left.
+fn unique_temp_path(path: &Path) -> PathBuf {
+    let n = NEXT_TEMP.fetch_add(1, Ordering::Relaxed);
+    let name = path
+        .file_name()
+        .map(|n| n.to_string_lossy())
+        .unwrap_or_default();
+    path.with_file_name(format!(".{name}.{}.{n}.tmp", std::process::id()))
+}
+
 /// Writes to a temporary file in the same folder, then renames it over the target, so a
-/// crash never leaves a half-written secret.
+/// crash never leaves a half-written secret. Each call has its own temporary file, so the last
+/// rename wins and every published file is complete.
 fn write_atomic(path: &Path, bytes: &[u8]) -> Result<(), SecretsError> {
-    let temp = path.with_extension("bin.tmp");
+    let temp = unique_temp_path(path);
     let result = write_private_file(&temp, bytes).and_then(|()| fs::rename(&temp, path));
     if result.is_err() {
         // The write error is the one worth reporting; a leftover temp file is harmless.
@@ -148,17 +164,12 @@ fn open_private(path: &Path) -> io::Result<File> {
     use std::os::unix::fs::OpenOptionsExt;
     OpenOptions::new()
         .write(true)
-        .create(true)
-        .truncate(true)
+        .create_new(true)
         .mode(0o600)
         .open(path)
 }
 
 #[cfg(not(unix))]
 fn open_private(path: &Path) -> io::Result<File> {
-    OpenOptions::new()
-        .write(true)
-        .create(true)
-        .truncate(true)
-        .open(path)
+    OpenOptions::new().write(true).create_new(true).open(path)
 }

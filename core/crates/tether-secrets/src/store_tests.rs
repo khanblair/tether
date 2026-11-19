@@ -228,3 +228,33 @@ fn secret_files_are_private_to_the_owner() {
         .mode();
     assert_eq!(mode & 0o777, 0o600);
 }
+
+fn spawn_put(
+    store: &Arc<SecretStore>,
+    n: usize,
+) -> std::thread::JoinHandle<Result<(), SecretsError>> {
+    let store = Arc::clone(store);
+    std::thread::spawn(move || {
+        let secret = Secret::from_text(&format!("{KEY_TEXT}-{n}-{}", "x".repeat(n * 50)));
+        store.put(&reference("k"), &secret)
+    })
+}
+
+#[test]
+fn concurrent_puts_to_one_reference_leave_one_complete_secret() {
+    let dir = tempfile::tempdir().unwrap();
+    let store = Arc::new(store_in(&dir));
+    for _ in 0..20 {
+        let writers: Vec<_> = (0..8).map(|n| spawn_put(&store, n)).collect();
+        for writer in writers {
+            writer.join().unwrap().unwrap();
+        }
+        let back = store.get(&reference("k")).unwrap().unwrap();
+        assert!(back.expose_text().unwrap().starts_with(KEY_TEXT));
+    }
+    let names: Vec<_> = fs::read_dir(dir.path().join("secrets"))
+        .unwrap()
+        .map(|e| e.unwrap().file_name().into_string().unwrap())
+        .collect();
+    assert_eq!(names, vec!["k.bin".to_owned()]);
+}

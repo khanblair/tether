@@ -659,6 +659,9 @@ internal interface UniffiCallbackInterfaceSecretsPlatformMethod0 : com.sun.jna.C
 internal interface UniffiCallbackInterfaceSecretsPlatformMethod1 : com.sun.jna.Callback {
     fun callback(`uniffiHandle`: Long,`wrapped`: RustBuffer.ByValue,`context`: RustBuffer.ByValue,`uniffiOutReturn`: RustBuffer,uniffiCallStatus: UniffiRustCallStatus,)
 }
+internal interface UniffiCallbackInterfaceDownloadProgressMethod0 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`downloaded`: Long,`total`: Long,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,)
+}
 @Structure.FieldOrder("uniffiFree", "uniffiClone", "onEvent")
 internal open class UniffiVTableCallbackInterfaceEventSink(
     @JvmField internal var `uniffiFree`: UniffiCallbackInterfaceFree? = null,
@@ -697,6 +700,25 @@ internal open class UniffiVTableCallbackInterfaceSecretsPlatform(
         `uniffiClone` = other.`uniffiClone`
         `wrap` = other.`wrap`
         `unwrap` = other.`unwrap`
+    }
+
+}
+@Structure.FieldOrder("uniffiFree", "uniffiClone", "onProgress")
+internal open class UniffiVTableCallbackInterfaceDownloadProgress(
+    @JvmField internal var `uniffiFree`: UniffiCallbackInterfaceFree? = null,
+    @JvmField internal var `uniffiClone`: UniffiCallbackInterfaceClone? = null,
+    @JvmField internal var `onProgress`: UniffiCallbackInterfaceDownloadProgressMethod0? = null,
+) : Structure() {
+    class UniffiByValue(
+        `uniffiFree`: UniffiCallbackInterfaceFree? = null,
+        `uniffiClone`: UniffiCallbackInterfaceClone? = null,
+        `onProgress`: UniffiCallbackInterfaceDownloadProgressMethod0? = null,
+    ): UniffiVTableCallbackInterfaceDownloadProgress(`uniffiFree`,`uniffiClone`,`onProgress`,), Structure.ByValue
+
+   internal fun uniffiSetValue(other: UniffiVTableCallbackInterfaceDownloadProgress) {
+        `uniffiFree` = other.`uniffiFree`
+        `uniffiClone` = other.`uniffiClone`
+        `onProgress` = other.`onProgress`
     }
 
 }
@@ -743,9 +765,19 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_tether_core_checksum_method_secretsplatform_unwrap(
     ): Int
+    external fun uniffi_tether_core_checksum_method_downloadprogress_on_progress(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_updater_cancel(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_updater_check(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_updater_download(
+    ): Int
     external fun uniffi_tether_core_checksum_constructor_tethercore_new(
     ): Int
     external fun uniffi_tether_core_checksum_constructor_secretvault_new(
+    ): Int
+    external fun uniffi_tether_core_checksum_constructor_updater_new(
     ): Int
     external fun ffi_tether_core_uniffi_contract_version(
     ): Int
@@ -763,6 +795,7 @@ internal object UniffiLib {
 
     init {
         Native.register(UniffiLib::class.java, findLibraryName(componentName = "tether_core"))
+        uniffiCallbackInterfaceDownloadProgress.register(this)
         uniffiCallbackInterfaceEventSink.register(this)
         uniffiCallbackInterfaceSecretsPlatform.register(this)
         
@@ -808,6 +841,26 @@ internal object UniffiLib {
     external fun uniffi_tether_core_fn_method_secretsplatform_wrap(`ptr`: Long,`plaintext`: RustBuffer.ByValue,`context`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_tether_core_fn_method_secretsplatform_unwrap(`ptr`: Long,`wrapped`: RustBuffer.ByValue,`context`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_tether_core_fn_clone_downloadprogress(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_tether_core_fn_free_downloadprogress(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_init_callback_vtable_downloadprogress(`vtable`: UniffiVTableCallbackInterfaceDownloadProgress,
+    ): Unit
+    external fun uniffi_tether_core_fn_method_downloadprogress_on_progress(`ptr`: Long,`downloaded`: Long,`total`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_clone_updater(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_tether_core_fn_free_updater(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_constructor_updater_new(`downloadDir`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_tether_core_fn_method_updater_cancel(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_method_updater_check(`ptr`: Long,`currentVersion`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_tether_core_fn_method_updater_download(`ptr`: Long,`version`: RustBuffer.ByValue,`progress`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_tether_core_fn_func_version(uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -957,10 +1010,25 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_tether_core_checksum_method_secretsplatform_unwrap() and 0xFFFF) != 62493) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_tether_core_checksum_method_downloadprogress_on_progress() and 0xFFFF) != 47177) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_updater_cancel() and 0xFFFF) != 37957) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_updater_check() and 0xFFFF) != 65463) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_updater_download() and 0xFFFF) != 64014) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_tether_core_checksum_constructor_tethercore_new() and 0xFFFF) != 22145) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_constructor_secretvault_new() and 0xFFFF) != 45283) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_constructor_updater_new() and 0xFFFF) != 29951) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
 }
@@ -1316,6 +1384,331 @@ public object FfiConverterByteArray: FfiConverterRustBuffer<ByteArray> {
     override fun write(value: ByteArray, buf: ByteBuffer) {
         buf.putInt(value.size)
         buf.put(value)
+    }
+}
+
+
+// This template implements a class for working with a Rust struct via a handle
+// to the live Rust struct on the other side of the FFI.
+//
+// There's some subtlety here, because we have to be careful not to operate on a Rust
+// struct after it has been dropped, and because we must expose a public API for freeing
+// theq Kotlin wrapper object in lieu of reliable finalizers. The core requirements are:
+//
+//   * Each instance holds an opaque handle to the underlying Rust struct.
+//     Method calls need to read this handle from the object's state and pass it in to
+//     the Rust FFI.
+//
+//   * When an instance is no longer needed, its handle should be passed to a
+//     special destructor function provided by the Rust FFI, which will drop the
+//     underlying Rust struct.
+//
+//   * Given an instance, calling code is expected to call the special
+//     `destroy` method in order to free it after use, either by calling it explicitly
+//     or by using a higher-level helper like the `use` method. Failing to do so risks
+//     leaking the underlying Rust struct.
+//
+//   * We can't assume that calling code will do the right thing, and must be prepared
+//     to handle Kotlin method calls executing concurrently with or even after a call to
+//     `destroy`, and to handle multiple (possibly concurrent!) calls to `destroy`.
+//
+//   * We must never allow Rust code to operate on the underlying Rust struct after
+//     the destructor has been called, and must never call the destructor more than once.
+//     Doing so may trigger memory unsafety.
+//
+//   * To mitigate many of the risks of leaking memory and use-after-free unsafety, a `Cleaner`
+//     is implemented to call the destructor when the Kotlin object becomes unreachable.
+//     This is done in a background thread. This is not a panacea, and client code should be aware that
+//      1. the thread may starve if some there are objects that have poorly performing
+//     `drop` methods or do significant work in their `drop` methods.
+//      2. the thread is shared across the whole library. This can be tuned by using `android_cleaner = true`,
+//         or `android = true` in the [`kotlin` section of the `uniffi.toml` file](https://mozilla.github.io/uniffi-rs/kotlin/configuration.html).
+//
+// If we try to implement this with mutual exclusion on access to the handle, there is the
+// possibility of a race between a method call and a concurrent call to `destroy`:
+//
+//    * Thread A starts a method call, reads the value of the handle, but is interrupted
+//      before it can pass the handle over the FFI to Rust.
+//    * Thread B calls `destroy` and frees the underlying Rust struct.
+//    * Thread A resumes, passing the already-read handle value to Rust and triggering
+//      a use-after-free.
+//
+// One possible solution would be to use a `ReadWriteLock`, with each method call taking
+// a read lock (and thus allowed to run concurrently) and the special `destroy` method
+// taking a write lock (and thus blocking on live method calls). However, we aim not to
+// generate methods with any hidden blocking semantics, and a `destroy` method that might
+// block if called incorrectly seems to meet that bar.
+//
+// So, we achieve our goals by giving each instance an associated `AtomicLong` counter to track
+// the number of in-flight method calls, and an `AtomicBoolean` flag to indicate whether `destroy`
+// has been called. These are updated according to the following rules:
+//
+//    * The initial value of the counter is 1, indicating a live object with no in-flight calls.
+//      The initial value for the flag is false.
+//
+//    * At the start of each method call, we atomically check the counter.
+//      If it is 0 then the underlying Rust struct has already been destroyed and the call is aborted.
+//      If it is nonzero them we atomically increment it by 1 and proceed with the method call.
+//
+//    * At the end of each method call, we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+//    * When `destroy` is called, we atomically flip the flag from false to true.
+//      If the flag was already true we silently fail.
+//      Otherwise we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+// Astute readers may observe that this all sounds very similar to the way that Rust's `Arc<T>` works,
+// and indeed it is, with the addition of a flag to guard against multiple calls to `destroy`.
+//
+// The overall effect is that the underlying Rust struct is destroyed only when `destroy` has been
+// called *and* all in-flight method calls have completed, avoiding violating any of the expectations
+// of the underlying Rust code.
+//
+// This makes a cleaner a better alternative to _not_ calling `destroy()` as
+// and when the object is finished with, but the abstraction is not perfect: if the Rust object's `drop`
+// method is slow, and/or there are many objects to cleanup, and it's on a low end Android device, then the cleaner
+// thread may be starved, and the app will leak memory.
+//
+// In this case, `destroy`ing manually may be a better solution.
+//
+// The cleaner can live side by side with the manual calling of `destroy`. In the order of responsiveness, uniffi objects
+// with Rust peers are reclaimed:
+//
+// 1. By calling the `destroy` method of the object, which calls `rustObject.free()`. If that doesn't happen:
+// 2. When the object becomes unreachable, AND the Cleaner thread gets to call `rustObject.free()`. If the thread is starved then:
+// 3. The memory is reclaimed when the process terminates.
+//
+// [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
+//
+
+
+/**
+ * Receives whole-percent download progress from a background updater call.
+ */
+public interface DownloadProgress {
+    
+    /**
+     * Receives downloaded and total byte counts.
+     */
+    fun `onProgress`(`downloaded`: kotlin.ULong, `total`: kotlin.ULong)
+    
+    companion object
+}
+
+/**
+ * Receives whole-percent download progress from a background updater call.
+ */
+open class DownloadProgressImpl: Disposable, AutoCloseable, DownloadProgress
+{
+
+    @Suppress("UNUSED_PARAMETER")
+    /**
+     * @suppress
+     */
+    constructor(withHandle: UniffiWithHandle, handle: Long) {
+        this.handle = handle
+        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(handle))
+    }
+
+    /**
+     * @suppress
+     *
+     * This constructor can be used to instantiate a fake object. Only used for tests. Any
+     * attempt to actually use an object constructed this way will fail as there is no
+     * connected Rust object.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    constructor(noHandle: NoHandle) {
+        this.handle = 0
+        this.cleanable = null
+    }
+
+    protected val handle: Long
+    protected val cleanable: UniffiCleaner.Cleanable?
+
+    private val wasDestroyed = AtomicBoolean(false)
+    private val callCounter = AtomicLong(1)
+
+    /**
+     * Whether the current object has been destroyed and its reference is gone in the Rust side.
+     */
+    val uniffiIsDestroyed: Boolean get() = wasDestroyed.get()
+
+    override fun destroy() {
+        // Only allow a single call to this method.
+        // TODO: maybe we should log a warning if called more than once?
+        if (this.wasDestroyed.compareAndSet(false, true)) {
+            // This decrement always matches the initial count of 1 given at creation time.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    @Synchronized
+    override fun close() {
+        this.destroy()
+    }
+
+    internal inline fun <R> callWithHandle(block: (handle: Long) -> R): R {
+        // Check and increment the call counter, to keep the object alive.
+        // This needs a compare-and-set retry loop in case of concurrent updates.
+        do {
+            val c = this.callCounter.get()
+            if (c == 0L) {
+                throw IllegalStateException("${this.javaClass.simpleName} object has already been destroyed")
+            }
+            if (c == Long.MAX_VALUE) {
+                throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
+            }
+        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        // Now we can safely do the method call without the handle being freed concurrently.
+        try {
+            return block(this.uniffiCloneHandle())
+        } finally {
+            // This decrement always matches the increment we performed above.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    // Use a static inner class instead of a closure so as not to accidentally
+    // capture `this` as part of the cleanable's action.
+    private class UniffiCleanAction(private val handle: Long) : Runnable {
+        override fun run() {
+            if (handle == 0.toLong()) {
+                // Fake object created with `NoHandle`, don't try to free.
+                return;
+            }
+            uniffiRustCall { status ->
+                UniffiLib.uniffi_tether_core_fn_free_downloadprogress(handle, status)
+            }
+        }
+    }
+
+    /**
+     * @suppress
+     */
+    fun uniffiCloneHandle(): Long {
+        if (handle == 0.toLong()) {
+            throw InternalException("uniffiCloneHandle() called on NoHandle object");
+        }
+        return uniffiRustCall() { status ->
+            UniffiLib.uniffi_tether_core_fn_clone_downloadprogress(handle, status)
+        }
+    }
+
+    
+    /**
+     * Receives downloaded and total byte counts.
+     */override fun `onProgress`(`downloaded`: kotlin.ULong, `total`: kotlin.ULong)
+        = 
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_downloadprogress_on_progress(
+        it,
+        
+        FfiConverterULong.lower(`downloaded`),
+        FfiConverterULong.lower(`total`),_status)
+}
+    }
+    
+    
+
+    
+
+    
+
+
+    
+    
+    /**
+     * @suppress
+     */
+    companion object
+    
+}
+
+
+
+// Put the implementation in an object so we don't pollute the top-level namespace
+internal object uniffiCallbackInterfaceDownloadProgress {
+    internal object `onProgress`: UniffiCallbackInterfaceDownloadProgressMethod0 {
+        override fun callback(`uniffiHandle`: Long,`downloaded`: Long,`total`: Long,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeDownloadProgress.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`onProgress`(
+                    FfiConverterULong.lift(`downloaded`),
+                    FfiConverterULong.lift(`total`),
+                )
+            }
+            val writeReturn = { _: Unit -> Unit }
+            uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
+        }
+    }
+
+    internal object uniffiFree: UniffiCallbackInterfaceFree {
+        override fun callback(handle: Long) {
+            FfiConverterTypeDownloadProgress.handleMap.remove(handle)
+        }
+    }
+
+    internal object uniffiClone: UniffiCallbackInterfaceClone {
+        override fun callback(handle: Long): Long {
+            return FfiConverterTypeDownloadProgress.handleMap.clone(handle)
+        }
+    }
+
+    internal var vtable = UniffiVTableCallbackInterfaceDownloadProgress.UniffiByValue(
+        uniffiFree,
+        uniffiClone,
+        `onProgress`,
+    )
+
+    // Registers the foreign callback with the Rust side.
+    // This method is generated for each callback interface.
+    internal fun register(lib: UniffiLib) {
+        lib.uniffi_tether_core_fn_init_callback_vtable_downloadprogress(vtable)
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeDownloadProgress: FfiConverter<DownloadProgress, Long> {
+    internal val handleMap = UniffiHandleMap<DownloadProgress>()
+
+    override fun lower(value: DownloadProgress): Long {
+        if (value is DownloadProgressImpl) {
+             // Rust-implemented object.  Clone the handle and return it
+            return value.uniffiCloneHandle()
+         } else {
+            // Kotlin object, generate a new vtable handle and return that.
+            return handleMap.insert(value)
+         }
+    }
+
+    override fun lift(value: Long): DownloadProgress {
+        if ((value and 1.toLong()) == 0.toLong()) {
+            // Rust-generated handle, construct a new class that uses the handle to implement the
+            // interface
+            return DownloadProgressImpl(UniffiWithHandle, value)
+        } else {
+            // Kotlin-generated handle, get the object from the handle map
+            return handleMap.remove(value)
+        }
+    }
+
+    override fun read(buf: ByteBuffer): DownloadProgress {
+        return lift(buf.getLong())
+    }
+
+    override fun allocationSize(value: DownloadProgress) = 8UL
+
+    override fun write(value: DownloadProgress, buf: ByteBuffer) {
+        buf.putLong(lower(value))
     }
 }
 
@@ -2695,6 +3088,345 @@ public object FfiConverterTypeTetherCore: FfiConverter<TetherCore, Long> {
 }
 
 
+// This template implements a class for working with a Rust struct via a handle
+// to the live Rust struct on the other side of the FFI.
+//
+// There's some subtlety here, because we have to be careful not to operate on a Rust
+// struct after it has been dropped, and because we must expose a public API for freeing
+// theq Kotlin wrapper object in lieu of reliable finalizers. The core requirements are:
+//
+//   * Each instance holds an opaque handle to the underlying Rust struct.
+//     Method calls need to read this handle from the object's state and pass it in to
+//     the Rust FFI.
+//
+//   * When an instance is no longer needed, its handle should be passed to a
+//     special destructor function provided by the Rust FFI, which will drop the
+//     underlying Rust struct.
+//
+//   * Given an instance, calling code is expected to call the special
+//     `destroy` method in order to free it after use, either by calling it explicitly
+//     or by using a higher-level helper like the `use` method. Failing to do so risks
+//     leaking the underlying Rust struct.
+//
+//   * We can't assume that calling code will do the right thing, and must be prepared
+//     to handle Kotlin method calls executing concurrently with or even after a call to
+//     `destroy`, and to handle multiple (possibly concurrent!) calls to `destroy`.
+//
+//   * We must never allow Rust code to operate on the underlying Rust struct after
+//     the destructor has been called, and must never call the destructor more than once.
+//     Doing so may trigger memory unsafety.
+//
+//   * To mitigate many of the risks of leaking memory and use-after-free unsafety, a `Cleaner`
+//     is implemented to call the destructor when the Kotlin object becomes unreachable.
+//     This is done in a background thread. This is not a panacea, and client code should be aware that
+//      1. the thread may starve if some there are objects that have poorly performing
+//     `drop` methods or do significant work in their `drop` methods.
+//      2. the thread is shared across the whole library. This can be tuned by using `android_cleaner = true`,
+//         or `android = true` in the [`kotlin` section of the `uniffi.toml` file](https://mozilla.github.io/uniffi-rs/kotlin/configuration.html).
+//
+// If we try to implement this with mutual exclusion on access to the handle, there is the
+// possibility of a race between a method call and a concurrent call to `destroy`:
+//
+//    * Thread A starts a method call, reads the value of the handle, but is interrupted
+//      before it can pass the handle over the FFI to Rust.
+//    * Thread B calls `destroy` and frees the underlying Rust struct.
+//    * Thread A resumes, passing the already-read handle value to Rust and triggering
+//      a use-after-free.
+//
+// One possible solution would be to use a `ReadWriteLock`, with each method call taking
+// a read lock (and thus allowed to run concurrently) and the special `destroy` method
+// taking a write lock (and thus blocking on live method calls). However, we aim not to
+// generate methods with any hidden blocking semantics, and a `destroy` method that might
+// block if called incorrectly seems to meet that bar.
+//
+// So, we achieve our goals by giving each instance an associated `AtomicLong` counter to track
+// the number of in-flight method calls, and an `AtomicBoolean` flag to indicate whether `destroy`
+// has been called. These are updated according to the following rules:
+//
+//    * The initial value of the counter is 1, indicating a live object with no in-flight calls.
+//      The initial value for the flag is false.
+//
+//    * At the start of each method call, we atomically check the counter.
+//      If it is 0 then the underlying Rust struct has already been destroyed and the call is aborted.
+//      If it is nonzero them we atomically increment it by 1 and proceed with the method call.
+//
+//    * At the end of each method call, we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+//    * When `destroy` is called, we atomically flip the flag from false to true.
+//      If the flag was already true we silently fail.
+//      Otherwise we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+// Astute readers may observe that this all sounds very similar to the way that Rust's `Arc<T>` works,
+// and indeed it is, with the addition of a flag to guard against multiple calls to `destroy`.
+//
+// The overall effect is that the underlying Rust struct is destroyed only when `destroy` has been
+// called *and* all in-flight method calls have completed, avoiding violating any of the expectations
+// of the underlying Rust code.
+//
+// This makes a cleaner a better alternative to _not_ calling `destroy()` as
+// and when the object is finished with, but the abstraction is not perfect: if the Rust object's `drop`
+// method is slow, and/or there are many objects to cleanup, and it's on a low end Android device, then the cleaner
+// thread may be starved, and the app will leak memory.
+//
+// In this case, `destroy`ing manually may be a better solution.
+//
+// The cleaner can live side by side with the manual calling of `destroy`. In the order of responsiveness, uniffi objects
+// with Rust peers are reclaimed:
+//
+// 1. By calling the `destroy` method of the object, which calls `rustObject.free()`. If that doesn't happen:
+// 2. When the object becomes unreachable, AND the Cleaner thread gets to call `rustObject.free()`. If the thread is starved then:
+// 3. The memory is reclaimed when the process terminates.
+//
+// [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
+//
+
+
+/**
+ * The updater object held by the Android app.
+ */
+public interface UpdaterInterface {
+    
+    /**
+     * Cancels the download currently in flight, if any.
+     */
+    fun `cancel`()
+    
+    /**
+     * Checks GitHub for a release. Kotlin must call this off the main thread.
+     *
+     * # Errors
+     * Returns an [`UpdaterError`] when the release check fails.
+     */
+    fun `check`(`currentVersion`: kotlin.String): UpdateCheckView
+    
+    /**
+     * Downloads a checked release. Kotlin must call this off the main thread.
+     *
+     * # Errors
+     * Returns [`UpdaterError::NoRelease`] when `version` was not returned by the latest
+     * available check, or another [`UpdaterError`] when downloading fails.
+     */
+    fun `download`(`version`: kotlin.String, `progress`: DownloadProgress): kotlin.String
+    
+    companion object
+}
+
+/**
+ * The updater object held by the Android app.
+ */
+open class Updater: Disposable, AutoCloseable, UpdaterInterface
+{
+
+    @Suppress("UNUSED_PARAMETER")
+    /**
+     * @suppress
+     */
+    constructor(withHandle: UniffiWithHandle, handle: Long) {
+        this.handle = handle
+        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(handle))
+    }
+
+    /**
+     * @suppress
+     *
+     * This constructor can be used to instantiate a fake object. Only used for tests. Any
+     * attempt to actually use an object constructed this way will fail as there is no
+     * connected Rust object.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    constructor(noHandle: NoHandle) {
+        this.handle = 0
+        this.cleanable = null
+    }
+    /**
+     * Creates an updater for `download_dir`.
+     */
+    constructor(`downloadDir`: kotlin.String) :
+        this(UniffiWithHandle, 
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_tether_core_fn_constructor_updater_new(
+    
+        
+        FfiConverterString.lower(`downloadDir`),_status)
+}
+    )
+
+    protected val handle: Long
+    protected val cleanable: UniffiCleaner.Cleanable?
+
+    private val wasDestroyed = AtomicBoolean(false)
+    private val callCounter = AtomicLong(1)
+
+    /**
+     * Whether the current object has been destroyed and its reference is gone in the Rust side.
+     */
+    val uniffiIsDestroyed: Boolean get() = wasDestroyed.get()
+
+    override fun destroy() {
+        // Only allow a single call to this method.
+        // TODO: maybe we should log a warning if called more than once?
+        if (this.wasDestroyed.compareAndSet(false, true)) {
+            // This decrement always matches the initial count of 1 given at creation time.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    @Synchronized
+    override fun close() {
+        this.destroy()
+    }
+
+    internal inline fun <R> callWithHandle(block: (handle: Long) -> R): R {
+        // Check and increment the call counter, to keep the object alive.
+        // This needs a compare-and-set retry loop in case of concurrent updates.
+        do {
+            val c = this.callCounter.get()
+            if (c == 0L) {
+                throw IllegalStateException("${this.javaClass.simpleName} object has already been destroyed")
+            }
+            if (c == Long.MAX_VALUE) {
+                throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
+            }
+        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        // Now we can safely do the method call without the handle being freed concurrently.
+        try {
+            return block(this.uniffiCloneHandle())
+        } finally {
+            // This decrement always matches the increment we performed above.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    // Use a static inner class instead of a closure so as not to accidentally
+    // capture `this` as part of the cleanable's action.
+    private class UniffiCleanAction(private val handle: Long) : Runnable {
+        override fun run() {
+            if (handle == 0.toLong()) {
+                // Fake object created with `NoHandle`, don't try to free.
+                return;
+            }
+            uniffiRustCall { status ->
+                UniffiLib.uniffi_tether_core_fn_free_updater(handle, status)
+            }
+        }
+    }
+
+    /**
+     * @suppress
+     */
+    fun uniffiCloneHandle(): Long {
+        if (handle == 0.toLong()) {
+            throw InternalException("uniffiCloneHandle() called on NoHandle object");
+        }
+        return uniffiRustCall() { status ->
+            UniffiLib.uniffi_tether_core_fn_clone_updater(handle, status)
+        }
+    }
+
+    
+    /**
+     * Cancels the download currently in flight, if any.
+     */override fun `cancel`()
+        = 
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_updater_cancel(
+        it,
+        _status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Checks GitHub for a release. Kotlin must call this off the main thread.
+     *
+     * # Errors
+     * Returns an [`UpdaterError`] when the release check fails.
+     */
+    @Throws(UpdaterException::class)override fun `check`(`currentVersion`: kotlin.String): UpdateCheckView {
+            return FfiConverterTypeUpdateCheckView.lift(
+    callWithHandle {
+    uniffiRustCallWithError(UpdaterException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_updater_check(
+        it,
+        
+        FfiConverterString.lower(`currentVersion`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Downloads a checked release. Kotlin must call this off the main thread.
+     *
+     * # Errors
+     * Returns [`UpdaterError::NoRelease`] when `version` was not returned by the latest
+     * available check, or another [`UpdaterError`] when downloading fails.
+     */
+    @Throws(UpdaterException::class)override fun `download`(`version`: kotlin.String, `progress`: DownloadProgress): kotlin.String {
+            return FfiConverterString.lift(
+    callWithHandle {
+    uniffiRustCallWithError(UpdaterException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_updater_download(
+        it,
+        
+        FfiConverterString.lower(`version`),
+        FfiConverterTypeDownloadProgress.lower(`progress`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+
+    
+
+
+    
+    
+    /**
+     * @suppress
+     */
+    companion object
+    
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeUpdater: FfiConverter<Updater, Long> {
+    override fun lower(value: Updater): Long {
+        return value.uniffiCloneHandle()
+    }
+
+    override fun lift(value: Long): Updater {
+        return Updater(UniffiWithHandle, value)
+    }
+
+    override fun read(buf: ByteBuffer): Updater {
+        return lift(buf.getLong())
+    }
+
+    override fun allocationSize(value: Updater) = 8UL
+
+    override fun write(value: Updater, buf: ByteBuffer) {
+        buf.putLong(lower(value))
+    }
+}
+
+
 
 /**
  * FFI view of [`CoreError`]. It is a plain record, not a Kotlin exception, so
@@ -2881,6 +3613,85 @@ public object FfiConverterTypeModelRefView: FfiConverterRustBuffer<ModelRefView>
     override fun write(value: ModelRefView, buf: ByteBuffer) {
             FfiConverterTypeProviderView.write(value.`provider`, buf)
             FfiConverterString.write(value.`modelId`, buf)
+    }
+}
+
+
+
+/**
+ * Release metadata displayed by the Android About screen.
+ */
+data class ReleaseView (
+    /**
+     * Version without the leading `v`.
+     */
+    var `version`: kotlin.String
+    , 
+    /**
+     * Release tag including the leading `v`.
+     */
+    var `tag`: kotlin.String
+    , 
+    /**
+     * Markdown release notes.
+     */
+    var `notes`: kotlin.String
+    , 
+    /**
+     * Publication timestamp.
+     */
+    var `publishedAt`: kotlin.String
+    , 
+    /**
+     * APK file name.
+     */
+    var `apkName`: kotlin.String
+    , 
+    /**
+     * APK size in bytes.
+     */
+    var `apkSizeBytes`: kotlin.ULong
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeReleaseView: FfiConverterRustBuffer<ReleaseView> {
+    override fun read(buf: ByteBuffer): ReleaseView {
+        return ReleaseView(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterULong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ReleaseView) = (
+            FfiConverterString.allocationSize(value.`version`) +
+            FfiConverterString.allocationSize(value.`tag`) +
+            FfiConverterString.allocationSize(value.`notes`) +
+            FfiConverterString.allocationSize(value.`publishedAt`) +
+            FfiConverterString.allocationSize(value.`apkName`) +
+            FfiConverterULong.allocationSize(value.`apkSizeBytes`)
+    )
+
+    override fun write(value: ReleaseView, buf: ByteBuffer) {
+            FfiConverterString.write(value.`version`, buf)
+            FfiConverterString.write(value.`tag`, buf)
+            FfiConverterString.write(value.`notes`, buf)
+            FfiConverterString.write(value.`publishedAt`, buf)
+            FfiConverterString.write(value.`apkName`, buf)
+            FfiConverterULong.write(value.`apkSizeBytes`, buf)
     }
 }
 
@@ -4401,6 +5212,299 @@ public object FfiConverterTypeToolCallStatusView: FfiConverterRustBuffer<ToolCal
 }
 
 
+
+
+
+/**
+ * Result of comparing the installed app with the latest release.
+ */
+sealed class UpdateCheckView {
+    
+    /**
+     * No newer release is available.
+     */
+    data class UpToDate(
+        /**
+         * Installed version.
+         */
+        val `current`: kotlin.String, 
+        /**
+         * Latest release version.
+         */
+        val `latest`: kotlin.String) : UpdateCheckView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * A newer release is available.
+     */
+    data class Available(
+        /**
+         * Release metadata.
+         */
+        val `release`: app.tether.core.generated.ReleaseView) : UpdateCheckView()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeUpdateCheckView : FfiConverterRustBuffer<UpdateCheckView>{
+    override fun read(buf: ByteBuffer): UpdateCheckView {
+        return when(buf.getInt()) {
+            1 -> UpdateCheckView.UpToDate(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                )
+            2 -> UpdateCheckView.Available(
+                FfiConverterTypeReleaseView.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: UpdateCheckView): ULong = when(value) {
+        is UpdateCheckView.UpToDate -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`current`)
+                + FfiConverterString.allocationSize(value.`latest`)
+            )
+        }
+        is UpdateCheckView.Available -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterTypeReleaseView.allocationSize(value.`release`)
+            )
+        }
+    }
+
+    override fun write(value: UpdateCheckView, buf: ByteBuffer) {
+        when(value) {
+            is UpdateCheckView.UpToDate -> {
+                buf.putInt(1)
+                FfiConverterString.write(value.`current`, buf)
+                FfiConverterString.write(value.`latest`, buf)
+                Unit
+            }
+            is UpdateCheckView.Available -> {
+                buf.putInt(2)
+                FfiConverterTypeReleaseView.write(value.`release`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+
+
+/**
+ * Errors exposed by the updater without local paths or remote URL details.
+ */
+sealed class UpdaterException: kotlin.Exception() {
+    
+    /**
+     * The network request failed.
+     */
+    class Network(
+        ) : UpdaterException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * No usable release was found.
+     */
+    class Unavailable(
+        ) : UpdaterException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * The update data was invalid.
+     */
+    class Invalid(
+        ) : UpdaterException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * The downloaded APK did not match its published digest.
+     */
+    class Checksum(
+        ) : UpdaterException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * The APK exceeds the size limit.
+     */
+    class TooLarge(
+        ) : UpdaterException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * Local storage failed.
+     */
+    class Storage(
+        ) : UpdaterException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * The operation was cancelled.
+     */
+    class Cancelled(
+        ) : UpdaterException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * No matching release has been checked.
+     */
+    class NoRelease(
+        ) : UpdaterException() {
+        override val message
+            get() = ""
+    }
+    
+
+    
+
+
+    companion object ErrorHandler : UniffiRustCallStatusErrorHandler<UpdaterException> {
+        override fun lift(error_buf: RustBuffer.ByValue): UpdaterException = FfiConverterTypeUpdaterError.lift(error_buf)
+    }
+
+    
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeUpdaterError : FfiConverterRustBuffer<UpdaterException> {
+    override fun read(buf: ByteBuffer): UpdaterException {
+        
+
+        return when(buf.getInt()) {
+            1 -> UpdaterException.Network()
+            2 -> UpdaterException.Unavailable()
+            3 -> UpdaterException.Invalid()
+            4 -> UpdaterException.Checksum()
+            5 -> UpdaterException.TooLarge()
+            6 -> UpdaterException.Storage()
+            7 -> UpdaterException.Cancelled()
+            8 -> UpdaterException.NoRelease()
+            else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: UpdaterException): ULong {
+        return when(value) {
+            is UpdaterException.Network -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is UpdaterException.Unavailable -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is UpdaterException.Invalid -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is UpdaterException.Checksum -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is UpdaterException.TooLarge -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is UpdaterException.Storage -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is UpdaterException.Cancelled -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is UpdaterException.NoRelease -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+        }
+    }
+
+    override fun write(value: UpdaterException, buf: ByteBuffer) {
+        when(value) {
+            is UpdaterException.Network -> {
+                buf.putInt(1)
+                Unit
+            }
+            is UpdaterException.Unavailable -> {
+                buf.putInt(2)
+                Unit
+            }
+            is UpdaterException.Invalid -> {
+                buf.putInt(3)
+                Unit
+            }
+            is UpdaterException.Checksum -> {
+                buf.putInt(4)
+                Unit
+            }
+            is UpdaterException.TooLarge -> {
+                buf.putInt(5)
+                Unit
+            }
+            is UpdaterException.Storage -> {
+                buf.putInt(6)
+                Unit
+            }
+            is UpdaterException.Cancelled -> {
+                buf.putInt(7)
+                Unit
+            }
+            is UpdaterException.NoRelease -> {
+                buf.putInt(8)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+
+}
 
 
 

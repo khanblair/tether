@@ -48,6 +48,7 @@ import app.tether.design.tokens.TetherBorder
 import app.tether.design.tokens.TetherRadius
 import app.tether.design.tokens.TetherSize
 import app.tether.design.tokens.TetherSpace
+import app.tether.messages.AppMessages
 import app.tether.shell.BackButton
 
 /**
@@ -58,6 +59,7 @@ import app.tether.shell.BackButton
 fun AboutScreen(
     controller: UpdatesController,
     core: CoreClient,
+    messages: AppMessages,
     showCoreCard: Boolean,
     onBack: () -> Unit,
 ) {
@@ -72,7 +74,7 @@ fun AboutScreen(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
-    val coreCard: @Composable () -> Unit = { CoreCard(core = core) }
+    val coreCard: @Composable () -> Unit = { CoreCard(core = core, messages = messages) }
     AboutContent(
         state = state,
         onAction = { action -> controller.perform(action) },

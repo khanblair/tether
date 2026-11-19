@@ -8,8 +8,11 @@ import app.tether.core.keystoreSecretVault
 import app.tether.design.ThemeMode
 import app.tether.home.HomeSources
 import app.tether.home.createHomeSources
+import app.tether.messages.AppMessages
 import app.tether.providers.CoreProviderGateway
 import app.tether.providers.ProviderGateway
+import app.tether.theme.PrefsThemeStore
+import app.tether.theme.ThemeController
 import app.tether.updates.CoreUpdateGateway
 import app.tether.updates.PrefsUpdateStore
 import app.tether.updates.UpdatesController
@@ -17,7 +20,6 @@ import app.tether.updates.createUpdateInstaller
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /** Hand-wired dependencies. A DI library arrives only when this grows past a screenful. */
@@ -58,12 +60,16 @@ class AppModule(
         )
     }
 
-    private val themeModeState = MutableStateFlow(ThemeMode.System)
+    /** The theme choice. It is saved in preferences and applies at once. */
+    val theme = ThemeController(PrefsThemeStore(context))
 
-    /** The theme choice. Held in memory until settings storage ships. */
-    val themeMode: StateFlow<ThemeMode> = themeModeState
+    /** The theme choice, read by the activity. */
+    val themeMode: StateFlow<ThemeMode> = theme.mode
 
     fun setThemeMode(mode: ThemeMode) {
-        themeModeState.value = mode
+        theme.set(mode)
     }
+
+    /** Messages for the snackbar host, such as the toast after a test event. */
+    val messages = AppMessages()
 }

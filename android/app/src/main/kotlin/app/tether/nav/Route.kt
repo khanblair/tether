@@ -9,6 +9,7 @@ enum class Route(
     val path: String,
     @StringRes val title: Int,
 ) {
+    Home("home", R.string.route_home_title),
     Onboarding("onboarding", R.string.route_onboarding_title),
     Projects("projects", R.string.route_projects_title),
     Attention("attention", R.string.route_attention_title),

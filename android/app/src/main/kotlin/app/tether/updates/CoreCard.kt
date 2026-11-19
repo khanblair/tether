@@ -23,6 +23,7 @@ import app.tether.design.TetherTheme
 import app.tether.design.components.PrimaryButton
 import app.tether.design.tokens.TetherRadius
 import app.tether.design.tokens.TetherSpace
+import app.tether.messages.AppMessages
 
 private const val EVENT_LOG_SIZE = 5
 
@@ -31,7 +32,10 @@ private const val EVENT_LOG_SIZE = 5
  * that sends a test event through the core and back.
  */
 @Composable
-internal fun CoreCard(core: CoreClient) {
+internal fun CoreCard(
+    core: CoreClient,
+    messages: AppMessages,
+) {
     val events by produceState(initialValue = emptyList<CoreEventView>(), core) {
         core.events.collect { value = (value + it).takeLast(EVENT_LOG_SIZE) }
     }
@@ -69,11 +73,13 @@ internal fun CoreCard(core: CoreClient) {
                 Text(text = describe(event), style = TetherTheme.monoSmall)
             }
             val message = stringResource(R.string.projects_core_test_message)
+            val sentToast = stringResource(R.string.core_test_event_sent)
             PrimaryButton(
                 label = stringResource(R.string.projects_core_send_test_action),
                 onClick = {
                     sent += 1
                     core.emitTestEvent("$message #$sent")
+                    messages.show(sentToast)
                 },
             )
         }

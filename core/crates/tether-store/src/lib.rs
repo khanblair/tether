@@ -6,8 +6,12 @@
 mod db;
 mod error;
 mod migrations;
+mod models;
+#[cfg(test)]
+mod models_tests;
 #[cfg(test)]
 mod schema_tests;
 
 pub use db::Store;
 pub use error::StoreError;
+pub use models::{CATALOG_TTL_MS, catalog_is_fresh};

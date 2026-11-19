@@ -46,4 +46,42 @@ pub enum StoreError {
         /// The journal mode SQLite reported.
         mode: String,
     },
+    /// A model price cannot be represented by SQLite's signed integer type.
+    #[error("model {field} price {value} does not fit in SQLite INTEGER")]
+    ModelPriceOverflow {
+        /// The price field that overflowed.
+        field: &'static str,
+        /// The value that was rejected.
+        value: u64,
+    },
+    /// A cached row contains an enum value unknown to this app.
+    #[error("cached model row has invalid {field} value: {value}")]
+    InvalidModelEnum {
+        /// The enum column with the invalid value.
+        field: &'static str,
+        /// The stored text.
+        value: String,
+    },
+    /// A cached model row contains a value outside the model type's range.
+    #[error("cached model row has invalid {field} value: {value}")]
+    InvalidModelValue {
+        /// The model field with the invalid value.
+        field: &'static str,
+        /// The stored integer.
+        value: i64,
+    },
+    /// Capability JSON could not be encoded for storage.
+    #[error("could not encode model capabilities: {0}")]
+    ModelCapsJson(#[from] serde_json::Error),
+    /// A model in a replacement list names another provider.
+    #[error("model belongs to {found}, but the replacement is for {expected}")]
+    ModelProviderMismatch {
+        /// The provider being replaced.
+        expected: &'static str,
+        /// The provider named by the model.
+        found: &'static str,
+    },
+    /// The input list is too long to assign SQLite positions.
+    #[error("model list is too long to store")]
+    PositionOverflow,
 }

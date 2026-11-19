@@ -211,7 +211,18 @@ any active state ──fatal error──▶ Failed ──retry──▶ Requesti
 
 ### Provider connection
 
-`Unset → Testing → (Ok | BadKey | NetworkError | Blocked)`; editing the key returns to `Unset`.
+`Unset → (Ok | BadKey | NetworkError | Blocked)`. `Testing` is a screen state only: it is never written to the database, so a test that dies with the app cannot leave a provider stuck on "testing" (a stored `testing` reads back as `Unset`). Saving a new key, or removing the key, returns the provider to `Unset`.
+
+P1-10 tests a saved key with the provider's model-list request (`ModelCatalog::list_models`), which returns data without generating tokens. The check lives in `tether-engine` (`check_provider`) and runs for at most 20 seconds. A blank key is `BadKey` with no request. The result maps as follows:
+
+| Result | Status |
+|---|---|
+| Model list returned | `Ok`, and the list is cached (24 hours, see the `models` table) |
+| HTTP 401, or 403 | `BadKey` |
+| OpenAI 403 with code `unsupported_country_region_territory` or a "country, region, or territory" message; Gemini 400 or 403 with a "location is not supported" message | `Blocked` |
+| Network failure, timeout, server error, rate limit, bad response | `NetworkError` |
+
+Only those two documented signals count as a region block, because for Anthropic, OpenRouter, DeepSeek, and Gemini a 403 means a permission or key problem. `ProviderSettings` (`tether-ffi`) reads the wrapped key through `SecretVault`, calls the engine, and saves the status, the test time, and the key reference in `provider_configs`; the key itself never leaves the core except through `reveal_key`, which Kotlin calls only after a biometric or screen lock check. `test_target` returns the exact URL of the request, so the screen can show it before the user taps Test connection. Removing a key also clears that provider's cached models.
 
 ## 7. Data model
 

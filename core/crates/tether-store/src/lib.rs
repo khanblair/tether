@@ -14,6 +14,8 @@ mod provider_configs;
 mod schema_tests;
 mod sessions;
 #[cfg(test)]
+mod sessions_rules_tests;
+#[cfg(test)]
 mod sessions_tests;
 
 pub use db::Store;

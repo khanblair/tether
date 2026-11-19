@@ -4,7 +4,7 @@ use tether_types::{
 
 use crate::Store;
 
-fn seed_project(store: &Store) -> ProjectId {
+pub(crate) fn seed_project(store: &Store) -> ProjectId {
     let id = ProjectId::new("01TESTPROJECT00000000000000");
     store
         .conn

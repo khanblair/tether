@@ -6,6 +6,8 @@ mod provider_connection;
 mod session;
 mod session_provider;
 #[cfg(test)]
+mod session_stream_tests;
+#[cfg(test)]
 mod session_tests;
 #[cfg(test)]
 mod session_usage_tests;

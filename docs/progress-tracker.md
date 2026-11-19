@@ -71,6 +71,7 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 | P0-17 | Commit size check | Blair with Claude | Done | n/a | `tools/check-commit-size.sh`, `just commits`, and a `tooling` CI step on pull requests |
 | P0-19 | Publish a signed release automatically | Blair with Claude | Done | #134, #136 | Merged; `v0.0.1` published as the latest release, signed with the pinned key. Releases are never pre-releases (#136) |
 | P0-16 | Release workflow | Blair with Claude | Done | #134 | Ran on the merge of #134 and published `v0.0.1`; issue #4 closed |
+| P1-07 | Gemini adapter | Blair with Codex and Claude | In progress | | Issue #11 (stays open for the nightly run). Written by a Codex CLI session (GPT-5.6 Luna), reviewed and mutation-tested by Claude; 120 provider tests |
 | P1-06 | OpenAI adapter (Responses API) | Blair with Codex and Claude | In review | #144 | Issue #10 (stays open for the nightly run). Written by a Codex CLI session (GPT-5.6 Luna), reviewed and mutation-tested by Claude; 99 tests with the Anthropic ones |
 | P1-05 | Anthropic adapter: streaming, tool calls, usage, caching headers | Blair with Claude | In review | #143 | Issue #9 (stays open for the nightly run). Adapter, shared HTTP client, 49 new tests, fixtures, and an ignored live smoke test. Not done: the nightly run of the live test needs an `ANTHROPIC_API_KEY` repository secret |
 | P1-04 | SSE parser and provider trait | Blair with Claude | In review | #141 | Issue #8. `ChatProvider` trait and types, `SseParser` with 29 tests including every split position |
@@ -80,6 +81,7 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 
 | Date | ID | Decision | Why | Docs affected |
 |---|---|---|---|---|
+| 2026-11-19 | D30 | The Gemini adapter sends the key only in the `x-goog-api-key` header and rejects model ids with characters outside letters, digits, `.`, `-`, and `_`. It uses the documented `v1beta` streaming endpoint and `thinkingBudget` (1024, 8192, 24576) even though Google now calls `generateContent` legacy in favour of its Interactions API. Thought signatures are not sent, because Google documents no way to skip them | A key in a URL lands in logs and proxies. A model id in the URL path must not be able to add a query or change the path. The adapter follows the documented endpoint that exists today; moving to the Interactions API is a later decision. Task P1-07, issue #11 | architecture |
 | 2026-11-19 | D29 | The adapters share one transport (`transport.rs`). The OpenAI adapter sends `store: false` and sends tool calls as `function_call` items without an `id`, and never replays reasoning. Codex tasks run as local Codex CLI sessions (`codex exec`, GPT-5.6 Luna, workspace-write sandbox) in the current checkout, because the Codex cloud environment does not exist and worktrees are not used | One copy of the code that handles the key, redirects, and cancellation. `store: false` keeps conversations off OpenAI's servers. An `id` on a function call makes the API ask for its paired reasoning item. The local CLI needs no cloud setup | architecture, project-structure |
 | 2026-11-19 | D27 | Every provider sends through one client from `http_client()`: HTTPS only, no redirects, 10 s connect and 120 s read timeouts. The Anthropic adapter leaves `thinking` out of a request that answers tool calls until signatures are stored, and never sends rewound messages. The license allow list gains `CDLA-Permissive-2.0`, which `webpki-roots` (the root certificate list reqwest uses) carries | reqwest strips only `Authorization` and `Cookie` headers on a cross-host redirect, so an `x-api-key` header would follow it. Anthropic rejects thinking in a tool loop without the signed blocks. CDLA-Permissive-2.0 is a permissive data license. Task P1-05, issue #9 | architecture, library-docs, deny.toml |
 | 2026-11-19 | D25 | A provider streams one response into a Tokio channel and stops when a cancellation token fires or the receiver is dropped. It does not retry; the engine does. The trait is dyn-compatible without an extra crate (it returns a boxed future). `Usage` events are running totals, not increments. The SSE parser drops a line over 1 MiB and an event over 8 MiB | A channel gives backpressure and lets the engine batch deltas every 32 ms; a token gives clean interruption (architecture 5.1); retries belong where the retryable flag is decided. Task P1-04, issue #8 | architecture, project-structure |
@@ -129,6 +131,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Who | What happened | Next |
 |---|---|---|---|
+| 2026-11-19 | Blair with Codex and Claude | Built P1-07 as a local Codex CLI session (GPT-5.6 Luna). Claude's review ran 20 mutations: 15 caught, 5 slipped through (loose `contains` assertions), closed with exact tests. Claude also added model id validation and the unspecified finish reason handling | Codex review of the PR, then P1-08 |
 | 2026-11-19 | Blair with Codex and Claude | Built P1-06 as a local Codex CLI session (GPT-5.6 Luna) after the owner clarified the flow. Claude extracted the shared transport first, then reviewed the result: 16 mutations, 14 caught, 2 gaps (bad tool arguments, empty fragments) closed with new tests | Codex review of #144, then P1-07 and P1-08 |
 | 2026-11-19 | Blair with Claude | Built P1-05 in a worktree stacked on the P1-04 branch: a Sonnet agent wrote the adapter from a detailed spec, and the main session reviewed it, mutation-tested it (3 of 12 mutations slipped through, tests added), and added the shared client, the tool-loop thinking rule, and the rewound filter | Codex review; Blair decides on the nightly live smoke test |
 | 2026-11-19 | Blair with Claude | Built P1-04: the main session wrote the provider contract, a Haiku agent wrote the SSE parser and fixtures in its own worktree, and the main session reviewed it, added the event size cap, and mutation-tested it. The first agent run used the wrong base branch and stopped without changes; it was re-run in a worktree on the right branch | Codex review, then P1-05 builds on this |
@@ -143,6 +146,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Files | Change | PR |
 |---|---|---|---|
+| 2026-11-19 | `core/crates/tether-providers/src/gemini/`, `core/fixtures/provider-streams/gemini-*.sse` | Gemini adapter, tests, and fixtures for P1-07 | |
 | 2026-11-19 | `core/crates/tether-providers/src/{openai/,transport.rs,test_support.rs}`, `core/fixtures/provider-streams/openai-*.sse` | Shared transport, OpenAI adapter, shared test server, and fixtures for P1-06 | #144 |
 | 2026-11-19 | `core/crates/tether-providers/src/{anthropic/,client.rs}`, `core/fixtures/provider-streams/anthropic-*.sse`, `core/deny.toml`, `core/Cargo.*` | Anthropic adapter, shared HTTP client, fixtures, and the license allowance for P1-05 | #143 |
 | 2026-11-19 | `core/crates/tether-providers/`, `core/fixtures/provider-streams/`, `core/Cargo.*` | Provider trait, request, event and error types, and the SSE parser for P1-04 | #141 |
@@ -157,6 +161,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Doc | Change |
 |---|---|---|
+| 2026-11-19 | architecture, project-structure, progress-tracker | The Gemini adapter as built (D30) |
 | 2026-11-19 | architecture, project-structure, progress-tracker | The shared transport and the OpenAI adapter as built (D29) |
 | 2026-11-19 | architecture, library-docs, project-structure, progress-tracker | The Anthropic adapter and the shared client as built (D27) |
 | 2026-11-19 | architecture, project-structure, progress-tracker | The provider contract as built (D25) and the new files |
@@ -186,6 +191,8 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 - P1-11 (event pipeline) owns three gaps found in the P1-01 review: Kotlin needs a way to read the session id of any `CoreEventView` without a per-variant `when` (add `CoreEvent::session_id()` in the engine and expose it); `EventBus` replays 16 events and drops the oldest of any kind, but architecture section 4 says only `TextDelta` drops, and `ApprovalRequired` and `TurnFinished` must not drop; and the 400-line file limit will need `views/event.rs` split by event group once about 10 more events land.
 - P1-02 owns the stored text form of `Role`, `SessionStatus`, `PermissionMode`, `Provider`, `Executor`, and `ToolCallStatus`, and what to do with an unknown part kind in `body_json`.
 - `ToolProposed` and `ApprovalRequired` carry only the tool and the target. The approval bar will also need the executor and the rule text for "Always allow"; add the fields in the task that builds that bar.
+- Reasoning replay: Anthropic thinking signatures, Gemini thought signatures, and OpenAI reasoning items are all dropped today, so a tool loop on a model that requires them can fail (Anthropic and OpenAI are worked around; Gemini has no documented bypass). Fixing it needs `MessagePart::Thinking` to carry opaque provider data and the store to keep it. Decide before the tool phase (P2).
+- Google calls `generateContent` legacy and recommends its Interactions API. Revisit the Gemini endpoint when that API is stable.
 - Consider sub-agents for read-only exploration early in v1.1; the turn engine should not assume one agent per session.
 - Scheduled tasks (v1.2) should only run while charging and on Wi-Fi by default.
 - Watch for a stable Node-compatible WASI runtime; it would move many JavaScript tasks from Linux mode into the sandbox.

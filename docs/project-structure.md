@@ -40,7 +40,7 @@ tether/
 │   └── crates/
 │       ├── tether-types/      ids, message, session, usage, error, event (CoreEvent); no UniFFI code
 │       ├── tether-engine/     VERSION, EventSink, Core (emits Ready and Test events)
-│       ├── tether-providers/  lib.rs (ChatProvider), request.rs, event.rs, error.rs, sse.rs (SseParser), client.rs (shared HTTP client), anthropic/ (adapter), openai/ (adapter), transport.rs (shared request and stream code)
+│       ├── tether-providers/  lib.rs (ChatProvider), request.rs, event.rs, error.rs, sse.rs (SseParser), client.rs (shared HTTP client), anthropic/ (adapter), openai/ (adapter), gemini/ (adapter), transport.rs (shared request and stream code)
 │       ├── tether-ffi/        UniFFI surface, builds libtether_core.so
 │       │   ├── uniffi.toml
 │       │   └── src/{lib.rs, callbacks.rs, views/{mod,event,types,error}.rs, bin/uniffi-bindgen.rs}

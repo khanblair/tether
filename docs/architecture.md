@@ -213,7 +213,7 @@ any active state ──fatal error──▶ Failed ──retry──▶ Requesti
 
 `Unset → (Ok | BadKey | NetworkError | Blocked)`. `Testing` is a screen state only: it is never written to the database, so a test that dies with the app cannot leave a provider stuck on "testing" (a stored `testing` reads back as `Unset`). Saving a new key, or removing the key, returns the provider to `Unset`.
 
-P1-10 tests a saved key with the provider's model-list request (`ModelCatalog::list_models`), which returns data without generating tokens. The check lives in `tether-engine` (`check_provider`) and runs for at most 20 seconds. A blank key is `BadKey` with no request. The result maps as follows:
+P1-10 tests a saved key with the provider's model-list request (`ModelCatalog::list_models`), which returns data without generating tokens. OpenRouter's model list is public and answers 200 for any key, so its test first calls `GET /key` (`ModelCatalog::verify_key`), which needs a valid key, and lists the models only when that succeeds; the screen shows both URLs. The check lives in `tether-engine` (`check_provider`) and runs for at most 20 seconds. A blank key is `BadKey` with no request. The result maps as follows:
 
 | Result | Status |
 |---|---|

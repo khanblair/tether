@@ -48,6 +48,7 @@ Goal: an empty app that calls into the Rust core, with all repo tooling in place
 | P0-17 | Commit size check in CI and `just commits` | n/a | A 16 file commit fails the check (self test); pull requests run it | P0-09 |
 | P0-18 | Mobile UI prototype in `tools/prototype` | n/a | Every screen in ui-rules.md has a frame; Blair has reviewed it in a browser | P0-07 |
 | P0-19 | Publish a signed release automatically when the core version changes | n/a | Merging a version bump to `main` publishes a GitHub Release with the signed `full` APK, the `play` bundle, and `SHA256SUMS`, with no manual tag and no draft | P0-16 |
+| P0-20 | App name is "Tether" in both flavors, shipped as release `v0.0.2` | n/a | The installed `full` APK shows "Tether" as its label; `v0.0.2` is the latest release | P0-19 |
 
 Testing approach: build checks on every ABI; one instrumented test that loads the native library; the theme checked by hand in both modes (screenshot tests are P1-19); slop and smell fixtures that must fail.
 

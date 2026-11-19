@@ -78,7 +78,9 @@ Why one process: the core holds session state in memory and SQLite; splitting it
 
 Rule: only `tether-engine` coordinates other crates. Leaf crates never call each other except where the table lists the dependency.
 
-Status: `tether-types`, `tether-engine`, `tether-ffi`, and `tether-store` contain code. The other crates are empty libraries that hold their place in the workspace (see project-structure.md, Present now).
+Status: `tether-types`, `tether-engine`, `tether-ffi`, `tether-store`, and `tether-secrets` contain code. The other crates are empty libraries that hold their place in the workspace (see project-structure.md, Present now).
+
+`tether-secrets` (P1-03): `SecretStore` keeps one file per secret and asks the platform to wrap and unwrap through the `SecretsPlatform` callback, which takes the secret's reference as a second argument and must bind it as authenticated data. The core never holds an encryption key. `Secret` wipes its bytes when dropped and never prints. Writes go to a temporary file with mode 0600 that only that call uses, and are renamed over the target, so a crash leaves the old file or the new one, and two writers to one reference never share a file (the last rename wins). `SecretVault` is the UniFFI face: Kotlin calls `put`, `reveal` (after a biometric check), `has`, and `delete`. Providers will read keys inside the core, not through the vault. The vault is its own object until the engine owns the store; the `init` call in section 8 takes it over then. On Android, `KeystoreSecretsPlatform` in `core-bridge` uses an AES-256-GCM key in the Keystore (StrongBox when available) that needs no user authentication. A process-wide lock guards creating that key, so two platform instances cannot each create one and make the first unreadable.
 
 ### Android (`android/`)
 
@@ -282,7 +284,7 @@ All under the app's private `files/` directory unless noted.
 | `workspaces/<project-id>/` | Project files and `.git` |
 | `db/tether.db` | SQLite database |
 | `blobs/<aa>/<hash>` | Content-addressed blobs |
-| `secrets/<ref>.bin` | Secrets encrypted with AES-GCM using a Keystore key |
+| `secrets/<ref>.bin` | The bytes `SecretsPlatform.wrap` returned (AES-GCM with a Keystore key: 12-byte IV, ciphertext, tag), after a 5-byte header (`TSEC` and a format version). `<ref>` allows only `a-z`, `0-9`, `-`, and `_`, up to 64 characters |
 | `memory/MEMORY.md`, `memory/USER.md` | Agent notes and user profile, capped in size (F22) |
 | `memory/vault/` | The Obsidian-compatible vault: plain Markdown notes, `index.md`, `log.md` (F23) |
 | `skills/<category>/<name>/SKILL.md` | User skills, with optional `references/`, `templates/`, `scripts/`, `assets/` (F21) |
@@ -304,6 +306,7 @@ Backups: `secrets/`, `linux/`, `runtimes/`, `blobs/`, `logs/`, and `cache/` are 
 | Threat | Control |
 |---|---|
 | Key theft from storage | Keys encrypted with an AES-GCM key held in Android Keystore (StrongBox when available); never written in plaintext; excluded from backup |
+| A wrapped secret file copied over another reference (for example the GitHub token over a provider key, to send it to a third party) | The reference is passed to the platform as authenticated data when wrapping and unwrapping, so a file moved to another reference fails to unwrap |
 | Keys leaking into logs, transcripts, exports | Redaction layer in the logger and exporter matches known key formats and every stored secret; S7 test |
 | Agent-run code reading keys | Secrets never enter executor environments; sandbox sees only `/workspace`; Linux mode binds only the project folder and a temp folder |
 | Path escape | Path guard canonicalizes every path, rejects `..` outside the root, rejects symlinks pointing outside, rejects writes inside `.git/` |

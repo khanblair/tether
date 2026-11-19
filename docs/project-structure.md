@@ -42,11 +42,12 @@ tether/
 │       ├── tether-store/      migrations/0001_init.sql; src/{lib,db,error,migrations,schema_tests}.rs
 │       ├── tether-engine/     VERSION, EventSink, Core (emits Ready and Test events)
 │       ├── tether-secrets/    SecretStore, SecretRef, Secret, SecretsPlatform trait, errors (src/{lib,error,platform,reference,secret,store,store_tests}.rs)
+│       ├── tether-providers/  lib.rs (ChatProvider), request.rs, event.rs, error.rs, sse.rs (SseParser)
 │       ├── tether-ffi/        UniFFI surface, builds libtether_core.so
 │       │   ├── uniffi.toml
 │       │   └── src/{lib.rs, callbacks.rs, secrets.rs, views/{mod,event,types,error}.rs, bin/uniffi-bindgen.rs}
 │       ├── tether-quality/    data/slop_words.txt and slop_patterns.toml (shared with slop-lint)
-│       └── tether-{providers,tools,workspace,vcs,sandbox,linux,ci,connectors,mcp,skills,memory}/
+│       └── tether-{tools,workspace,vcs,sandbox,linux,ci,connectors,mcp,skills,memory}/
 │                              Empty libraries
 ├── android/
 │   ├── settings.gradle.kts  build.gradle.kts  gradle.properties  gradlew  gradlew.bat
@@ -72,7 +73,7 @@ tether/
     └── pull_request_template.md  CODEOWNERS  dependabot.yml
 ```
 
-Not present yet: `LICENSE` (no license chosen, see Q5), `nightly.yml` (nothing to run until P1), `core/benches/`, the rest of `core/fixtures/` (only `smells/` exists), feature modules, `service`, `platform`, the `full` and `play` Linux mode files, and the real code of every Rust crate except `tether-types`, `tether-engine`, `tether-ffi`, `tether-store`, and `tether-secrets`.
+Not present yet: `LICENSE` (no license chosen, see Q5), `nightly.yml` (nothing to run until P1), `core/benches/`, the rest of `core/fixtures/` (only `smells/` and `provider-streams/` exist), feature modules, `service`, `platform`, the `full` and `play` Linux mode files, and the real code of every Rust crate except `tether-types`, `tether-engine`, `tether-ffi`, `tether-store`, `tether-secrets`, and `tether-providers`.
 
 ## Top level
 
@@ -140,6 +141,7 @@ core/
 │   └── store.rs               Database write and query timings
 ├── fixtures/
 │   ├── smells/                Crate that must fail clippy (see tools/check-smell-fixtures.sh)
+│   ├── provider-streams/      SSE streams for the parser and adapter tests, written from the providers' documented formats
 │   ├── repos/                 Small sample repos for tests (Python, JS, Rust)
 │   └── provider-streams/      Recorded provider SSE streams for adapter tests
 └── crates/

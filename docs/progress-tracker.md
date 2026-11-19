@@ -71,7 +71,7 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 | P0-17 | Commit size check | Blair with Claude | Done | n/a | `tools/check-commit-size.sh`, `just commits`, and a `tooling` CI step on pull requests |
 | P0-19 | Publish a signed release automatically | Blair with Claude | Done | #134, #136 | Merged; `v0.0.1` published as the latest release, signed with the pinned key. Releases are never pre-releases (#136) |
 | P0-16 | Release workflow | Blair with Claude | Done | #134 | Ran on the merge of #134 and published `v0.0.1`; issue #4 closed |
-| P1-03 | `tether-secrets` with Keystore wrap and unwrap callback | Blair with Claude | In review | #142 | Issue #7. Rust store with 18 tests, FFI vault with 3, Kotlin `KeystoreSecretsPlatform`, and 4 device tests on the emulator |
+| P1-03 | `tether-secrets` with Keystore wrap and unwrap callback | Blair with Claude | In review | #142 | Issue #7. Rust store with 19 tests, FFI vault with 3, Kotlin `KeystoreSecretsPlatform`, and 5 device tests on the emulator. Codex found two concurrency bugs (shared temp file, per-instance key lock); both reproduced and fixed |
 | P1-01 | `tether-types` message, part, event, usage, error types | Blair with Claude | Done | #138 | Merged; issue #5 closed. Types, 15 new events, and FFI views; bindings regenerated. Sonnet and Codex reviews done |
 
 ## Decisions log

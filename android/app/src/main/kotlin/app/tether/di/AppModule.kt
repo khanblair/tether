@@ -6,6 +6,8 @@ import app.tether.core.generated.ProviderSettings
 import app.tether.core.generated.Updater
 import app.tether.core.keystoreSecretVault
 import app.tether.design.ThemeMode
+import app.tether.home.HomeSources
+import app.tether.home.createHomeSources
 import app.tether.providers.CoreProviderGateway
 import app.tether.providers.ProviderGateway
 import app.tether.updates.CoreUpdateGateway
@@ -33,7 +35,10 @@ class AppModule(
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    /** The update flow, shared by the home banner and the About screen. */
+    /** The data behind the home screens: projects and sessions. Debug and release builds differ. */
+    val home: HomeSources = createHomeSources()
+
+    /** The update flow, shared by the Needs attention list and the About screen. */
     val updates: UpdatesController by lazy {
         UpdatesController(
             gateway =

@@ -3,6 +3,12 @@
     <!-- Routes -->
     <string name="route_onboarding_title">Welcome</string>
     <string name="route_projects_title">Projects</string>
+    <string name="route_attention_title">Needs attention</string>
+    <string name="route_new_session_title">New session</string>
+    <string name="route_skills_title">Skills and memory</string>
+    <string name="route_clone_title">Clone from GitHub</string>
+    <string name="route_new_project_title">New empty project</string>
+    <string name="route_import_title">Import a zip</string>
     <string name="route_project_home_title">Project home</string>
     <string name="route_session_title">Session</string>
     <string name="route_diff_title">Diff</string>
@@ -16,15 +22,13 @@
     <string name="nav_back_label">Back</string>
     <string name="placeholder_body">This screen arrives in a later phase. See the build plan.</string>
 
-    <!-- Projects (P0 shell) -->
-    <string name="projects_intro_body">Phase P0 shell. The screens below are placeholders that prove navigation.</string>
+    <!-- Rust core card (About, debug builds only) -->
     <string name="projects_core_title">Rust core</string>
     <string name="projects_core_version">Version %1$s</string>
     <string name="projects_core_events_title">Recent events</string>
     <string name="projects_core_events_empty">No events yet</string>
     <string name="projects_core_send_test_action">Send test event</string>
     <string name="projects_core_test_message">Hello from Kotlin</string>
-    <string name="projects_screens_title">Screens</string>
     <string name="core_event_ready">Ready, core %1$s</string>
     <string name="core_event_test">Test: %1$s</string>
     <string name="core_event_other">Core event</string>
@@ -106,9 +110,67 @@
     <string name="settings_about_version">Version %1$s</string>
     <string name="settings_about_update_available">Update available: version %1$s</string>
 
-    <!-- Home banner -->
-    <string name="home_update_available">Version %1$s is available.</string>
-    <string name="home_update_view">View</string>
+    <!-- Projects home -->
+    <string name="home_menu_action">Open projects and sessions</string>
+    <string name="home_search_action">Search projects</string>
+    <string name="home_search_placeholder">Search by project name</string>
+    <string name="home_search_clear">Clear search</string>
+    <string name="home_bell_action">Needs attention</string>
+    <plurals name="home_bell_count">
+        <item quantity="one">Needs attention, %1$d item</item>
+        <item quantity="other">Needs attention, %1$d items</item>
+    </plurals>
+    <plurals name="home_project_dirty">
+        <item quantity="one">%1$d uncommitted · %2$s</item>
+        <item quantity="other">%1$d uncommitted · %2$s</item>
+    </plurals>
+    <string name="home_project_clean">Clean · %1$s</string>
+    <string name="home_running_badge">Running</string>
+    <plurals name="home_project_count">
+        <item quantity="one">%1$d project</item>
+        <item quantity="other">%1$d projects</item>
+    </plurals>
+    <string name="home_no_match">No project matches \"%1$s\"</string>
+    <string name="home_empty_body">A project is a code repository stored on this phone. Open one to start a session.</string>
+    <string name="home_new_project">New project</string>
+    <string name="home_new_project_clone_sub">Pick a repository and branch</string>
+    <string name="home_new_project_clone">Clone from GitHub</string>
+    <string name="home_new_project_empty">New empty project</string>
+    <string name="home_new_project_empty_sub">Name it and start from nothing</string>
+    <string name="home_new_project_import">Import a zip</string>
+    <string name="home_new_project_import_sub">Unpack an archive into a new project</string>
+
+    <!-- Relative times -->
+    <string name="time_just_now">just now</string>
+    <string name="time_minutes_ago">%1$d min ago</string>
+    <string name="time_hours_ago">%1$d h ago</string>
+    <string name="time_yesterday">Yesterday</string>
+    <plurals name="time_days_ago">
+        <item quantity="one">%1$d day ago</item>
+        <item quantity="other">%1$d days ago</item>
+    </plurals>
+
+    <!-- Navigation drawer -->
+    <string name="drawer_search_placeholder">Search sessions</string>
+    <string name="drawer_search_empty">No session matches \"%1$s\"</string>
+    <string name="drawer_all_projects">All projects</string>
+    <string name="drawer_new_session">New session</string>
+    <string name="drawer_settings">Settings</string>
+    <string name="drawer_skills">Skills and memory</string>
+    <string name="drawer_state_running">Running</string>
+    <string name="drawer_state_waiting">Needs approval</string>
+    <string name="drawer_state_stopped">Stopped · %1$s</string>
+    <string name="drawer_state_done">Done · %1$s</string>
+    <string name="drawer_state_pr">PR #%1$d</string>
+
+    <!-- Needs attention -->
+    <string name="attention_group_waiting">Waiting for you</string>
+    <string name="attention_group_failed">Failed</string>
+    <string name="attention_group_updates">Updates</string>
+    <string name="attention_approval_sub">%1$s · Needs approval</string>
+    <string name="attention_failed_sub">%1$s · %2$s</string>
+    <string name="attention_update_sub">You have %1$s</string>
+    <string name="attention_empty">Nothing needs you right now.</string>
 
     <!-- About and updates -->
     <string name="about_title">About</string>

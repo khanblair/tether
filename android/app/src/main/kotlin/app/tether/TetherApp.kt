@@ -12,5 +12,7 @@ class TetherApp : Application() {
         super.onCreate()
         module = AppModule(this)
         module.core.start()
+        module.updates.restore()
+        module.updates.checkIfDue()
     }
 }

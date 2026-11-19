@@ -25,15 +25,18 @@ import app.tether.design.components.TetherTopBar
 import app.tether.design.tokens.TetherSpace
 import app.tether.di.AppModule
 import app.tether.nav.Route
+import app.tether.updates.UpdatesUiState
 
-/** The entry to model providers, and the theme choice. */
+/** The entry to model providers, the About screen, and the theme choice. */
 @Composable
 fun SettingsScreen(
     module: AppModule,
     onBack: () -> Unit,
     onOpenProviders: () -> Unit,
+    onOpenAbout: () -> Unit,
 ) {
     val mode by module.themeMode.collectAsStateWithLifecycle()
+    val updateState by module.updates.state.collectAsStateWithLifecycle()
     val labels =
         mapOf(
             ThemeMode.System to R.string.settings_theme_system,
@@ -72,6 +75,7 @@ fun SettingsScreen(
                 },
                 onClick = onOpenProviders,
             )
+            UpdatesRow(state = updateState, onClick = onOpenAbout)
             Text(
                 text = stringResource(R.string.settings_theme_title),
                 style = MaterialTheme.typography.titleSmall,
@@ -92,4 +96,31 @@ fun SettingsScreen(
             )
         }
     }
+}
+
+/** The About and updates entry. Its subtitle names the new version when one is known. */
+@Composable
+private fun UpdatesRow(
+    state: UpdatesUiState,
+    onClick: () -> Unit,
+) {
+    val version = state.newerVersion
+    val subtitle =
+        if (state.updateAvailable && version != null) {
+            stringResource(R.string.settings_about_update_available, version)
+        } else {
+            stringResource(R.string.settings_about_version, state.currentVersion)
+        }
+    ListRow(
+        title = stringResource(R.string.settings_about_title),
+        subtitle = subtitle,
+        trailing = {
+            TetherIcon(
+                icon = TetherIcons.ChevronRight,
+                contentDescription = null,
+                tint = TetherTheme.colors.text3,
+            )
+        },
+        onClick = onClick,
+    )
 }

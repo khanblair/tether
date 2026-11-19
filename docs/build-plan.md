@@ -77,7 +77,7 @@ Goal: chat with every provider, stream text, persist and resume sessions, show c
 | P1-17 | Voice input | F18 | Speech fills the composer; editable before send | P1-13 |
 | P1-18 | Log redaction layer and S7 test | F19 | Test with all key formats finds zero leaks in logs and export | P1-03 |
 | P1-19 | Screenshot tests for the P0 components in light, dark, and 200% font scale | n/a | Roborazzi goldens for `PrimaryButton`, `TetherTopBar`, and the theme pass in CI | P0-07 |
-| P1-20 | In-app updates for the `full` build | F19 | Settings > About > Updates checks the latest GitHub Release and shows its notes. In `full` it downloads the APK, verifies it against `SHA256SUMS`, and installs it over the running app; `play` links to Google Play instead | P1-10 |
+| P1-20 | In-app updates for the `full` build | F19 | Settings > About > Updates checks the latest GitHub Release and shows its notes. In `full` it downloads the APK, verifies it against `SHA256SUMS`, and installs it over the running app; `play` links to Google Play instead. The app also checks at start (at most every 12 hours) and shows a banner on the home screen when a newer version exists | P1-10 |
 
 Testing approach: recorded provider streams as fixtures; contract tests per adapter for text, tool call, error, rate limit, and malformed chunk; nightly live smoke test per provider with cheap models; Compose UI tests for transcript and composer; macrobenchmark for scroll.
 

@@ -3,6 +3,7 @@
 mod callbacks;
 mod provider_settings;
 mod secrets;
+mod updater;
 mod views;
 
 use std::sync::Arc;
@@ -12,6 +13,7 @@ use tether_engine::Core;
 pub use callbacks::EventSink;
 pub use provider_settings::{ProviderSettings, ProviderSettingsError, ProviderStatusView};
 pub use secrets::{SecretVault, SecretVaultError, SecretsPlatform, SecretsPlatformFailure};
+pub use updater::{DownloadProgress, ReleaseView, UpdateCheckView, Updater, UpdaterError};
 pub use views::{
     ConnectionStatusView, CoreErrorView, CoreEventView, ErrorKindView, ExecutorView,
     MessagePartView, MessageView, ModelRefView, PermissionModeView, ProviderView, RoleView,

@@ -3,10 +3,18 @@ package app.tether.di
 import android.content.Context
 import app.tether.core.CoreClient
 import app.tether.core.generated.ProviderSettings
+import app.tether.core.generated.Updater
 import app.tether.core.keystoreSecretVault
 import app.tether.design.ThemeMode
 import app.tether.providers.CoreProviderGateway
 import app.tether.providers.ProviderGateway
+import app.tether.updates.CoreUpdateGateway
+import app.tether.updates.PrefsUpdateStore
+import app.tether.updates.UpdatesController
+import app.tether.updates.createUpdateInstaller
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -22,6 +30,28 @@ class AppModule(
         CoreProviderGateway(
             lazy { ProviderSettings(context.getDatabasePath("tether.db").absolutePath, vault) },
         )
+
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    /** The update flow, shared by the home banner and the About screen. */
+    val updates: UpdatesController by lazy {
+        UpdatesController(
+            gateway =
+                CoreUpdateGateway(
+                    lazy { Updater(context.cacheDir.resolve("updates").absolutePath) },
+                ),
+            installer = createUpdateInstaller(context),
+            store = PrefsUpdateStore(context),
+            currentVersion =
+                context.packageManager
+                    .getPackageInfo(
+                        context.packageName,
+                        0,
+                    ).versionName
+                    .orEmpty(),
+            scope = appScope,
+        )
+    }
 
     private val themeModeState = MutableStateFlow(ThemeMode.System)
 

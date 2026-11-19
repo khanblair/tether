@@ -19,6 +19,7 @@ enum class Route(
     Linux("linux", R.string.route_linux_title),
     Settings("settings", R.string.route_settings_title),
     Providers("providers", R.string.providers_title),
+    About("about", R.string.about_title),
     Cost("cost", R.string.route_cost_title),
 }
 

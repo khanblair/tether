@@ -24,8 +24,9 @@ tether-engine.workspace = true
 tether-secrets.workspace = true
 tether-store.workspace = true
 tether-types.workspace = true
-tokio.workspace = true
 thiserror.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
 uniffi.workspace = true
 
 [dev-dependencies]

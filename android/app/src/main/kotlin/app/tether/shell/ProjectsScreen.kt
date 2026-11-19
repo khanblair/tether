@@ -20,24 +20,35 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.tether.R
 import app.tether.core.CoreClient
 import app.tether.core.generated.CoreEventView
 import app.tether.design.TetherTheme
+import app.tether.design.components.BannerTone
+import app.tether.design.components.InlineBanner
 import app.tether.design.components.PrimaryButton
 import app.tether.design.components.TetherTopBar
 import app.tether.design.tokens.TetherRadius
 import app.tether.design.tokens.TetherSpace
 import app.tether.nav.Route
+import app.tether.updates.UpdatesUiState
+import kotlinx.coroutines.flow.StateFlow
 
 private const val EVENT_LOG_SIZE = 5
 
-/** P0 home: proves the Rust to Compose event path and lists every placeholder route. */
+/**
+ * P0 home: proves the Rust to Compose event path and lists every placeholder route. A banner
+ * at the top names a newer version when the update flow knows one.
+ */
 @Composable
 fun ProjectsScreen(
     core: CoreClient,
+    updates: StateFlow<UpdatesUiState>,
+    onOpenAbout: () -> Unit,
     onOpen: (Route) -> Unit,
 ) {
+    val updateState by updates.collectAsStateWithLifecycle()
     val events by produceState(initialValue = emptyList<CoreEventView>(), core) {
         core.events.collect { value = (value + it).takeLast(EVENT_LOG_SIZE) }
     }
@@ -53,6 +64,20 @@ fun ProjectsScreen(
                     .PaddingValues(TetherSpace.space4),
             verticalArrangement = Arrangement.spacedBy(TetherSpace.space4),
         ) {
+            if (updateState.updateAvailable) {
+                item {
+                    InlineBanner(
+                        text =
+                            stringResource(
+                                R.string.home_update_available,
+                                updateState.newerVersion.orEmpty(),
+                            ),
+                        tone = BannerTone.Info,
+                        actionLabel = stringResource(R.string.home_update_view),
+                        onAction = onOpenAbout,
+                    )
+                }
+            }
             item {
                 Text(
                     text = stringResource(R.string.projects_intro_body),

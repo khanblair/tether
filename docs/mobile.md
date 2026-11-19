@@ -186,7 +186,7 @@ Setup, commands, and troubleshooting are in development.md. For mobile work spec
 Release steps are in development.md section 13. Mobile-specific items:
 
 - Google Play: Data safety form states that no data is collected by Tether; data goes to providers and GitHub at the user's direction. Foreground service type declaration and justification. Policy decision on Linux mode (product-scope.md Q1).
-- GitHub Releases (`full`): one universal APK now (split APKs per ABI plan for P10), a `SHA256SUMS` file attached to the release, and in-app updates (P1-20): the app checks the latest release, and the user can download, verify against `SHA256SUMS`, and install it from Settings > About > Updates. The system installer asks the user to confirm, and the new APK must carry the same signing certificate as the installed app.
+- GitHub Releases (`full`): one universal APK now (split APKs per ABI plan for P10), a `SHA256SUMS` file attached to the release, and in-app updates (P1-20): the app checks the latest release, and the user can download, verify against `SHA256SUMS`, and install it from Settings > About > Updates. The system installer asks the user to confirm, and the new APK must carry the same signing certificate as the installed app. The app checks when it starts (at most every 12 hours) and whenever About opens, and shows a banner on the home screen when a newer version exists. The first release that contains the updater has to be installed by hand once; later releases arrive through it.
 - Staged rollout on Play: 10%, 50%, 100% over a week, watching locally exported crash logs from beta testers.
 
 ## 14. Tasks

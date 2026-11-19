@@ -17,17 +17,21 @@ import app.tether.providers.ProvidersViewModel
 import app.tether.shell.PlaceholderScreen
 import app.tether.shell.ProjectsScreen
 import app.tether.shell.SettingsScreen
+import app.tether.updates.AboutScreen
 
 /** The navigation graph. Shared routes live here; feature modules plug in as they appear. */
 @Composable
 fun TetherNavHost(module: AppModule) {
     val navController = rememberNavController()
     val back: () -> Unit = { navController.popBackStack() }
+    val openAbout: () -> Unit = { navController.navigate(Route.About.path) }
 
     NavHost(navController = navController, startDestination = Route.Projects.path) {
         composable(Route.Projects.path) {
             ProjectsScreen(
                 core = module.core,
+                updates = module.updates.state,
+                onOpenAbout = openAbout,
                 onOpen = { route -> navController.navigate(route.path) },
             )
         }
@@ -36,7 +40,11 @@ fun TetherNavHost(module: AppModule) {
                 module = module,
                 onBack = back,
                 onOpenProviders = { navController.navigate(Route.Providers.path) },
+                onOpenAbout = openAbout,
             )
+        }
+        composable(Route.About.path) {
+            AboutScreen(controller = module.updates, onBack = back)
         }
         composable(Route.Providers.path) {
             ProvidersScreen(
@@ -69,8 +77,12 @@ fun TetherNavHost(module: AppModule) {
             }
         }
         Route.entries
-            .filter { it != Route.Projects && it != Route.Settings && it != Route.Providers }
-            .forEach { route ->
+            .filter {
+                it != Route.Projects &&
+                    it != Route.Settings &&
+                    it != Route.Providers &&
+                    it != Route.About
+            }.forEach { route ->
                 composable(route.path) { PlaceholderScreen(route = route, onBack = back) }
             }
     }

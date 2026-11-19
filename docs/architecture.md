@@ -224,6 +224,18 @@ P1-10 tests a saved key with the provider's model-list request (`ModelCatalog::l
 
 Only those two documented signals count as a region block, because for Anthropic, OpenRouter, DeepSeek, and Gemini a 403 means a permission or key problem. `ProviderSettings` (`tether-ffi`) reads the wrapped key through `SecretVault`, calls the engine, and saves the status, the test time, and the key reference in `provider_configs`; the key itself never leaves the core except through `reveal_key`, which Kotlin calls only after a biometric or screen lock check. `test_target` returns the exact URL of the request, so the screen can show it before the user taps Test connection. Removing a key also clears that provider's cached models.
 
+### App update
+
+`Idle → Checking → (UpToDate | Available) → Downloading → Ready → (NeedsPermission →) Installing → Installed`; any step can go to `Failed`, from which the screen offers the step that failed again. On the Play build `Available` ends at an "Open Google Play" button: that build never downloads or installs.
+
+The check, download, and verification live in `tether-engine` (`updates`) and run for the Kotlin layer through the `Updater` object in `tether-ffi`:
+
+- **Check.** `GET https://api.github.com/repos/khanblair/tether/releases/latest` with no credentials and no user data (the only identifying header is `User-Agent: tether-updater`). Drafts and pre-releases are ignored (releases are never pre-releases, D21). The tag must be `v` plus three numbers; versions compare as numbers, so `0.0.10` is newer than `0.0.9`. A newer release needs an asset named exactly `tether-full-v<version>.apk` and one named exactly `SHA256SUMS`. The check is limited to 20 seconds and the response to 1 MiB.
+- **Download and verify.** The core fetches `SHA256SUMS` (up to 64 KiB) and takes the one line for the APK name, streams the APK into a `.part` file while hashing it, and keeps it only when the SHA-256 matches. Wrong digest, wrong size, a stream longer than the published size, a file over 256 MiB, or a cancel deletes the partial file. File names are built only from the strict `tether-full-v<digits>.<digits>.<digits>.apk` pattern. A file that was already downloaded and still matches is reused. Older downloads are removed.
+- **Network rules.** HTTPS only. Redirects (GitHub serves the asset through a storage host) are followed at most 5 times and only to `github.com`, `api.github.com`, or a host ending in `.github.com` or `.githubusercontent.com`; no `Authorization` header is ever sent. The app never sends URLs back to the core: `download(version)` uses the release the last `check` found.
+- **Install.** Kotlin hands the verified file to `PackageInstaller` (`full` build only, which declares `REQUEST_INSTALL_PACKAGES`; the Play build does not). Android shows its own confirmation and refuses an APK signed with a different key, so a swapped file cannot replace the app. The first install asks the user to allow installs from Tether in system settings.
+- **When it runs.** `UpdatesController` checks in the background when the app starts if the last check is older than 12 hours (failures stay silent), and again whenever About opens. A newer version shows as a banner on the home screen and in Settings.
+
 ## 7. Data model
 
 SQLite database at `files/db/tether.db`, WAL mode, foreign keys on. IDs are ULIDs stored as text. Times are Unix milliseconds.

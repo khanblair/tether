@@ -2,6 +2,8 @@
 //!
 //! P0 holds only the version and the event hand-off used by the FFI layer.
 
+pub mod updates;
+
 use std::sync::Arc;
 
 use tether_types::CoreEvent;

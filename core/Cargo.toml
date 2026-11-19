@@ -17,9 +17,10 @@ tether-secrets = { path = "crates/tether-secrets" }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "stream"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+sha2 = "0.10"
 tempfile = "3"
 thiserror = "2"
-tokio = { version = "1", features = ["sync", "time", "rt", "macros"] }
+tokio = { version = "1", features = ["sync", "time", "rt", "macros", "fs", "io-util"] }
 tokio-util = "0.7"
 zeroize = "1"
 uniffi = "0.32"

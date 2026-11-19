@@ -5,6 +5,7 @@ use tether_types::ToolCallId;
 
 use crate::anthropic::stream::StreamState;
 use crate::sse::{SseEvent, SseParser};
+use crate::transport::StreamMapper;
 use crate::{ProviderError, ResponseUsage, StopReason, StreamEvent};
 
 const TEXT: &str = include_str!(concat!(

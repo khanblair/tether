@@ -6,6 +6,7 @@ use tether_types::ToolCallId;
 
 use super::wire::{BlockStart, Delta, MessageDeltaBody, WireError, WireEvent, WireUsage};
 use crate::sse::SseEvent;
+use crate::transport::StreamMapper;
 use crate::{ProviderError, ResponseUsage, StopReason, StreamEvent};
 
 /// What the adapter remembers between events of one response.
@@ -21,12 +22,12 @@ pub(super) struct StreamState {
     finished: bool,
 }
 
-impl StreamState {
+impl StreamMapper for StreamState {
     /// Maps one SSE event to zero or more stream events.
     ///
     /// The `type` field of the data picks the handler, not the `event:` name. After
     /// `message_stop` every later event is ignored, so `Finished` is never sent twice.
-    pub(super) fn handle(&mut self, event: &SseEvent) -> Result<Vec<StreamEvent>, ProviderError> {
+    fn handle(&mut self, event: &SseEvent) -> Result<Vec<StreamEvent>, ProviderError> {
         if self.finished {
             return Ok(Vec::new());
         }
@@ -50,12 +51,12 @@ impl StreamState {
     }
 
     /// True once the response ended with `message_stop`.
-    pub(super) fn is_finished(&self) -> bool {
+    fn is_finished(&self) -> bool {
         self.finished
     }
 
     /// Checks the body ended the right way. A body that stops before `message_stop` is cut off.
-    pub(super) fn finish(&self) -> Result<(), ProviderError> {
+    fn finish(&self) -> Result<(), ProviderError> {
         if self.finished {
             return Ok(());
         }
@@ -63,7 +64,9 @@ impl StreamState {
             message: "the stream ended before message_stop".to_owned(),
         })
     }
+}
 
+impl StreamState {
     /// Merges the counts an event names into the totals and returns them.
     ///
     /// Counts are cumulative, so a later value replaces an earlier one.

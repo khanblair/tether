@@ -6,7 +6,6 @@ use tokio_util::sync::CancellationToken;
 
 use std::time::Duration;
 
-use super::super::http::status_error;
 use super::server::{Reply, refused_base_url, start};
 use super::{KEY, collect, request};
 use crate::{
@@ -244,29 +243,6 @@ async fn a_403_maps_to_auth_like_a_401() {
             message: "not allowed".to_owned()
         })
     );
-}
-
-#[test]
-fn every_status_maps_to_the_error_kind_the_engine_expects() {
-    use reqwest::StatusCode;
-
-    let map = |code: u16| status_error(StatusCode::from_u16(code).unwrap(), None, b"");
-    for code in [401, 403] {
-        assert!(matches!(map(code), ProviderError::Auth { .. }), "{code}");
-    }
-    for code in [400, 404, 413, 422] {
-        assert!(
-            matches!(map(code), ProviderError::InvalidRequest { .. }),
-            "{code}"
-        );
-    }
-    for code in [302, 418, 500, 502, 503, 529] {
-        assert!(
-            matches!(map(code), ProviderError::Server { status, .. } if status == code),
-            "{code}"
-        );
-    }
-    assert!(matches!(map(429), ProviderError::RateLimited { .. }));
 }
 
 #[tokio::test]

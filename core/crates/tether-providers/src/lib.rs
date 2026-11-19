@@ -9,6 +9,7 @@ mod error;
 mod event;
 mod request;
 pub mod sse;
+mod transport;
 
 use std::future::Future;
 use std::pin::Pin;

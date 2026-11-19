@@ -42,7 +42,7 @@ tether/
 │       ├── tether-store/      migrations/0001_init.sql; src/{lib,db,error,migrations,schema_tests}.rs
 │       ├── tether-engine/     VERSION, EventSink, Core (emits Ready and Test events)
 │       ├── tether-secrets/    SecretStore, SecretRef, Secret, SecretsPlatform trait, errors (src/{lib,error,platform,reference,secret,store,store_tests}.rs)
-│       ├── tether-providers/  lib.rs (ChatProvider), request.rs, event.rs, error.rs, sse.rs (SseParser), client.rs (shared HTTP client), anthropic/ (adapter), openai/ (adapter), transport.rs (shared request and stream code)
+│       ├── tether-providers/  lib.rs (ChatProvider), request.rs, event.rs, error.rs, sse.rs (SseParser), client.rs (shared HTTP client), anthropic/ (adapter), openai/ (adapter), gemini/ (adapter), transport.rs (shared request and stream code)
 │       ├── tether-ffi/        UniFFI surface, builds libtether_core.so
 │       │   ├── uniffi.toml
 │       │   └── src/{lib.rs, callbacks.rs, secrets.rs, views/{mod,event,types,error}.rs, bin/uniffi-bindgen.rs}

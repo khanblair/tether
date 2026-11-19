@@ -16,7 +16,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -34,7 +33,10 @@ class UpdatesController(
     private val fileExists: (String) -> Boolean = { File(it).isFile },
 ) {
     /** True while a check runs, so a background check and a manual one never overlap. */
-    private val checkInFlight = AtomicBoolean(false)
+    private val checkLock = Any()
+
+    /** Guarded by [checkLock]. */
+    private var checkInFlight = false
 
     /** Numbers each download, so a Cancel and its retries belong to one download only. */
     private val downloadId = AtomicInteger(0)
@@ -76,22 +78,36 @@ class UpdatesController(
         scope.launch {
             val last = withContext(io) { store.lastCheckMs() }
             val due = last == null || clock() - last >= CHECK_INTERVAL_MS
-            val before = state.value.phase
-            if (due && before in CHECKABLE && checkInFlight.compareAndSet(false, true)) {
-                runCheck(manual = false, before = before)
-            }
+            if (!due) return@launch
+            val before = reserveCheck(showChecking = false) ?: return@launch
+            runCheck(manual = false, before = before)
         }
     }
 
     /** Checks now and shows the result or the failure. */
     fun checkNow() {
-        if (state.value.phase !in CHECKABLE) return
-        mutableState.update { it.copy(phase = UpdatePhase.Checking, problem = null) }
-        // A background check may already run. It ends by showing its own result, so do not start a
-        // second one that could finish later and overwrite a download.
-        if (!checkInFlight.compareAndSet(false, true)) return
-        scope.launch { runCheck(manual = true, before = UpdatePhase.Idle) }
+        val before = reserveCheck(showChecking = true) ?: return
+        scope.launch { runCheck(manual = true, before = before) }
     }
+
+    /**
+     * Takes the one check slot and, for a manual check, shows Checking. Returns the phase the
+     * screen had, or null when the phase allows no check or a check already runs (a manual
+     * request then shows Checking and lets the running check end it). Taking the slot, changing
+     * the phase, publishing a result, and freeing the slot all happen under [checkLock], so a
+     * request can never see a finished result and a busy slot at once.
+     */
+    private fun reserveCheck(showChecking: Boolean): UpdatePhase? =
+        synchronized(checkLock) {
+            val phase = state.value.phase
+            if (phase !in CHECKABLE) return null
+            val taken = !checkInFlight
+            if (taken) checkInFlight = true
+            if (showChecking) {
+                mutableState.update { it.copy(phase = UpdatePhase.Checking, problem = null) }
+            }
+            if (taken) phase else null
+        }
 
     /** Downloads the newer APK and verifies it. */
     fun download() {
@@ -162,62 +178,65 @@ class UpdatesController(
         before: UpdatePhase,
     ) {
         try {
-            call { gateway.check(currentVersion) }
-                .onSuccess { applyCheck(it) }
-                .onFailure { failure -> onCheckFailed(failure, manual, before) }
+            val result = call { gateway.check(currentVersion) }
+            // The store is written before the lock, which only covers quick state changes.
+            remember(knownVersionAfter(result))
+            synchronized(checkLock) {
+                // Free the slot first: a state collector that runs inline may ask for a new check
+                // the moment the result is published, and it must find the slot free.
+                checkInFlight = false
+                result
+                    .onSuccess { applyCheck(it) }
+                    .onFailure { onCheckFailed(it, manual, before) }
+            }
         } finally {
-            checkInFlight.set(false)
+            synchronized(checkLock) { checkInFlight = false }
         }
     }
 
-    private suspend fun onCheckFailed(
+    /** The newer version to remember: the one found, none when up to date, else the old one. */
+    private fun knownVersionAfter(result: Result<UpdateCheckView>): String? =
+        result.fold(
+            onSuccess = { (it as? UpdateCheckView.Available)?.release?.version },
+            onFailure = { state.value.let { s -> s.release?.version ?: s.knownNewerVersion } },
+        )
+
+    private fun onCheckFailed(
         failure: Throwable,
         manual: Boolean,
         before: UpdatePhase,
     ) {
-        // A failed attempt counts for the 12 hour throttle too. Keep the version already known.
-        val known = state.value.let { it.release?.version ?: it.knownNewerVersion }
-        remember(known)
         mutableState.update {
             when {
                 it.phase !in CHECK_RESULT_PHASES -> it
-                manual -> it.copy(phase = UpdatePhase.Failed, problem = problemFor(failure))
+                // A manual request joined this check and shows the spinner: tell the user.
+                manual || it.phase == UpdatePhase.Checking ->
+                    it.copy(phase = UpdatePhase.Failed, problem = problemFor(failure))
                 else -> it.copy(phase = before)
             }
         }
     }
 
-    private suspend fun applyCheck(view: UpdateCheckView) {
-        when (view) {
-            is UpdateCheckView.UpToDate -> {
-                remember(null)
-                mutableState.update {
-                    if (it.phase !in CHECK_RESULT_PHASES) {
-                        it
-                    } else {
+    private fun applyCheck(view: UpdateCheckView) {
+        mutableState.update {
+            if (it.phase !in CHECK_RESULT_PHASES) {
+                it
+            } else {
+                when (view) {
+                    is UpdateCheckView.UpToDate ->
                         it.copy(
                             phase = UpdatePhase.UpToDate,
                             release = null,
                             knownNewerVersion = null,
                             problem = null,
                         )
-                    }
-                }
-            }
-            is UpdateCheckView.Available -> {
-                val release = summaryOf(view.release)
-                remember(release.version)
-                mutableState.update {
-                    if (it.phase !in CHECK_RESULT_PHASES) {
-                        it
-                    } else {
+                    is UpdateCheckView.Available ->
                         it.copy(
                             phase = UpdatePhase.Available,
-                            release = release,
+                            release = summaryOf(view.release),
                             knownNewerVersion = null,
                             problem = null,
                         )
-                    }
                 }
             }
         }

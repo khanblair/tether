@@ -5,6 +5,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -85,6 +86,51 @@ class UpdatesControllerConcurrencyTest {
         assertEquals(UpdatePhase.Available, c.state.value.phase)
         assertNull(c.state.value.apkPath)
         assertTrue("cancel was asked ${cancels.get()} times", cancels.get() >= 2)
+    }
+
+    @Test
+    fun a_new_check_asked_for_the_moment_a_result_is_published_cannot_strand_the_spinner() {
+        val c = controller()
+        val asked =
+            java.util.concurrent.atomic
+                .AtomicBoolean(false)
+        // An unconfined collector runs inline on the thread that publishes the result.
+        scope.launch(Dispatchers.Unconfined) {
+            c.state.collect {
+                if (it.phase == UpdatePhase.UpToDate &&
+                    asked.compareAndSet(false, true)
+                ) {
+                    c.checkNow()
+                }
+            }
+        }
+        c.checkNow()
+        waitUntil("the second check") { asked.get() && checkCalls() == 2 }
+        waitUntil("the second result") { c.state.value.phase == UpdatePhase.UpToDate }
+        Thread.sleep(SETTLE_MS)
+        assertEquals(UpdatePhase.UpToDate, c.state.value.phase)
+        assertEquals(2, checkCalls())
+    }
+
+    @Test
+    fun a_manual_request_that_joins_a_failing_background_check_shows_the_failure() {
+        val c = controller()
+        val started = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        gateway.onCheck = {
+            started.countDown()
+            release.await(WAIT_MS, TimeUnit.MILLISECONDS)
+            throw app.tether.core.generated.UpdaterException
+                .Network()
+        }
+        c.checkIfDue()
+        assertTrue(started.await(WAIT_MS, TimeUnit.MILLISECONDS))
+        c.checkNow()
+        assertEquals(UpdatePhase.Checking, c.state.value.phase)
+        release.countDown()
+        waitUntil("the failure") { c.state.value.phase == UpdatePhase.Failed }
+        assertEquals(UpdateProblem.Network, c.state.value.problem)
+        assertEquals(1, checkCalls())
     }
 
     @Test

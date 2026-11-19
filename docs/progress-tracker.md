@@ -71,6 +71,7 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 | P0-17 | Commit size check | Blair with Claude | Done | n/a | `tools/check-commit-size.sh`, `just commits`, and a `tooling` CI step on pull requests |
 | P0-19 | Publish a signed release automatically | Blair with Claude | Done | #134, #136 | Merged; `v0.0.1` published as the latest release, signed with the pinned key. Releases are never pre-releases (#136) |
 | P0-16 | Release workflow | Blair with Claude | Done | #134 | Ran on the merge of #134 and published `v0.0.1`; issue #4 closed |
+| P1-05 | Anthropic adapter: streaming, tool calls, usage, caching headers | Blair with Claude | In progress | | Issue #9. Adapter, shared HTTP client, 49 new tests, fixtures, and an ignored live smoke test. Not done: the nightly run of the live test needs an `ANTHROPIC_API_KEY` repository secret |
 | P1-04 | SSE parser and provider trait | Blair with Claude | In review | #141 | Issue #8. `ChatProvider` trait and types, `SseParser` with 29 tests including every split position |
 | P1-01 | `tether-types` message, part, event, usage, error types | Blair with Claude | Done | #138 | Merged; issue #5 closed. Types, 15 new events, and FFI views; bindings regenerated. Sonnet and Codex reviews done |
 
@@ -78,6 +79,7 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 
 | Date | ID | Decision | Why | Docs affected |
 |---|---|---|---|---|
+| 2026-11-19 | D27 | Every provider sends through one client from `http_client()`: HTTPS only, no redirects, 10 s connect and 120 s read timeouts. The Anthropic adapter leaves `thinking` out of a request that answers tool calls until signatures are stored, and never sends rewound messages. The license allow list gains `CDLA-Permissive-2.0`, which `webpki-roots` (the root certificate list reqwest uses) carries | reqwest strips only `Authorization` and `Cookie` headers on a cross-host redirect, so an `x-api-key` header would follow it. Anthropic rejects thinking in a tool loop without the signed blocks. CDLA-Permissive-2.0 is a permissive data license. Task P1-05, issue #9 | architecture, library-docs, deny.toml |
 | 2026-11-19 | D25 | A provider streams one response into a Tokio channel and stops when a cancellation token fires or the receiver is dropped. It does not retry; the engine does. The trait is dyn-compatible without an extra crate (it returns a boxed future). `Usage` events are running totals, not increments. The SSE parser drops a line over 1 MiB and an event over 8 MiB | A channel gives backpressure and lets the engine batch deltas every 32 ms; a token gives clean interruption (architecture 5.1); retries belong where the retryable flag is decided. Task P1-04, issue #8 | architecture, project-structure |
 | 2026-11-18 | D23 | `tether-types` holds plain Rust types with no UniFFI code; `tether-ffi` converts the types the UI sees into `View` types, with ids as plain strings. `CoreError` is an enum with one variant per kind and a `retryable()` method. Its view is a record (`kind`, `message`, `retryable`), not an error enum, because a UniFFI error is a Kotlin exception: it cannot carry shared fields, compares by reference, and a field named `message` does not compile. Every session event carries `session_id`. P1-01 defines 15 of the 25 events; the other 10 arrive with the task that first emits them | Keeps UniFFI out of the engine crates and matches the P0 pattern. Doing it in `tether-types` would need external types across crates in UniFFI. Task P1-01, issue #5 | architecture, project-structure |
 | 2026-11-18 | D22 | The `full` build updates itself: Settings > About > Updates checks the latest GitHub Release, downloads the APK, verifies it against `SHA256SUMS`, and installs it over the running app. The `play` build links to Google Play. Releases are never marked as pre-releases, because the latest release lookup skips them. Risk: a release is offered to every `full` user as soon as it is published, with no staged rollout; a bad release is fixed by publishing a higher version | Owner's request. Replaces the default of notify only in M-Q2. Task P1-20, issue #135 | mobile, build-plan |
@@ -125,6 +127,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Who | What happened | Next |
 |---|---|---|---|
+| 2026-11-19 | Blair with Claude | Built P1-05 in a worktree stacked on the P1-04 branch: a Sonnet agent wrote the adapter from a detailed spec, and the main session reviewed it, mutation-tested it (3 of 12 mutations slipped through, tests added), and added the shared client, the tool-loop thinking rule, and the rewound filter | Codex review; Blair decides on the nightly live smoke test |
 | 2026-11-19 | Blair with Claude | Built P1-04: the main session wrote the provider contract, a Haiku agent wrote the SSE parser and fixtures in its own worktree, and the main session reviewed it, added the event size cap, and mutation-tested it. The first agent run used the wrong base branch and stopped without changes; it was re-run in a worktree on the right branch | Codex review, then P1-05 builds on this |
 | 2026-11-18 | Blair with Claude | Opened PR #139 with `AGENTS.md` and `CLAUDE.md`. A Sonnet review found wrong claims about what `just check` and `slop-lint` cover, commands that only run from a subfolder, and missing pointers to code-standards section 13; fixed | Merge #139 after review |
 | 2026-11-18 | Blair with Claude | Built P1-01 on `feat/p1-01-tether-types`: the shared types, the 15 new events, and their FFI views. Found that a UniFFI error enum becomes a Kotlin exception whose generated `message` clashes with a field of that name; made the error view a record instead. Sonnet review: fixed the doc, tests, and dead code it found | Sonnet review, then Blair's go to commit and open the pull request |
@@ -137,6 +140,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Files | Change | PR |
 |---|---|---|---|
+| 2026-11-19 | `core/crates/tether-providers/src/{anthropic/,client.rs}`, `core/fixtures/provider-streams/anthropic-*.sse`, `core/deny.toml`, `core/Cargo.*` | Anthropic adapter, shared HTTP client, fixtures, and the license allowance for P1-05 | |
 | 2026-11-19 | `core/crates/tether-providers/`, `core/fixtures/provider-streams/`, `core/Cargo.*` | Provider trait, request, event and error types, and the SSE parser for P1-04 | #141 |
 | 2026-11-18 | `AGENTS.md`, `CLAUDE.md`, `docs/README.md`, `docs/project-structure.md`, `docs/progress-tracker.md` | Agent instruction files at the repo root, listed in the structure doc and linked from the docs README | #139 |
 | 2026-11-18 | `core/crates/tether-types/`, `core/crates/tether-ffi/src/views/`, `core/Cargo.*`, generated Kotlin bindings, `ProjectsScreen.kt`, `strings.xml` | Shared types, events, and FFI views for P1-01 | #138 |
@@ -149,6 +153,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Doc | Change |
 |---|---|---|
+| 2026-11-19 | architecture, library-docs, project-structure, progress-tracker | The Anthropic adapter and the shared client as built (D27) |
 | 2026-11-19 | architecture, project-structure, progress-tracker | The provider contract as built (D25) and the new files |
 | 2026-11-18 | README, project-structure | `AGENTS.md` and `CLAUDE.md` added to both trees; the README sends agents to `AGENTS.md` first |
 | 2026-11-18 | architecture, project-structure, progress-tracker | Shared types and events as built: plain Rust types, `View` types in `tether-ffi`, `CoreError` shape, 15 events defined (D23) |

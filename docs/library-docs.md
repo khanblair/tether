@@ -153,7 +153,7 @@ Icons: Lucide (ISC), converted to Compose `ImageVector`s in `designsystem/Icons.
 
 ## 4. Usage notes and gotchas
 
-- **reqwest:** one shared `Client` in the engine, created with timeouts (connect 10 s, read 120 s for streams). Never create a client per request; it defeats connection reuse.
+- **reqwest:** one shared `Client` in the engine, created with timeouts (connect 10 s, read 120 s for streams). Never create a client per request; it defeats connection reuse. Build it with `tether_providers::http_client()`: it refuses plain HTTP and never follows a redirect, because reqwest forwards custom headers such as `x-api-key` to the redirect target.
 - **SSE streams:** providers split events across TCP chunks and sometimes send comments or empty lines. `tether-providers/sse.rs` handles this; do not parse SSE elsewhere.
 - **rusqlite:** one write connection owned by the store, used from a blocking thread. Read connections may run in parallel thanks to WAL. Never hold a transaction across an `.await`.
 - **gix:** feature flags are fine-grained; enable only what we use. Push over HTTPS uses our credential callback with the GitHub token; never embed the token in the URL (it would land in config and logs).

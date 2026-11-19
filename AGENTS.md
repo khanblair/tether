@@ -20,7 +20,7 @@ Tether is an Android coding-agent harness: a Rust core in `core/` and a Kotlin a
 
 ## Who writes and who reviews
 
-- Codex writes the core Rust tasks from the issue and pushes to the pull request branch. Claude Code writes the Android UI, using Haiku subagents for the mechanical translation of screens, and reviews what Codex wrote.
+- Codex writes the core Rust tasks from the issue and pushes to the pull request branch. It always uses GPT-5.6 Luna, until the owner says otherwise. Claude Code writes the Android UI, using Haiku subagents for the mechanical translation of screens, and reviews what Codex wrote.
 - Request `@codex review` on every pull request. A pull request is reviewed by the other model than the one that wrote it (decision D28).
 
 ## Commits

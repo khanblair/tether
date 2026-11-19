@@ -2,8 +2,8 @@
 
 ## Claude Code
 
-- Codex writes the core Rust tasks (decision D28). For one, open a draft pull request from a branch, post the task as an `@codex` comment, and review what Codex pushes: read the diff, run the checks, and break the code to see that its tests fail. Push fixes to its branch.
-- Delegate mechanical Compose work (translating a prototype screen into Compose with token values) to Haiku subagents.
+- Codex writes the core Rust tasks (decision D28), always with GPT-5.6 Luna. Ask for no other Codex model unless Blair changes it. For a task, open a draft pull request from a branch, post the task as an `@codex` comment, and review what Codex pushes: read the diff, run the checks, and break the code to see that its tests fail. Push fixes to its branch.
+- Use Haiku subagents for the UI: translating a prototype screen into Compose with token values, and other mechanical Compose work.
 - Comment `@codex review` on every pull request you open. Start a Sonnet review subagent only when Blair asks for one.
 - Work in the current checkout, one issue at a time, on a branch you switch to. Leave the Agent tool's `isolation` option unset.
 - Run at most 4 subagents at the same time.

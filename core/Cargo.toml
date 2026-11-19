@@ -26,6 +26,7 @@ tokio = { version = "1", features = ["sync", "time", "rt", "macros", "fs", "io-u
 tokio-util = "0.7"
 zeroize = "1"
 uniffi = "0.32"
+ulid = "1.2"
 
 [workspace.lints.rust]
 missing_docs = "warn"

@@ -1,0 +1,99 @@
+use tether_types::{
+    MessagePart, ModelRef, PermissionMode, ProjectId, Provider, Role, SessionStatus,
+};
+
+use crate::Store;
+
+fn seed_project(store: &Store) -> ProjectId {
+    let id = ProjectId::new("01TESTPROJECT00000000000000");
+    store
+        .conn
+        .execute(
+            "INSERT INTO projects (id, name, path, created_at) VALUES (?1, 'Test', 'test', 1)",
+            [id.as_str()],
+        )
+        .unwrap();
+    id
+}
+
+#[test]
+fn a_streamed_turn_survives_reopening_the_database() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("tether.db");
+    let session_id = {
+        let mut store = Store::open(&path).unwrap();
+        let project = seed_project(&store);
+        let session = store
+            .create_session(
+                &project,
+                &ModelRef {
+                    provider: Provider::Anthropic,
+                    model_id: "claude-test".into(),
+                },
+                PermissionMode::Ask,
+                100,
+            )
+            .unwrap();
+        store.begin_turn(&session.id, "Hello", 101).unwrap();
+        let answer = store.create_assistant_message(&session.id, 102).unwrap();
+        store.save_assistant_parts(&answer, "Hel", "").unwrap();
+        store
+            .save_assistant_parts(&answer, "Hello there", "")
+            .unwrap();
+        store
+            .set_session_status(&session.id, SessionStatus::Idle, 103)
+            .unwrap();
+        session.id
+    };
+
+    let store = Store::open(&path).unwrap();
+    let session = store.load_session(&session_id).unwrap().unwrap();
+    assert_eq!(session.title, "Hello");
+    assert_eq!(session.status, SessionStatus::Idle);
+    let messages = store.messages(&session_id).unwrap();
+    assert_eq!(messages.len(), 2);
+    assert_eq!(messages[0].role, Role::User);
+    assert_eq!(
+        messages[0].parts,
+        vec![MessagePart::Text {
+            text: "Hello".into()
+        }]
+    );
+    assert_eq!(messages[1].role, Role::Assistant);
+    assert_eq!(
+        messages[1].parts,
+        vec![MessagePart::Text {
+            text: "Hello there".into()
+        }]
+    );
+}
+
+#[test]
+fn an_unfinished_turn_reopens_as_interrupted() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("tether.db");
+    let session_id = {
+        let mut store = Store::open(&path).unwrap();
+        let project = seed_project(&store);
+        let session = store
+            .create_session(
+                &project,
+                &ModelRef {
+                    provider: Provider::Gemini,
+                    model_id: "gemini-test".into(),
+                },
+                PermissionMode::Ask,
+                100,
+            )
+            .unwrap();
+        store.begin_turn(&session.id, "Hello", 101).unwrap();
+        session.id
+    };
+    let store = Store::open(&path).unwrap();
+    assert_eq!(store.recover_active_sessions().unwrap(), 1);
+    assert_eq!(
+        store.load_session(&session_id).unwrap().unwrap().status,
+        SessionStatus::Interrupted
+    );
+    assert_eq!(store.messages(&session_id).unwrap().len(), 1);
+}

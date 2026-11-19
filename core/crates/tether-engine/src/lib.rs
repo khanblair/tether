@@ -3,9 +3,15 @@
 //! P0 holds only the version and the event hand-off used by the FFI layer.
 
 mod provider_connection;
+mod session;
+mod session_provider;
+#[cfg(test)]
+mod session_tests;
 pub mod updates;
 
 pub use provider_connection::{ProviderCheck, check_provider, provider_test_targets};
+pub use session::{SessionActor, SessionActorError, SessionHandle};
+pub use session_provider::provider_for;
 
 use std::sync::Arc;
 

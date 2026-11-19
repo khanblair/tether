@@ -15,7 +15,7 @@ use super::wire::ErrorBody;
 use crate::transport::{Call, ErrorStyle, run, secret_header};
 use crate::{ChatRequest, ProviderError, StreamEvent};
 
-struct GeminiErrors;
+pub(super) struct GeminiErrors;
 
 static STREAM_PREFIX_COUNTER: AtomicU64 = AtomicU64::new(0);
 

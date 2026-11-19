@@ -1,6 +1,7 @@
 //! Shared local HTTP server helpers for provider tests.
 
 use std::io;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -10,6 +11,7 @@ use tokio::task::JoinHandle;
 const PAUSE: Duration = Duration::from_millis(5);
 
 /// The request the server received. It has no `Debug` impl because it holds the API key.
+#[derive(Clone)]
 pub(crate) struct SeenRequest {
     pub(crate) request_line: String,
     pub(crate) body: String,
@@ -94,12 +96,35 @@ pub(crate) struct TestServer {
     pub(crate) seen: JoinHandle<io::Result<SeenRequest>>,
 }
 
+/// A local server that answers one reply per request.
+pub(crate) struct ManyTestServer {
+    /// The base URL for the provider under test.
+    pub(crate) base_url: String,
+    /// The requests received, in order.
+    pub(crate) seen: JoinHandle<io::Result<Vec<SeenRequest>>>,
+    /// Requests received before the server task is stopped.
+    pub(crate) requests: Arc<Mutex<Vec<SeenRequest>>>,
+}
+
 /// Starts a server on a free local port.
 pub(crate) async fn start(reply: Reply) -> TestServer {
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let base_url = format!("http://{}", listener.local_addr().unwrap());
     let seen = tokio::spawn(serve(listener, reply));
     TestServer { base_url, seen }
+}
+
+/// Starts a local server with an ordered sequence of replies.
+pub(crate) async fn start_many(replies: Vec<Reply>) -> ManyTestServer {
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let base_url = format!("http://{}", listener.local_addr().unwrap());
+    let requests = Arc::new(Mutex::new(Vec::with_capacity(replies.len())));
+    let seen = tokio::spawn(serve_many(listener, replies, Arc::clone(&requests)));
+    ManyTestServer {
+        base_url,
+        seen,
+        requests,
+    }
 }
 
 /// Returns a local base URL where no server is listening.
@@ -113,6 +138,26 @@ async fn serve(listener: TcpListener, reply: Reply) -> io::Result<SeenRequest> {
     socket.set_nodelay(true)?;
     let seen = read_request(&mut socket).await?;
     write_reply(&mut socket, reply).await?;
+    Ok(seen)
+}
+
+async fn serve_many(
+    listener: TcpListener,
+    replies: Vec<Reply>,
+    requests: Arc<Mutex<Vec<SeenRequest>>>,
+) -> io::Result<Vec<SeenRequest>> {
+    let mut seen = Vec::with_capacity(replies.len());
+    for reply in replies {
+        let (mut socket, _) = listener.accept().await?;
+        socket.set_nodelay(true)?;
+        let request = read_request(&mut socket).await?;
+        requests
+            .lock()
+            .map_err(|_| io::ErrorKind::Other)?
+            .push(request.clone());
+        write_reply(&mut socket, reply).await?;
+        seen.push(request);
+    }
     Ok(seen)
 }
 

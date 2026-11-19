@@ -3,6 +3,7 @@
 
 use reqwest::header::{HeaderMap, HeaderValue, RETRY_AFTER};
 use reqwest::{Client, Response, StatusCode};
+use serde::de::DeserializeOwned;
 use serde_json::Value;
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
@@ -12,6 +13,8 @@ use crate::{ProviderError, StreamEvent};
 
 /// The most bytes of an error body that are read. An error message is short.
 const MAX_ERROR_BODY_BYTES: usize = 64 * 1024;
+/// Maximum response body accepted by the JSON model-list reader.
+const MAX_JSON_BODY_BYTES: usize = 16 * 1024 * 1024;
 
 /// What an adapter supplies to turn one provider's event stream into [`StreamEvent`] values.
 pub(crate) trait StreamMapper {
@@ -50,6 +53,61 @@ pub(crate) struct Call<'a> {
     pub(crate) body: &'a Value,
     /// How the provider words its errors.
     pub(crate) errors: &'a dyn ErrorStyle,
+}
+
+/// One JSON GET request.
+pub(crate) struct GetCall<'a> {
+    /// The shared HTTP client.
+    pub(crate) client: &'a Client,
+    /// The full URL to fetch.
+    pub(crate) url: String,
+    /// The provider's headers, including the key.
+    pub(crate) headers: HeaderMap,
+    /// How the provider words its errors.
+    pub(crate) errors: &'a dyn ErrorStyle,
+}
+
+/// Sends a bounded JSON GET request and maps its response.
+pub(crate) async fn get_json<T: DeserializeOwned>(
+    call: GetCall<'_>,
+    cancel: &CancellationToken,
+) -> Result<T, ProviderError> {
+    let response = tokio::select! {
+        biased;
+        () = cancel.cancelled() => return Err(ProviderError::Cancelled),
+        sent = call.client.get(&call.url).headers(call.headers).send() => sent.map_err(network_error)?,
+    };
+    if !response.status().is_success() {
+        let status = response.status();
+        let retry_after = retry_after_secs(response.headers());
+        let body = read_error_body(response).await;
+        return Err(status_error(status, retry_after, &body, call.errors));
+    }
+    let body = read_json_body(response, cancel).await?;
+    serde_json::from_slice(&body).map_err(|_| ProviderError::MalformedStream {
+        message: "the model list was not valid JSON".to_owned(),
+    })
+}
+
+async fn read_json_body(
+    mut response: Response,
+    cancel: &CancellationToken,
+) -> Result<Vec<u8>, ProviderError> {
+    let mut body = Vec::new();
+    loop {
+        let chunk = tokio::select! {
+            biased;
+            () = cancel.cancelled() => return Err(ProviderError::Cancelled),
+            chunk = response.chunk() => chunk.map_err(network_error)?,
+        };
+        let Some(chunk) = chunk else { return Ok(body) };
+        if body.len().saturating_add(chunk.len()) > MAX_JSON_BODY_BYTES {
+            return Err(ProviderError::MalformedStream {
+                message: "the model list is too large".to_owned(),
+            });
+        }
+        body.extend_from_slice(&chunk);
+    }
 }
 
 /// A header value that holds a secret. It is marked sensitive so it stays out of debug output.
@@ -252,6 +310,7 @@ async fn deliver(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_support::{Reply, start};
 
     struct Plain;
 
@@ -287,5 +346,66 @@ mod tests {
         assert!(secret_header("test-key-123").unwrap().is_sensitive());
         let error = secret_header("bad\nkey-value").unwrap_err();
         assert!(!format!("{error:?}").contains("key-value"));
+    }
+
+    async fn get(base_url: String, cancel: &CancellationToken) -> Result<Value, ProviderError> {
+        let client = crate::client_builder().no_proxy().build().unwrap();
+        get_json(
+            GetCall {
+                client: &client,
+                url: format!("{base_url}/models"),
+                headers: HeaderMap::new(),
+                errors: &Plain,
+            },
+            cancel,
+        )
+        .await
+    }
+
+    async fn get_until_cancelled(
+        base_url: String,
+        cancel: CancellationToken,
+    ) -> Result<Value, ProviderError> {
+        get(base_url, &cancel).await
+    }
+
+    #[tokio::test]
+    async fn get_json_maps_auth_and_retry_after() {
+        let auth = start(Reply::json("401 Unauthorized", &[], "{}")).await;
+        assert!(matches!(
+            get(auth.base_url, &CancellationToken::new()).await,
+            Err(ProviderError::Auth { .. })
+        ));
+
+        let rate = start(Reply::json(
+            "429 Too Many Requests",
+            &["retry-after: 7"],
+            "{}",
+        ))
+        .await;
+        assert_eq!(
+            get(rate.base_url, &CancellationToken::new()).await,
+            Err(ProviderError::RateLimited {
+                message: "Too Many Requests".to_owned(),
+                retry_after_secs: Some(7)
+            })
+        );
+    }
+
+    #[tokio::test]
+    async fn get_json_rejects_non_json_and_cancelled_reads() {
+        let malformed = start(Reply::json("200 OK", &[], "not json")).await;
+        assert_eq!(
+            get(malformed.base_url, &CancellationToken::new()).await,
+            Err(ProviderError::MalformedStream {
+                message: "the model list was not valid JSON".to_owned()
+            })
+        );
+
+        let held = start(Reply::json("200 OK", &[], "{}").then_hold_open()).await;
+        let cancel = CancellationToken::new();
+        let task = tokio::spawn(get_until_cancelled(held.base_url, cancel.clone()));
+        cancel.cancel();
+        assert_eq!(task.await.unwrap(), Err(ProviderError::Cancelled));
     }
 }

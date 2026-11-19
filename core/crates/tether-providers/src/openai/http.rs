@@ -12,7 +12,7 @@ use super::wire::ErrorBody;
 use crate::transport::{Call, ErrorStyle, run, secret_header};
 use crate::{ChatRequest, ProviderError, StreamEvent};
 
-struct OpenAiErrors;
+pub(super) struct OpenAiErrors;
 
 impl ErrorStyle for OpenAiErrors {
     fn message(&self, body: &[u8]) -> Option<String> {

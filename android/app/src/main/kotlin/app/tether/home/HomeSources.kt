@@ -12,8 +12,15 @@ interface SessionsSource {
     fun sessions(): List<SessionSummary>
 }
 
+/** The usage the Home dashboard charts. */
+interface UsageSource {
+    /** The usage for the dashboard cards. */
+    fun usage(): UsageSnapshot
+}
+
 /** The data sources for the home screens, created once by the app module. */
 data class HomeSources(
     val projects: ProjectsSource,
     val sessions: SessionsSource,
+    val usage: UsageSource,
 )

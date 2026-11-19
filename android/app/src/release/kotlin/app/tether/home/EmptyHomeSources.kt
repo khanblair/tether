@@ -11,4 +11,8 @@ fun createHomeSources(): HomeSources =
             object : SessionsSource {
                 override fun sessions(): List<SessionSummary> = emptyList()
             },
+        usage =
+            object : UsageSource {
+                override fun usage(): UsageSnapshot = UsageSnapshot.Empty
+            },
     )

@@ -72,6 +72,7 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 | P0-19 | Publish a signed release automatically | Blair with Claude | Done | #134, #136 | Merged; `v0.0.1` published as the latest release, signed with the pinned key. Releases are never pre-releases (#136) |
 | P0-16 | Release workflow | Blair with Claude | Done | #134 | Ran on the merge of #134 and published `v0.0.1`; issue #4 closed |
 | P0-20 | App name "Tether" and release `v0.0.2` | Blair with Claude | In review | | No issue. The `full` flavor label changed from "Tether full" to "Tether"; version 0.0.2 so the release workflow publishes a fixed APK. `versionCode` rises from 100 to 200 |
+| P1-09 | Model catalog fetch, cache, capability flags, pricing | Blair with Codex and Claude | In progress | | Issue #13. Provider lists, bundled prices, shared model types, and the 24-hour store cache are implemented; review and pull request remain |
 | P1-08 | OpenAI-compatible adapter; DeepSeek and OpenRouter configs | Blair with Codex and Claude | Done | #147 | Merged; issue #12 closed. Written by a Codex CLI session (GPT-5.6 Luna), reviewed and mutation-tested by Claude; 168 provider tests. Four Codex findings fixed (DeepSeek reasoning replay, OpenRouter cache writes, refusal deltas, `null` token details failing a whole chunk) |
 | P1-07 | Gemini adapter | Blair with Codex and Claude | Done | #146 | Merged; issue #11 closed on fixture tests (D31). Written by a Codex CLI session (GPT-5.6 Luna), reviewed and mutation-tested by Claude; 127 provider tests. Two Codex review findings fixed (unique generated call ids, `parametersJsonSchema`) |
 | P1-06 | OpenAI adapter (Responses API) | Blair with Codex and Claude | Done | #144 | Merged; issue #10 closed on fixture tests (D31). Written by a Codex CLI session (GPT-5.6 Luna), reviewed and mutation-tested by Claude; 99 tests with the Anthropic ones |
@@ -139,6 +140,9 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Who | What happened | Next |
 |---|---|---|---|
+| 2026-11-19 | Codex | Checked issue #13 and the PR workflow, reviewed the P1-09 branch, and documented the catalog and cache as built | Run the full checks, commit in groups of 15 files or fewer, open and review the pull request |
+| 2026-11-19 | Codex | Fixed three P1-09 review findings: catalog requests share the chat header guard, OpenAI drops search models, and pricing edge cases have tests. The scoped provider format, test, and clippy commands pass | Review P1-09 and open its pull request |
+| 2026-11-19 | Codex | Added fixture-backed model catalog tests for all providers, shared JSON GET tests, exact-match pricing-detail coverage, pagination caps, and encoded Anthropic and Gemini query values. Fixed Gemini `nextPageToken` parsing. The provider crate passes its scoped format, test, and clippy checks | Review P1-09 part B2 and open its pull request |
 | 2026-11-19 | Blair with Claude | Merged PR 147 (P1-08) after a last Codex review, and merged the two Dependabot pull requests that were green (the Gradle wrapper one needed a branch update and a `No issue:` line for the `issue-link` check). Blair noted the app showed "Tether full" as its name; changed the `full` flavor label to "Tether" and bumped the version to 0.0.2 so the release workflow publishes it | Merge the release pull request, check the published v0.0.2 assets, then P1-09 |
 | 2026-11-19 | Blair with Codex and Claude | Merged PRs 140 to 146 in dependency order, resolving conflicts, and fixed two more Codex findings on the way (return after the final event; Gemini call ids and schemas). Built P1-08 as a Codex CLI session (GPT-5.6 Luna): Claude's 27 mutations left 6 survivors, closed with tests, and found two bugs by reading. A Codex review then found three more issues, fixed by a second Codex CLI session: DeepSeek needs its reasoning replayed in tool conversations, OpenRouter cache writes were counted as input, and refusal deltas were dropped. A last review found that a `null` field such as `prompt_tokens_details` made the whole chunk fail, because `#[serde(default)]` covers only a missing field; a `nullable` reader now covers nine fields (a message with several tool results kept only the last; an extra header could replace Authorization) | Codex review of the P1-08 pull request |
 | 2026-11-19 | Blair with Codex and Claude | Resumed P1-07 after the owner's go-ahead. A Codex CLI session (GPT-5.6 Luna) fixed two Codex review findings: generated tool call ids restarted at zero in every response, and tool schemas went in the field that accepts only Google's restricted schema. Claude added a test that the id prefix carries the time | Merge PR 146 when CI and Codex are green, then P1-08 |
@@ -160,6 +164,9 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Files | Change | PR |
 |---|---|---|---|
+| 2026-11-19 | `core/crates/tether-types/src/model.rs`, `core/crates/tether-providers/{data/prices/,src/catalog.rs,src/pricing/,src/*/models.rs}`, `core/crates/tether-store/{migrations/0001_init.sql,src/models.rs}`, `core/fixtures/model-lists/` | P1-09 shared model types, provider catalog, bundled prices, fixtures, and transactional cache | |
+| 2026-11-19 | `core/crates/tether-providers/src/{openai/,openai_compat/}models.rs`, `openai_compat/http.rs`, `openai/tests/models.rs`, `openai_compat/tests/models.rs`, `pricing/tests.rs` | P1-09 review fixes and regression tests for catalog headers, search filtering, and pricing edge cases | |
+| 2026-11-19 | `core/crates/tether-providers/src/{anthropic/,gemini/,openai/,openai_compat/}tests/models.rs`, `transport.rs`, `test_support.rs`, `pricing/tests.rs` | P1-09 part B2 model-list tests, pagination and query-encoding fixes, shared GET coverage, and exact bundled-detail matching test | |
 | 2026-11-19 | `android/app/src/full/res/values/flavor.xml`, `core/Cargo.toml`, `core/Cargo.lock`, `docs/build-plan.md`, `docs/progress-tracker.md` | App name "Tether" for the `full` flavor; version 0.0.2 (P0-20) | |
 | 2026-11-19 | `core/crates/tether-providers/src/{openai_compat/,deepseek.rs,openrouter.rs}`, `core/fixtures/provider-streams/{deepseek,openrouter,openai-compat}-*.sse` | OpenAI-compatible adapter with DeepSeek and OpenRouter settings for P1-08 | #147 |
 | 2026-11-19 | `core/crates/tether-providers/src/gemini/`, `core/fixtures/provider-streams/gemini-*.sse` | Gemini adapter, tests, and fixtures for P1-07 | #146 |
@@ -180,6 +187,9 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Doc | Change |
 |---|---|---|
+| 2026-11-19 | architecture, project-structure, progress-tracker | Documented P1-09 model catalog, prices, and cache |
+| 2026-11-19 | progress-tracker | Recorded the P1-09 review fixes and their scoped checks |
+| 2026-11-19 | progress-tracker | Recorded P1-09 part B2 model-list test and fix work |
 | 2026-11-19 | build-plan, progress-tracker | App name fix and `v0.0.2` (P0-20); P1-02, P1-03, P1-04, and P1-08 marked Done after their pull requests merged |
 | 2026-11-19 | architecture, project-structure, progress-tracker | The OpenAI-compatible adapter as built, and decision D31 (fixture tests only for P1-05 to P1-08) |
 | 2026-11-19 | architecture, project-structure, progress-tracker | The Gemini adapter as built (D30) |

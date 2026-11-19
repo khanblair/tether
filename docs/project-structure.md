@@ -37,12 +37,13 @@ tether/
 ├── core/                      Rust workspace
 │   ├── Cargo.toml  Cargo.lock  deny.toml  clippy.toml  rustfmt.toml
 │   ├── fixtures/smells/       Crate with a function over the line limit; clippy must fail on it
+│   ├── fixtures/model-lists/ Provider list responses for catalog tests
 │   └── crates/
-│       ├── tether-types/      ids, message, session, text, usage, error, event (CoreEvent); no UniFFI code
-│       ├── tether-store/      migrations/0001_init.sql; src/{lib,db,error,migrations,schema_tests}.rs
+│       ├── tether-types/      ids, message, model catalog, session, text, usage, error, event (CoreEvent); no UniFFI code
+│       ├── tether-store/      migrations/0001_init.sql; src/{lib,db,error,migrations,models,models_tests,schema_tests}.rs
 │       ├── tether-engine/     VERSION, EventSink, Core (emits Ready and Test events)
 │       ├── tether-secrets/    SecretStore, SecretRef, Secret, SecretsPlatform trait, errors (src/{lib,error,platform,reference,secret,store,store_tests}.rs)
-│       ├── tether-providers/  lib.rs (ChatProvider), request.rs, event.rs, error.rs, sse.rs (SseParser), client.rs (shared HTTP client), anthropic/ (adapter), openai/ (adapter), gemini/ (adapter), openai_compat/ (adapter), deepseek.rs, openrouter.rs, transport.rs (shared request and stream code)
+│       ├── tether-providers/  lib.rs (ChatProvider, ModelCatalog), catalog.rs, pricing/ and data/prices/, request.rs, event.rs, error.rs, sse.rs (SseParser), client.rs (shared HTTP client), anthropic/ (adapter), openai/ (adapter), gemini/ (adapter), openai_compat/ (adapter), deepseek.rs, openrouter.rs, transport.rs (shared request and stream code)
 │       ├── tether-ffi/        UniFFI surface, builds libtether_core.so
 │       │   ├── uniffi.toml
 │       │   └── src/{lib.rs, callbacks.rs, secrets.rs, views/{mod,event,types,error}.rs, bin/uniffi-bindgen.rs}

@@ -7,6 +7,7 @@ mod error;
 mod event;
 mod ids;
 mod message;
+mod model;
 mod session;
 mod text;
 mod usage;
@@ -15,6 +16,7 @@ pub use error::CoreError;
 pub use event::CoreEvent;
 pub use ids::{MessageId, ProjectId, SessionId, ToolCallId};
 pub use message::{Message, MessagePart, Role};
+pub use model::{ModelCaps, ModelInfo, ModelPrice, PriceSource, Support};
 pub use session::{
     ConnectionStatus, Executor, ModelRef, PermissionMode, Provider, SessionStatus, ToolCallStatus,
 };

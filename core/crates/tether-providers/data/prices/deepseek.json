@@ -1,0 +1,21 @@
+{
+  "provider": "deepseek",
+  "as_of": "2026-11-19",
+  "source": "https://api-docs.deepseek.com/quick_start/pricing",
+  "models": [
+    {
+      "id": "deepseek-flash",
+      "input_per_million": "0.3",
+      "output_per_million": "1.2",
+      "cache_read_per_million": "0.006",
+      "note": "Peak rate. Off-peak is half."
+    },
+    {
+      "id": "deepseek-v4-pro",
+      "input_per_million": "1.32",
+      "output_per_million": "3.96",
+      "cache_read_per_million": "0.044",
+      "note": "Peak rate. Off-peak is half."
+    }
+  ]
+}

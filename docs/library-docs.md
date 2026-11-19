@@ -156,7 +156,7 @@ Icons: Lucide (ISC), converted to Compose `ImageVector`s in `designsystem/Icons.
 
 - **reqwest:** one shared `Client` in the engine, created with timeouts (connect 10 s, read 120 s for streams). Never create a client per request; it defeats connection reuse.
 - **SSE streams:** providers split events across TCP chunks and sometimes send comments or empty lines. `tether-providers/sse.rs` handles this; do not parse SSE elsewhere.
-- **rusqlite:** one write connection owned by the store, used from a blocking thread. Read connections may run in parallel thanks to WAL. Never hold a transaction across an `.await`.
+- **rusqlite:** bundled SQLite compiles C code, so Android cross-checks go through `cargo ndk` (CI does this). One write connection owned by the store, used from a blocking thread. Read connections may run in parallel thanks to WAL. Never hold a transaction across an `.await`.
 - **gix:** feature flags are fine-grained; enable only what we use. Push over HTTPS uses our credential callback with the GitHub token; never embed the token in the URL (it would land in config and logs).
 - **wasmtime:** create one `Engine` per process. Precompiled `.cwasm` files are only valid for the same Wasmtime version and engine config; the cache key includes both. Use epoch interruption for time limits, not fuel (fuel is slower).
 - **WASI mounts:** preopen only `/workspace` and a per-run temp dir. Do not inherit the host environment.

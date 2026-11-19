@@ -38,14 +38,15 @@ tether/
 │   ├── Cargo.toml  Cargo.lock  deny.toml  clippy.toml  rustfmt.toml
 │   ├── fixtures/smells/       Crate with a function over the line limit; clippy must fail on it
 │   └── crates/
-│       ├── tether-types/      ids, message, session, usage, error, event (CoreEvent); no UniFFI code
+│       ├── tether-types/      ids, message, session, text, usage, error, event (CoreEvent); no UniFFI code
+│       ├── tether-store/      migrations/0001_init.sql; src/{lib,db,error,migrations,schema_tests}.rs
 │       ├── tether-engine/     VERSION, EventSink, Core (emits Ready and Test events)
 │       ├── tether-secrets/    SecretStore, SecretRef, Secret, SecretsPlatform trait, errors (src/{lib,error,platform,reference,secret,store,store_tests}.rs)
 │       ├── tether-ffi/        UniFFI surface, builds libtether_core.so
 │       │   ├── uniffi.toml
 │       │   └── src/{lib.rs, callbacks.rs, secrets.rs, views/{mod,event,types,error}.rs, bin/uniffi-bindgen.rs}
 │       ├── tether-quality/    data/slop_words.txt and slop_patterns.toml (shared with slop-lint)
-│       └── tether-{providers,tools,workspace,vcs,sandbox,linux,ci,store,connectors,mcp,skills,memory}/
+│       └── tether-{providers,tools,workspace,vcs,sandbox,linux,ci,connectors,mcp,skills,memory}/
 │                              Empty libraries
 ├── android/
 │   ├── settings.gradle.kts  build.gradle.kts  gradle.properties  gradlew  gradlew.bat
@@ -71,7 +72,7 @@ tether/
     └── pull_request_template.md  CODEOWNERS  dependabot.yml
 ```
 
-Not present yet: `LICENSE` (no license chosen, see Q5), `nightly.yml` (nothing to run until P1), `core/benches/`, the rest of `core/fixtures/` (only `smells/` exists), feature modules, `service`, `platform`, the `full` and `play` Linux mode files, and the real code of every Rust crate except `tether-types`, `tether-engine`, `tether-ffi`, and `tether-secrets`.
+Not present yet: `LICENSE` (no license chosen, see Q5), `nightly.yml` (nothing to run until P1), `core/benches/`, the rest of `core/fixtures/` (only `smells/` exists), feature modules, `service`, `platform`, the `full` and `play` Linux mode files, and the real code of every Rust crate except `tether-types`, `tether-engine`, `tether-ffi`, `tether-store`, and `tether-secrets`.
 
 ## Top level
 
@@ -153,6 +154,7 @@ core/
     │       ├── event.rs       CoreEvent enum
     │       ├── permission.rs  ApprovalScope (later)
     │       ├── executor.rs    Run types (later)
+    │       ├── text.rs        Text forms (as_str, FromStr) for enums kept as text
     │       ├── usage.rs       UsageSnapshot
     │       └── error.rs       CoreError: a variant per kind, with a retryable flag
     ├── tether-ffi/
@@ -260,9 +262,12 @@ core/
     │   │   └── 0001_init.sql  Initial schema
     │   └── src/
     │       ├── lib.rs
-    │       ├── db.rs          Connection, WAL, migrations
-    │       ├── queries.rs     Typed queries per table
-    │       └── blobs.rs       Blob store and cleanup
+    │       ├── db.rs          Store: open, WAL, foreign keys, run migrations
+    │       ├── error.rs       StoreError
+    │       ├── migrations.rs  Migration list and runner (PRAGMA user_version)
+    │       ├── schema_tests.rs Tests for schema 0001 (test only)
+    │       ├── queries.rs     Typed queries per table (later)
+    │       └── blobs.rs       Blob store and cleanup (later)
     ├── tether-connectors/
     │   └── src/
     │       ├── lib.rs         Connector trait

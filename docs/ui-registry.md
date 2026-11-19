@@ -30,7 +30,7 @@ All components start as **Planned**. Screenshot tests start with the first featu
 | `TetherSurface` | Tonal surface wrapper | `tone` (bg, surface, sunken, raised), `elevation` | each tone × light, dark | P0 | Planned |
 | `TetherText` | Text bound to type tokens | `text`, `style` token, `color` token, `maxLines` | default, truncated | P0 | Planned |
 | `MonoText` | Inline code, paths, commands | `text`, `size` (mono, mono-s, mono-label) | default, truncated middle for paths | P0 | Planned |
-| `TetherIcon` | Lucide icon with token sizing; the icons live in `TetherIcons`: circle-check, circle-x, circle-dot, circle-pause, chevron-left, chevron-right, zap, trash-2, eye, eye-off, key-round, menu, search, bell, settings, folder, folder-open, git-branch, package, plus, brain, loader, x | `icon`, `contentDescription`, `tint`, `size` | default, tinted | P0 | Built |
+| `TetherIcon` | Lucide icon with token sizing; the icons live in `TetherIcons`: circle-check, circle-x, circle-dot, circle-pause, chevron-left, chevron-right, zap, trash-2, eye, eye-off, key-round, menu, search, bell, settings, folder, folder-open, git-branch, package, plus, brain, loader, x, arrow-left, house, sun, moon, monitor, chart-column, activity, chevron-down | `icon`, `contentDescription`, `tint`, `size` | default, tinted | P0 | Built |
 | `FocusRing` | Keyboard focus indicator modifier | `shape` | unfocused, focused | P0 | Planned |
 
 ## Buttons and inputs
@@ -54,7 +54,9 @@ All components start as **Planned**. Screenshot tests start with the first featu
 | Name | Purpose | Props | States | Phase | Status |
 |---|---|---|---|---|---|
 | `TetherTopBar` | Top app bar | `title`, `subtitle`, `navigationIcon`, `actions` | default (scrolled shadow is planned) | P0 | Built |
-| `HomeDrawer` | Sessions grouped by project, session search, All projects, New session, Settings, Skills and memory. Lives in the app module | `sessions`, `query`, `onQueryChange`, `onOpenSession`, `onAllProjects`, `onNewSession`, `onOpenSettings`, `onOpenSkills` | with sessions, no sessions, search with no match | P1 | Built |
+| `HomeDrawer` | Header with the theme toggle, destinations (Home, Projects, Needs attention, Usage and cost, Runs), session search and sessions by project, then New session, Settings, Skills and memory. Lives in the app module | `sessions`, `query`, `currentRoute`, `attentionCount`, `themeMode`, `onToggleTheme`, `onDestination`, `onOpenSession`, `onNewSession`, `onOpenSettings`, `onOpenSkills` | with sessions, no sessions, search with no match, each destination selected | P1 | Built |
+| `DrawerItem` | Drawer destination row; the current one is `tonal` | `label`, `icon`, `selected`, `onClick`, `badge` | default, selected, pressed, with badge | P1 | Built |
+| `ThemeToggleButton` | Icon button that shows the theme choice (monitor, sun, moon) and cycles System, Light, Dark | `mode`, `contentDescription`, `onClick` | system, light, dark | P1 | Built |
 | `NotificationBell` | Bell in the top bar; an accent dot when something needs the user | `hasAttention`, `contentDescription`, `onClick` | quiet, attention | P1 | Built |
 | `SectionTitle` | Small heading above a list group | `text` | default | P1 | Built |
 | `ListGroup` | Bordered container for stacked rows | `content` | default | P1 | Built |
@@ -123,6 +125,11 @@ All components start as **Planned**. Screenshot tests start with the first featu
 | `ProgressLine` | Thin indeterminate progress | `active` | idle, active | P1 | Planned |
 | `RunningIndicator` | Small running icon | `label` | animated, reduced motion static | P1 | Planned |
 | `StatusBadge` | Pill with a label and an optional icon | `label`, `tone` (`BadgeTone`: neutral, tonal, success, warning, danger), `icon` | each tone | P1 | Built |
+| `DashboardCard` | Card on Home: optional title and action, then content | `title`, `action`, `content` | with title, without title, with action | P1 | Built |
+| `StatRow` | Three stats side by side with a value, a label, and a plain comparison | `items` (`StatItem`) | one, three | P1 | Built |
+| `UsageBarChart` | Bars of tokens per day with axis labels and a text description. Bars only | `values`, `labels`, `contentDescription` | all zero, one day, seven days | P1 | Built |
+| `ShareRow` | A label, its share in numbers, and a thin bar | `label`, `share`, `fraction`, `color` | 0%, 62%, 100% | P1 | Built |
+| `DataTable` | The table behind a chart, two columns | `headers`, `rows` | default | P1 | Built |
 | `StatusMark` | Session state icon: running (turning), done, waiting, failed, idle. Decorative: the row text carries the meaning | `state` (`SessionState`) | each state, reduced motion static | P1 | Built |
 
 ## Diff and files
@@ -172,7 +179,7 @@ All components start as **Planned**. Screenshot tests start with the first featu
 |---|---|---|---|---|---|
 | `EmptyState` | One sentence and one action | `text`, `action` | default | P1 | Planned |
 | `SkeletonRow` | Loading placeholder row | `lines` | 1 line, 2 lines | P1 | Planned |
-| `TetherSnackbar` | Undoable action feedback | `message`, `action` | default, with Undo | P1 | Planned |
+| `TetherSnackbarHost` | Snackbars (with an action) and toasts (without one) on the inverse surface of the app theme, announced politely | `hostState` | snackbar with action, toast, light, dark | P1 | Built |
 | `InlineBanner` | Persistent notice in a screen, announced politely to TalkBack | `text`, `tone` (`BannerTone`: info, success, warning, danger), `title`, `actionLabel`, `onAction` | info, success, warning, danger | P1 | Built |
 
 ## Onboarding

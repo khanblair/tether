@@ -12,6 +12,7 @@ publish = false
 [workspace.dependencies]
 tether-types = { path = "crates/tether-types" }
 tether-engine = { path = "crates/tether-engine" }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "stream"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"

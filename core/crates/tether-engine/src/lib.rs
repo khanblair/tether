@@ -1,6 +1,10 @@
 //! Engine: sessions, turn loop, permissions, executor router, checkpoints.
-//!
+
 //! P0 holds only the version and the event hand-off used by the FFI layer.
+
+mod provider_connection;
+
+pub use provider_connection::{ProviderCheck, check_provider, provider_test_target};
 
 use std::sync::Arc;
 

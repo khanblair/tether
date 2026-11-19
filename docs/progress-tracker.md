@@ -77,6 +77,7 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 
 | Date | ID | Decision | Why | Docs affected |
 |---|---|---|---|---|
+| 2026-11-19 | D28 | Build workflow, updated. Codex (GPT-5.6 Luna) writes the core Rust tasks: Claude opens a draft pull request and posts the task as an `@codex` comment, and Codex pushes to that branch. Claude Code reviews what Codex wrote and writes the Android UI, with Haiku subagents for mechanical screen translation. `@codex review` is requested on every pull request, and fresh-context Sonnet reviews run only when the owner asks. No git worktrees: one issue at a time in the current checkout. Replaces the Sonnet review part of D20. Codex needs an environment for the repository (chatgpt.com/codex/cloud/settings/environments), which only the owner can create | Owner's decision. The reviewer is always the other model than the writer, and one issue at a time keeps each pull request small | code-standards, AGENTS.md, CLAUDE.md |
 | 2026-11-18 | D23 | `tether-types` holds plain Rust types with no UniFFI code; `tether-ffi` converts the types the UI sees into `View` types, with ids as plain strings. `CoreError` is an enum with one variant per kind and a `retryable()` method. Its view is a record (`kind`, `message`, `retryable`), not an error enum, because a UniFFI error is a Kotlin exception: it cannot carry shared fields, compares by reference, and a field named `message` does not compile. Every session event carries `session_id`. P1-01 defines 15 of the 25 events; the other 10 arrive with the task that first emits them | Keeps UniFFI out of the engine crates and matches the P0 pattern. Doing it in `tether-types` would need external types across crates in UniFFI. Task P1-01, issue #5 | architecture, project-structure |
 | 2026-11-18 | D22 | The `full` build updates itself: Settings > About > Updates checks the latest GitHub Release, downloads the APK, verifies it against `SHA256SUMS`, and installs it over the running app. The `play` build links to Google Play. Releases are never marked as pre-releases, because the latest release lookup skips them. Risk: a release is offered to every `full` user as soon as it is published, with no staged rollout; a bad release is fixed by publishing a higher version | Owner's request. Replaces the default of notify only in M-Q2. Task P1-20, issue #135 | mobile, build-plan |
 | 2026-11-18 | D21 | Releases publish automatically when the version in `core/Cargo.toml` has no tag, from a merged pull request, with no manual tag and no draft; the release fails unless the APK is signed with the key whose fingerprint is pinned in `TETHER_CERT_SHA256` | Owner's decision: merge, then download and test. A failed release leaves no tag, so the next push retries | development, architecture, project-structure, build-plan |
@@ -123,6 +124,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Who | What happened | Next |
 |---|---|---|---|
+| 2026-11-19 | Blair with Claude | The owner asked why Codex was not writing code. It had only reviewed pull requests, because Codex needs a cloud environment that does not exist yet and the work had drifted to Claude agents. Recorded the workflow in `AGENTS.md`, `CLAUDE.md`, and code-standards (D28), and started P1-06 as a draft pull request for Codex | Owner creates the Codex environment; Claude reviews what Codex pushes to #144 |
 | 2026-11-18 | Blair with Claude | Opened PR #139 with `AGENTS.md` and `CLAUDE.md`. A Sonnet review found wrong claims about what `just check` and `slop-lint` cover, commands that only run from a subfolder, and missing pointers to code-standards section 13; fixed | Merge #139 after review |
 | 2026-11-18 | Blair with Claude | Built P1-01 on `feat/p1-01-tether-types`: the shared types, the 15 new events, and their FFI views. Found that a UniFFI error enum becomes a Kotlin exception whose generated `message` clashes with a field of that name; made the error view a record instead. Sonnet review: fixed the doc, tests, and dead code it found | Sonnet review, then Blair's go to commit and open the pull request |
 | 2026-11-18 | Blair with Claude | Opened PR #134 for P0-19 (automatic release) after PR #132 merged and issue #3 closed on its own. A Sonnet review found the key could be replaced silently and the version was not validated; both fixed | Merge #134, which releases v0.0.1; download and test the APK; back up the keystore |
@@ -134,6 +136,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Files | Change | PR |
 |---|---|---|---|
+| 2026-11-19 | `AGENTS.md`, `CLAUDE.md`, `docs/code-standards.md`, `docs/project-structure.md`, `docs/progress-tracker.md` | Codex writes core Rust, Haiku helps with UI, `@codex review` on every pull request, no worktrees (D28) | |
 | 2026-11-18 | `AGENTS.md`, `CLAUDE.md`, `docs/README.md`, `docs/project-structure.md`, `docs/progress-tracker.md` | Agent instruction files at the repo root, listed in the structure doc and linked from the docs README | #139 |
 | 2026-11-18 | `core/crates/tether-types/`, `core/crates/tether-ffi/src/views/`, `core/Cargo.*`, generated Kotlin bindings, `ProjectsScreen.kt`, `strings.xml` | Shared types, events, and FFI views for P1-01 | #138 |
 | 2026-11-18 | `.github/workflows/release.yml`, `docs/development.md`, `docs/progress-tracker.md` | Every release is published as the latest, never a pre-release; tracker brought up to date | #136 |
@@ -145,6 +148,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Doc | Change |
 |---|---|---|
+| 2026-11-19 | code-standards, project-structure, progress-tracker | Review rule and workflow updated (D28) |
 | 2026-11-18 | README, project-structure | `AGENTS.md` and `CLAUDE.md` added to both trees; the README sends agents to `AGENTS.md` first |
 | 2026-11-18 | architecture, project-structure, progress-tracker | Shared types and events as built: plain Rust types, `View` types in `tether-ffi`, `CoreError` shape, 15 events defined (D23) |
 | 2026-11-18 | mobile, build-plan | In-app updates for the full build: P1-20 added, M-Q2 decided (D22) |

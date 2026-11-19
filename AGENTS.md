@@ -18,6 +18,11 @@ Tether is an Android coding-agent harness: a Rust core in `core/` and a Kotlin a
 - Change only what the task needs, plus the docs, tracker rows, and generated files that must change with it. Work that no task covers gets its own issue.
 - Land shared contracts first (types, traits, schema) so parallel tasks do not collide.
 
+## Who writes and who reviews
+
+- Codex writes the core Rust tasks from the issue and pushes to the pull request branch. Claude Code writes the Android UI, using Haiku subagents for the mechanical translation of screens, and reviews what Codex wrote.
+- Request `@codex review` on every pull request. A pull request is reviewed by the other model than the one that wrote it (decision D28).
+
 ## Commits
 
 - Keep each commit to 15 files or fewer, grouped by purpose. `just commits` checks it, and CI runs the same check.

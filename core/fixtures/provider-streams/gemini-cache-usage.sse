@@ -1,0 +1,4 @@
+data: {"candidates":[{"content":{"parts":[{"text":"Done"}]}}],"usageMetadata":{"promptTokenCount":60,"cachedContentTokenCount":40,"candidatesTokenCount":3,"thoughtsTokenCount":6}}
+
+data: {"candidates":[{"finishReason":"STOP"}]}
+

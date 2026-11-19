@@ -16,6 +16,9 @@ use tether_types::{ConnectionStatus, Provider};
 
 use crate::{ConnectionStatusView, ProviderView, SecretVault};
 
+/// The number of providers with independently changing key revisions.
+const PROVIDER_COUNT: usize = 5;
+
 /// A provider settings operation failed. Details never contain secret bytes.
 #[derive(Debug, thiserror::Error, uniffi::Error)]
 pub enum ProviderSettingsError {
@@ -48,6 +51,14 @@ trait Checker: Send + Sync {
     ) -> Pin<Box<dyn Future<Output = ProviderCheck> + Send + 'a>>;
 }
 
+/// Stores the database and the revisions that protect in-flight key tests.
+struct State {
+    /// The saved provider status and model cache.
+    store: Store,
+    /// The latest key revision for each provider.
+    revisions: [u64; PROVIDER_COUNT],
+}
+
 /// The engine's real key check, which sends one authenticated request.
 struct EngineChecker;
 
@@ -65,7 +76,7 @@ impl Checker for EngineChecker {
 #[derive(uniffi::Object)]
 pub struct ProviderSettings {
     vault: Arc<SecretVault>,
-    store: Mutex<Store>,
+    state: Mutex<State>,
     checker: Arc<dyn Checker>,
 }
 
@@ -115,16 +126,22 @@ impl ProviderSettings {
             return Err(ProviderSettingsError::EmptyKey);
         }
         let reference = secret_ref(provider)?;
+        let mut state = self.lock_state()?;
+        let revision = next_revision(&state, provider)?;
         self.vault
             .store
             .put(&reference, &tether_secrets::Secret::from_text(key))
             .map_err(|_| ProviderSettingsError::Unavailable)?;
-        self.save(
-            provider,
-            Some(reference.as_str()),
-            ConnectionStatus::Unset,
-            None,
-        )
+        state.revisions[provider_index(provider)] = revision;
+        state
+            .store
+            .save_provider_status(
+                provider,
+                Some(reference.as_str()),
+                ConnectionStatus::Unset,
+                None,
+            )
+            .map_err(|_| ProviderSettingsError::Unavailable)
     }
 
     /// Deletes the key, resets the saved status, and clears the cached models.
@@ -133,12 +150,19 @@ impl ProviderSettings {
     /// Returns an error when the vault or database cannot save the change.
     pub fn remove_key(&self, provider: ProviderView) -> Result<(), ProviderSettingsError> {
         let provider: Provider = provider.into();
+        let mut state = self.lock_state()?;
+        let revision = next_revision(&state, provider)?;
         self.vault
             .store
             .delete(&secret_ref(provider)?)
             .map_err(|_| ProviderSettingsError::Unavailable)?;
-        self.save(provider, None, ConnectionStatus::Unset, None)?;
-        self.lock_store()?
+        state.revisions[provider_index(provider)] = revision;
+        state
+            .store
+            .save_provider_status(provider, None, ConnectionStatus::Unset, None)
+            .map_err(|_| ProviderSettingsError::Unavailable)?;
+        state
+            .store
             .clear_models(provider)
             .map_err(|_| ProviderSettingsError::Unavailable)
     }
@@ -176,6 +200,7 @@ impl ProviderSettings {
     ) -> Result<ProviderStatusView, ProviderSettingsError> {
         let provider: Provider = provider.into();
         let reference = secret_ref(provider)?;
+        let revision = self.provider_revision(provider)?;
         let Some(secret) = self
             .vault
             .store
@@ -188,12 +213,8 @@ impl ProviderSettings {
             .expose_text()
             .map_err(|_| ProviderSettingsError::Unavailable)?;
         let check = self.run_check(provider, key)?;
-        let now = now_ms()?;
-        self.save(provider, Some(reference.as_str()), check.status, Some(now))?;
-        if matches!(check.status, ConnectionStatus::Ok) {
-            self.lock_store()?
-                .replace_models(provider, &check.models, now)
-                .map_err(|_| ProviderSettingsError::Unavailable)?;
+        if !self.save_check(provider, revision, &reference, &check)? {
+            return self.view(provider);
         }
         self.view(provider)
     }
@@ -210,7 +231,10 @@ impl ProviderSettings {
             .map_err(|_| ProviderSettingsError::Unavailable)?;
         Ok(Arc::new(Self {
             vault,
-            store: Mutex::new(store),
+            state: Mutex::new(State {
+                store,
+                revisions: [0; PROVIDER_COUNT],
+            }),
             checker,
         }))
     }
@@ -218,19 +242,22 @@ impl ProviderSettings {
     /// Builds the status view. The saved status is read only when a key exists.
     fn view(&self, provider: Provider) -> Result<ProviderStatusView, ProviderSettingsError> {
         let status = if self.key_exists(provider)? {
-            self.lock_store()?
+            self.lock_state()?
+                .store
                 .provider_status(provider)
                 .map_err(|_| ProviderSettingsError::Unavailable)?
         } else {
             ConnectionStatus::Unset
         };
-        let store = self.lock_store()?;
+        let state = self.lock_state()?;
         Ok(ProviderStatusView {
             status: status.into(),
-            model_count: store
+            model_count: state
+                .store
                 .models_count(provider)
                 .map_err(|_| ProviderSettingsError::Unavailable)?,
-            tested_at_ms: store
+            tested_at_ms: state
+                .store
                 .provider_tested_at(provider)
                 .map_err(|_| ProviderSettingsError::Unavailable)?,
         })
@@ -256,23 +283,61 @@ impl ProviderSettings {
         Ok(runtime.block_on(self.checker.check(provider, key)))
     }
 
-    fn lock_store(&self) -> Result<MutexGuard<'_, Store>, ProviderSettingsError> {
-        self.store
+    /// Locks the store and the provider key revisions together.
+    fn lock_state(&self) -> Result<MutexGuard<'_, State>, ProviderSettingsError> {
+        self.state
             .lock()
             .map_err(|_| ProviderSettingsError::Unavailable)
     }
 
-    fn save(
+    /// Reads the key revision before an in-flight key check reads the vault.
+    fn provider_revision(&self, provider: Provider) -> Result<u64, ProviderSettingsError> {
+        Ok(self.lock_state()?.revisions[provider_index(provider)])
+    }
+
+    /// Saves a check only when its key revision is still current.
+    fn save_check(
         &self,
         provider: Provider,
-        reference: Option<&str>,
-        status: ConnectionStatus,
-        tested_at: Option<i64>,
-    ) -> Result<(), ProviderSettingsError> {
-        self.lock_store()?
-            .save_provider_status(provider, reference, status, tested_at)
-            .map_err(|_| ProviderSettingsError::Unavailable)
+        revision: u64,
+        reference: &SecretRef,
+        check: &ProviderCheck,
+    ) -> Result<bool, ProviderSettingsError> {
+        let mut state = self.lock_state()?;
+        if state.revisions[provider_index(provider)] != revision {
+            return Ok(false);
+        }
+        let now = now_ms()?;
+        state
+            .store
+            .save_provider_status(provider, Some(reference.as_str()), check.status, Some(now))
+            .map_err(|_| ProviderSettingsError::Unavailable)?;
+        if matches!(check.status, ConnectionStatus::Ok) {
+            state
+                .store
+                .replace_models(provider, &check.models, now)
+                .map_err(|_| ProviderSettingsError::Unavailable)?;
+        }
+        Ok(true)
     }
+}
+
+/// Returns the array index assigned to a provider.
+fn provider_index(provider: Provider) -> usize {
+    match provider {
+        Provider::Anthropic => 0,
+        Provider::OpenAi => 1,
+        Provider::Gemini => 2,
+        Provider::DeepSeek => 3,
+        Provider::OpenRouter => 4,
+    }
+}
+
+/// Calculates the next revision without changing state.
+fn next_revision(state: &State, provider: Provider) -> Result<u64, ProviderSettingsError> {
+    state.revisions[provider_index(provider)]
+        .checked_add(1)
+        .ok_or(ProviderSettingsError::Unavailable)
 }
 
 fn secret_ref(provider: Provider) -> Result<SecretRef, ProviderSettingsError> {
@@ -326,11 +391,28 @@ mod tests {
     struct FakeChecker {
         answer: Mutex<ProviderCheck>,
         calls: AtomicUsize,
+        in_flight: Mutex<Box<dyn Fn() + Send + Sync>>,
     }
 
+    /// Does nothing when no in-flight hook is installed.
+    fn no_op_hook() {}
+
     impl FakeChecker {
+        /// Replaces the answer returned by the next check.
         fn answer(&self, check: ProviderCheck) {
             *self.answer.lock().unwrap() = check;
+        }
+
+        /// Runs `hook` once during the next check.
+        fn set_in_flight_hook(&self, hook: impl Fn() + Send + Sync + 'static) {
+            *self.in_flight.lock().unwrap() = Box::new(hook);
+        }
+
+        /// Takes and runs the hook installed for the next check, then restores a no-op.
+        fn run_in_flight_hook(&self) {
+            let hook =
+                std::mem::replace(&mut *self.in_flight.lock().unwrap(), Box::new(no_op_hook));
+            hook();
         }
     }
 
@@ -341,6 +423,7 @@ mod tests {
             _key: &'a str,
         ) -> Pin<Box<dyn Future<Output = ProviderCheck> + Send + 'a>> {
             self.calls.fetch_add(1, Ordering::SeqCst);
+            self.run_in_flight_hook();
             let answer = self.answer.lock().unwrap().clone();
             Box::pin(std::future::ready(answer))
         }
@@ -363,6 +446,7 @@ mod tests {
         let checker = Arc::new(FakeChecker {
             answer: Mutex::new(answer),
             calls: AtomicUsize::new(0),
+            in_flight: Mutex::new(Box::new(no_op_hook)),
         });
         let shared: Arc<dyn Checker> = checker.clone();
         let settings = ProviderSettings::open(&db.to_string_lossy(), vault, shared).unwrap();
@@ -395,8 +479,9 @@ mod tests {
 
     fn cached_ids(settings: &ProviderSettings) -> Vec<String> {
         settings
-            .lock_store()
+            .lock_state()
             .unwrap()
+            .store
             .models(Provider::Gemini)
             .unwrap()
             .into_iter()
@@ -528,12 +613,15 @@ mod tests {
 
         settings.remove_key(ProviderView::Gemini).unwrap();
 
-        let store = settings.store.lock().unwrap();
+        let state = settings.state.lock().unwrap();
         assert_eq!(
-            store.provider_status(Provider::Gemini).unwrap(),
+            state.store.provider_status(Provider::Gemini).unwrap(),
             ConnectionStatus::Unset
         );
-        assert_eq!(store.provider_tested_at(Provider::Gemini).unwrap(), None);
+        assert_eq!(
+            state.store.provider_tested_at(Provider::Gemini).unwrap(),
+            None
+        );
     }
 
     #[test]
@@ -550,8 +638,9 @@ mod tests {
 
         assert_eq!(
             settings
-                .lock_store()
+                .lock_state()
                 .unwrap()
+                .store
                 .provider_status(Provider::Gemini)
                 .unwrap(),
             ConnectionStatus::Ok
@@ -586,6 +675,111 @@ mod tests {
         assert!(before <= tested_at && tested_at <= after, "{tested_at}");
         assert_eq!(cached_ids(settings), THREE);
         assert_eq!(fx.checker.calls.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn replacing_a_key_during_a_test_discards_the_old_result() {
+        let fx = fixture(outcome(ConnectionStatus::Ok, &["old-model"]));
+        let settings = Arc::clone(&fx.settings);
+        settings.set_key(ProviderView::Gemini, KEY).unwrap();
+        settings.test_connection(ProviderView::Gemini).unwrap();
+        fx.checker.answer(outcome(ConnectionStatus::Ok, &THREE));
+
+        let changed_settings = Arc::clone(&settings);
+        fx.checker.set_in_flight_hook(move || {
+            changed_settings
+                .set_key(ProviderView::Gemini, "sk-replacement")
+                .unwrap();
+        });
+        let result = settings.test_connection(ProviderView::Gemini).unwrap();
+
+        assert_eq!(result, status_view(ConnectionStatusView::Unset, 1, None));
+        assert_eq!(
+            settings
+                .reveal_key(ProviderView::Gemini)
+                .unwrap()
+                .as_deref(),
+            Some("sk-replacement")
+        );
+        assert_eq!(cached_ids(&settings), vec!["old-model"]);
+    }
+
+    #[test]
+    fn removing_a_key_during_a_test_discards_the_old_result_and_cache() {
+        let fx = fixture(outcome(ConnectionStatus::Ok, &THREE));
+        let settings = Arc::clone(&fx.settings);
+        settings.set_key(ProviderView::Gemini, KEY).unwrap();
+        settings.test_connection(ProviderView::Gemini).unwrap();
+
+        let changed_settings = Arc::clone(&settings);
+        fx.checker.set_in_flight_hook(move || {
+            changed_settings.remove_key(ProviderView::Gemini).unwrap();
+        });
+        let result = settings.test_connection(ProviderView::Gemini).unwrap();
+
+        assert_eq!(result, status_view(ConnectionStatusView::Unset, 0, None));
+        assert_eq!(settings.reveal_key(ProviderView::Gemini).unwrap(), None);
+        assert_eq!(cached_ids(&settings), Vec::<String>::new());
+    }
+
+    #[test]
+    fn an_unchanged_key_saves_the_test_result() {
+        let fx = fixture(outcome(ConnectionStatus::Ok, &THREE));
+        let settings = &fx.settings;
+        settings.set_key(ProviderView::Gemini, KEY).unwrap();
+
+        let result = settings.test_connection(ProviderView::Gemini).unwrap();
+
+        assert_eq!(result.status, ConnectionStatusView::Ok);
+        assert_eq!(result.model_count, 3);
+        assert!(result.tested_at_ms.is_some());
+        assert_eq!(cached_ids(settings), THREE);
+    }
+
+    #[test]
+    fn changing_another_provider_key_does_not_discard_the_test_result() {
+        let fx = fixture(outcome(ConnectionStatus::Ok, &THREE));
+        let settings = Arc::clone(&fx.settings);
+        settings.set_key(ProviderView::Gemini, KEY).unwrap();
+
+        let changed_settings = Arc::clone(&settings);
+        fx.checker.set_in_flight_hook(move || {
+            changed_settings
+                .set_key(ProviderView::OpenAi, "sk-openai")
+                .unwrap();
+        });
+        let result = settings.test_connection(ProviderView::Gemini).unwrap();
+
+        assert_eq!(result.status, ConnectionStatusView::Ok);
+        assert_eq!(result.model_count, 3);
+        assert_eq!(cached_ids(&settings), THREE);
+        assert_eq!(
+            settings
+                .reveal_key(ProviderView::OpenAi)
+                .unwrap()
+                .as_deref(),
+            Some("sk-openai")
+        );
+    }
+
+    #[test]
+    fn sequential_tests_of_one_key_keep_the_same_revision() {
+        let fx = fixture(outcome(ConnectionStatus::Ok, &THREE));
+        let settings = &fx.settings;
+        settings.set_key(ProviderView::Gemini, KEY).unwrap();
+        let revision = settings.provider_revision(Provider::Gemini).unwrap();
+
+        let first = settings.test_connection(ProviderView::Gemini).unwrap();
+        let second = settings.test_connection(ProviderView::Gemini).unwrap();
+
+        assert_eq!(first.status, ConnectionStatusView::Ok);
+        assert_eq!(second.status, ConnectionStatusView::Ok);
+        assert_eq!(second.model_count, 3);
+        assert_eq!(
+            settings.provider_revision(Provider::Gemini).unwrap(),
+            revision
+        );
+        assert_eq!(fx.checker.calls.load(Ordering::SeqCst), 2);
     }
 
     #[test]

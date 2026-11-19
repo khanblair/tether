@@ -10,7 +10,9 @@
 CREATE TABLE projects (
     id               TEXT PRIMARY KEY,
     name             TEXT NOT NULL,
-    path             TEXT NOT NULL UNIQUE,
+    -- Relative to files/workspaces/: not empty, not absolute, and no .. segment.
+    path             TEXT NOT NULL UNIQUE
+        CHECK (path <> '' AND substr(path, 1, 1) <> '/' AND instr('/' || path || '/', '/../') = 0),
     remote_url       TEXT,
     default_branch   TEXT,
     default_provider TEXT CHECK (default_provider IN ('anthropic', 'openai', 'gemini', 'deepseek', 'openrouter')),
@@ -82,7 +84,7 @@ CREATE TABLE models (
     PRIMARY KEY (provider, model_id)
 ) STRICT;
 
--- No foreign key on project_id: cost history outlives a deleted project.
+-- No foreign key on project_id: cost history outlives a deleted project. Days are UTC dates.
 CREATE TABLE usage_daily (
     day         TEXT NOT NULL CHECK (day GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
     provider    TEXT NOT NULL CHECK (provider IN ('anthropic', 'openai', 'gemini', 'deepseek', 'openrouter')),

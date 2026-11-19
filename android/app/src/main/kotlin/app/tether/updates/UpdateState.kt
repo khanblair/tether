@@ -50,6 +50,7 @@ enum class UpdateProblem {
     InstallInvalid,
     InstallStorage,
     InstallFailed,
+    DownloadMissing,
 }
 
 /** A newer release, as the screens show it. */

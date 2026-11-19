@@ -137,21 +137,25 @@ private fun failedPrimary(state: UpdatesUiState): UpdateAction =
         else -> UpdateAction.Check
     }
 
+/** One sentence for each failed step. A test checks that every problem has its own. */
+private val problemTexts: Map<UpdateProblem, Int> =
+    mapOf(
+        UpdateProblem.Network to R.string.updates_problem_network,
+        UpdateProblem.NothingPublished to R.string.updates_problem_nothing_published,
+        UpdateProblem.BadResponse to R.string.updates_problem_bad_response,
+        UpdateProblem.ChecksumMismatch to R.string.updates_problem_checksum,
+        UpdateProblem.TooLarge to R.string.updates_problem_too_large,
+        UpdateProblem.Storage to R.string.updates_problem_storage,
+        UpdateProblem.InstallDeclined to R.string.updates_problem_install_declined,
+        UpdateProblem.InstallBlocked to R.string.updates_problem_install_blocked,
+        UpdateProblem.InstallConflict to R.string.updates_problem_install_conflict,
+        UpdateProblem.InstallIncompatible to R.string.updates_problem_install_incompatible,
+        UpdateProblem.InstallInvalid to R.string.updates_problem_install_invalid,
+        UpdateProblem.InstallStorage to R.string.updates_problem_install_storage,
+        UpdateProblem.InstallFailed to R.string.updates_problem_install_failed,
+        UpdateProblem.DownloadMissing to R.string.updates_problem_download_missing,
+    )
+
 /** The sentence that explains a failed step. Each problem has its own sentence. */
 @StringRes
-internal fun problemText(problem: UpdateProblem): Int =
-    when (problem) {
-        UpdateProblem.Network -> R.string.updates_problem_network
-        UpdateProblem.NothingPublished -> R.string.updates_problem_nothing_published
-        UpdateProblem.BadResponse -> R.string.updates_problem_bad_response
-        UpdateProblem.ChecksumMismatch -> R.string.updates_problem_checksum
-        UpdateProblem.TooLarge -> R.string.updates_problem_too_large
-        UpdateProblem.Storage -> R.string.updates_problem_storage
-        UpdateProblem.InstallDeclined -> R.string.updates_problem_install_declined
-        UpdateProblem.InstallBlocked -> R.string.updates_problem_install_blocked
-        UpdateProblem.InstallConflict -> R.string.updates_problem_install_conflict
-        UpdateProblem.InstallIncompatible -> R.string.updates_problem_install_incompatible
-        UpdateProblem.InstallInvalid -> R.string.updates_problem_install_invalid
-        UpdateProblem.InstallStorage -> R.string.updates_problem_install_storage
-        UpdateProblem.InstallFailed -> R.string.updates_problem_install_failed
-    }
+internal fun problemText(problem: UpdateProblem): Int = problemTexts.getValue(problem)

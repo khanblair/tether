@@ -152,4 +152,5 @@
     <string name="updates_problem_install_invalid">Android could not read the update file.</string>
     <string name="updates_problem_install_storage">Android has no space to install the update.</string>
     <string name="updates_problem_install_failed">The install did not finish.</string>
+    <string name="updates_problem_download_missing">The downloaded update is no longer there. Download it again.</string>
 </resources>

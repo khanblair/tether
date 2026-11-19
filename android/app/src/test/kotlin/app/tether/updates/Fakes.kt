@@ -24,7 +24,10 @@ class FakeUpdateGateway : UpdateGateway {
     var failNext: Exception? = null
     var failCancel: Exception? = null
     var progressSteps: List<Pair<ULong, ULong>> = emptyList()
-    val calls = mutableListOf<String>()
+    val calls: MutableList<String> = java.util.Collections.synchronizedList(mutableListOf())
+    var onCheck: (() -> Unit)? = null
+    var onDownload: (() -> Unit)? = null
+    var onCancel: (() -> Unit)? = null
 
     private fun record(call: String) {
         calls += call
@@ -36,6 +39,7 @@ class FakeUpdateGateway : UpdateGateway {
 
     override fun check(currentVersion: String): UpdateCheckView {
         record("check:$currentVersion")
+        onCheck?.invoke()
         return checkResult
     }
 
@@ -44,12 +48,14 @@ class FakeUpdateGateway : UpdateGateway {
         progress: DownloadProgress,
     ): String {
         record("download:$version")
+        onDownload?.invoke()
         progressSteps.forEach { (done, total) -> progress.onProgress(done, total) }
         return downloadPath
     }
 
     override fun cancel() {
         calls += "cancel"
+        onCancel?.invoke()
         failCancel?.let { throw it }
     }
 }

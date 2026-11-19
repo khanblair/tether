@@ -23,6 +23,7 @@ class UpdatesControllerTest {
 
     private fun TestScope.controller(
         installer: FakeUpdateInstaller = FakeUpdateInstaller(),
+        fileExists: (String) -> Boolean = { true },
     ): UpdatesController =
         UpdatesController(
             gateway = gateway,
@@ -32,6 +33,7 @@ class UpdatesControllerTest {
             scope = this,
             io = StandardTestDispatcher(testScheduler),
             clock = { now },
+            fileExists = fileExists,
         )
 
     private fun newer() = UpdateCheckView.Available(releaseView())
@@ -190,7 +192,38 @@ class UpdatesControllerTest {
         }
 
     @Test
-    fun a_cancelled_download_goes_back_to_available() =
+    fun a_cancel_tapped_before_the_download_starts_never_reaches_the_core() =
+        runTest {
+            gateway.checkResult = newer()
+            val c = controller()
+            c.checkNow()
+            advanceUntilIdle()
+            c.download()
+            c.cancelDownload()
+            advanceUntilIdle()
+            assertEquals(UpdatePhase.Available, c.state.value.phase)
+            assertNull(c.state.value.problem)
+            assertNull(c.state.value.apkPath)
+            assertFalse(gateway.calls.any { it.startsWith("download") })
+        }
+
+    @Test
+    fun a_cancel_that_comes_too_late_to_stop_the_call_still_discards_the_result() =
+        runTest {
+            gateway.checkResult = newer()
+            val c = controller()
+            c.checkNow()
+            advanceUntilIdle()
+            gateway.onDownload = { c.cancelDownload() }
+            c.download()
+            advanceUntilIdle()
+            assertEquals(UpdatePhase.Available, c.state.value.phase)
+            assertNull(c.state.value.apkPath)
+            assertTrue(gateway.calls.any { it.startsWith("download") })
+        }
+
+    @Test
+    fun a_download_that_the_core_reports_as_cancelled_goes_back_to_available() =
         runTest {
             gateway.checkResult = newer()
             val c = controller()
@@ -198,25 +231,23 @@ class UpdatesControllerTest {
             advanceUntilIdle()
             gateway.failNext = UpdaterException.Cancelled()
             c.download()
-            c.cancelDownload()
             advanceUntilIdle()
             assertEquals(UpdatePhase.Available, c.state.value.phase)
             assertNull(c.state.value.problem)
-            assertTrue("cancel" in gateway.calls)
         }
 
     @Test
-    fun a_cancel_that_throws_does_not_crash_the_app_and_the_download_still_ends() =
+    fun a_new_download_after_a_cancel_is_not_cancelled() =
         runTest {
             gateway.checkResult = newer()
-            gateway.failCancel = IllegalStateException("boom")
             val c = controller()
             c.checkNow()
             advanceUntilIdle()
             c.download()
             c.cancelDownload()
             advanceUntilIdle()
-            assertTrue("cancel" in gateway.calls)
+            c.download()
+            advanceUntilIdle()
             assertEquals(UpdatePhase.Ready, c.state.value.phase)
         }
 
@@ -229,9 +260,12 @@ class UpdatesControllerTest {
             assertFalse("cancel" in gateway.calls)
         }
 
-    private fun TestScope.readyController(installer: FakeUpdateInstaller): UpdatesController {
+    private fun TestScope.readyController(
+        installer: FakeUpdateInstaller,
+        fileExists: (String) -> Boolean = { true },
+    ): UpdatesController {
         gateway.checkResult = newer()
-        val c = controller(installer)
+        val c = controller(installer, fileExists)
         c.checkNow()
         advanceUntilIdle()
         c.download()
@@ -323,6 +357,68 @@ class UpdatesControllerTest {
             advanceUntilIdle()
             assertEquals(listOf("store"), installer.calls)
             assertEquals(UpdatePhase.Ready, c.state.value.phase)
+        }
+
+    @Test
+    fun a_missing_download_is_forgotten_and_offered_again_instead_of_retried() =
+        runTest {
+            val installer = FakeUpdateInstaller()
+            val c = readyController(installer, fileExists = { false })
+            c.install()
+            advanceUntilIdle()
+            assertEquals(UpdatePhase.Failed, c.state.value.phase)
+            assertEquals(UpdateProblem.DownloadMissing, c.state.value.problem)
+            assertNull(c.state.value.apkPath)
+            assertTrue(installer.calls.isEmpty())
+            c.download()
+            assertEquals(UpdatePhase.Downloading, c.state.value.phase)
+        }
+
+    @Test
+    fun a_file_that_vanishes_while_the_install_fails_is_reported_as_missing() =
+        runTest {
+            var present = true
+            val installer =
+                FakeUpdateInstaller().apply {
+                    outcome = {
+                        present = false
+                        it.onFailure(InstallFailure.Storage)
+                    }
+                }
+            val c = readyController(installer, fileExists = { present })
+            c.install()
+            advanceUntilIdle()
+            assertEquals(UpdateProblem.DownloadMissing, c.state.value.problem)
+            assertNull(c.state.value.apkPath)
+        }
+
+    @Test
+    fun a_failed_background_check_counts_for_the_throttle_and_keeps_the_known_version() =
+        runTest {
+            store.available = "0.0.3"
+            val c = controller()
+            c.restore()
+            advanceUntilIdle()
+            gateway.failNext = UpdaterException.Network()
+            c.checkIfDue()
+            advanceUntilIdle()
+            assertEquals(now, store.last)
+            assertEquals("0.0.3", store.available)
+            assertEquals(1, gateway.calls.count { it.startsWith("check") })
+            c.checkIfDue()
+            advanceUntilIdle()
+            assertEquals(1, gateway.calls.count { it.startsWith("check") })
+        }
+
+    @Test
+    fun a_failed_manual_check_is_recorded_too() =
+        runTest {
+            val c = controller()
+            gateway.failNext = UpdaterException.Network()
+            c.checkNow()
+            advanceUntilIdle()
+            assertEquals(now, store.last)
+            assertNull(store.available)
         }
 
     @Test

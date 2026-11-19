@@ -8,6 +8,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * State holder for the update flow: check, download and verify, install. It lives as long as the
@@ -28,7 +30,14 @@ class UpdatesController(
     private val scope: CoroutineScope,
     private val io: CoroutineDispatcher = Dispatchers.IO,
     private val clock: () -> Long = System::currentTimeMillis,
+    private val fileExists: (String) -> Boolean = { File(it).isFile },
 ) {
+    /** True while a check runs, so a background check and a manual one never overlap. */
+    private val checkInFlight = AtomicBoolean(false)
+
+    /** Set by Cancel; reset by each new download. */
+    private val cancelRequested = AtomicBoolean(false)
+
     private val mutableState =
         MutableStateFlow(
             UpdatesUiState(
@@ -64,7 +73,9 @@ class UpdatesController(
             val last = withContext(io) { store.lastCheckMs() }
             val due = last == null || clock() - last >= CHECK_INTERVAL_MS
             val before = state.value.phase
-            if (due && before in CHECKABLE) runCheck(manual = false, before = before)
+            if (due && before in CHECKABLE && checkInFlight.compareAndSet(false, true)) {
+                runCheck(manual = false, before = before)
+            }
         }
     }
 
@@ -72,6 +83,9 @@ class UpdatesController(
     fun checkNow() {
         if (state.value.phase !in CHECKABLE) return
         mutableState.update { it.copy(phase = UpdatePhase.Checking, problem = null) }
+        // A background check may already run. It ends by showing its own result, so do not start a
+        // second one that could finish later and overwrite a download.
+        if (!checkInFlight.compareAndSet(false, true)) return
         scope.launch { runCheck(manual = true, before = UpdatePhase.Idle) }
     }
 
@@ -83,6 +97,7 @@ class UpdatesController(
             current.phase == UpdatePhase.Available ||
                 (current.phase == UpdatePhase.Failed && current.apkPath == null)
         if (!canStart) return
+        cancelRequested.set(false)
         mutableState.update {
             it.copy(
                 phase = UpdatePhase.Downloading,
@@ -96,7 +111,17 @@ class UpdatesController(
 
     /** Stops the download in flight. */
     fun cancelDownload() {
-        if (state.value.phase == UpdatePhase.Downloading) scope.launch { call { gateway.cancel() } }
+        if (state.value.phase != UpdatePhase.Downloading) return
+        cancelRequested.set(true)
+        scope.launch {
+            // The core's cancel reaches only a download that has already registered itself, so a
+            // Cancel tapped while the download is still starting could be lost. Ask again until the
+            // download call has returned.
+            while (state.value.phase == UpdatePhase.Downloading) {
+                call { gateway.cancel() }
+                delay(CANCEL_RETRY_MS)
+            }
+        }
     }
 
     /** Hands the verified APK to the system installer, or opens the Play page on the Play build. */
@@ -131,51 +156,78 @@ class UpdatesController(
         manual: Boolean,
         before: UpdatePhase,
     ) {
-        call { gateway.check(currentVersion) }
-            .onSuccess { applyCheck(it) }
-            .onFailure { failure ->
-                mutableState.update {
-                    if (manual) {
-                        it.copy(
-                            phase = UpdatePhase.Failed,
-                            problem = problemFor(failure),
-                        )
-                    } else {
-                        it.copy(phase = before)
-                    }
-                }
+        try {
+            call { gateway.check(currentVersion) }
+                .onSuccess { applyCheck(it) }
+                .onFailure { failure -> onCheckFailed(failure, manual, before) }
+        } finally {
+            checkInFlight.set(false)
+        }
+    }
+
+    private suspend fun onCheckFailed(
+        failure: Throwable,
+        manual: Boolean,
+        before: UpdatePhase,
+    ) {
+        // A failed attempt counts for the 12 hour throttle too. Keep the version already known.
+        val known = state.value.let { it.release?.version ?: it.knownNewerVersion }
+        remember(known)
+        mutableState.update {
+            when {
+                it.phase !in CHECK_RESULT_PHASES -> it
+                manual -> it.copy(phase = UpdatePhase.Failed, problem = problemFor(failure))
+                else -> it.copy(phase = before)
             }
+        }
     }
 
     private suspend fun applyCheck(view: UpdateCheckView) {
         when (view) {
             is UpdateCheckView.UpToDate -> {
-                withContext(io) { store.recordCheck(clock(), null) }
+                remember(null)
                 mutableState.update {
-                    it.copy(
-                        phase = UpdatePhase.UpToDate,
-                        release = null,
-                        knownNewerVersion = null,
-                        problem = null,
-                    )
+                    if (it.phase !in CHECK_RESULT_PHASES) {
+                        it
+                    } else {
+                        it.copy(
+                            phase = UpdatePhase.UpToDate,
+                            release = null,
+                            knownNewerVersion = null,
+                            problem = null,
+                        )
+                    }
                 }
             }
             is UpdateCheckView.Available -> {
                 val release = summaryOf(view.release)
-                withContext(io) { store.recordCheck(clock(), release.version) }
+                remember(release.version)
                 mutableState.update {
-                    it.copy(
-                        phase = UpdatePhase.Available,
-                        release = release,
-                        knownNewerVersion = null,
-                        problem = null,
-                    )
+                    if (it.phase !in CHECK_RESULT_PHASES) {
+                        it
+                    } else {
+                        it.copy(
+                            phase = UpdatePhase.Available,
+                            release = release,
+                            knownNewerVersion = null,
+                            problem = null,
+                        )
+                    }
                 }
             }
         }
     }
 
+    /** Records that a check ran now, and the newer version known, if any. */
+    private suspend fun remember(available: String?) {
+        call { store.recordCheck(clock(), available) }
+    }
+
     private suspend fun runDownload(release: ReleaseSummary) {
+        if (cancelRequested.get()) {
+            mutableState.update { it.copy(phase = UpdatePhase.Available) }
+            return
+        }
         val sink =
             object : DownloadProgress {
                 override fun onProgress(
@@ -192,7 +244,11 @@ class UpdatesController(
             }
         call { gateway.download(release.version, sink) }
             .onSuccess { path ->
-                mutableState.update { it.copy(phase = UpdatePhase.Ready, apkPath = path) }
+                // A Cancel that arrived too late to stop the call still wins. The verified file
+                // stays in the cache, and the next download reuses it.
+                val phase = if (cancelRequested.get()) UpdatePhase.Available else UpdatePhase.Ready
+                val apk = if (phase == UpdatePhase.Ready) path else null
+                mutableState.update { it.copy(phase = phase, apkPath = apk) }
             }.onFailure { failure ->
                 mutableState.update {
                     if (failure is UpdaterException.Cancelled) {
@@ -215,17 +271,35 @@ class UpdatesController(
                 }
 
                 override fun onFailure(failure: InstallFailure) {
-                    mutableState.update {
-                        it.copy(
-                            phase = UpdatePhase.Failed,
-                            problem = problemFor(failure),
-                        )
-                    }
+                    scope.launch { reportInstallFailure(path, problemFor(failure)) }
                 }
             }
         scope.launch {
+            if (!withContext(io) { fileExists(path) }) {
+                reportInstallFailure(path, UpdateProblem.DownloadMissing)
+                return@launch
+            }
             call { installer.install(File(path), listener) }
                 .onFailure { listener.onFailure(InstallFailure.Other) }
+        }
+    }
+
+    /**
+     * Shows an install failure. When the downloaded file is gone (the cache was cleared while the
+     * app kept running), forget its path so the screen offers a new download, not a retry that
+     * cannot work.
+     */
+    private suspend fun reportInstallFailure(
+        path: String,
+        problem: UpdateProblem,
+    ) {
+        val present = withContext(io) { fileExists(path) }
+        mutableState.update {
+            it.copy(
+                phase = UpdatePhase.Failed,
+                problem = if (present) problem else UpdateProblem.DownloadMissing,
+                apkPath = if (present) it.apkPath else null,
+            )
         }
     }
 
@@ -242,8 +316,12 @@ class UpdatesController(
 
     private companion object {
         const val CHECK_INTERVAL_MS = 12L * 60L * 60L * 1000L
+        const val CANCEL_RETRY_MS = 100L
         val CHECKABLE =
             setOf(UpdatePhase.Idle, UpdatePhase.UpToDate, UpdatePhase.Available, UpdatePhase.Failed)
+
+        /** Phases in which a finished check may change what the screen shows. */
+        val CHECK_RESULT_PHASES = CHECKABLE + UpdatePhase.Checking
         val INSTALLABLE = setOf(UpdatePhase.Ready, UpdatePhase.NeedsPermission, UpdatePhase.Failed)
     }
 }

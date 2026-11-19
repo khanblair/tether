@@ -4,6 +4,7 @@
 //! back as [`StreamEvent`] values. The engine owns retries, batching, and permissions.
 
 pub mod anthropic;
+mod catalog;
 mod client;
 pub mod deepseek;
 mod error;
@@ -12,6 +13,7 @@ pub mod gemini;
 pub mod openai;
 pub mod openai_compat;
 pub mod openrouter;
+pub mod pricing;
 mod request;
 pub mod sse;
 mod transport;
@@ -26,6 +28,7 @@ use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 
 pub use anthropic::{AnthropicConfig, AnthropicProvider};
+pub use catalog::ModelCatalog;
 pub use client::{client_builder, http_client};
 pub use deepseek::{DeepSeekConfig, DeepSeekProvider};
 pub use error::ProviderError;
@@ -34,6 +37,7 @@ pub use gemini::{GeminiConfig, GeminiProvider};
 pub use openai::{OpenAiConfig, OpenAiProvider};
 pub use openai_compat::{Dialect, OpenAiCompatConfig, OpenAiCompatProvider};
 pub use openrouter::{OpenRouterConfig, OpenRouterProvider};
+pub use pricing::{bundled_as_of, bundled_details, bundled_price, cost_micros, parse_usd_micros};
 pub use request::{ChatRequest, ReasoningEffort, ToolSpec};
 
 /// A boxed future, so [`ChatProvider`] can be used as a trait object.

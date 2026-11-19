@@ -80,7 +80,11 @@ pub(crate) async fn get_json<T: DeserializeOwned>(
     if !response.status().is_success() {
         let status = response.status();
         let retry_after = retry_after_secs(response.headers());
-        let body = read_error_body(response).await;
+        let body = tokio::select! {
+            biased;
+            () = cancel.cancelled() => return Err(ProviderError::Cancelled),
+            body = read_error_body(response) => body,
+        };
         return Err(status_error(status, retry_after, &body, call.errors));
     }
     let body = read_json_body(response, cancel).await?;
@@ -311,6 +315,8 @@ async fn deliver(
 mod tests {
     use super::*;
     use crate::test_support::{Reply, start};
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::TcpListener;
 
     struct Plain;
 
@@ -369,6 +375,21 @@ mod tests {
         get(base_url, &cancel).await
     }
 
+    async fn serve_stalled_error(
+        listener: TcpListener,
+        reply_sent: tokio::sync::oneshot::Sender<()>,
+    ) {
+        let (mut socket, _) = listener.accept().await.unwrap();
+        let mut request_start = [0];
+        socket.read_exact(&mut request_start).await.unwrap();
+        socket
+            .write_all(b"HTTP/1.1 401 Unauthorized\r\ntransfer-encoding: chunked\r\ncontent-type: application/json\r\n\r\n2\r\n{}\r\n")
+            .await
+            .unwrap();
+        reply_sent.send(()).unwrap();
+        std::future::pending::<()>().await;
+    }
+
     #[tokio::test]
     async fn get_json_maps_auth_and_retry_after() {
         let auth = start(Reply::json("401 Unauthorized", &[], "{}")).await;
@@ -407,5 +428,27 @@ mod tests {
         let task = tokio::spawn(get_until_cancelled(held.base_url, cancel.clone()));
         cancel.cancel();
         assert_eq!(task.await.unwrap(), Err(ProviderError::Cancelled));
+    }
+
+    #[tokio::test]
+    async fn get_json_cancels_while_an_error_body_stalls() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let base_url = format!("http://{}", listener.local_addr().unwrap());
+        let (reply_sent, reply_seen) = tokio::sync::oneshot::channel();
+        let server = tokio::spawn(serve_stalled_error(listener, reply_sent));
+        let cancel = CancellationToken::new();
+        let mut task = tokio::spawn(get_until_cancelled(base_url, cancel.clone()));
+        reply_seen.await.unwrap();
+        assert!(
+            tokio::time::timeout(std::time::Duration::from_millis(100), &mut task)
+                .await
+                .is_err()
+        );
+
+        cancel.cancel();
+        let result = tokio::time::timeout(std::time::Duration::from_millis(200), &mut task).await;
+        task.abort();
+        server.abort();
+        assert_eq!(result.unwrap().unwrap(), Err(ProviderError::Cancelled));
     }
 }

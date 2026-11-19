@@ -1,0 +1,55 @@
+{
+  "models": [
+    {
+      "name": "models/gemini-4-neon",
+      "version": "001",
+      "displayName": "Gemini 4 Neon",
+      "description": "x",
+      "inputTokenLimit": 1048576,
+      "outputTokenLimit": 65536,
+      "supportedGenerationMethods": [
+        "generateContent",
+        "countTokens",
+        "createCachedContent"
+      ],
+      "temperature": 1.0,
+      "maxTemperature": 2.0,
+      "topP": 0.95,
+      "topK": 64,
+      "thinking": true
+    },
+    {
+      "name": "models/gemini-2.5-flash-lite",
+      "version": "001",
+      "displayName": "Gemini 2.5 Flash-Lite",
+      "description": "x",
+      "inputTokenLimit": 1048576,
+      "outputTokenLimit": 65536,
+      "supportedGenerationMethods": [
+        "generateContent",
+        "countTokens"
+      ],
+      "temperature": 1.0,
+      "maxTemperature": 2.0,
+      "topP": 0.95,
+      "topK": 64,
+      "thinking": false
+    },
+    {
+      "name": "models/gemini-embedding-001",
+      "version": "001",
+      "displayName": "Gemini Embedding",
+      "description": "x",
+      "inputTokenLimit": 2048,
+      "outputTokenLimit": 1,
+      "supportedGenerationMethods": [
+        "embedContent"
+      ],
+      "temperature": 1.0,
+      "maxTemperature": 2.0,
+      "topP": 0.95,
+      "topK": 64
+    }
+  ],
+  "nextPageToken": "page-2-token"
+}

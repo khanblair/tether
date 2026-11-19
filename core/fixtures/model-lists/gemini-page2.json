@@ -1,0 +1,51 @@
+{
+  "models": [
+    {
+      "name": "models/gemini-3.8-flash",
+      "version": "001",
+      "displayName": "Gemini 3.8 Flash",
+      "description": "x",
+      "inputTokenLimit": 1048576,
+      "outputTokenLimit": 65536,
+      "supportedGenerationMethods": [
+        "generateContent",
+        "countTokens",
+        "batchGenerateContent"
+      ],
+      "temperature": 1.0,
+      "maxTemperature": 2.0,
+      "topP": 0.95,
+      "topK": 64
+    },
+    {
+      "name": "models/imagen-4",
+      "version": "001",
+      "displayName": "Imagen 4",
+      "description": "x",
+      "inputTokenLimit": 480,
+      "outputTokenLimit": 8192,
+      "supportedGenerationMethods": [
+        "predict"
+      ],
+      "temperature": 1.0,
+      "maxTemperature": 2.0,
+      "topP": 0.95,
+      "topK": 64
+    },
+    {
+      "name": "models/aqa",
+      "version": "001",
+      "displayName": "Model that performs Attributed Question Answering.",
+      "description": "x",
+      "inputTokenLimit": 7168,
+      "outputTokenLimit": 1024,
+      "supportedGenerationMethods": [
+        "generateAnswer"
+      ],
+      "temperature": 1.0,
+      "maxTemperature": 2.0,
+      "topP": 0.95,
+      "topK": 64
+    }
+  ]
+}

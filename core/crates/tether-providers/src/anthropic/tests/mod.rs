@@ -7,6 +7,7 @@ mod body;
 mod http;
 mod live;
 mod mapping;
+mod models;
 use crate::test_support as server;
 
 use tether_types::{Message, MessageId, MessagePart, Role, SessionId};

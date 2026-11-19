@@ -1,0 +1,2 @@
+data: {"id":"compat-cut","choices":[{"index":0,"delta":{"content":"Cut off"},"finish_reason":"stop"}]}
+

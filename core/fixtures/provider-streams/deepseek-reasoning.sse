@@ -1,0 +1,8 @@
+data: {"id":"ds-reason","choices":[{"index":0,"delta":{"reasoning_content":"Plan"},"finish_reason":null}]}
+
+data: {"id":"ds-reason","choices":[{"index":0,"delta":{"content":"Answer"},"finish_reason":null}]}
+
+data: {"id":"ds-reason","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"prompt_tokens":8,"completion_tokens":3,"prompt_cache_hit_tokens":2}}
+
+data: [DONE]
+

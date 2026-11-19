@@ -6,6 +6,7 @@ mod body;
 mod http;
 mod live;
 mod mapping;
+mod models;
 
 use tether_types::{Message, MessageId, MessagePart, Role, SessionId};
 use tokio::sync::mpsc;

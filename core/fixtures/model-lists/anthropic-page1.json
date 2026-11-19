@@ -1,0 +1,150 @@
+{
+  "data": [
+    {
+      "type": "model",
+      "id": "claude-opus-5-5",
+      "display_name": "Claude Opus 5.5",
+      "created_at": "2026-09-21T00:00:00Z",
+      "deprecated_at": null,
+      "retires_at": null,
+      "lifecycle": "active",
+      "line": "opus",
+      "max_input_tokens": 1000000,
+      "max_tokens": 128000,
+      "capabilities": {
+        "batch": {
+          "supported": true
+        },
+        "citations": {
+          "supported": true
+        },
+        "code_execution": {
+          "supported": true
+        },
+        "image_input": {
+          "supported": true
+        },
+        "pdf_input": {
+          "supported": true
+        },
+        "effort": {
+          "supported": true,
+          "low": {
+            "supported": true
+          },
+          "medium": {
+            "supported": true
+          },
+          "high": {
+            "supported": true
+          },
+          "max": {
+            "supported": true
+          },
+          "xhigh": null
+        },
+        "thinking": {
+          "supported": true,
+          "types": {
+            "adaptive": {
+              "supported": true
+            },
+            "between_tools": {
+              "supported": true
+            },
+            "disabled": {
+              "supported": true
+            },
+            "enabled": {
+              "supported": true
+            }
+          }
+        },
+        "structured_outputs": {
+          "supported": true
+        }
+      }
+    },
+    {
+      "type": "model",
+      "id": "claude-haiku-5-5",
+      "display_name": "Claude Haiku 5.5",
+      "created_at": "2026-09-21T00:00:00Z",
+      "deprecated_at": null,
+      "retires_at": null,
+      "lifecycle": "active",
+      "line": "haiku",
+      "max_input_tokens": 200000,
+      "max_tokens": 64000,
+      "capabilities": {
+        "batch": {
+          "supported": true
+        },
+        "citations": {
+          "supported": true
+        },
+        "code_execution": {
+          "supported": true
+        },
+        "image_input": {
+          "supported": true
+        },
+        "pdf_input": {
+          "supported": true
+        },
+        "effort": {
+          "supported": false,
+          "low": {
+            "supported": false
+          },
+          "medium": {
+            "supported": false
+          },
+          "high": {
+            "supported": false
+          },
+          "max": {
+            "supported": false
+          },
+          "xhigh": null
+        },
+        "thinking": {
+          "supported": false,
+          "types": {
+            "adaptive": {
+              "supported": false
+            },
+            "between_tools": {
+              "supported": false
+            },
+            "disabled": {
+              "supported": true
+            },
+            "enabled": {
+              "supported": false
+            }
+          }
+        },
+        "structured_outputs": {
+          "supported": true
+        }
+      }
+    },
+    {
+      "type": "model",
+      "id": "claude-old-text",
+      "display_name": "Claude Old Text",
+      "created_at": "2026-09-21T00:00:00Z",
+      "deprecated_at": "2026-10-01T00:00:00Z",
+      "retires_at": null,
+      "lifecycle": "deprecated",
+      "line": null,
+      "max_input_tokens": null,
+      "max_tokens": null,
+      "capabilities": null
+    }
+  ],
+  "first_id": "claude-opus-5-5",
+  "has_more": true,
+  "last_id": "claude-old-text"
+}

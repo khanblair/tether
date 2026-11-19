@@ -1,0 +1,6 @@
+data: {"id":"or-reason","choices":[{"index":0,"delta":{"reasoning":"Think"},"finish_reason":null}]}
+
+data: {"id":"or-reason","choices":[{"index":0,"delta":{"content":"Answer"},"finish_reason":"stop"}],"usage":{"prompt_tokens":8,"completion_tokens":3}}
+
+data: [DONE]
+

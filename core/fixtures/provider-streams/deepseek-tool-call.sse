@@ -1,0 +1,8 @@
+data: {"id":"ds-tool","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"id":"call_ds","type":"function","function":{"name":"read_file","arguments":"{\"p"}}]},"finish_reason":null}]}
+
+data: {"id":"ds-tool","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"ath\":\"src/"}}]},"finish_reason":null}]}
+
+data: {"id":"ds-tool","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"main.rs\"}"}}]},"finish_reason":"tool_calls"}],"usage":{"prompt_tokens":20,"completion_tokens":8}}
+
+data: [DONE]
+

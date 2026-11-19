@@ -5,6 +5,7 @@ use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 
 use super::{KEY, collect, request};
+use crate::gemini::http::stream_prefix;
 use crate::test_support::{Reply, start};
 use crate::{ChatProvider, GeminiConfig, GeminiProvider, ProviderError, StreamEvent};
 
@@ -122,6 +123,11 @@ fn debug_output_hides_key() {
     assert!(!format!("{config:?} {provider:?}").contains(KEY));
 }
 
+#[test]
+fn stream_prefix_changes_on_each_call() {
+    assert_ne!(stream_prefix(), stream_prefix());
+}
+
 #[tokio::test]
 async fn a_model_id_that_could_change_the_url_is_rejected_before_any_request() {
     let provider = provider("http://127.0.0.1:9".to_owned());
@@ -132,4 +138,15 @@ async fn a_model_id_that_could_change_the_url_is_rejected_before_any_request() {
         .stream_chat(&chat, sender, CancellationToken::new())
         .await;
     assert!(matches!(result, Err(ProviderError::InvalidRequest { .. })));
+}
+
+#[test]
+fn a_call_prefix_carries_the_time_so_it_differs_after_a_restart() {
+    let prefix = crate::gemini::http::stream_prefix();
+    let parts: Vec<&str> = prefix.split('_').collect();
+    assert_eq!(parts.len(), 3, "{prefix}");
+    assert_eq!(parts[0], "gemini");
+    let millis: u128 = parts[1].parse().unwrap();
+    assert!(millis > 1_700_000_000_000, "{prefix}");
+    assert!(parts[2].parse::<u64>().is_ok(), "{prefix}");
 }

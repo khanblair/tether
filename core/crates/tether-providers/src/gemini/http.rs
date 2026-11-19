@@ -1,5 +1,8 @@
 //! Gemini request headers, URL, and HTTP error mapping.
 
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use reqwest::Client;
 use reqwest::header::HeaderMap;
 use tokio::sync::mpsc;
@@ -13,6 +16,16 @@ use crate::transport::{Call, ErrorStyle, run, secret_header};
 use crate::{ChatRequest, ProviderError, StreamEvent};
 
 struct GeminiErrors;
+
+static STREAM_PREFIX_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+pub(super) fn stream_prefix() -> String {
+    let millis = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |duration| duration.as_millis());
+    let counter = STREAM_PREFIX_COUNTER.fetch_add(1, Ordering::Relaxed);
+    format!("gemini_{millis}_{counter}")
+}
 
 impl ErrorStyle for GeminiErrors {
     fn message(&self, body: &[u8]) -> Option<String> {
@@ -78,5 +91,5 @@ pub(super) async fn stream_chat(
         body: &body,
         errors: &GeminiErrors,
     };
-    run(call, StreamState::default(), events, cancel).await
+    run(call, StreamState::new(stream_prefix()), events, cancel).await
 }

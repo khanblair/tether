@@ -15,6 +15,14 @@ fn tool() -> ToolSpec {
     }
 }
 
+fn schema_tool() -> ToolSpec {
+    ToolSpec {
+        name: "read_file".into(),
+        description: "Reads a file.".into(),
+        input_schema_json: r#"{"type":"object","properties":{"options":{"type":"object","properties":{"encoding":{"type":"string"}}}},"additionalProperties":false}"#.into(),
+    }
+}
+
 fn body(request: &crate::ChatRequest) -> Value {
     build_body(request).unwrap()
 }
@@ -33,8 +41,31 @@ fn text_system_and_tools_use_gemini_fields() {
         json!({"parts":[{"text":"Be brief."}]})
     );
     assert_eq!(
-        body(&chat)["tools"][0]["functionDeclarations"][0]["parameters"],
+        body(&chat)["tools"][0]["functionDeclarations"][0]["parametersJsonSchema"],
         serde_json::from_str::<Value>(&tool().input_schema_json).unwrap()
+    );
+}
+
+#[test]
+fn json_schema_is_preserved_under_parameters_json_schema() {
+    let mut chat = request();
+    chat.tools = vec![schema_tool()];
+
+    assert_eq!(
+        body(&chat),
+        json!({
+            "contents":[{"role":"user","parts":[{"text":"Hello"}]}],
+            "generationConfig":{"maxOutputTokens":64},
+            "tools":[{"functionDeclarations":[{
+                "name":"read_file",
+                "description":"Reads a file.",
+                "parametersJsonSchema":{
+                    "type":"object",
+                    "properties":{"options":{"type":"object","properties":{"encoding":{"type":"string"}}}},
+                    "additionalProperties":false
+                }
+            }]}]
+        })
     );
 }
 

@@ -9,12 +9,25 @@ use crate::sse::SseEvent;
 use crate::transport::StreamMapper;
 use crate::{ProviderError, ResponseUsage, StopReason, StreamEvent};
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub(super) struct StreamState {
+    call_prefix: String,
     calls: HashSet<ToolCallId>,
     next_call: usize,
     has_tool_call: bool,
     finished: bool,
+}
+
+impl StreamState {
+    pub(super) fn new(call_prefix: String) -> Self {
+        Self {
+            call_prefix,
+            calls: HashSet::new(),
+            next_call: 0,
+            has_tool_call: false,
+            finished: false,
+        }
+    }
 }
 
 impl StreamMapper for StreamState {
@@ -107,7 +120,7 @@ impl StreamState {
 
     fn function_call(&mut self, call: &super::wire::FunctionCall) -> Vec<StreamEvent> {
         let id = call.id.clone().unwrap_or_else(|| {
-            let id = format!("gemini_call_{}", self.next_call);
+            let id = format!("{}_{}", self.call_prefix, self.next_call);
             self.next_call += 1;
             id
         });

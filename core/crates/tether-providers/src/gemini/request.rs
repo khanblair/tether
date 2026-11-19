@@ -64,7 +64,7 @@ fn tools_json(tools: &[ToolSpec]) -> Result<Value, ProviderError> {
             Ok(json!({
                 "name": tool.name,
                 "description": tool.description,
-                "parameters": parameters,
+                "parametersJsonSchema": parameters,
             }))
         })
         .collect::<Result<Vec<_>, ProviderError>>()?;

@@ -42,7 +42,11 @@ const TRUNCATED: &str = include_str!(concat!(
 ));
 
 fn run(fixture: &str) -> (Vec<StreamEvent>, Result<(), ProviderError>) {
-    let mut state = StreamState::default();
+    run_with_prefix(fixture, "gemini_test_0")
+}
+
+fn run_with_prefix(fixture: &str, prefix: &str) -> (Vec<StreamEvent>, Result<(), ProviderError>) {
+    let mut state = StreamState::new(prefix.to_owned());
     let mut events = Vec::new();
     for event in SseParser::new().push(fixture.as_bytes()) {
         match state.handle(&event) {
@@ -51,6 +55,24 @@ fn run(fixture: &str) -> (Vec<StreamEvent>, Result<(), ProviderError>) {
         }
     }
     (events, state.finish())
+}
+
+fn tool_events(id: &str) -> Vec<StreamEvent> {
+    let id = ToolCallId::new(id);
+    vec![
+        StreamEvent::ToolCallStarted {
+            id: id.clone(),
+            name: "read_file".into(),
+        },
+        StreamEvent::ToolCallArgsDelta {
+            id: id.clone(),
+            json_fragment: "{\"path\":\"a.rs\"}".into(),
+        },
+        StreamEvent::ToolCallFinished { id },
+        StreamEvent::Finished {
+            stop_reason: StopReason::ToolUse,
+        },
+    ]
 }
 
 #[test]
@@ -82,7 +104,7 @@ fn text_usage_and_stop_map_in_order() {
 #[test]
 fn tool_call_thinking_cache_and_max_map() {
     let (events, result) = run(TOOL);
-    let id = ToolCallId::new("gemini_call_0");
+    let id = ToolCallId::new("gemini_test_0_0");
     assert_eq!(result, Ok(()));
     assert!(events.contains(&StreamEvent::ToolCallStarted {
         id: id.clone(),
@@ -131,7 +153,7 @@ fn blocked_and_error_streams_map() {
 
 #[test]
 fn unknown_parts_are_ignored() {
-    let mut state = StreamState::default();
+    let mut state = StreamState::new("gemini_test_0".to_owned());
     let event = crate::sse::SseEvent {
         data: json!({"candidates":[{"content":{"parts":[{"inlineData":{}}]}}]}).to_string(),
         ..Default::default()
@@ -141,7 +163,7 @@ fn unknown_parts_are_ignored() {
 
 #[test]
 fn a_function_call_stream_ends_with_tool_use() {
-    let id = ToolCallId::new("gemini_call_0");
+    let id = ToolCallId::new("gemini_test_0_0");
     assert_eq!(
         run(TOOL).0,
         vec![
@@ -179,8 +201,45 @@ fn calls_without_ids_get_different_generated_ids() {
     assert_eq!(
         started,
         vec![
-            ToolCallId::new("gemini_call_0"),
-            ToolCallId::new("gemini_call_1")
+            ToolCallId::new("gemini_test_0_0"),
+            ToolCallId::new("gemini_test_0_1")
+        ]
+    );
+}
+
+#[test]
+fn different_response_prefixes_produce_different_generated_ids() {
+    assert_eq!(
+        run_with_prefix(TOOL, "response_a").0,
+        tool_events("response_a_0")
+    );
+    assert_eq!(
+        run_with_prefix(TOOL, "response_b").0,
+        tool_events("response_b_0")
+    );
+}
+
+#[test]
+fn a_provider_call_id_is_preserved() {
+    let sse = "data: {\"candidates\":[{\"content\":{\"parts\":[{\"functionCall\":{\"id\":\"provider-call\",\"name\":\"a\",\"args\":{}}}]},\"finishReason\":\"STOP\"}]}\n\n";
+
+    assert_eq!(
+        run_with_prefix(sse, "response").0,
+        vec![
+            StreamEvent::ToolCallStarted {
+                id: ToolCallId::new("provider-call"),
+                name: "a".into(),
+            },
+            StreamEvent::ToolCallArgsDelta {
+                id: ToolCallId::new("provider-call"),
+                json_fragment: "{}".into(),
+            },
+            StreamEvent::ToolCallFinished {
+                id: ToolCallId::new("provider-call"),
+            },
+            StreamEvent::Finished {
+                stop_reason: StopReason::ToolUse,
+            },
         ]
     );
 }

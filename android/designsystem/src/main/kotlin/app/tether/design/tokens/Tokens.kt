@@ -244,6 +244,7 @@ object TetherSize {
     val approvalBarMin: Dp = 72.dp
     val toolCardHeader: Dp = 44.dp
     val notesMax: Dp = 240.dp
+    val chartHeight: Dp = 144.dp
     val transcriptMax: Dp = 720.dp
     val paneList: Dp = 320.dp
     val paneDetailMin: Dp = 360.dp

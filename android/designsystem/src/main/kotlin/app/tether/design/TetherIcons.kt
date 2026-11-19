@@ -41,6 +41,18 @@ object TetherIcons {
         }
     }
 
+    val ArrowLeft: ImageVector by lazy {
+        tetherIcon("ArrowLeft") {
+            strokePath {
+                moveTo(12f, 19f)
+                lineTo(5f, 12f)
+                lineTo(12f, 5f)
+                moveTo(19f, 12f)
+                lineTo(5f, 12f)
+            }
+        }
+    }
+
     val ChevronRight: ImageVector by lazy {
         tetherIcon("ChevronRight") {
             strokePath {
@@ -261,6 +273,71 @@ object TetherIcons {
         tetherIcon("X") {
             strokeSvg("M18 6 6 18")
             strokeSvg("m6 6 12 12")
+        }
+    }
+
+    val House: ImageVector by lazy {
+        tetherIcon("House") {
+            strokeSvg("M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8")
+            strokeSvg(
+                "M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999" +
+                    "A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z",
+            )
+        }
+    }
+
+    val Sun: ImageVector by lazy {
+        tetherIcon("Sun") {
+            strokePath { circle(12f, 12f, 4f) }
+            strokeSvg("M12 2v2")
+            strokeSvg("M12 20v2")
+            strokeSvg("m4.93 4.93 1.41 1.41")
+            strokeSvg("m17.66 17.66 1.41 1.41")
+            strokeSvg("M2 12h2")
+            strokeSvg("M20 12h2")
+            strokeSvg("m6.34 17.66-1.41 1.41")
+            strokeSvg("m19.07 4.93-1.41 1.41")
+        }
+    }
+
+    val Moon: ImageVector by lazy {
+        tetherIcon("Moon") {
+            strokeSvg(
+                "M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803" +
+                    "a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401",
+            )
+        }
+    }
+
+    val Monitor: ImageVector by lazy {
+        tetherIcon("Monitor") {
+            strokeSvg("M2 5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2z")
+            strokeSvg("M8 21h8")
+            strokeSvg("M12 17v4")
+        }
+    }
+
+    val ChartColumn: ImageVector by lazy {
+        tetherIcon("ChartColumn") {
+            strokeSvg("M3 3v16a2 2 0 0 0 2 2h16")
+            strokeSvg("M18 17V9")
+            strokeSvg("M13 17V5")
+            strokeSvg("M8 17v-3")
+        }
+    }
+
+    val Activity: ImageVector by lazy {
+        tetherIcon("Activity") {
+            strokeSvg(
+                "M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0" +
+                    "L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2",
+            )
+        }
+    }
+
+    val ChevronDown: ImageVector by lazy {
+        tetherIcon("ChevronDown") {
+            strokeSvg("m6 9 6 6 6-6")
         }
     }
 }

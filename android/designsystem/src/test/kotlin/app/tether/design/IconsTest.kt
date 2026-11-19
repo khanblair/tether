@@ -13,6 +13,7 @@ class IconsTest {
             TetherIcons.CircleX,
             TetherIcons.CircleDot,
             TetherIcons.ChevronRight,
+            TetherIcons.ArrowLeft,
             TetherIcons.ChevronLeft,
             TetherIcons.Zap,
             TetherIcons.Trash2,
@@ -32,6 +33,13 @@ class IconsTest {
             TetherIcons.Loader,
             TetherIcons.CirclePause,
             TetherIcons.X,
+            TetherIcons.House,
+            TetherIcons.Sun,
+            TetherIcons.Moon,
+            TetherIcons.Monitor,
+            TetherIcons.ChartColumn,
+            TetherIcons.Activity,
+            TetherIcons.ChevronDown,
         )
 
     @Test

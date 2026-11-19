@@ -1,4 +1,4 @@
-//! A tiny HTTP/1.1 server that answers one request with a canned reply.
+//! Shared local HTTP server helpers for provider tests.
 
 use std::io;
 use std::time::Duration;
@@ -7,29 +7,27 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::task::JoinHandle;
 
-/// The pause between pieces of a streamed body, so the client sees them as separate reads.
 const PAUSE: Duration = Duration::from_millis(5);
 
-/// The request the server received. It has no `Debug` impl, because it holds the API key.
-pub(super) struct SeenRequest {
-    pub(super) request_line: String,
-    pub(super) body: String,
+/// The request the server received. It has no `Debug` impl because it holds the API key.
+pub(crate) struct SeenRequest {
+    pub(crate) request_line: String,
+    pub(crate) body: String,
     headers: Vec<(String, String)>,
 }
 
 impl SeenRequest {
-    /// The value of a header, found without regard to case.
-    pub(super) fn header(&self, name: &str) -> Option<&str> {
-        let found = self
-            .headers
+    /// Returns a header without regard to case.
+    pub(crate) fn header(&self, name: &str) -> Option<&str> {
+        self.headers
             .iter()
-            .find(|(key, _)| key.eq_ignore_ascii_case(name));
-        found.map(|(_, value)| value.as_str())
+            .find(|(key, _)| key.eq_ignore_ascii_case(name))
+            .map(|(_, value)| value.as_str())
     }
 }
 
-/// What the server sends back.
-pub(super) struct Reply {
+/// A canned HTTP response.
+pub(crate) struct Reply {
     head: String,
     pieces: Vec<Vec<u8>>,
     chunked: bool,
@@ -38,8 +36,8 @@ pub(super) struct Reply {
 }
 
 impl Reply {
-    /// A reply with a status line such as `429 Too Many Requests`, extra headers, and a JSON body.
-    pub(super) fn json(status: &str, extra_headers: &[&str], body: &str) -> Self {
+    /// Creates a JSON response with the supplied status and headers.
+    pub(crate) fn json(status: &str, extra_headers: &[&str], body: &str) -> Self {
         let mut extra = extra_headers.join("\r\n");
         if !extra.is_empty() {
             extra.push_str("\r\n");
@@ -58,8 +56,8 @@ impl Reply {
         }
     }
 
-    /// A 200 reply that streams `sse` in chunks of `piece_len` bytes.
-    pub(super) fn stream(sse: &str, piece_len: usize) -> Self {
+    /// Creates a chunked streaming response.
+    pub(crate) fn stream(sse: &str, piece_len: usize) -> Self {
         let head = "HTTP/1.1 200 OK\r\ncontent-type: text/event-stream\r\n\
                     transfer-encoding: chunked\r\nconnection: close\r\n\r\n";
         Self {
@@ -75,37 +73,37 @@ impl Reply {
         }
     }
 
-    /// Drops the connection after the last piece, without the chunked body's closing marker.
-    pub(super) fn then_abort(mut self) -> Self {
+    /// Drops the connection after the last body piece.
+    pub(crate) fn then_abort(mut self) -> Self {
         self.abort = true;
         self
     }
 
-    /// Keeps the connection open after the last piece instead of ending the body.
-    pub(super) fn then_hold_open(mut self) -> Self {
+    /// Keeps the connection open after the last body piece.
+    pub(crate) fn then_hold_open(mut self) -> Self {
         self.hold_open = true;
         self
     }
 }
 
-/// A running server.
-pub(super) struct TestServer {
-    /// The address to use as the provider's base URL.
-    pub(super) base_url: String,
-    /// Resolves to the request once the reply has been sent.
-    pub(super) seen: JoinHandle<io::Result<SeenRequest>>,
+/// A running local server.
+pub(crate) struct TestServer {
+    /// The base URL for the provider under test.
+    pub(crate) base_url: String,
+    /// The received request, after the reply has been sent.
+    pub(crate) seen: JoinHandle<io::Result<SeenRequest>>,
 }
 
-/// Starts a server on a free local port that answers one request with `reply`.
-pub(super) async fn start(reply: Reply) -> TestServer {
+/// Starts a server on a free local port.
+pub(crate) async fn start(reply: Reply) -> TestServer {
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let base_url = format!("http://{}", listener.local_addr().unwrap());
     let seen = tokio::spawn(serve(listener, reply));
     TestServer { base_url, seen }
 }
 
-/// A base URL where nothing listens, so a connection is refused.
-pub(super) async fn refused_base_url() -> String {
+/// Returns a local base URL where no server is listening.
+pub(crate) async fn refused_base_url() -> String {
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     format!("http://{}", listener.local_addr().unwrap())
 }
@@ -118,7 +116,6 @@ async fn serve(listener: TcpListener, reply: Reply) -> io::Result<SeenRequest> {
     Ok(seen)
 }
 
-/// Reads the head and the body of the request.
 async fn read_request(socket: &mut TcpStream) -> io::Result<SeenRequest> {
     let mut raw = Vec::new();
     let head_len = loop {
@@ -130,10 +127,10 @@ async fn read_request(socket: &mut TcpStream) -> io::Result<SeenRequest> {
     let head = String::from_utf8_lossy(&raw[..head_len]).into_owned();
     let mut lines = head.lines();
     let request_line = lines.next().unwrap_or_default().to_owned();
-    let headers: Vec<(String, String)> = lines
+    let headers = lines
         .filter_map(|line| line.split_once(':'))
         .map(|(key, value)| (key.trim().to_owned(), value.trim().to_owned()))
-        .collect();
+        .collect::<Vec<_>>();
     let length = content_length(&headers);
     while raw.len() < head_len + length {
         read_more(socket, &mut raw).await?;
@@ -147,10 +144,11 @@ async fn read_request(socket: &mut TcpStream) -> io::Result<SeenRequest> {
 }
 
 fn content_length(headers: &[(String, String)]) -> usize {
-    let found = headers
+    headers
         .iter()
-        .find(|(key, _)| key.eq_ignore_ascii_case("content-length"));
-    found.and_then(|(_, value)| value.parse().ok()).unwrap_or(0)
+        .find(|(key, _)| key.eq_ignore_ascii_case("content-length"))
+        .and_then(|(_, value)| value.parse().ok())
+        .unwrap_or(0)
 }
 
 async fn read_more(socket: &mut TcpStream, raw: &mut Vec<u8>) -> io::Result<()> {

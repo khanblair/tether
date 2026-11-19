@@ -1118,7 +1118,7 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_tether_core_checksum_method_sessionruntime_open_session() and 0xFFFF) != 64633) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_tether_core_checksum_method_sessionruntime_transcript() and 0xFFFF) != 56303) {
+    if ((lib.uniffi_tether_core_checksum_method_sessionruntime_transcript() and 0xFFFF) != 42069) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_method_downloadprogress_on_progress() and 0xFFFF) != 47177) {
@@ -3817,7 +3817,7 @@ public interface SessionRuntimeInterface {
      * Reads the saved transcript in message order.
      *
      * # Errors
-     * Returns an error when the database is unreadable.
+     * Returns an error when the session is absent or the database is unreadable.
      */
     fun `transcript`(`sessionId`: kotlin.String): List<MessageView>
     
@@ -4015,7 +4015,7 @@ open class SessionRuntime: Disposable, AutoCloseable, SessionRuntimeInterface
      * Reads the saved transcript in message order.
      *
      * # Errors
-     * Returns an error when the database is unreadable.
+     * Returns an error when the session is absent or the database is unreadable.
      */
     @Throws(SessionRuntimeException::class)override fun `transcript`(`sessionId`: kotlin.String): List<MessageView> {
             return FfiConverterSequenceTypeMessageView.lift(

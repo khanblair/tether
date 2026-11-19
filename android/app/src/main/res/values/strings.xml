@@ -102,4 +102,54 @@
     <string name="settings_theme_light">Light</string>
     <string name="settings_theme_dark">Dark</string>
     <string name="settings_theme_note">The choice resets when the app restarts until settings storage ships in P1.</string>
+    <string name="settings_about_title">About and updates</string>
+    <string name="settings_about_version">Version %1$s</string>
+    <string name="settings_about_update_available">Update available: version %1$s</string>
+
+    <!-- Home banner -->
+    <string name="home_update_available">Version %1$s is available.</string>
+    <string name="home_update_view">View</string>
+
+    <!-- About and updates -->
+    <string name="about_title">About</string>
+    <string name="about_app_name">Tether</string>
+    <string name="about_version">Version %1$s</string>
+    <string name="updates_idle_title">Updates</string>
+    <string name="updates_idle_body">Check whether a newer version is out.</string>
+    <string name="updates_check_action">Check for updates</string>
+    <string name="updates_check_again">Check again</string>
+    <string name="updates_checking_title">Checking for updates</string>
+    <string name="updates_up_to_date_title">You have the latest version</string>
+    <string name="updates_up_to_date_body">Version %1$s is the newest.</string>
+    <string name="updates_available_title">Version %1$s is available</string>
+    <string name="updates_download_action">Download update</string>
+    <string name="updates_download_size">Download size %1$s</string>
+    <string name="updates_store_action">Open Google Play</string>
+    <string name="updates_downloading_title">Downloading version %1$s</string>
+    <string name="updates_progress_percent">%1$d%%</string>
+    <string name="updates_cancel_action">Cancel</string>
+    <string name="updates_ready_title">Version %1$s is ready to install</string>
+    <string name="updates_ready_body">Tether checked the file against the published checksums.</string>
+    <string name="updates_install_action">Install</string>
+    <string name="updates_permission_title">Allow installs from Tether</string>
+    <string name="updates_permission_body">Android asks once. Turn on Allow from this source, then come back.</string>
+    <string name="updates_settings_action">Open settings</string>
+    <string name="updates_installing_title">Installing version %1$s</string>
+    <string name="updates_installing_body">Confirm in the Android installer.</string>
+    <string name="updates_installed_title">Version %1$s is installed</string>
+    <string name="updates_installed_body">Open Tether again to use it.</string>
+    <string name="updates_failed_title">Could not update</string>
+    <string name="updates_problem_network">Tether could not reach GitHub. Check your connection and try again.</string>
+    <string name="updates_problem_nothing_published">This release has no update file for this build.</string>
+    <string name="updates_problem_bad_response">GitHub sent an answer Tether could not use.</string>
+    <string name="updates_problem_checksum">The download did not match the published checksum, so Tether deleted it.</string>
+    <string name="updates_problem_too_large">The update file is larger than Tether accepts.</string>
+    <string name="updates_problem_storage">Tether could not save the update. Free some space and try again.</string>
+    <string name="updates_problem_install_declined">The install was cancelled.</string>
+    <string name="updates_problem_install_blocked">Android blocked the install. Check that Tether may install apps.</string>
+    <string name="updates_problem_install_conflict">Android found a conflict with the installed app.</string>
+    <string name="updates_problem_install_incompatible">This update does not work on this device.</string>
+    <string name="updates_problem_install_invalid">Android could not read the update file.</string>
+    <string name="updates_problem_install_storage">Android has no space to install the update.</string>
+    <string name="updates_problem_install_failed">The install did not finish.</string>
 </resources>

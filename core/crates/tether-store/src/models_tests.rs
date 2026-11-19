@@ -286,3 +286,64 @@ fn every_support_value_round_trips_in_each_capability() {
 
     assert_eq!(store.models(Provider::Gemini).unwrap(), expected);
 }
+
+#[test]
+fn models_count_counts_only_the_named_provider() {
+    let mut store = Store::open_in_memory().unwrap();
+    assert_eq!(store.models_count(Provider::DeepSeek).unwrap(), 0);
+
+    store
+        .replace_models(
+            Provider::Anthropic,
+            &[
+                model(Provider::Anthropic, "a1"),
+                model(Provider::Anthropic, "a2"),
+            ],
+            1,
+        )
+        .unwrap();
+    store
+        .replace_models(Provider::OpenAi, &[model(Provider::OpenAi, "o1")], 1)
+        .unwrap();
+
+    assert_eq!(store.models_count(Provider::Anthropic).unwrap(), 2);
+    assert_eq!(store.models_count(Provider::OpenAi).unwrap(), 1);
+    assert_eq!(store.models_count(Provider::DeepSeek).unwrap(), 0);
+}
+
+#[test]
+fn clear_models_removes_one_provider_and_keeps_the_others() {
+    let mut store = Store::open_in_memory().unwrap();
+    let openai = model(Provider::OpenAi, "o1");
+    store
+        .replace_models(
+            Provider::Anthropic,
+            &[
+                model(Provider::Anthropic, "a1"),
+                model(Provider::Anthropic, "a2"),
+            ],
+            10,
+        )
+        .unwrap();
+    store
+        .replace_models(Provider::OpenAi, std::slice::from_ref(&openai), 20)
+        .unwrap();
+
+    store.clear_models(Provider::Anthropic).unwrap();
+
+    assert_eq!(store.models(Provider::Anthropic).unwrap(), []);
+    assert_eq!(store.models_count(Provider::Anthropic).unwrap(), 0);
+    assert_eq!(store.models_fetched_at(Provider::Anthropic).unwrap(), None);
+    assert_eq!(store.models(Provider::OpenAi).unwrap(), [openai]);
+    assert_eq!(store.models_count(Provider::OpenAi).unwrap(), 1);
+    assert_eq!(store.models_fetched_at(Provider::OpenAi).unwrap(), Some(20));
+}
+
+#[test]
+fn clear_models_on_a_provider_never_fetched_is_a_no_op() {
+    let mut store = Store::open_in_memory().unwrap();
+    store.clear_models(Provider::Gemini).unwrap();
+
+    assert_eq!(store.models_count(Provider::Gemini).unwrap(), 0);
+    assert_eq!(store.models_fetched_at(Provider::Gemini).unwrap(), None);
+}

@@ -34,6 +34,7 @@ pub(crate) struct Reply {
     length: Option<u64>,
     redirect: Option<String>,
     pieces: Option<usize>,
+    hang: bool,
 }
 
 pub(crate) struct Server {
@@ -45,6 +46,12 @@ pub(crate) struct Server {
 pub(crate) async fn start_server(routes: Vec<Route>, expected: usize) -> Server {
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let base_url = format!("http://{}", listener.local_addr().unwrap());
+    let mut routes = routes;
+    for route in &mut routes {
+        if let Some(location) = &mut route.reply.redirect {
+            *location = location.replace("http://test-server", &base_url);
+        }
+    }
     let requests = Arc::new(Mutex::new(Vec::new()));
     let seen = Arc::clone(&requests);
     let task = tokio::spawn(async move {
@@ -90,7 +97,36 @@ pub(crate) fn reply_with_length(status: u16, body: impl AsRef<[u8]>, length: Opt
         length,
         redirect: None,
         pieces: None,
+        hang: false,
     }
+}
+
+pub(crate) fn redirect(path: &str, location: &str) -> Route {
+    route(
+        path,
+        Reply {
+            status: 302,
+            body: Vec::new(),
+            length: Some(0),
+            redirect: Some(location.into()),
+            pieces: None,
+            hang: false,
+        },
+    )
+}
+
+pub(crate) fn hanging(path: &str) -> Route {
+    route(
+        path,
+        Reply {
+            status: 200,
+            body: Vec::new(),
+            length: None,
+            redirect: None,
+            pieces: None,
+            hang: true,
+        },
+    )
 }
 
 pub(crate) fn route_stream(path: &str, body: Vec<u8>, pieces: usize) -> Route {
@@ -102,6 +138,7 @@ pub(crate) fn route_stream(path: &str, body: Vec<u8>, pieces: usize) -> Route {
             length: None,
             redirect: None,
             pieces: Some(pieces),
+            hang: false,
         },
     )
 }
@@ -181,6 +218,10 @@ async fn read_request(socket: &mut tokio::net::TcpStream) -> Request {
 }
 
 async fn write_reply(socket: &mut tokio::net::TcpStream, reply: &Reply) {
+    if reply.hang {
+        tokio::time::sleep(Duration::from_secs(60)).await;
+        return;
+    }
     let status_text = if reply.status == 200 { "OK" } else { "Status" };
     let mut head = format!(
         "HTTP/1.1 {} {}\r\nconnection: close\r\n",

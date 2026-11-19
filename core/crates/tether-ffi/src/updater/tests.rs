@@ -114,3 +114,56 @@ fn cancel_does_not_poison_a_later_download() {
     let token = CancellationToken::new();
     assert!(!token.is_cancelled());
 }
+
+/// A checker whose download waits until its token is cancelled, like a stalled network.
+struct BlockingChecker {
+    started: std::sync::mpsc::Sender<()>,
+}
+
+impl Checker for BlockingChecker {
+    fn check(&self, _current_version: &str) -> Result<UpdateCheck, UpdateError> {
+        Ok(UpdateCheck::Available(release()))
+    }
+
+    fn download(&self, request: DownloadRequest<'_>) -> Result<PathBuf, UpdateError> {
+        self.started.send(()).unwrap();
+        // A broken cancel must fail the test, not hang it: give up after five seconds.
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        while !request.cancel.is_cancelled() && std::time::Instant::now() < deadline {
+            std::thread::sleep(std::time::Duration::from_millis(2));
+        }
+        if request.cancel.is_cancelled() {
+            Err(UpdateError::Cancelled)
+        } else {
+            Err(UpdateError::Network)
+        }
+    }
+}
+
+#[test]
+fn cancel_stops_a_download_in_flight_and_a_later_download_starts_fresh() {
+    let (started, wait_for_start) = std::sync::mpsc::channel();
+    let updater = Arc::new(Updater::with_checker(
+        PathBuf::from("downloads"),
+        Arc::new(BlockingChecker { started }),
+    ));
+    updater.check("0.0.2".into()).unwrap();
+    let progress = Arc::new(Progress(Mutex::new(Vec::new())));
+    let worker = {
+        let updater = Arc::clone(&updater);
+        let progress = progress.clone();
+        std::thread::spawn(move || updater.download("0.0.3".into(), progress))
+    };
+    wait_for_start.recv().unwrap();
+    updater.cancel();
+    assert_eq!(worker.join().unwrap(), Err(UpdaterError::Cancelled));
+
+    // The next download gets its own token, so the old cancel does not poison it.
+    let second = {
+        let updater = Arc::clone(&updater);
+        std::thread::spawn(move || updater.download("0.0.3".into(), progress))
+    };
+    wait_for_start.recv().unwrap();
+    updater.cancel();
+    assert_eq!(second.join().unwrap(), Err(UpdaterError::Cancelled));
+}

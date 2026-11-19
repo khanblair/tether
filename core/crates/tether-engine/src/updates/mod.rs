@@ -121,9 +121,18 @@ pub async fn check(
     config: &UpdateConfig,
     current_version: &str,
 ) -> Result<UpdateCheck, UpdateError> {
+    check_with_timeout(config, current_version, CHECK_TIMEOUT).await
+}
+
+/// Checks for an update with a caller-selected timeout.
+pub(crate) async fn check_with_timeout(
+    config: &UpdateConfig,
+    current_version: &str,
+    timeout: Duration,
+) -> Result<UpdateCheck, UpdateError> {
     let current = version::parse_current(current_version)?;
     let client = client(config).map_err(|_| UpdateError::Network)?;
-    tokio::time::timeout(CHECK_TIMEOUT, release::check(config, current, &client))
+    tokio::time::timeout(timeout, release::check(config, current, &client))
         .await
         .map_err(|_| UpdateError::Network)?
 }
@@ -159,7 +168,7 @@ pub(crate) fn client(config: &UpdateConfig) -> Result<Client, reqwest::Error> {
         .connect_timeout(CONNECT_TIMEOUT)
         .read_timeout(READ_TIMEOUT)
         .redirect(Policy::custom(move |attempt| {
-            if attempt.previous().len() >= 5 {
+            if attempt.previous().len() > 5 {
                 return attempt.stop();
             }
             let allowed = is_allowed_redirect(attempt.url())
@@ -217,3 +226,15 @@ mod cached_tests;
 mod test_support;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod tests_limits;
+#[cfg(test)]
+mod tests_network;
+#[cfg(test)]
+mod tests_progress;
+#[cfg(test)]
+mod tests_release;
+#[cfg(test)]
+mod tests_sums;
+#[cfg(test)]
+mod tests_version;

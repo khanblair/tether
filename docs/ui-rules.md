@@ -44,6 +44,15 @@ Compact (phone portrait), from top to bottom:
 - Rows show project name, branch, uncommitted change count, last activity. Sort by last activity.
 - The primary action is **New project**, which opens a sheet: Clone from GitHub, New empty, Import zip.
 - Empty state explains what a project is in one sentence and offers the same three actions.
+- The full screen is the app's home. Its top bar has a menu button (opens the drawer), the title, Search, and the bell. Settings lives in the drawer, not in this top bar.
+- Search filters the list by project name in place; it does not open another screen.
+
+### Needs attention
+- The bell in the home top bar opens it. A dot on the bell shows when anything needs the user, and the dot clears when the list is empty.
+- It lists, newest first, in three groups: **Waiting for you** (a session needs approval, with the session and project named), **Failed** (a run or session stopped with an error, with the reason in one line), and **Updates** (a newer app version is out).
+- Each row opens what it names: the session, or About for an update. There is no "mark as read": an item leaves the list when its cause is gone.
+- Empty state: "Nothing needs you right now." One sentence, no illustration.
+- It is not a notification history. System notifications (approvals in the background, run results) are separate and stay in the Android shade.
 
 ### Project home
 - Shows repo and branch, uncommitted changes (tap opens the diff), default executor, and recent sessions.

@@ -59,9 +59,9 @@ tether/
 │   ├── config/{detekt.yml, lint.xml}
 │   ├── smell-fixtures/        Module with a function over the line limit; detekt must fail on it (built only with -Ptether.smellFixtures)
 │   ├── app/                   build.gradle.kts (flavors play and full; app version read from core/Cargo.toml), proguard-rules.pro
-│   │   └── src/{main, full, play, androidTest}   TetherApp, MainActivity, di/AppModule, nav/, shell/ (provider settings and placeholder screens)
+│   │   └── src/{main, debug, release, full, play, androidTest}   TetherApp, MainActivity, di/AppModule, nav/, home/ (Projects home, drawer, Needs attention; sample sources in debug, empty sources in release), shell/ (settings and placeholder screens)
 │   ├── core-bridge/           CoreClient, EventBus, KeystoreSecretsPlatform, consumer-rules.pro, (gen) generated/tether_core.kt
-│   └── designsystem/          TetherTheme, TetherIcons, PrimaryButton, TetherTopBar, ListRow, ProviderRow, SecretField, InlineBanner, TestConnectionButton, TetherTextButton, FONTS-LICENSE.txt, (gen) tokens/Tokens.kt and token colors, Plex fonts
+│   └── designsystem/          TetherTheme, TetherIcons, PrimaryButton, TetherTopBar, ListRow, ProviderRow, SecretField, InlineBanner, TestConnectionButton, TetherTextButton, TetherIconButton, NotificationBell, StatusBadge, StatusMark, ProjectRow, SessionRow, SectionTitle, ListGroup, TetherSearchField, TetherSheet, FONTS-LICENSE.txt, (gen) tokens/Tokens.kt and token colors, Plex fonts
 ├── ios/README.md              Plan for v2
 ├── runtimes/README.md  linux/README.md  bench/README.md   Planned folders, one README each
 ├── tools/

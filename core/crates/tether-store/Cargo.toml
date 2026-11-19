@@ -6,5 +6,14 @@ rust-version.workspace = true
 publish.workspace = true
 description = "SQLite storage: schema, migrations, queries, blobs."
 
+[dependencies]
+rusqlite.workspace = true
+thiserror.workspace = true
+tether-types.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
+tempfile.workspace = true
+
 [lints]
 workspace = true

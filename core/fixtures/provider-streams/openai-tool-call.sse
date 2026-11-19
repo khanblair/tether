@@ -1,0 +1,14 @@
+data: {"type":"response.output_item.added","item":{"type":"function_call","id":"fc_item_1","call_id":"call_1","name":"read_file"}}
+
+data: {"type":"response.function_call_arguments.delta","item_id":"fc_item_1","delta":"{\"pa"}
+
+data: {"type":"response.function_call_arguments.delta","item_id":"fc_item_1","delta":"th\":\"src/"}
+
+data: {"type":"response.function_call_arguments.delta","item_id":"fc_item_1","delta":"main.rs\"}"}
+
+data: {"type":"response.function_call_arguments.done","item_id":"fc_item_1"}
+
+data: {"type":"response.output_item.done","item":{"type":"function_call","id":"fc_item_1","call_id":"call_1","name":"read_file"}}
+
+data: {"type":"response.completed","response":{"usage":{"input_tokens":20,"output_tokens":8,"input_tokens_details":{"cached_tokens":0}}}}
+

@@ -7,8 +7,13 @@ pub mod anthropic;
 mod client;
 mod error;
 mod event;
+pub mod openai;
 mod request;
 pub mod sse;
+mod transport;
+
+#[cfg(test)]
+mod test_support;
 
 use std::future::Future;
 use std::pin::Pin;
@@ -20,6 +25,7 @@ pub use anthropic::{AnthropicConfig, AnthropicProvider};
 pub use client::{client_builder, http_client};
 pub use error::ProviderError;
 pub use event::{ResponseUsage, StopReason, StreamEvent};
+pub use openai::{OpenAiConfig, OpenAiProvider};
 pub use request::{ChatRequest, ReasoningEffort, ToolSpec};
 
 /// A boxed future, so [`ChatProvider`] can be used as a trait object.

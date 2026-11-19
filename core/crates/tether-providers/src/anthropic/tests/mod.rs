@@ -7,7 +7,7 @@ mod body;
 mod http;
 mod live;
 mod mapping;
-mod server;
+use crate::test_support as server;
 
 use tether_types::{Message, MessageId, MessagePart, Role, SessionId};
 use tokio::sync::mpsc;

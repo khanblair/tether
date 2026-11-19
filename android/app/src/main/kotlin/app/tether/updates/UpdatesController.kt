@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * State holder for the update flow: check, download and verify, install. It lives as long as the
@@ -35,8 +36,11 @@ class UpdatesController(
     /** True while a check runs, so a background check and a manual one never overlap. */
     private val checkInFlight = AtomicBoolean(false)
 
-    /** Set by Cancel; reset by each new download. */
-    private val cancelRequested = AtomicBoolean(false)
+    /** Numbers each download, so a Cancel and its retries belong to one download only. */
+    private val downloadId = AtomicInteger(0)
+
+    /** The id of the download the user cancelled, or 0. */
+    private val cancelledId = AtomicInteger(0)
 
     private val mutableState =
         MutableStateFlow(
@@ -97,7 +101,7 @@ class UpdatesController(
             current.phase == UpdatePhase.Available ||
                 (current.phase == UpdatePhase.Failed && current.apkPath == null)
         if (!canStart) return
-        cancelRequested.set(false)
+        val id = downloadId.incrementAndGet()
         mutableState.update {
             it.copy(
                 phase = UpdatePhase.Downloading,
@@ -106,18 +110,19 @@ class UpdatesController(
                 problem = null,
             )
         }
-        scope.launch { runDownload(release) }
+        scope.launch { runDownload(release, id) }
     }
 
     /** Stops the download in flight. */
     fun cancelDownload() {
         if (state.value.phase != UpdatePhase.Downloading) return
-        cancelRequested.set(true)
+        val id = downloadId.get()
+        cancelledId.set(id)
         scope.launch {
             // The core's cancel reaches only a download that has already registered itself, so a
-            // Cancel tapped while the download is still starting could be lost. Ask again until the
-            // download call has returned.
-            while (state.value.phase == UpdatePhase.Downloading) {
+            // Cancel tapped while the download is still starting could be lost. Ask again until
+            // this download's call has returned, and never longer: a newer download is not ours.
+            while (downloadId.get() == id && state.value.phase == UpdatePhase.Downloading) {
                 call { gateway.cancel() }
                 delay(CANCEL_RETRY_MS)
             }
@@ -223,8 +228,11 @@ class UpdatesController(
         call { store.recordCheck(clock(), available) }
     }
 
-    private suspend fun runDownload(release: ReleaseSummary) {
-        if (cancelRequested.get()) {
+    private suspend fun runDownload(
+        release: ReleaseSummary,
+        id: Int,
+    ) {
+        if (cancelledId.get() == id) {
             mutableState.update { it.copy(phase = UpdatePhase.Available) }
             return
         }
@@ -246,7 +254,14 @@ class UpdatesController(
             .onSuccess { path ->
                 // A Cancel that arrived too late to stop the call still wins. The verified file
                 // stays in the cache, and the next download reuses it.
-                val phase = if (cancelRequested.get()) UpdatePhase.Available else UpdatePhase.Ready
+                val phase =
+                    if (cancelledId.get() ==
+                        id
+                    ) {
+                        UpdatePhase.Available
+                    } else {
+                        UpdatePhase.Ready
+                    }
                 val apk = if (phase == UpdatePhase.Ready) path else null
                 mutableState.update { it.copy(phase = phase, apkPath = apk) }
             }.onFailure { failure ->

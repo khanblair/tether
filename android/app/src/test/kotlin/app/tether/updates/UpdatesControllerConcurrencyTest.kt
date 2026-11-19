@@ -88,6 +88,43 @@ class UpdatesControllerConcurrencyTest {
     }
 
     @Test
+    fun a_cancel_retry_loop_never_cancels_a_newer_download() {
+        gateway.checkResult = UpdateCheckView.Available(releaseView())
+        val c = controller()
+        c.checkNow()
+        waitUntil("the release") { c.state.value.phase == UpdatePhase.Available }
+        val cancels = AtomicInteger(0)
+        val firstCancel = CountDownLatch(1)
+        gateway.onCancel = {
+            cancels.incrementAndGet()
+            firstCancel.countDown()
+        }
+        val firstStarted = CountDownLatch(1)
+        gateway.onDownload = {
+            firstStarted.countDown()
+            firstCancel.await(WAIT_MS, TimeUnit.MILLISECONDS)
+        }
+        c.download()
+        assertTrue(firstStarted.await(WAIT_MS, TimeUnit.MILLISECONDS))
+        c.cancelDownload()
+        waitUntil("the first download to end") { c.state.value.phase == UpdatePhase.Available }
+        // The retry loop is now asleep. Start another download before it wakes up.
+        val secondStarted = CountDownLatch(1)
+        val releaseSecond = CountDownLatch(1)
+        gateway.onDownload = {
+            secondStarted.countDown()
+            releaseSecond.await(WAIT_MS, TimeUnit.MILLISECONDS)
+        }
+        c.download()
+        assertTrue(secondStarted.await(WAIT_MS, TimeUnit.MILLISECONDS))
+        Thread.sleep(SETTLE_MS * 3)
+        assertEquals(1, cancels.get())
+        assertEquals(UpdatePhase.Downloading, c.state.value.phase)
+        releaseSecond.countDown()
+        waitUntil("the second download to finish") { c.state.value.phase == UpdatePhase.Ready }
+    }
+
+    @Test
     fun a_late_background_check_result_does_not_overwrite_a_download() {
         gateway.checkResult = UpdateCheckView.Available(releaseView())
         val c = controller()

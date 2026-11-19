@@ -19,6 +19,19 @@ class IconsTest {
             TetherIcons.Eye,
             TetherIcons.EyeOff,
             TetherIcons.KeyRound,
+            TetherIcons.Menu,
+            TetherIcons.Search,
+            TetherIcons.Bell,
+            TetherIcons.Settings,
+            TetherIcons.Folder,
+            TetherIcons.FolderOpen,
+            TetherIcons.GitBranch,
+            TetherIcons.Package,
+            TetherIcons.Plus,
+            TetherIcons.Brain,
+            TetherIcons.Loader,
+            TetherIcons.CirclePause,
+            TetherIcons.X,
         )
 
     @Test

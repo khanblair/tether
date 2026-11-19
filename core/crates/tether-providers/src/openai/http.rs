@@ -8,11 +8,20 @@ use tokio_util::sync::CancellationToken;
 use super::OpenAiConfig;
 use super::request::build_body_with;
 use super::stream::StreamState;
-use super::wire::ErrorBody;
+use super::wire::{ErrorBody, HttpError};
 use crate::transport::{Call, ErrorStyle, run, secret_header};
 use crate::{ChatRequest, ProviderError, StreamEvent};
 
 pub(super) struct OpenAiErrors;
+
+/// True when OpenAI refuses the request because of the caller's country or region.
+fn is_region_block(error: &HttpError) -> bool {
+    error.code.as_deref() == Some("unsupported_country_region_territory")
+        || error
+            .message
+            .to_ascii_lowercase()
+            .contains("country, region, or territory")
+}
 
 impl ErrorStyle for OpenAiErrors {
     fn message(&self, body: &[u8]) -> Option<String> {
@@ -24,11 +33,16 @@ impl ErrorStyle for OpenAiErrors {
 
     fn classify(&self, status: reqwest::StatusCode, body: &[u8]) -> Option<ProviderError> {
         let parsed = serde_json::from_slice::<ErrorBody>(body).ok()?;
-        let code = parsed.error.code.as_deref()?;
-        (status == reqwest::StatusCode::TOO_MANY_REQUESTS && code == "insufficient_quota")
-            .then_some(ProviderError::Auth {
-                message: parsed.error.message,
-            })
+        let error = parsed.error;
+        if status == reqwest::StatusCode::FORBIDDEN && is_region_block(&error) {
+            return Some(ProviderError::Blocked {
+                message: error.message,
+            });
+        }
+        let quota = error.code.as_deref() == Some("insufficient_quota");
+        (status == reqwest::StatusCode::TOO_MANY_REQUESTS && quota).then_some(ProviderError::Auth {
+            message: error.message,
+        })
     }
 }
 

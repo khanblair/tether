@@ -26,6 +26,13 @@ class ProviderDetailViewModel(
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(ProviderDetailUiState(provider))
 
+    /**
+     * Counts the moments that invalidate a reveal in flight: hiding, stopping, saving, and
+     * removing. A reveal reads the vault off the main thread, so it must not show its key if one
+     * of those happened while it ran.
+     */
+    private var revealGeneration = 0
+
     /** The screen state. */
     val state: StateFlow<ProviderDetailUiState> = mutableState.asStateFlow()
 
@@ -80,6 +87,7 @@ class ProviderDetailViewModel(
                 gateway.setKey(provider, typed.keyInput)
                 gateway.status(provider)
             }.onSuccess { saved ->
+                revealGeneration++
                 mutableState.update { it.withSaved(true, saved).cleared() }
             }.onFailure { failure ->
                 val message =
@@ -100,6 +108,7 @@ class ProviderDetailViewModel(
         viewModelScope.launch {
             call { gateway.removeKey(provider) }
                 .onSuccess {
+                    revealGeneration++
                     mutableState.update {
                         it
                             .copy(
@@ -141,26 +150,21 @@ class ProviderDetailViewModel(
 
     /** Call this only after the system accepted a biometric check. Shows the saved key. */
     fun reveal() {
+        val generation = revealGeneration
         viewModelScope.launch {
             call { gateway.revealKey(provider) }
                 .onSuccess { key ->
+                    if (generation != revealGeneration) return@onSuccess
                     if (key == null) {
                         mutableState.update { it.copy(message = ProviderMessage.RevealFailed) }
                     } else {
                         mutableState.update {
-                            it.copy(
-                                keyInput = key,
-                                revealed = true,
-                                edited = false,
-                                message = null,
-                            )
+                            it.copy(keyInput = key, revealed = true, edited = false, message = null)
                         }
                     }
                 }.onFailure {
-                    mutableState.update {
-                        it.copy(
-                            message = ProviderMessage.RevealFailed,
-                        )
+                    if (generation == revealGeneration) {
+                        mutableState.update { it.copy(message = ProviderMessage.RevealFailed) }
                     }
                 }
         }
@@ -173,6 +177,7 @@ class ProviderDetailViewModel(
 
     /** Masks the field. A revealed saved key is also dropped from memory; typed text is kept. */
     fun hide() {
+        revealGeneration++
         mutableState.update {
             if (it.edited) it.copy(revealed = false) else it.copy(keyInput = "", revealed = false)
         }
@@ -180,6 +185,7 @@ class ProviderDetailViewModel(
 
     /** The screen left the foreground. A revealed key must not stay on screen. */
     fun onStopped() {
+        revealGeneration++
         if (mutableState.value.revealed) hide()
     }
 

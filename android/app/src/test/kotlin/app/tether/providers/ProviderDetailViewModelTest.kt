@@ -325,6 +325,46 @@ class ProviderDetailViewModelTest {
         }
 
     @Test
+    fun a_reveal_that_finishes_after_the_screen_stopped_is_dropped() =
+        runTest(dispatcher) {
+            gateway.keys[provider] = "sk-saved"
+            val vm = model()
+            vm.reveal()
+            vm.onStopped()
+            advanceUntilIdle()
+            assertEquals("", vm.state.value.keyInput)
+            assertFalse(vm.state.value.revealed)
+            vm.reveal()
+            advanceUntilIdle()
+            assertEquals("sk-saved", vm.state.value.keyInput)
+            assertTrue(vm.state.value.revealed)
+        }
+
+    @Test
+    fun a_reveal_that_finishes_after_a_hide_or_a_save_or_a_remove_is_dropped() =
+        runTest(dispatcher) {
+            gateway.keys[provider] = "sk-saved"
+            val vm = model()
+            vm.reveal()
+            vm.hide()
+            advanceUntilIdle()
+            assertFalse(vm.state.value.revealed)
+
+            vm.reveal()
+            vm.onKeyChange("sk-new")
+            vm.save()
+            advanceUntilIdle()
+            assertEquals("", vm.state.value.keyInput)
+            assertFalse(vm.state.value.revealed)
+
+            vm.reveal()
+            vm.remove()
+            advanceUntilIdle()
+            assertEquals("", vm.state.value.keyInput)
+            assertFalse(vm.state.value.revealed)
+        }
+
+    @Test
     fun the_state_text_never_contains_the_key() =
         runTest(dispatcher) {
             val vm = model()

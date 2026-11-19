@@ -72,7 +72,7 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 | P0-19 | Publish a signed release automatically | Blair with Claude | Done | #134, #136 | Merged; `v0.0.1` published as the latest release, signed with the pinned key. Releases are never pre-releases (#136) |
 | P0-16 | Release workflow | Blair with Claude | Done | #134 | Ran on the merge of #134 and published `v0.0.1`; issue #4 closed |
 | P0-20 | App name "Tether" and release `v0.0.2` | Blair with Claude | In review | | No issue. The `full` flavor label changed from "Tether full" to "Tether"; version 0.0.2 so the release workflow publishes a fixed APK. `versionCode` rises from 100 to 200 |
-| P1-09 | Model catalog fetch, cache, capability flags, pricing | Blair with Codex and Claude | In review | #149 | Issue #13. Provider lists, bundled prices, shared model types, and the 24-hour store cache pass local checks; Codex review and CI remain |
+| P1-09 | Model catalog fetch, cache, capability flags, pricing | Blair with Codex and Claude | In review | #149 | Issue #13. Provider lists, bundled prices, shared model types, and the 24-hour store cache pass local checks; the Codex error-body cancellation finding is fixed, with a fresh review and CI pending |
 | P1-08 | OpenAI-compatible adapter; DeepSeek and OpenRouter configs | Blair with Codex and Claude | Done | #147 | Merged; issue #12 closed. Written by a Codex CLI session (GPT-5.6 Luna), reviewed and mutation-tested by Claude; 168 provider tests. Four Codex findings fixed (DeepSeek reasoning replay, OpenRouter cache writes, refusal deltas, `null` token details failing a whole chunk) |
 | P1-07 | Gemini adapter | Blair with Codex and Claude | Done | #146 | Merged; issue #11 closed on fixture tests (D31). Written by a Codex CLI session (GPT-5.6 Luna), reviewed and mutation-tested by Claude; 127 provider tests. Two Codex review findings fixed (unique generated call ids, `parametersJsonSchema`) |
 | P1-06 | OpenAI adapter (Responses API) | Blair with Codex and Claude | Done | #144 | Merged; issue #10 closed on fixture tests (D31). Written by a Codex CLI session (GPT-5.6 Luna), reviewed and mutation-tested by Claude; 99 tests with the Anthropic ones |
@@ -140,6 +140,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Who | What happened | Next |
 |---|---|---|---|
+| 2026-11-19 | Codex | Reproduced and fixed Codex's PR #149 finding: a cancelled catalog fetch now stops while an error body stalls. Added a regression test; provider tests and clippy pass | Run the full checks and request a fresh review |
 | 2026-11-19 | Codex | Opened PR #149 with five commits of 15 files or fewer and requested `@codex review`; issue #13 closes on merge | Check Codex feedback and CI, then merge if clear |
 | 2026-11-19 | Codex | Checked issue #13 and the PR workflow, reviewed the P1-09 branch, and documented the catalog and cache as built | Run the full checks, commit in groups of 15 files or fewer, open and review the pull request |
 | 2026-11-19 | Codex | Fixed three P1-09 review findings: catalog requests share the chat header guard, OpenAI drops search models, and pricing edge cases have tests. The scoped provider format, test, and clippy commands pass | Review P1-09 and open its pull request |
@@ -165,6 +166,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Files | Change | PR |
 |---|---|---|---|
+| 2026-11-19 | `core/crates/tether-providers/src/transport.rs` | Cancel a catalog error-body read when the caller stops; regression test | #149 |
 | 2026-11-19 | `core/crates/tether-types/src/model.rs`, `core/crates/tether-providers/{data/prices/,src/catalog.rs,src/pricing/,src/*/models.rs}`, `core/crates/tether-store/{migrations/0001_init.sql,src/models.rs}`, `core/fixtures/model-lists/` | P1-09 shared model types, provider catalog, bundled prices, fixtures, and transactional cache | #149 |
 | 2026-11-19 | `core/crates/tether-providers/src/{openai/,openai_compat/}models.rs`, `openai_compat/http.rs`, `openai/tests/models.rs`, `openai_compat/tests/models.rs`, `pricing/tests.rs` | P1-09 review fixes and regression tests for catalog headers, search filtering, and pricing edge cases | #149 |
 | 2026-11-19 | `core/crates/tether-providers/src/{anthropic/,gemini/,openai/,openai_compat/}tests/models.rs`, `transport.rs`, `test_support.rs`, `pricing/tests.rs` | P1-09 part B2 model-list tests, pagination and query-encoding fixes, shared GET coverage, and exact bundled-detail matching test | #149 |
@@ -188,6 +190,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Doc | Change |
 |---|---|---|
+| 2026-11-19 | progress-tracker | Recorded the PR #149 review finding and fix |
 | 2026-11-19 | progress-tracker | Linked P1-09 to PR #149 and marked it In review |
 | 2026-11-19 | architecture, project-structure, progress-tracker | Documented P1-09 model catalog, prices, and cache |
 | 2026-11-19 | progress-tracker | Recorded the P1-09 review fixes and their scoped checks |

@@ -78,7 +78,9 @@ Why one process: the core holds session state in memory and SQLite; splitting it
 
 Rule: only `tether-engine` coordinates other crates. Leaf crates never call each other except where the table lists the dependency.
 
-Status: at P0 only `tether-types`, `tether-engine`, and `tether-ffi` contain code. The other crates are empty libraries that hold their place in the workspace (see project-structure.md, Present now).
+Status: `tether-types`, `tether-engine`, `tether-ffi`, and `tether-providers` contain code. The other crates are empty libraries that hold their place in the workspace (see project-structure.md, Present now).
+
+`tether-providers` (P1-04) holds the provider contract. `ChatProvider::stream_chat(request, events, cancel)` streams one response into a channel as `StreamEvent` values (`TextDelta`, `ThinkingDelta`, `ToolCallStarted`, `ToolCallArgsDelta`, `ToolCallFinished`, `Usage`, `Finished`). `Usage` events carry running totals for the response, with cache read and write tokens kept apart. The last event of a successful stream is always `Finished`. An adapter stops when `cancel` fires or the receiver is dropped, and never retries; the engine retries when the converted `CoreError` is retryable. `ChatRequest` puts the system prompt and tools first so adapters can cache them. `ProviderError` converts to `CoreError`. `SseParser` turns byte chunks into events, follows the WHATWG rules, and drops a line over 1 MiB and an event over 8 MiB.
 
 ### Android (`android/`)
 

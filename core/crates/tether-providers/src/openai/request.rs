@@ -5,8 +5,18 @@ use serde_json::{Map, Value, json};
 use super::messages::to_api_input;
 use crate::{ChatRequest, ProviderError, ReasoningEffort, ToolSpec};
 
-/// Builds a streaming Responses API request.
+/// Builds a request that asks for reasoning summaries, as the default configuration does.
+#[cfg(test)]
 pub(super) fn build_body(request: &ChatRequest) -> Result<Value, ProviderError> {
+    build_body_with(request, true)
+}
+
+/// Builds a streaming Responses API request. With `reasoning_summary` set, a reasoning effort
+/// also asks for a summary, because OpenAI sends summary deltas only on request.
+pub(super) fn build_body_with(
+    request: &ChatRequest,
+    reasoning_summary: bool,
+) -> Result<Value, ProviderError> {
     let mut body = Map::new();
     body.insert("model".to_owned(), json!(request.model_id));
     body.insert("stream".to_owned(), Value::Bool(true));
@@ -26,10 +36,11 @@ pub(super) fn build_body(request: &ChatRequest) -> Result<Value, ProviderError> 
         body.insert("tools".to_owned(), tools_json(&request.tools)?);
     }
     if let Some(effort) = request.reasoning {
-        body.insert(
-            "reasoning".to_owned(),
-            json!({ "effort": effort_name(effort) }),
-        );
+        let mut reasoning = json!({ "effort": effort_name(effort) });
+        if reasoning_summary {
+            reasoning["summary"] = json!("auto");
+        }
+        body.insert("reasoning".to_owned(), reasoning);
     }
     Ok(Value::Object(body))
 }

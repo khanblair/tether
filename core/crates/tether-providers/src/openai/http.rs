@@ -6,7 +6,7 @@ use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 
 use super::OpenAiConfig;
-use super::request::build_body;
+use super::request::build_body_with;
 use super::stream::StreamState;
 use super::wire::ErrorBody;
 use crate::transport::{Call, ErrorStyle, run, secret_header};
@@ -40,7 +40,7 @@ pub(super) async fn stream_chat(
     events: mpsc::Sender<StreamEvent>,
     cancel: CancellationToken,
 ) -> Result<(), ProviderError> {
-    let body = build_body(request)?;
+    let body = build_body_with(request, config.reasoning_summary)?;
     let mut headers = HeaderMap::new();
     let value = format!("Bearer {}", config.api_key);
     headers.insert(AUTHORIZATION, secret_header(&value)?);

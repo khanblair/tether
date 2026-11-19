@@ -170,6 +170,11 @@ async fn read_stream(
             Err(_) if state.is_finished() => return Ok(()),
             Err(error) => return Err(error),
         }
+        // The final event is forwarded, so the response is complete. Do not wait for the server
+        // to close the body: a silent or keep-alive-only connection would hold the call open.
+        if state.is_finished() {
+            return Ok(());
+        }
     }
 }
 

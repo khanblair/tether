@@ -97,3 +97,90 @@ fn an_unfinished_turn_reopens_as_interrupted() {
     );
     assert_eq!(store.messages(&session_id).unwrap().len(), 1);
 }
+
+#[test]
+fn begin_turn_waits_for_another_writer_before_reading_sequence() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("tether.db");
+    let mut seed = Store::open(&path).unwrap();
+    let project = seed_project(&seed);
+    let session = seed
+        .create_session(
+            &project,
+            &ModelRef {
+                provider: Provider::Anthropic,
+                model_id: "test".into(),
+            },
+            PermissionMode::Ask,
+            1,
+        )
+        .unwrap();
+    let mut worker_store = Store::open(&path).unwrap();
+    let writer = Store::open(&path).unwrap();
+    writer
+        .conn
+        .execute_batch("BEGIN IMMEDIATE; UPDATE projects SET name = 'Busy'")
+        .unwrap();
+    let (started_tx, started_rx) = std::sync::mpsc::channel();
+    let (done_tx, done_rx) = std::sync::mpsc::channel();
+    let id = session.id.clone();
+    let worker = std::thread::spawn(move || {
+        started_tx.send(()).unwrap();
+        done_tx
+            .send(worker_store.begin_turn(&id, "Hello", 2))
+            .unwrap();
+    });
+    started_rx.recv().unwrap();
+    assert!(
+        done_rx
+            .recv_timeout(std::time::Duration::from_millis(100))
+            .is_err()
+    );
+    writer.conn.execute_batch("COMMIT").unwrap();
+    assert!(done_rx.recv().unwrap().is_ok());
+    worker.join().unwrap();
+}
+
+#[test]
+fn assistant_message_waits_for_another_writer_before_reading_sequence() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("tether.db");
+    let mut seed = Store::open(&path).unwrap();
+    let project = seed_project(&seed);
+    let session = seed
+        .create_session(
+            &project,
+            &ModelRef {
+                provider: Provider::Anthropic,
+                model_id: "test".into(),
+            },
+            PermissionMode::Ask,
+            1,
+        )
+        .unwrap();
+    seed.begin_turn(&session.id, "Hello", 2).unwrap();
+    let mut worker_store = Store::open(&path).unwrap();
+    let writer = Store::open(&path).unwrap();
+    writer
+        .conn
+        .execute_batch("BEGIN IMMEDIATE; UPDATE projects SET name = 'Busy'")
+        .unwrap();
+    let (started_tx, started_rx) = std::sync::mpsc::channel();
+    let (done_tx, done_rx) = std::sync::mpsc::channel();
+    let id = session.id.clone();
+    let worker = std::thread::spawn(move || {
+        started_tx.send(()).unwrap();
+        done_tx
+            .send(worker_store.create_assistant_message(&id, 3))
+            .unwrap();
+    });
+    started_rx.recv().unwrap();
+    assert!(
+        done_rx
+            .recv_timeout(std::time::Duration::from_millis(100))
+            .is_err()
+    );
+    writer.conn.execute_batch("COMMIT").unwrap();
+    assert!(done_rx.recv().unwrap().is_ok());
+    worker.join().unwrap();
+}

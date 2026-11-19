@@ -7,10 +7,12 @@ mod session;
 mod session_provider;
 #[cfg(test)]
 mod session_tests;
+#[cfg(test)]
+mod session_usage_tests;
 pub mod updates;
 
 pub use provider_connection::{ProviderCheck, check_provider, provider_test_targets};
-pub use session::{SessionActor, SessionActorError, SessionHandle};
+pub use session::{ProviderFactory, SessionActor, SessionActorError, SessionHandle};
 pub use session_provider::provider_for;
 
 use std::sync::Arc;

@@ -106,7 +106,7 @@ impl ChatProvider for DelayedProvider {
     }
 }
 
-struct Recorder(mpsc::UnboundedSender<CoreEvent>);
+pub(crate) struct Recorder(pub(crate) mpsc::UnboundedSender<CoreEvent>);
 
 impl EventSink for Recorder {
     fn on_event(&self, event: CoreEvent) {
@@ -114,7 +114,7 @@ impl EventSink for Recorder {
     }
 }
 
-fn seeded_store(path: &std::path::Path) -> (Store, tether_types::SessionId) {
+pub(crate) fn seeded_store(path: &std::path::Path) -> (Store, tether_types::SessionId) {
     let mut store = Store::open(path).unwrap();
     let project = ProjectId::new("01TESTPROJECT00000000000000");
     rusqlite::Connection::open(path)
@@ -138,7 +138,7 @@ fn seeded_store(path: &std::path::Path) -> (Store, tether_types::SessionId) {
     (store, session.id)
 }
 
-async fn next_event(rx: &mut mpsc::UnboundedReceiver<CoreEvent>) -> CoreEvent {
+pub(crate) async fn next_event(rx: &mut mpsc::UnboundedReceiver<CoreEvent>) -> CoreEvent {
     tokio::time::timeout(std::time::Duration::from_secs(2), rx.recv())
         .await
         .unwrap()

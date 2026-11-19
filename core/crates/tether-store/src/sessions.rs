@@ -1,6 +1,6 @@
 //! Session and transcript writes. A turn's text is committed before its event is emitted.
 
-use rusqlite::{OptionalExtension, Transaction, params};
+use rusqlite::{OptionalExtension, Transaction, TransactionBehavior, params};
 use tether_types::{
     Message, MessageId, MessagePart, ModelRef, PermissionMode, ProjectId, Provider, Role,
     SessionId, SessionStatus, UsageSnapshot,
@@ -136,7 +136,9 @@ impl Store {
         text: &str,
         now_ms: i64,
     ) -> Result<MessageId, StoreError> {
-        let tx = self.conn.transaction()?;
+        let tx = self
+            .conn
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
         let message_id = insert_message(&tx, id, Role::User, now_ms)?;
         insert_part(
             &tx,
@@ -167,7 +169,9 @@ impl Store {
         id: &SessionId,
         now_ms: i64,
     ) -> Result<MessageId, StoreError> {
-        let tx = self.conn.transaction()?;
+        let tx = self
+            .conn
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
         let message_id = insert_message(&tx, id, Role::Assistant, now_ms)?;
         tx.commit()?;
         Ok(message_id)

@@ -5,10 +5,10 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use tether_engine::{SessionActor, SessionHandle, provider_for};
+use tether_engine::{ProviderFactory, SessionActor, SessionHandle, provider_for};
 use tether_secrets::SecretRef;
 use tether_store::{SessionRecord, Store};
-use tether_types::{ModelRef, PermissionMode, ProjectId, Provider, SessionId};
+use tether_types::{CoreError, ModelRef, PermissionMode, ProjectId, Provider, SessionId};
 
 use crate::{EventSink, MessageView, ProviderView, SecretVault, SessionStatusView};
 
@@ -180,16 +180,13 @@ impl SessionRuntime {
             .load_session(&id)
             .map_err(|_| SessionRuntimeError::Unavailable)?
             .ok_or(SessionRuntimeError::NotFound)?;
-        let key = self.provider_key(session.provider)?;
-        let key_text = key
-            .expose_text()
-            .map_err(|_| SessionRuntimeError::Unavailable)?;
-        let provider = provider_for(session.provider, key_text)
-            .map_err(|_| SessionRuntimeError::Unavailable)?;
+        provider_key(&self.vault, session.provider)?;
+        let provider_factory = session_provider_factory(Arc::clone(&self.vault), session.provider);
         let sink: Arc<dyn tether_engine::EventSink> =
             Arc::new(crate::callbacks::SinkAdapter(Arc::clone(&self.sink)));
-        let (actor, handle) = SessionActor::new(store, &id, provider, sink)
-            .map_err(|_| SessionRuntimeError::Unavailable)?;
+        let (actor, handle) =
+            SessionActor::new_with_provider_factory(store, &id, provider_factory, sink)
+                .map_err(|_| SessionRuntimeError::Unavailable)?;
         self.runtime.spawn(actor.run());
         let runner = Arc::new(SessionRunner {
             handle,
@@ -204,19 +201,36 @@ impl SessionRuntime {
     fn store(&self) -> Result<Store, SessionRuntimeError> {
         Store::open(Path::new(&self.database_path)).map_err(|_| SessionRuntimeError::Unavailable)
     }
+}
 
-    fn provider_key(
-        &self,
-        provider: Provider,
-    ) -> Result<tether_secrets::Secret, SessionRuntimeError> {
-        let reference = SecretRef::new(&format!("provider-{}", provider.as_str()))
-            .map_err(|_| SessionRuntimeError::Unavailable)?;
-        self.vault
-            .store
-            .get(&reference)
-            .map_err(|_| SessionRuntimeError::Unavailable)?
-            .ok_or(SessionRuntimeError::MissingKey)
-    }
+fn provider_key(
+    vault: &SecretVault,
+    provider: Provider,
+) -> Result<tether_secrets::Secret, SessionRuntimeError> {
+    let reference = SecretRef::new(&format!("provider-{}", provider.as_str()))
+        .map_err(|_| SessionRuntimeError::Unavailable)?;
+    vault
+        .store
+        .get(&reference)
+        .map_err(|_| SessionRuntimeError::Unavailable)?
+        .ok_or(SessionRuntimeError::MissingKey)
+}
+
+fn session_provider_factory(vault: Arc<SecretVault>, provider: Provider) -> ProviderFactory {
+    Arc::new(move || {
+        let key = provider_key(&vault, provider).map_err(|error| match error {
+            SessionRuntimeError::MissingKey => CoreError::Auth {
+                message: "provider key is not saved".into(),
+            },
+            _ => CoreError::Internal {
+                message: "provider key is unavailable".into(),
+            },
+        })?;
+        let key_text = key.expose_text().map_err(|_| CoreError::Internal {
+            message: "provider key is unavailable".into(),
+        })?;
+        provider_for(provider, key_text).map_err(CoreError::from)
+    })
 }
 
 /// A running actor for one session.
@@ -346,5 +360,24 @@ mod tests {
                 .status,
             SessionStatus::Interrupted
         );
+    }
+
+    #[test]
+    fn provider_factory_reads_the_current_key_after_removal() {
+        let dir = tempfile::tempdir().unwrap();
+        let vault = SecretVault::new(
+            dir.path().join("secrets").to_string_lossy().into_owned(),
+            Arc::new(PlainPlatform),
+        );
+        vault.put("provider-anthropic", "old-key").unwrap();
+        let factory = session_provider_factory(Arc::clone(&vault), Provider::Anthropic);
+        assert!(factory().is_ok());
+        vault.delete("provider-anthropic").unwrap();
+        assert!(matches!(
+            factory(),
+            Err(tether_types::CoreError::Auth { .. })
+        ));
+        vault.put("provider-anthropic", "new-key").unwrap();
+        assert!(factory().is_ok());
     }
 }

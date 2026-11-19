@@ -30,13 +30,24 @@ pub(super) async fn stream_chat(
     let body = build_body(request)?;
     let response = tokio::select! {
         biased;
-        () = cancel.cancelled() => return Err(ProviderError::Cancelled),
+        () = stopped(&events, &cancel) => return Err(ProviderError::Cancelled),
         sent = send_request(client, config, &body) => sent?,
     };
     if !response.status().is_success() {
-        return Err(failure(response, &cancel).await);
+        return Err(failure(response, &events, &cancel).await);
     }
     read_stream(response, &events, &cancel).await
+}
+
+/// Resolves when the caller has stopped listening: it cancelled, or dropped the receiver.
+///
+/// Every wait on the network also waits on this, so a dropped receiver releases the request
+/// at once, even when the server is silent or sends only keep-alive pings.
+async fn stopped(events: &mpsc::Sender<StreamEvent>, cancel: &CancellationToken) {
+    tokio::select! {
+        () = cancel.cancelled() => {}
+        () = events.closed() => {}
+    }
 }
 
 /// Posts the request body. The key goes in a sensitive header so it stays out of debug output.
@@ -67,13 +78,17 @@ fn network_error(error: reqwest::Error) -> ProviderError {
     }
 }
 
-/// Reads the error body of a non-2xx response and maps it, unless the caller cancels first.
-async fn failure(response: Response, cancel: &CancellationToken) -> ProviderError {
+/// Reads the error body of a non-2xx response and maps it, unless the caller stops first.
+async fn failure(
+    response: Response,
+    events: &mpsc::Sender<StreamEvent>,
+    cancel: &CancellationToken,
+) -> ProviderError {
     let status = response.status();
     let retry_after = retry_after_secs(response.headers());
     let body = tokio::select! {
         biased;
-        () = cancel.cancelled() => return ProviderError::Cancelled,
+        () = stopped(events, cancel) => return ProviderError::Cancelled,
         body = read_error_body(response) => body,
     };
     status_error(status, retry_after, &body)
@@ -145,7 +160,7 @@ async fn read_stream(
     loop {
         let next = tokio::select! {
             biased;
-            () = cancel.cancelled() => return Err(ProviderError::Cancelled),
+            () = stopped(events, cancel) => return Err(ProviderError::Cancelled),
             next = next_events(&mut response, &mut parser) => next,
         };
         match next {

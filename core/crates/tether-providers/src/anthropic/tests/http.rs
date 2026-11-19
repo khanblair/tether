@@ -295,3 +295,21 @@ async fn a_redirect_is_not_followed_so_the_key_never_reaches_another_host() {
     let visit = tokio::time::timeout(Duration::from_millis(300), elsewhere.accept()).await;
     assert!(visit.is_err(), "the redirect target received a connection");
 }
+
+#[tokio::test]
+async fn a_dropped_receiver_stops_a_silent_stream_at_once() {
+    let server = start(Reply::stream("", PIECE_LEN).then_hold_open()).await;
+    let provider = provider(server.base_url);
+    let chat = request();
+    let (sender, receiver) = mpsc::channel(8);
+    let stream = provider.stream_chat(&chat, sender, CancellationToken::new());
+    let drop_later = async {
+        tokio::time::sleep(Duration::from_millis(150)).await;
+        drop(receiver);
+    };
+    let (result, ()) = tokio::join!(
+        tokio::time::timeout(Duration::from_secs(5), stream),
+        drop_later
+    );
+    assert_eq!(result.unwrap(), Err(ProviderError::Cancelled));
+}

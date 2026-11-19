@@ -112,6 +112,22 @@ class ProviderDetailViewModelTest {
         }
 
     @Test
+    fun an_edit_made_while_a_save_is_pending_is_ignored() =
+        runTest(dispatcher) {
+            val vm = model()
+            vm.onKeyChange("first")
+            vm.save()
+            assertTrue(vm.state.value.saving)
+            vm.onKeyChange("second")
+            assertEquals("first", vm.state.value.keyInput)
+            advanceUntilIdle()
+            assertEquals("first", gateway.keys[provider])
+            assertEquals("", vm.state.value.keyInput)
+            vm.onKeyChange("second")
+            assertEquals("second", vm.state.value.keyInput)
+        }
+
+    @Test
     fun an_empty_key_error_keeps_the_text_and_shows_its_own_message() =
         runTest(dispatcher) {
             val vm = model()

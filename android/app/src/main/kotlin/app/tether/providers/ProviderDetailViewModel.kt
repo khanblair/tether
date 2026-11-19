@@ -63,7 +63,11 @@ class ProviderDetailViewModel(
 
     /** The user typed or pasted [text] into the key field. */
     fun onKeyChange(text: String) {
-        mutableState.update { it.copy(keyInput = text, edited = true, message = null) }
+        // A save in flight sends the text it started with, then clears the field. An edit made
+        // now would be cleared unsaved, so it is ignored. The screen also disables the field.
+        mutableState.update {
+            if (it.saving) it else it.copy(keyInput = text, edited = true, message = null)
+        }
     }
 
     /** Saves the typed key. The core trims it and rejects an empty one. */

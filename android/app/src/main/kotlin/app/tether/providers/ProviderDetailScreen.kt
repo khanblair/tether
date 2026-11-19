@@ -191,6 +191,7 @@ private fun KeySection(
             } else {
                 null
             },
+        enabled = !state.saving,
         onPaste = onPaste,
     )
     PrimaryButton(

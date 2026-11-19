@@ -40,11 +40,12 @@ tether/
 │   └── crates/
 │       ├── tether-types/      ids, message, session, usage, error, event (CoreEvent); no UniFFI code
 │       ├── tether-engine/     VERSION, EventSink, Core (emits Ready and Test events)
+│       ├── tether-secrets/    SecretStore, SecretRef, Secret, SecretsPlatform trait, errors (src/{lib,error,platform,reference,secret,store,store_tests}.rs)
 │       ├── tether-ffi/        UniFFI surface, builds libtether_core.so
 │       │   ├── uniffi.toml
-│       │   └── src/{lib.rs, callbacks.rs, views/{mod,event,types,error}.rs, bin/uniffi-bindgen.rs}
+│       │   └── src/{lib.rs, callbacks.rs, secrets.rs, views/{mod,event,types,error}.rs, bin/uniffi-bindgen.rs}
 │       ├── tether-quality/    data/slop_words.txt and slop_patterns.toml (shared with slop-lint)
-│       └── tether-{providers,tools,workspace,vcs,sandbox,linux,ci,store,connectors,mcp,secrets,skills,memory}/
+│       └── tether-{providers,tools,workspace,vcs,sandbox,linux,ci,store,connectors,mcp,skills,memory}/
 │                              Empty libraries
 ├── android/
 │   ├── settings.gradle.kts  build.gradle.kts  gradle.properties  gradlew  gradlew.bat
@@ -56,7 +57,7 @@ tether/
 │   ├── smell-fixtures/        Module with a function over the line limit; detekt must fail on it (built only with -Ptether.smellFixtures)
 │   ├── app/                   build.gradle.kts (flavors play and full; app version read from core/Cargo.toml), proguard-rules.pro
 │   │   └── src/{main, full, play, androidTest}   TetherApp, MainActivity, di/AppModule, nav/, shell/ (placeholder screens)
-│   ├── core-bridge/           CoreClient, EventBus, consumer-rules.pro, (gen) generated/tether_core.kt
+│   ├── core-bridge/           CoreClient, EventBus, KeystoreSecretsPlatform, consumer-rules.pro, (gen) generated/tether_core.kt
 │   └── designsystem/          TetherTheme, PrimaryButton, TetherTopBar, FONTS-LICENSE.txt, (gen) tokens/Tokens.kt and token colors, Plex fonts
 ├── ios/README.md              Plan for v2
 ├── runtimes/README.md  linux/README.md  bench/README.md   Planned folders, one README each
@@ -70,7 +71,7 @@ tether/
     └── pull_request_template.md  CODEOWNERS  dependabot.yml
 ```
 
-Not present yet: `LICENSE` (no license chosen, see Q5), `nightly.yml` (nothing to run until P1), `core/benches/`, the rest of `core/fixtures/` (only `smells/` exists), feature modules, `service`, `platform`, the `full` and `play` Linux mode files, and the real code of every Rust crate except `tether-types`, `tether-engine`, and `tether-ffi`.
+Not present yet: `LICENSE` (no license chosen, see Q5), `nightly.yml` (nothing to run until P1), `core/benches/`, the rest of `core/fixtures/` (only `smells/` exists), feature modules, `service`, `platform`, the `full` and `play` Linux mode files, and the real code of every Rust crate except `tether-types`, `tether-engine`, `tether-ffi`, and `tether-secrets`.
 
 ## Top level
 
@@ -160,7 +161,8 @@ core/
     │   ├── build.rs           UniFFI scaffolding
     │   └── src/
     │       ├── lib.rs         Exported TetherCore object
-    │       ├── callbacks.rs   EventSink, SecretsPlatform, NotifyPlatform, NetworkPlatform
+    │       ├── callbacks.rs   EventSink, NotifyPlatform, NetworkPlatform
+    │       ├── secrets.rs     SecretsPlatform callback, SecretVault
     │       └── views/         Engine types to FFI view types: event.rs, types.rs, error.rs
     ├── tether-engine/
     │   └── src/

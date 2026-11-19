@@ -71,7 +71,7 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 | P0-17 | Commit size check | Blair with Claude | Done | n/a | `tools/check-commit-size.sh`, `just commits`, and a `tooling` CI step on pull requests |
 | P0-19 | Publish a signed release automatically | Blair with Claude | Done | #134, #136 | Merged; `v0.0.1` published as the latest release, signed with the pinned key. Releases are never pre-releases (#136) |
 | P0-16 | Release workflow | Blair with Claude | Done | #134 | Ran on the merge of #134 and published `v0.0.1`; issue #4 closed |
-| P1-08 | OpenAI-compatible adapter; DeepSeek and OpenRouter configs | Blair with Codex and Claude | In progress | | Issue #12. Written by a Codex CLI session (GPT-5.6 Luna), reviewed and mutation-tested by Claude; 150 provider tests |
+| P1-08 | OpenAI-compatible adapter; DeepSeek and OpenRouter configs | Blair with Codex and Claude | In review | #147 | Issue #12. Written by a Codex CLI session (GPT-5.6 Luna), reviewed and mutation-tested by Claude; 150 provider tests |
 | P1-07 | Gemini adapter | Blair with Codex and Claude | Done | #146 | Merged; issue #11 closed on fixture tests (D31). Written by a Codex CLI session (GPT-5.6 Luna), reviewed and mutation-tested by Claude; 127 provider tests. Two Codex review findings fixed (unique generated call ids, `parametersJsonSchema`) |
 | P1-06 | OpenAI adapter (Responses API) | Blair with Codex and Claude | Done | #144 | Merged; issue #10 closed on fixture tests (D31). Written by a Codex CLI session (GPT-5.6 Luna), reviewed and mutation-tested by Claude; 99 tests with the Anthropic ones |
 | P1-05 | Anthropic adapter: streaming, tool calls, usage, caching headers | Blair with Claude | Done | #143 | Merged; issue #9 closed on fixture tests (D31). Adapter, shared HTTP client, 49 new tests, fixtures, and an ignored live smoke test. Not done: the nightly run of the live test needs an `ANTHROPIC_API_KEY` repository secret |
@@ -158,7 +158,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Files | Change | PR |
 |---|---|---|---|
-| 2026-11-19 | `core/crates/tether-providers/src/{openai_compat/,deepseek.rs,openrouter.rs}`, `core/fixtures/provider-streams/{deepseek,openrouter,openai-compat}-*.sse` | OpenAI-compatible adapter with DeepSeek and OpenRouter settings for P1-08 | |
+| 2026-11-19 | `core/crates/tether-providers/src/{openai_compat/,deepseek.rs,openrouter.rs}`, `core/fixtures/provider-streams/{deepseek,openrouter,openai-compat}-*.sse` | OpenAI-compatible adapter with DeepSeek and OpenRouter settings for P1-08 | #147 |
 | 2026-11-19 | `core/crates/tether-providers/src/gemini/`, `core/fixtures/provider-streams/gemini-*.sse` | Gemini adapter, tests, and fixtures for P1-07 | #146 |
 | 2026-11-19 | `core/crates/tether-providers/src/{openai/,transport.rs,test_support.rs}`, `core/fixtures/provider-streams/openai-*.sse` | Shared transport, OpenAI adapter, shared test server, and fixtures for P1-06 | #144 |
 | 2026-11-19 | `core/crates/tether-providers/src/{anthropic/,client.rs}`, `core/fixtures/provider-streams/anthropic-*.sse`, `core/deny.toml`, `core/Cargo.*` | Anthropic adapter, shared HTTP client, fixtures, and the license allowance for P1-05 | #143 |

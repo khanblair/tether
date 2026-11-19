@@ -74,6 +74,16 @@ pub enum MessagePart {
 }
 
 impl MessagePart {
+    /// Every part kind, in declaration order. The store's `kind` column accepts exactly these.
+    pub const KINDS: &'static [&'static str] = &[
+        "text",
+        "image_ref",
+        "tool_call",
+        "tool_result",
+        "thinking",
+        "compaction_summary",
+    ];
+
     /// The part kind kept in the `kind` column. It equals the `kind` tag in the JSON form.
     #[must_use]
     pub const fn kind(&self) -> &'static str {
@@ -146,9 +156,11 @@ mod tests {
             MessagePart::Thinking { text: "t".into() },
             MessagePart::CompactionSummary { text: "s".into() },
         ];
+        assert_eq!(parts.len(), MessagePart::KINDS.len());
         for part in parts {
             let json = serde_json::to_value(&part).unwrap();
             assert_eq!(json["kind"], part.kind());
+            assert!(MessagePart::KINDS.contains(&part.kind()));
         }
     }
 

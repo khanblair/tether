@@ -3,6 +3,7 @@
 mod callbacks;
 mod provider_settings;
 mod secrets;
+mod sessions;
 mod updater;
 mod views;
 
@@ -13,6 +14,7 @@ use tether_engine::Core;
 pub use callbacks::EventSink;
 pub use provider_settings::{ProviderSettings, ProviderSettingsError, ProviderStatusView};
 pub use secrets::{SecretVault, SecretVaultError, SecretsPlatform, SecretsPlatformFailure};
+pub use sessions::{SessionRecordView, SessionRunner, SessionRuntime, SessionRuntimeError};
 pub use updater::{DownloadProgress, ReleaseView, UpdateCheckView, Updater, UpdaterError};
 pub use views::{
     ConnectionStatusView, CoreErrorView, CoreEventView, ErrorKindView, ExecutorView,

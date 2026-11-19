@@ -204,6 +204,11 @@ async fn read_stream<M: StreamMapper>(
             Err(_) if mapper.is_finished() => return Ok(()),
             Err(error) => return Err(error),
         }
+        // The final event is forwarded, so the response is complete. Do not wait for the server
+        // to close the body: a silent or keep-alive-only connection would hold the call open.
+        if mapper.is_finished() {
+            return Ok(());
+        }
     }
 }
 

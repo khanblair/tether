@@ -22,6 +22,10 @@ pub struct OpenAiConfig {
     pub api_key: String,
     /// The API address without a trailing path.
     pub base_url: String,
+    /// Ask for a reasoning summary whenever a reasoning effort is set. OpenAI sends summary
+    /// deltas only on request. Turn it off for an organization that OpenAI has not cleared to
+    /// receive summaries.
+    pub reasoning_summary: bool,
 }
 
 impl OpenAiConfig {
@@ -31,6 +35,7 @@ impl OpenAiConfig {
         Self {
             api_key: api_key.into(),
             base_url: DEFAULT_BASE_URL.to_owned(),
+            reasoning_summary: true,
         }
     }
 }
@@ -40,6 +45,7 @@ impl fmt::Debug for OpenAiConfig {
         f.debug_struct("OpenAiConfig")
             .field("api_key", &"<hidden>")
             .field("base_url", &self.base_url)
+            .field("reasoning_summary", &self.reasoning_summary)
             .finish()
     }
 }

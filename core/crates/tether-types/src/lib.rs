@@ -8,6 +8,7 @@ mod event;
 mod ids;
 mod message;
 mod session;
+mod text;
 mod usage;
 
 pub use error::CoreError;
@@ -17,4 +18,5 @@ pub use message::{Message, MessagePart, Role};
 pub use session::{
     ConnectionStatus, Executor, ModelRef, PermissionMode, Provider, SessionStatus, ToolCallStatus,
 };
+pub use text::UnknownValue;
 pub use usage::UsageSnapshot;

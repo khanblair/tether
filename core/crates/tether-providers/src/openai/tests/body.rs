@@ -4,7 +4,7 @@ use serde_json::{Value, json};
 use tether_types::{MessagePart, Role, ToolCallId};
 
 use super::{message, request, text};
-use crate::openai::request::build_body;
+use crate::openai::request::{build_body, build_body_with};
 use crate::{ProviderError, ReasoningEffort, ToolSpec};
 
 fn tool() -> ToolSpec {
@@ -94,7 +94,10 @@ fn reasoning_summary_and_rejections_work() {
             text: "Earlier.".to_owned(),
         }],
     )];
-    assert_eq!(body(&chat)["reasoning"], json!({"effort":"high"}));
+    assert_eq!(
+        body(&chat)["reasoning"],
+        json!({"effort":"high","summary":"auto"})
+    );
     assert_eq!(
         body(&chat)["input"][0]["content"][0]["text"],
         "[Summary of the earlier conversation]\nEarlier."
@@ -157,4 +160,12 @@ fn tool_call_arguments_that_are_not_json_are_rejected() {
         build_body(&chat),
         Err(ProviderError::InvalidRequest { .. })
     ));
+}
+
+#[test]
+fn the_reasoning_summary_can_be_turned_off() {
+    let mut chat = request();
+    chat.reasoning = Some(ReasoningEffort::Low);
+    let value = build_body_with(&chat, false).unwrap();
+    assert_eq!(value["reasoning"], json!({"effort":"low"}));
 }

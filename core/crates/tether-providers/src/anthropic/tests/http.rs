@@ -289,3 +289,12 @@ async fn a_dropped_receiver_stops_a_silent_stream_at_once() {
     );
     assert_eq!(result.unwrap(), Err(ProviderError::Cancelled));
 }
+
+#[tokio::test]
+async fn the_call_returns_once_message_stop_is_forwarded_without_waiting_for_the_body_to_end() {
+    let server = start(Reply::stream(TEXT, PIECE_LEN).then_hold_open()).await;
+    let outcome = tokio::time::timeout(Duration::from_secs(5), run(server.base_url)).await;
+    let (events, result) = outcome.unwrap();
+    assert_eq!(result, Ok(()));
+    assert!(matches!(events.last(), Some(StreamEvent::Finished { .. })));
+}

@@ -1,6 +1,7 @@
 //! UniFFI surface of the core, built as `libtether_core.so`.
 
 mod callbacks;
+mod secrets;
 mod views;
 
 use std::sync::Arc;
@@ -8,6 +9,7 @@ use std::sync::Arc;
 use tether_engine::Core;
 
 pub use callbacks::EventSink;
+pub use secrets::{SecretVault, SecretVaultError, SecretsPlatform, SecretsPlatformFailure};
 pub use views::{
     ConnectionStatusView, CoreErrorView, CoreEventView, ErrorKindView, ExecutorView,
     MessagePartView, MessageView, ModelRefView, PermissionModeView, ProviderView, RoleView,

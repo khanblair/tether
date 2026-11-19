@@ -21,8 +21,13 @@ cli = ["uniffi/cli"]
 
 [dependencies]
 tether-engine.workspace = true
+tether-secrets.workspace = true
 tether-types.workspace = true
+thiserror.workspace = true
 uniffi.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
 
 # Not `workspace = true`: UniFFI scaffolding needs `unsafe` and generates undocumented items.
 [lints.rust]

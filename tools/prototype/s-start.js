@@ -98,9 +98,9 @@ const proj = (n, branch, ch, when, extra = "") => `<button class="lrow"${nav({ g
 frame({
   id: "projects", area: "projects", title: "Projects",
   why: "Resume work in one tap. Rows show the signal that matters: branch, uncommitted changes, last activity.",
-  has: ["Search and Settings in the top bar", "Rows sorted by last activity", "Badge for uncommitted changes and running sessions", "Primary action at the bottom: New project"],
-  config: ["Sort: last activity (default), name", "Archive by swipe, with the same action in the row menu"],
-  render: () => screen(appbar({ title: "Projects", actions: [{ icon: "search", label: "Search projects" }, { icon: "settings", label: "Settings", go: "settings" }] }) + body(`<div class="pad col gap12">
+  has: ["Menu, Search, and bell in the top bar; the dot on the bell when something needs you", "Rows sorted by last activity", "Badge for uncommitted changes and running sessions", "Primary action at the bottom: New project"],
+  config: ["Sort: last activity (default), name", "Archive by swipe, with the same action in the row menu", "Settings is in the drawer, not in this top bar"],
+  render: () => screen(appbar({ title: "Projects", menu: "sessions", actions: [{ icon: "search", label: "Search projects" }, { icon: "bell", label: "Needs attention, 2 items", go: "attention", dot: true }] }) + body(`<div class="pad col gap12">
     ${group([
       `<button class="lrow"${nav({ go: "project-home" })}><span class="ico">${I("folder")}</span><span class="tx"><b>acme-api</b><span><span class="mono">main</span> · 3 uncommitted · 12 min ago</span></span>${badge("Running", "tonal", "loader")}</button>`,
       proj("tether", "main", "Clean · ", "2 h ago"),
@@ -116,10 +116,31 @@ frame({
   why: "Empty states explain what goes here and offer one action. No illustration.",
   has: ["One sentence on what a project is", "The same three actions as New project"],
   config: ["None"],
-  render: () => screen(appbar({ title: "Projects", actions: [{ icon: "settings", label: "Settings", go: "settings" }] }) + body(`<div class="pad col gap16" style="padding-top:24px">
+  render: () => screen(appbar({ title: "Projects", menu: "sessions", actions: [{ icon: "bell", label: "Needs attention", go: "attention-empty" }] }) + body(`<div class="pad col gap16" style="padding-top:24px">
     <p class="t-body-l c2" style="margin:0">A project is a code repository stored on this phone. Open one to start a session.</p>
     ${group([row({ icon: "git-branch", title: "Clone from GitHub", go: "clone" }), row({ icon: "folder-open", title: "New empty project", go: "project-home" }), row({ icon: "package", title: "Import a zip", go: "project-home" })])}
   </div>`)),
+});
+
+// Needs attention: one list of what needs the user. Items leave when their cause is gone.
+const attnRow = (dot, title, sub, go) => `<button class="lrow"${nav({ go })}><span class="ico">${statusDot(dot)}</span><span class="tx"><b>${title}</b><span>${sub}</span></span><span class="c3">${I("chevron-right")}</span></button>`;
+
+frame({
+  id: "attention", area: "projects", title: "Needs attention",
+  why: "One place for what needs you. Items leave when their cause is gone; there is no read state.",
+  has: ["Waiting for you, Failed, and Updates groups", "Each row opens what it names", "A dot on the bell when the list is not empty"],
+  config: ["Not a notification history: system notifications stay in the Android shade"],
+  render: () => screen(appbar({ title: "Needs attention", back: true }) + body(`${secTitle("Waiting for you")}<div class="pad">${group([attnRow("wait", "Migrate to Pydantic v2", "acme-api · Needs approval", "session-approval")])}</div>
+    ${secTitle("Failed")}<div class="pad">${group([attnRow("err", "Stopped while running npm test", "blog · 12 min ago", "state-interrupted")])}</div>
+    ${secTitle("Updates")}<div class="pad">${group([row({ icon: "circle-dot", title: "Version 0.0.4 is available", sub: "You have 0.0.3", go: "set-about" })])}</div>`)),
+});
+
+frame({
+  id: "attention-empty", area: "projects", title: "Needs attention, empty",
+  why: "An empty list says so in one sentence.",
+  has: ["One sentence in the body-l secondary style", "No illustration"],
+  config: ["None"],
+  render: () => screen(appbar({ title: "Needs attention", back: true }) + body(`<div class="pad" style="padding-top:24px"><p class="t-body-l c2" style="margin:0">Nothing needs you right now.</p></div>`)),
 });
 
 frame({

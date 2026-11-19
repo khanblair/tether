@@ -107,7 +107,7 @@ Rules:
 | Smell | Limit | Rust check | Kotlin check |
 |---|---|---|---|
 | Long function | 50 lines (Rust, Kotlin); 80 for composables | Clippy `too_many_lines` | detekt `LongMethod` for 50 lines; `@Composable` functions are exempt from the tool, so the 80-line limit is checked in review |
-| Long file | 400 lines excluding tests | `tools/check-file-length.sh` (skips generated files and test folders; Rust inline tests start at `#[cfg(test)]` and are not counted) | Same script |
+| Long file | 400 lines excluding tests; 800 for a file that holds only tests (`*_tests.rs`, `*_test.rs`, `*Test.kt`, `*Tests.kt`) | `tools/check-file-length.sh` (skips generated files and test folders; Rust inline tests start at `#[cfg(test)]` and are not counted) | Same script |
 | Deep nesting | 3 levels | Clippy `excessive_nesting` | detekt `NestedBlockDepth` |
 | Too many parameters | 5 | Clippy `too_many_arguments` | detekt `LongParameterList` (`@Composable` functions and default parameters are exempt) |
 | High complexity | Cognitive complexity 15 | Clippy `cognitive_complexity` | detekt `CognitiveComplexMethod` |

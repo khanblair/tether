@@ -49,11 +49,16 @@ class KeystoreSecretsPlatform(
             cipher.doFinal(wrapped, IV_BYTES, wrapped.size - IV_BYTES)
         }
 
-    @Synchronized
-    private fun key(): SecretKey {
-        val store = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
-        return (store.getKey(alias, null) as SecretKey?) ?: generateKey()
-    }
+    /**
+     * The key for [alias], created on first use. The lock is shared by every instance in the
+     * process: two instances that both found no key would each create one, and the second would
+     * replace the first and make everything wrapped with it unreadable.
+     */
+    private fun key(): SecretKey =
+        synchronized(KEY_LOCK) {
+            val store = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
+            (store.getKey(alias, null) as SecretKey?) ?: generateKey()
+        }
 
     private fun generateKey(): SecretKey =
         try {
@@ -102,6 +107,7 @@ class KeystoreSecretsPlatform(
         /** Keystore alias of the key that wraps every secret. */
         const val DEFAULT_ALIAS = "tether_secrets_v1"
 
+        private val KEY_LOCK = Any()
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
         private const val TRANSFORMATION = "AES/GCM/NoPadding"
         private const val KEY_BITS = 256

@@ -17,6 +17,8 @@ import org.junit.runner.RunWith
 import java.io.File
 import java.security.KeyStore
 import java.util.UUID
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
 
 /**
  * Proves secrets survive a restart, and that the file holds no plaintext, with the real Android
@@ -26,6 +28,7 @@ import java.util.UUID
 @RunWith(AndroidJUnit4::class)
 class SecretVaultTest {
     private val alias = "tether_secrets_test_${UUID.randomUUID()}"
+    private val extraAliases = mutableListOf<String>()
     private lateinit var dir: File
 
     @Before
@@ -37,7 +40,8 @@ class SecretVaultTest {
     @After
     fun tearDown() {
         dir.deleteRecursively()
-        KeyStore.getInstance("AndroidKeyStore").apply { load(null) }.deleteEntry(alias)
+        val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+        (extraAliases + alias).forEach { store.deleteEntry(it) }
     }
 
     private fun newVault() = keystoreSecretVault(dir, KeystoreSecretsPlatform(alias))
@@ -80,7 +84,42 @@ class SecretVaultTest {
         assertNull(vault.reveal("provider-gemini"))
     }
 
+    @Test
+    fun platforms_created_at_the_same_time_share_one_key() {
+        repeat(RACE_ROUNDS) {
+            val raceAlias = "tether_secrets_race_${UUID.randomUUID()}"
+            extraAliases += raceAlias
+            val blobs = wrapAtOnce(raceAlias)
+
+            val reader = KeystoreSecretsPlatform(raceAlias)
+            blobs.forEach { assertEquals(SECRET, String(reader.unwrap(it, CONTEXT))) }
+        }
+    }
+
+    /** Wraps [SECRET] from several threads at once, each with its own platform on [raceAlias]. */
+    private fun wrapAtOnce(raceAlias: String): List<ByteArray> {
+        val start = CountDownLatch(1)
+        val pool = Executors.newFixedThreadPool(RACE_THREADS)
+        try {
+            val jobs =
+                List(RACE_THREADS) {
+                    pool.submit<ByteArray> {
+                        start.await()
+                        KeystoreSecretsPlatform(raceAlias).wrap(SECRET.toByteArray(), CONTEXT)
+                    }
+                }
+            start.countDown()
+            return jobs.map { it.get() }
+        } finally {
+            pool.shutdown()
+        }
+    }
+
     private companion object {
+        val CONTEXT = "provider-anthropic".toByteArray()
+        const val RACE_ROUNDS = 5
+        const val RACE_THREADS = 8
+
         const val SECRET = "sk-ant-api03-TESTVALUE-not-a-real-key"
     }
 }

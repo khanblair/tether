@@ -1,5 +1,6 @@
 // Areas 1 and 2: first run and projects.
 area("first", "First run", "Four screens: welcome with a phone check, a local profile, a provider key, and a project. Goal: install to first useful session fast (success criterion S1). Every step is skippable, and every step that needs the network says so and waits when the phone is offline. No permission prompts here.");
+area("home", "Home", "The start screen: what needs you, today's use, the week, recent projects, providers");
 area("projects", "Projects", "The entry point. Rows are sorted by last activity and show what needs attention (uncommitted changes). Everything important sits in the bottom half of the screen.");
 
 const dots = (n) => `<div class="row" style="justify-content:center;gap:6px;margin:8px 0 12px" aria-label="Step ${n} of 4">${[1, 2, 3, 4].map((i) => `<i style="width:${i === n ? 20 : 6}px;height:6px;border-radius:3px;background:${i === n ? "var(--tt-color-accent-ink)" : "var(--tt-color-line-input)"}"></i>`).join("")}</div>`;
@@ -77,7 +78,7 @@ frame({
       row({ icon: "package", title: "Import a zip", sub: "Pick an archive from your files", go: "project-home" }),
     ])}
     <div class="card"><div class="row" style="align-items:flex-start"><span class="c2">${I("info")}</span><span class="t-body-s c2">GitHub sign-in is optional. Without it you can still import a zip or start empty, but the agent cannot push or open pull requests.</span></div></div>
-  </div>`) + foot(4, btn("Skip for now", { kind: "plain", full: true, go: "projects-empty" }))),
+  </div>`) + foot(4, btn("Skip for now", { kind: "plain", full: true, go: "home-empty" }))),
 });
 
 frame({
@@ -95,12 +96,90 @@ frame({
 
 const proj = (n, branch, ch, when, extra = "") => `<button class="lrow"${nav({ go: "project-home" })}><span class="ico">${I("folder")}</span><span class="tx"><b>${n}</b><span class="mono t-mono-s">${branch}</span><span>${ch}${when}</span></span>${extra}</button>`;
 
+// Home: the start screen. Cards share one column; each card has its own shape and one clear action.
+const hmSec = (t) => `<div class="sec-title" style="margin:8px 0 4px">${t}</div>`;
+const hmHead = (t, action) => `<div class="row" style="justify-content:space-between"><b class="t-title-s">${t}</b>${action}</div>`;
+const hmItem = (dot, title, sub, go) => `<button class="lrow" style="min-height:52px;padding:8px 0"${nav({ go })}><span class="ico">${statusDot(dot)}</span><span class="tx"><b>${title}</b><span>${sub}</span></span><span class="c3">${I("chevron-right")}</span></button>`;
+const hmStat = (i, value, label, cmp) => `<div class="grow col gap4" style="padding:0 12px;${i ? "border-left:1px solid var(--tt-color-line);" : "padding-left:0;"}${i === 2 ? "padding-right:0;" : ""}"><b class="t-title-l">${value}</b><span class="t-body-s c3">${label}</span><span class="t-body-s c2">${cmp}</span></div>`;
+const hmDays = [120, 150, 95, 240, 160, 180, 212];
+const hmChart = () => {
+  const w = 340, h = 140, bw = 22, n = hmDays.length, g = (w - n * bw) / (n - 1), max = 250, labels = ["M", "T", "W", "T", "F", "S", "S"];
+  const sentence = "1.2M tokens this week, 16% more than last week.";
+  return `<svg viewBox="0 0 ${w} ${h + 22}" role="img" aria-label="${sentence}"><line x1="0" y1="${h}" x2="${w}" y2="${h}" stroke="var(--tt-chart-grid)"/><line x1="0" y1="${h / 2}" x2="${w}" y2="${h / 2}" stroke="var(--tt-chart-grid)" stroke-dasharray="3 4"/>${hmDays.map((v, i) => `<rect x="${i * (bw + g)}" y="${h - (v / max) * h}" width="${bw}" height="${(v / max) * h}" rx="3" fill="var(--tt-chart-series-1)"/><text x="${i * (bw + g) + bw / 2}" y="${h + 16}" font-size="11" text-anchor="middle" fill="var(--tt-chart-axis-text)">${labels[i]}</text>`).join("")}</svg>`;
+};
+const hmModel = (name, pct, n) => `<div class="col gap4" style="padding:6px 0"><div class="row" style="justify-content:space-between"><span class="t-body">${name}</span><span class="t-body-s c2">${pct}%</span></div><div style="height:6px;border-radius:3px;background:var(--tt-color-surface-sunken);overflow:hidden"><i style="display:block;height:100%;width:${pct}%;border-radius:3px;background:var(--tt-chart-series-${n})"></i></div></div>`;
+const hmProv = (name, ok) => `<button class="lrow" style="min-height:48px;padding:6px 0"${nav({ go: "set-providers" })}><span class="ico">${ok ? `<span class="cok">${I("circle-check")}</span>` : `<span class="c3">${I("circle-dot")}</span>`}</span><span class="tx"><b>${name}</b><span>${ok ? "Key saved" : "No key yet"}</span></span><span class="c3">${I("chevron-right")}</span></button>`;
+
+frame({
+  id: "home", area: "home", title: "Home",
+  why: "Home answers one question: what is going on. It shows what needs you first, then use, then where to go next.",
+  has: ["Summary line", "Needs you now with running sessions", "Today stats", "7-day usage chart with a sentence, by model, and Show data", "Recent projects", "Providers ready"],
+  config: ["Cost is not shown until prices are wired", "Charts are bars only, each with a text summary and a data table"],
+  render: () => screen(appbar({ title: "Home", menu: "sessions", actions: [{ icon: "bell", label: "Needs attention, 2 items", go: "attention", dot: true }] }) + body(`<div class="pad col gap12" style="padding-top:12px;padding-bottom:12px">
+    <p class="t-body-l c2" style="margin:0">2 things need you. 1 session is running.</p>
+    <div class="card col gap4">
+      ${hmHead("Needs you now", btn("See all", { kind: "text", sm: true, go: "attention" }))}
+      ${hmItem("wait", "Migrate to Pydantic v2", "acme-api · Needs approval", "session-approval")}
+      ${hmItem("err", "Stopped while running npm test", "blog · 12 min ago", "state-interrupted")}
+      <button class="lrow" style="min-height:52px;padding:8px 0"${nav({ go: "set-about" })}><span class="ico c2">${I("circle-dot")}</span><span class="tx"><b>Version 0.0.4 is available</b><span>You have 0.0.3</span></span><span class="c3">${I("chevron-right")}</span></button>
+      ${hmSec("Running now")}
+      ${hmItem("run", "Fix login timeout", "acme-api · Running", "session-running")}
+    </div>
+    <div class="card">
+      <b class="t-title-s">Today</b>
+      <div class="row" style="align-items:stretch;margin-top:12px">${hmStat(0, "4", "Sessions", "2 more than yesterday")}${hmStat(1, "212k", "Tokens", "18% more than yesterday")}${hmStat(2, "17", "Files changed", "Same as yesterday")}</div>
+    </div>
+    <div class="card col gap4">
+      ${hmHead("Usage, last 7 days", "")}
+      <p class="t-body c2" style="margin:0">1.2M tokens this week, 16% more than last week.</p>
+      <div class="chart" style="margin-top:8px">${hmChart()}</div>
+      ${hmSec("By model")}
+      ${hmModel("Sonnet 5.5", 62, 1)}${hmModel("Haiku 5.5", 25, 2)}${hmModel("Opus 5.5", 13, 3)}
+      <div class="row" style="justify-content:center;margin-top:4px">${btn("Show data", { kind: "text", sm: true, trail: "chevron-down" })}</div>
+    </div>
+    <div class="card col gap4">
+      ${hmHead("Recent projects", btn("All projects", { kind: "text", sm: true, go: "projects" }))}
+      <button class="lrow" style="min-height:56px;padding:8px 0"${nav({ go: "project-home" })}><span class="ico">${I("folder")}</span><span class="tx"><b>acme-api</b><span><span class="mono">main</span> · 3 uncommitted · 12 min ago</span></span>${badge("Running", "tonal", "loader")}</button>
+      ${proj("tether", "main", "Clean · ", "2 h ago")}
+      ${proj("dotfiles", "feat/zsh", "1 uncommitted · ", "Yesterday")}
+    </div>
+    <div class="card col gap4">
+      ${hmHead("Providers", btn("Manage", { kind: "text", sm: true, go: "set-providers" }))}
+      <div class="t-body c2">2 of 5 providers have a key</div>
+      ${hmProv("Anthropic", true)}${hmProv("OpenAI", true)}${hmProv("Google Gemini", false)}${hmProv("DeepSeek", false)}${hmProv("OpenRouter", false)}
+    </div>
+  </div>`)),
+});
+
+frame({
+  id: "home-empty", area: "home", title: "Home, first run",
+  why: "A new user sees what to do next, not empty charts.",
+  has: ["Welcome sentence that names the two steps", "Providers card with one full-width primary button", "Recent projects with New project", "Usage card that says it is empty, with no chart"],
+  config: ["The bell has no dot while the list is empty"],
+  render: () => screen(appbar({ title: "Home", menu: "sessions", actions: [{ icon: "bell", label: "Needs attention", go: "attention-empty" }] }) + body(`<div class="pad col gap12" style="padding-top:12px;padding-bottom:12px">
+    <p class="t-body-l c2" style="margin:0">Welcome to Tether. Add a key and open a project to begin.</p>
+    <div class="card col gap12">
+      <b class="t-title-s">Providers</b>
+      <div class="t-body c2">No provider key yet. Sessions need one.</div>
+      ${btn("Add a key", { full: true, icon: "key-round", go: "set-providers" })}
+    </div>
+    <div class="card col gap4">
+      ${hmHead("Recent projects", btn("New project", { kind: "text", sm: true, go: "sheet-newproject" }))}
+      <div class="t-body c2">No projects yet.</div>
+    </div>
+    <div class="card col gap4">
+      <b class="t-title-s">Usage, last 7 days</b>
+      <div class="t-body c2">No usage yet. It appears here after your first session.</div>
+    </div>
+  </div>`)),
+});
+
 frame({
   id: "projects", area: "projects", title: "Projects",
   why: "Resume work in one tap. Rows show the signal that matters: branch, uncommitted changes, last activity.",
-  has: ["Menu, Search, and bell in the top bar; the dot on the bell when something needs you", "Rows sorted by last activity", "Badge for uncommitted changes and running sessions", "Primary action at the bottom: New project"],
+  has: ["Menu and Search in the top bar", "Rows sorted by last activity", "Badge for uncommitted changes and running sessions", "Primary action at the bottom: New project"],
   config: ["Sort: last activity (default), name", "Archive by swipe, with the same action in the row menu", "Settings is in the drawer, not in this top bar"],
-  render: () => screen(appbar({ title: "Projects", menu: "sessions", actions: [{ icon: "search", label: "Search projects" }, { icon: "bell", label: "Needs attention, 2 items", go: "attention", dot: true }] }) + body(`<div class="pad col gap12">
+  render: () => screen(appbar({ title: "Projects", menu: "sessions", actions: [{ icon: "search", label: "Search projects" }] }) + body(`<div class="pad col gap12">
     ${group([
       `<button class="lrow"${nav({ go: "project-home" })}><span class="ico">${I("folder")}</span><span class="tx"><b>acme-api</b><span><span class="mono">main</span> · 3 uncommitted · 12 min ago</span></span>${badge("Running", "tonal", "loader")}</button>`,
       proj("tether", "main", "Clean · ", "2 h ago"),
@@ -116,7 +195,7 @@ frame({
   why: "Empty states explain what goes here and offer one action. No illustration.",
   has: ["One sentence on what a project is", "The same three actions as New project"],
   config: ["None"],
-  render: () => screen(appbar({ title: "Projects", menu: "sessions", actions: [{ icon: "bell", label: "Needs attention", go: "attention-empty" }] }) + body(`<div class="pad col gap16" style="padding-top:24px">
+  render: () => screen(appbar({ title: "Projects", menu: "sessions" }) + body(`<div class="pad col gap16" style="padding-top:24px">
     <p class="t-body-l c2" style="margin:0">A project is a code repository stored on this phone. Open one to start a session.</p>
     ${group([row({ icon: "git-branch", title: "Clone from GitHub", go: "clone" }), row({ icon: "folder-open", title: "New empty project", go: "project-home" }), row({ icon: "package", title: "Import a zip", go: "project-home" })])}
   </div>`)),

@@ -1,6 +1,5 @@
 package app.tether.home
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -21,39 +20,29 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.tether.R
 import app.tether.design.TetherIcons
 import app.tether.design.TetherTheme
-import app.tether.design.components.BadgeTone
 import app.tether.design.components.ListGroup
-import app.tether.design.components.ListRow
-import app.tether.design.components.NotificationBell
 import app.tether.design.components.PrimaryButton
 import app.tether.design.components.ProjectRow
-import app.tether.design.components.StatusBadge
-import app.tether.design.components.TetherIcon
 import app.tether.design.components.TetherIconButton
 import app.tether.design.components.TetherSearchField
-import app.tether.design.components.TetherSheet
 import app.tether.design.components.TetherTopBar
 import app.tether.design.tokens.TetherBorder
 import app.tether.design.tokens.TetherSpace
 
 /**
- * The Projects screen, the app's home. The top bar opens the drawer, searches projects by name,
- * and opens Needs attention. The bottom action starts the New project sheet.
+ * The Projects screen, a drawer destination. The top bar opens the drawer and searches projects
+ * by name. The bottom action starts the New project sheet.
  */
 @Composable
 fun ProjectsScreen(
     viewModel: ProjectsViewModel,
-    hasAttention: Boolean,
-    attentionCount: Int,
     onOpenMenu: () -> Unit,
-    onOpenAttention: () -> Unit,
     onOpenProject: (String) -> Unit,
     onNewProject: (NewProjectChoice) -> Unit,
 ) {
@@ -74,11 +63,8 @@ fun ProjectsScreen(
         topBar = {
             ProjectsTopBar(
                 showSearch = hasProjects,
-                hasAttention = hasAttention,
-                attentionCount = attentionCount,
                 onOpenMenu = onOpenMenu,
                 onToggleSearch = toggleSearch,
-                onOpenAttention = onOpenAttention,
             )
         },
         bottomBar = {
@@ -107,11 +93,8 @@ fun ProjectsScreen(
 @Composable
 private fun ProjectsTopBar(
     showSearch: Boolean,
-    hasAttention: Boolean,
-    attentionCount: Int,
     onOpenMenu: () -> Unit,
     onToggleSearch: () -> Unit,
-    onOpenAttention: () -> Unit,
 ) {
     TetherTopBar(
         title = stringResource(R.string.route_projects_title),
@@ -130,22 +113,9 @@ private fun ProjectsTopBar(
                     onClick = onToggleSearch,
                 )
             }
-            NotificationBell(
-                hasAttention = hasAttention,
-                contentDescription = attentionLabel(attentionCount),
-                onClick = onOpenAttention,
-            )
         },
     )
 }
-
-@Composable
-private fun attentionLabel(count: Int): String =
-    if (count > 0) {
-        pluralStringResource(R.plurals.home_bell_count, count, count)
-    } else {
-        stringResource(R.string.home_bell_action)
-    }
 
 @Composable
 private fun NewProjectBar(onClick: () -> Unit) {
@@ -242,80 +212,14 @@ private fun ProjectList(
                     color = TetherTheme.colors.line,
                 )
             }
-            val ago = relativeTime(state.now, project.lastActivityAt).text()
-            val summary =
-                if (project.uncommitted > 0) {
-                    pluralStringResource(
-                        R.plurals.home_project_dirty,
-                        project.uncommitted,
-                        project.uncommitted,
-                        ago,
-                    )
-                } else {
-                    stringResource(R.string.home_project_clean, ago)
-                }
-            val runningBadge: @Composable () -> Unit = {
-                StatusBadge(
-                    label = stringResource(R.string.home_running_badge),
-                    tone = BadgeTone.Tonal,
-                    icon = TetherIcons.Loader,
-                )
-            }
+            val runningBadge: @Composable () -> Unit = { RunningProjectBadge() }
             ProjectRow(
                 name = project.name,
                 branch = project.branch,
-                summary = summary,
+                summary = projectSummary(project, state.now),
                 onClick = { onOpenProject(project.id) },
                 badge = if (project.running) runningBadge else null,
             )
         }
     }
-}
-
-@Composable
-private fun NewProjectSheet(
-    onDismiss: () -> Unit,
-    onChoose: (NewProjectChoice) -> Unit,
-) {
-    TetherSheet(title = stringResource(R.string.home_new_project), onDismiss = onDismiss) {
-        ListGroup(modifier = Modifier.padding(horizontal = TetherSpace.space4)) {
-            SheetRow(
-                icon = TetherIcons.GitBranch,
-                title = R.string.home_new_project_clone,
-                subtitle = R.string.home_new_project_clone_sub,
-                onClick = { onChoose(NewProjectChoice.Clone) },
-            )
-            HorizontalDivider(thickness = TetherBorder.hairline, color = TetherTheme.colors.line)
-            SheetRow(
-                icon = TetherIcons.FolderOpen,
-                title = R.string.home_new_project_empty,
-                subtitle = R.string.home_new_project_empty_sub,
-                onClick = { onChoose(NewProjectChoice.Empty) },
-            )
-            HorizontalDivider(thickness = TetherBorder.hairline, color = TetherTheme.colors.line)
-            SheetRow(
-                icon = TetherIcons.Package,
-                title = R.string.home_new_project_import,
-                subtitle = R.string.home_new_project_import_sub,
-                onClick = { onChoose(NewProjectChoice.Import) },
-            )
-        }
-    }
-}
-
-@Composable
-private fun SheetRow(
-    icon: ImageVector,
-    @StringRes title: Int,
-    @StringRes subtitle: Int,
-    onClick: () -> Unit,
-) {
-    ListRow(
-        title = stringResource(title),
-        subtitle = stringResource(subtitle),
-        leading = {
-            TetherIcon(icon = icon, contentDescription = null, tint = TetherTheme.colors.text2)
-        },
-        onClick = onClick,
-    )
 }

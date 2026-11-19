@@ -145,7 +145,7 @@ private fun RowDivider() {
 }
 
 @Composable
-private fun ApprovalRow(
+internal fun ApprovalRow(
     row: AttentionItem.Approval,
     onClick: () -> Unit,
 ) {
@@ -159,7 +159,7 @@ private fun ApprovalRow(
 }
 
 @Composable
-private fun FailureRow(
+internal fun FailureRow(
     row: AttentionItem.Failure,
     now: Long,
     onClick: () -> Unit,
@@ -175,7 +175,7 @@ private fun FailureRow(
 }
 
 @Composable
-private fun UpdateRow(
+internal fun UpdateRow(
     row: AttentionItem.Update,
     onClick: () -> Unit,
 ) {
@@ -192,6 +192,26 @@ private fun UpdateRow(
         trailing = { Chevron() },
         onClick = onClick,
     )
+}
+
+/** One Needs attention row for any item. Home uses it, so both lists word and act the same. */
+@Composable
+internal fun AttentionItemRow(
+    item: AttentionItem,
+    now: Long,
+    onOpenSession: (String) -> Unit,
+    onOpenAbout: () -> Unit,
+) {
+    when (item) {
+        is AttentionItem.Approval ->
+            ApprovalRow(
+                row = item,
+                onClick = { onOpenSession(item.sessionId) },
+            )
+        is AttentionItem.Failure ->
+            FailureRow(row = item, now = now, onClick = { onOpenSession(item.sessionId) })
+        is AttentionItem.Update -> UpdateRow(row = item, onClick = onOpenAbout)
+    }
 }
 
 @Composable

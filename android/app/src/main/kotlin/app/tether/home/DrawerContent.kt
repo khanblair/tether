@@ -15,7 +15,9 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.Text
@@ -30,6 +32,8 @@ import androidx.compose.ui.res.stringResource
 import app.tether.R
 import app.tether.design.TetherIcons
 import app.tether.design.TetherTheme
+import app.tether.design.ThemeMode
+import app.tether.design.components.DrawerItem
 import app.tether.design.components.ListRow
 import app.tether.design.components.PrimaryButton
 import app.tether.design.components.SectionTitle
@@ -37,21 +41,45 @@ import app.tether.design.components.SessionRow
 import app.tether.design.components.SessionState
 import app.tether.design.components.TetherIcon
 import app.tether.design.components.TetherSearchField
+import app.tether.design.components.ThemeToggleButton
+import app.tether.design.next
+import app.tether.design.tokens.TetherBorder
 import app.tether.design.tokens.TetherSize
 import app.tether.design.tokens.TetherSpace
+import app.tether.nav.Route
+
+/** A top-level destination in the drawer. */
+private data class Destination(
+    val route: Route,
+    @StringRes val label: Int,
+    val icon: ImageVector,
+)
+
+private val DESTINATIONS =
+    listOf(
+        Destination(Route.Home, R.string.drawer_home, TetherIcons.House),
+        Destination(Route.Projects, R.string.drawer_projects, TetherIcons.Folder),
+        Destination(Route.Attention, R.string.drawer_attention, TetherIcons.Bell),
+        Destination(Route.Cost, R.string.drawer_usage, TetherIcons.ChartColumn),
+        Destination(Route.Runs, R.string.drawer_runs, TetherIcons.Activity),
+    )
 
 /**
- * The navigation drawer: sessions grouped by project, with the search, All projects, and the
- * actions pinned at the bottom. Every item is a plain row or button, so the drawer never needs a
- * bottom bar. [now] is the time the relative times are taken from.
+ * The navigation drawer. The header holds the theme toggle. The list holds the top-level
+ * destinations, then the session search and the sessions grouped by project. The actions stay
+ * pinned at the bottom. [now] is the time the relative times are taken from.
  */
 @Composable
 fun HomeDrawer(
     sessions: List<SessionSummary>,
     query: String,
     onQueryChange: (String) -> Unit,
+    currentRoute: String?,
+    attentionCount: Int,
+    themeMode: ThemeMode,
+    onToggleTheme: () -> Unit,
+    onDestination: (Route) -> Unit,
     onOpenSession: (String) -> Unit,
-    onAllProjects: () -> Unit,
     onNewSession: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenSkills: () -> Unit,
@@ -63,20 +91,16 @@ fun HomeDrawer(
         drawerContentColor = TetherTheme.colors.text,
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            DrawerHeader()
-            TetherSearchField(
-                value = query,
-                onValueChange = onQueryChange,
-                placeholder = stringResource(R.string.drawer_search_placeholder),
-                clearLabel = stringResource(R.string.home_search_clear),
-                modifier = Modifier.padding(horizontal = TetherSpace.space4),
-            )
-            SessionList(
+            DrawerHeader(themeMode = themeMode, onToggleTheme = onToggleTheme)
+            DrawerList(
                 sessions = sessions,
                 query = query,
-                now = now,
+                onQueryChange = onQueryChange,
+                currentRoute = currentRoute,
+                attentionCount = attentionCount,
+                onDestination = onDestination,
                 onOpenSession = onOpenSession,
-                onAllProjects = onAllProjects,
+                now = now,
                 modifier = Modifier.weight(1f),
             )
             DrawerFooter(
@@ -89,7 +113,11 @@ fun HomeDrawer(
 }
 
 @Composable
-private fun DrawerHeader() {
+private fun DrawerHeader(
+    themeMode: ThemeMode,
+    onToggleTheme: () -> Unit,
+) {
+    val current = themeModeName(themeMode)
     Row(
         modifier =
             Modifier
@@ -109,21 +137,52 @@ private fun DrawerHeader() {
             text = stringResource(R.string.about_app_name),
             style = MaterialTheme.typography.titleMedium,
             color = TetherTheme.colors.text,
+            modifier = Modifier.weight(1f),
+        )
+        ThemeToggleButton(
+            mode = themeMode,
+            contentDescription =
+                stringResource(
+                    R.string.drawer_theme_description,
+                    current,
+                    themeModeName(themeMode.next()),
+                ),
+            onClick = onToggleTheme,
         )
     }
 }
 
 @Composable
-private fun SessionList(
+private fun DrawerList(
     sessions: List<SessionSummary>,
     query: String,
-    now: Long,
+    onQueryChange: (String) -> Unit,
+    currentRoute: String?,
+    attentionCount: Int,
+    onDestination: (Route) -> Unit,
     onOpenSession: (String) -> Unit,
-    onAllProjects: () -> Unit,
+    now: Long,
     modifier: Modifier,
 ) {
     val groups = remember(sessions, query) { groupSessions(sessions, query) }
     LazyColumn(modifier = modifier.fillMaxWidth()) {
+        destinationItems(currentRoute, attentionCount, onDestination)
+        item {
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = TetherSpace.space2),
+                thickness = TetherBorder.hairline,
+                color = TetherTheme.colors.line,
+            )
+        }
+        item {
+            TetherSearchField(
+                value = query,
+                onValueChange = onQueryChange,
+                placeholder = stringResource(R.string.drawer_search_placeholder),
+                clearLabel = stringResource(R.string.home_search_clear),
+                modifier = Modifier.padding(horizontal = TetherSpace.space4),
+            )
+        }
         if (groups.isEmpty() && query.isNotBlank()) {
             item { NoSessionMatch(query = query) }
         }
@@ -138,15 +197,38 @@ private fun SessionList(
                 )
             }
         }
-        item {
-            ListRow(
-                title = stringResource(R.string.drawer_all_projects),
-                leading = { DrawerIcon(TetherIcons.Folder) },
-                onClick = onAllProjects,
-            )
-        }
     }
 }
+
+private fun LazyListScope.destinationItems(
+    currentRoute: String?,
+    attentionCount: Int,
+    onDestination: (Route) -> Unit,
+) {
+    items(DESTINATIONS, key = { it.route.path }) { destination ->
+        DrawerItem(
+            label = stringResource(destination.label),
+            icon = destination.icon,
+            selected = currentRoute == destination.route.path,
+            onClick = { onDestination(destination.route) },
+            badge = destination.badgeFor(attentionCount),
+        )
+    }
+}
+
+/** The count shown beside Needs attention, when anything needs the user. */
+private fun Destination.badgeFor(attentionCount: Int): String? =
+    if (route == Route.Attention && attentionCount > 0) attentionCount.toString() else null
+
+@Composable
+private fun themeModeName(mode: ThemeMode): String =
+    stringResource(
+        when (mode) {
+            ThemeMode.System -> R.string.settings_theme_system
+            ThemeMode.Light -> R.string.settings_theme_light
+            ThemeMode.Dark -> R.string.settings_theme_dark
+        },
+    )
 
 @Composable
 private fun NoSessionMatch(query: String) {

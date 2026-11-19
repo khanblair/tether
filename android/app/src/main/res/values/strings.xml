@@ -2,6 +2,7 @@
 <resources>
     <!-- Routes -->
     <string name="route_onboarding_title">Welcome</string>
+    <string name="route_home_title">Home</string>
     <string name="route_projects_title">Projects</string>
     <string name="route_attention_title">Needs attention</string>
     <string name="route_new_session_title">New session</string>
@@ -32,6 +33,7 @@
     <string name="core_event_ready">Ready, core %1$s</string>
     <string name="core_event_test">Test: %1$s</string>
     <string name="core_event_other">Core event</string>
+    <string name="core_test_event_sent">Test event sent</string>
 
     <!-- Providers list -->
     <string name="providers_title">Model providers</string>
@@ -105,7 +107,7 @@
     <string name="settings_theme_system">System</string>
     <string name="settings_theme_light">Light</string>
     <string name="settings_theme_dark">Dark</string>
-    <string name="settings_theme_note">The choice resets when the app restarts until settings storage ships in P1.</string>
+    <string name="settings_theme_note">Your choice is saved on this phone and applies at once.</string>
     <string name="settings_about_title">About and updates</string>
     <string name="settings_about_version">Version %1$s</string>
     <string name="settings_about_update_available">Update available: version %1$s</string>
@@ -140,6 +142,63 @@
     <string name="home_new_project_import">Import a zip</string>
     <string name="home_new_project_import_sub">Unpack an archive into a new project</string>
 
+    <!-- Home dashboard -->
+    <plurals name="dashboard_summary_needs">
+        <item quantity="one">%1$d thing needs you.</item>
+        <item quantity="other">%1$d things need you.</item>
+    </plurals>
+    <plurals name="dashboard_summary_running">
+        <item quantity="one">%1$d session is running.</item>
+        <item quantity="other">%1$d sessions are running.</item>
+    </plurals>
+    <string name="dashboard_summary_calm">Nothing needs you right now.</string>
+    <string name="dashboard_summary_welcome">Welcome to Tether. Add a key and open a project to begin.</string>
+    <string name="dashboard_needs_title">Needs you now</string>
+    <string name="dashboard_see_all">See all</string>
+    <string name="dashboard_running_title">Running now</string>
+    <string name="dashboard_today_title">Today</string>
+    <string name="dashboard_stat_sessions">Sessions</string>
+    <string name="dashboard_stat_tokens">Tokens</string>
+    <string name="dashboard_stat_files">Files changed</string>
+    <string name="dashboard_base_yesterday">yesterday</string>
+    <string name="dashboard_change_same">Same as %1$s</string>
+    <string name="dashboard_change_no_baseline">No earlier data</string>
+    <plurals name="dashboard_change_more">
+        <item quantity="one">%1$d more than %2$s</item>
+        <item quantity="other">%1$d more than %2$s</item>
+    </plurals>
+    <plurals name="dashboard_change_less">
+        <item quantity="one">%1$d fewer than %2$s</item>
+        <item quantity="other">%1$d fewer than %2$s</item>
+    </plurals>
+    <string name="dashboard_change_percent_more">%1$d%% more than %2$s</string>
+    <string name="dashboard_change_percent_less">%1$d%% less than %2$s</string>
+    <string name="dashboard_usage_title">Usage, last 7 days</string>
+    <string name="dashboard_week_more">%1$s tokens this week, %2$d%% more than last week.</string>
+    <string name="dashboard_week_less">%1$s tokens this week, %2$d%% less than last week.</string>
+    <string name="dashboard_week_same">%1$s tokens this week. Same as last week.</string>
+    <string name="dashboard_week_none">%1$s tokens this week.</string>
+    <string name="dashboard_usage_empty">No usage yet. It appears here after your first session.</string>
+    <string name="dashboard_by_model">By model</string>
+    <string name="dashboard_share_percent">%1$d%%</string>
+    <string name="dashboard_show_data">Show data</string>
+    <string name="dashboard_hide_data">Hide data</string>
+    <string name="dashboard_table_day">Day</string>
+    <string name="dashboard_table_tokens">Tokens</string>
+    <string name="dashboard_recent_title">Recent projects</string>
+    <string name="dashboard_all_projects">All projects</string>
+    <string name="dashboard_no_projects">No projects yet.</string>
+    <string name="dashboard_providers_title">Providers</string>
+    <plurals name="dashboard_providers_count">
+        <item quantity="one">%1$d of %2$d providers have a key</item>
+        <item quantity="other">%1$d of %2$d providers have a key</item>
+    </plurals>
+    <string name="dashboard_providers_manage">Manage</string>
+    <string name="dashboard_providers_none">No provider key yet. Sessions need one.</string>
+    <string name="dashboard_add_key">Add a key</string>
+    <string name="dashboard_provider_key_saved">Key saved</string>
+    <string name="dashboard_provider_no_key">No key yet</string>
+
     <!-- Relative times -->
     <string name="time_just_now">just now</string>
     <string name="time_minutes_ago">%1$d min ago</string>
@@ -153,7 +212,12 @@
     <!-- Navigation drawer -->
     <string name="drawer_search_placeholder">Search sessions</string>
     <string name="drawer_search_empty">No session matches \"%1$s\"</string>
-    <string name="drawer_all_projects">All projects</string>
+    <string name="drawer_home">Home</string>
+    <string name="drawer_projects">Projects</string>
+    <string name="drawer_attention">Needs attention</string>
+    <string name="drawer_usage">Usage and cost</string>
+    <string name="drawer_runs">Runs</string>
+    <string name="drawer_theme_description">Theme: %1$s. Switch to %2$s.</string>
     <string name="drawer_new_session">New session</string>
     <string name="drawer_settings">Settings</string>
     <string name="drawer_skills">Skills and memory</string>

@@ -71,7 +71,7 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 | P0-17 | Commit size check | Blair with Claude | Done | n/a | `tools/check-commit-size.sh`, `just commits`, and a `tooling` CI step on pull requests |
 | P0-19 | Publish a signed release automatically | Blair with Claude | Done | #134, #136 | Merged; `v0.0.1` published as the latest release, signed with the pinned key. Releases are never pre-releases (#136) |
 | P0-16 | Release workflow | Blair with Claude | Done | #134 | Ran on the merge of #134 and published `v0.0.1`; issue #4 closed |
-| P1-05 | Anthropic adapter: streaming, tool calls, usage, caching headers | Blair with Claude | In progress | | Issue #9. Adapter, shared HTTP client, 49 new tests, fixtures, and an ignored live smoke test. Not done: the nightly run of the live test needs an `ANTHROPIC_API_KEY` repository secret |
+| P1-05 | Anthropic adapter: streaming, tool calls, usage, caching headers | Blair with Claude | In review | #143 | Issue #9 (stays open for the nightly run). Adapter, shared HTTP client, 49 new tests, fixtures, and an ignored live smoke test. Not done: the nightly run of the live test needs an `ANTHROPIC_API_KEY` repository secret |
 | P1-04 | SSE parser and provider trait | Blair with Claude | In review | #141 | Issue #8. `ChatProvider` trait and types, `SseParser` with 29 tests including every split position |
 | P1-01 | `tether-types` message, part, event, usage, error types | Blair with Claude | Done | #138 | Merged; issue #5 closed. Types, 15 new events, and FFI views; bindings regenerated. Sonnet and Codex reviews done |
 
@@ -140,7 +140,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Files | Change | PR |
 |---|---|---|---|
-| 2026-11-19 | `core/crates/tether-providers/src/{anthropic/,client.rs}`, `core/fixtures/provider-streams/anthropic-*.sse`, `core/deny.toml`, `core/Cargo.*` | Anthropic adapter, shared HTTP client, fixtures, and the license allowance for P1-05 | |
+| 2026-11-19 | `core/crates/tether-providers/src/{anthropic/,client.rs}`, `core/fixtures/provider-streams/anthropic-*.sse`, `core/deny.toml`, `core/Cargo.*` | Anthropic adapter, shared HTTP client, fixtures, and the license allowance for P1-05 | #143 |
 | 2026-11-19 | `core/crates/tether-providers/`, `core/fixtures/provider-streams/`, `core/Cargo.*` | Provider trait, request, event and error types, and the SSE parser for P1-04 | #141 |
 | 2026-11-18 | `AGENTS.md`, `CLAUDE.md`, `docs/README.md`, `docs/project-structure.md`, `docs/progress-tracker.md` | Agent instruction files at the repo root, listed in the structure doc and linked from the docs README | #139 |
 | 2026-11-18 | `core/crates/tether-types/`, `core/crates/tether-ffi/src/views/`, `core/Cargo.*`, generated Kotlin bindings, `ProjectsScreen.kt`, `strings.xml` | Shared types, events, and FFI views for P1-01 | #138 |

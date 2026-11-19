@@ -12,6 +12,8 @@ publish = false
 [workspace.dependencies]
 tether-types = { path = "crates/tether-types" }
 tether-engine = { path = "crates/tether-engine" }
+tether-providers = { path = "crates/tether-providers" }
+tether-store = { path = "crates/tether-store" }
 rusqlite = { version = "0.43", features = ["bundled"] }
 tether-secrets = { path = "crates/tether-secrets" }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "stream"] }

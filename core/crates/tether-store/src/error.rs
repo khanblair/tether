@@ -84,4 +84,10 @@ pub enum StoreError {
     /// The input list is too long to assign SQLite positions.
     #[error("model list is too long to store")]
     PositionOverflow,
+    /// A transient screen state was offered for storage. Only a finished test result is saved.
+    #[error("provider status {status} is screen state and is not stored")]
+    TransientStatus {
+        /// The status text that was refused.
+        status: &'static str,
+    },
 }

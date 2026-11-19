@@ -3,7 +3,7 @@ package app.tether.updates
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
+import androidx.core.net.toUri
 import java.io.File
 
 /** Creates the update installer for the Play build, which never installs updates itself. */
@@ -29,9 +29,7 @@ internal class StoreLinkUpdateInstaller(
         val market =
             Intent(
                 Intent.ACTION_VIEW,
-                Uri.parse(
-                    "market://details?id=" + context.packageName,
-                ),
+                ("market://details?id=" + context.packageName).toUri(),
             ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         try {
             context.startActivity(market)
@@ -39,9 +37,8 @@ internal class StoreLinkUpdateInstaller(
             val web =
                 Intent(
                     Intent.ACTION_VIEW,
-                    Uri.parse(
-                        "https://play.google.com/store/apps/details?id=" + context.packageName,
-                    ),
+                    ("https://play.google.com/store/apps/details?id=" + context.packageName)
+                        .toUri(),
                 ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(web)
         }

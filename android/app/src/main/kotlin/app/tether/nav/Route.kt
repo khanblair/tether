@@ -2,6 +2,7 @@ package app.tether.nav
 
 import androidx.annotation.StringRes
 import app.tether.R
+import app.tether.core.generated.ProviderView
 
 /** Every route in the app. Screens fill in as phases ship; see docs/build-plan.md. */
 enum class Route(
@@ -17,5 +18,14 @@ enum class Route(
     Runs("runs", R.string.route_runs_title),
     Linux("linux", R.string.route_linux_title),
     Settings("settings", R.string.route_settings_title),
+    Providers("providers", R.string.providers_title),
     Cost("cost", R.string.route_cost_title),
 }
+
+/** Routes whose path has arguments. They are not entries of [Route]. */
+object Routes {
+    const val PROVIDER_DETAIL = "providers/{provider}"
+}
+
+/** The detail path for [provider], such as "providers/ANTHROPIC". */
+fun providerDetailPath(provider: ProviderView) = "providers/${provider.name}"

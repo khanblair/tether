@@ -38,6 +38,18 @@ impl ErrorStyle for GeminiErrors {
     fn classify(&self, status: reqwest::StatusCode, body: &[u8]) -> Option<ProviderError> {
         let parsed = serde_json::from_slice::<ErrorBody>(body).ok()?;
         let error = parsed.error;
+        let region_blocked = matches!(
+            status,
+            reqwest::StatusCode::BAD_REQUEST | reqwest::StatusCode::FORBIDDEN
+        ) && error
+            .message
+            .to_ascii_lowercase()
+            .contains("location is not supported");
+        if region_blocked {
+            return Some(ProviderError::Blocked {
+                message: error.message,
+            });
+        }
         let invalid_key = error
             .details
             .iter()

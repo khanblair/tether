@@ -22,6 +22,7 @@ cli = ["uniffi/cli"]
 [dependencies]
 tether-engine.workspace = true
 tether-secrets.workspace = true
+tether-store.workspace = true
 tether-types.workspace = true
 thiserror.workspace = true
 tokio.workspace = true

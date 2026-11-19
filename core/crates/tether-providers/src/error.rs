@@ -12,6 +12,12 @@ pub enum ProviderError {
         /// What the provider said.
         message: String,
     },
+    /// The provider forbids this region or account.
+    #[error("the provider blocked access: {message}")]
+    Blocked {
+        /// What the provider said.
+        message: String,
+    },
     /// The provider asked the client to slow down.
     #[error("rate limited: {message}")]
     RateLimited {
@@ -55,7 +61,7 @@ impl From<ProviderError> for CoreError {
     fn from(error: ProviderError) -> Self {
         let message = error.to_string();
         match error {
-            ProviderError::Auth { .. } => Self::Auth { message },
+            ProviderError::Auth { .. } | ProviderError::Blocked { .. } => Self::Auth { message },
             ProviderError::RateLimited { .. } => Self::RateLimited { message },
             ProviderError::InvalidRequest { .. } => Self::InvalidInput { message },
             ProviderError::Server { .. } | ProviderError::Network { .. } => {

@@ -72,25 +72,54 @@ pub(crate) async fn get_json<T: DeserializeOwned>(
     call: GetCall<'_>,
     cancel: &CancellationToken,
 ) -> Result<T, ProviderError> {
-    let response = tokio::select! {
-        biased;
-        () = cancel.cancelled() => return Err(ProviderError::Cancelled),
-        sent = call.client.get(&call.url).headers(call.headers).send() => sent.map_err(network_error)?,
-    };
+    let response = send_get(&call, cancel).await?;
     if !response.status().is_success() {
-        let status = response.status();
-        let retry_after = retry_after_secs(response.headers());
-        let body = tokio::select! {
-            biased;
-            () = cancel.cancelled() => return Err(ProviderError::Cancelled),
-            body = read_error_body(response) => body,
-        };
-        return Err(status_error(status, retry_after, &body, call.errors));
+        return Err(read_get_error(response, call.errors, cancel).await);
     }
     let body = read_json_body(response, cancel).await?;
     serde_json::from_slice(&body).map_err(|_| ProviderError::MalformedStream {
         message: "the model list was not valid JSON".to_owned(),
     })
+}
+
+/// Sends a bounded JSON GET and ignores the successful response body.
+pub(crate) async fn get_status(
+    call: GetCall<'_>,
+    cancel: &CancellationToken,
+) -> Result<(), ProviderError> {
+    let response = send_get(&call, cancel).await?;
+    if !response.status().is_success() {
+        return Err(read_get_error(response, call.errors, cancel).await);
+    }
+    read_json_body(response, cancel).await.map(|_| ())
+}
+
+async fn send_get(
+    call: &GetCall<'_>,
+    cancel: &CancellationToken,
+) -> Result<Response, ProviderError> {
+    tokio::select! {
+        biased;
+        () = cancel.cancelled() => Err(ProviderError::Cancelled),
+        sent = call.client.get(&call.url).headers(call.headers.clone()).send() => {
+            sent.map_err(network_error)
+        },
+    }
+}
+
+async fn read_get_error(
+    response: Response,
+    errors: &dyn ErrorStyle,
+    cancel: &CancellationToken,
+) -> ProviderError {
+    let status = response.status();
+    let retry_after = retry_after_secs(response.headers());
+    let body = tokio::select! {
+        biased;
+        () = cancel.cancelled() => return ProviderError::Cancelled,
+        body = read_error_body(response) => body,
+    };
+    status_error(status, retry_after, &body, errors)
 }
 
 async fn read_json_body(

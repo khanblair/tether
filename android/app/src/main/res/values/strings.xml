@@ -29,7 +29,74 @@
     <string name="core_event_test">Test: %1$s</string>
     <string name="core_event_other">Core event</string>
 
+    <!-- Providers list -->
+    <string name="providers_title">Model providers</string>
+    <string name="providers_settings_subtitle">Keys and connection status</string>
+    <string name="providers_load_failed">Could not read one or more providers. Try again.</string>
+    <string name="providers_name_anthropic">Anthropic</string>
+    <string name="providers_name_openai">OpenAI</string>
+    <string name="providers_name_gemini">Google Gemini</string>
+    <string name="providers_name_deepseek">DeepSeek</string>
+    <string name="providers_name_openrouter">OpenRouter</string>
+    <string name="providers_subtitle_no_key">No key</string>
+    <string name="providers_subtitle_key_not_tested">Key saved, not tested</string>
+    <string name="providers_subtitle_bad_key">Key rejected. Check the key.</string>
+    <string name="providers_subtitle_network">Could not reach the provider. Check your connection.</string>
+    <string name="providers_subtitle_blocked">The provider blocked this request. Your region or account may not be supported.</string>
+    <plurals name="providers_subtitle_ok">
+        <item quantity="one">%1$d model, tested %2$s</item>
+        <item quantity="other">%1$d models, tested %2$s</item>
+    </plurals>
+    <plurals name="providers_models">
+        <item quantity="one">%1$d model</item>
+        <item quantity="other">%1$d models</item>
+    </plurals>
+    <string name="providers_status_no_key">No key</string>
+    <string name="providers_status_connected">Connected</string>
+    <string name="providers_status_not_tested">Not tested</string>
+    <string name="providers_status_key_rejected">Key rejected</string>
+    <string name="providers_status_network_error">Network error</string>
+    <string name="providers_status_blocked">Blocked</string>
+
+    <!-- Provider detail -->
+    <string name="provider_detail_key_label">API key</string>
+    <string name="provider_detail_key_empty">Enter an API key</string>
+    <string name="provider_detail_key_saved">Saved key</string>
+    <string name="provider_detail_key_hint">Showing a saved key asks for your fingerprint or screen lock.</string>
+    <string name="provider_detail_error_empty">Enter a key. It cannot be empty.</string>
+    <string name="provider_detail_reveal">Show key</string>
+    <string name="provider_detail_hide">Hide key</string>
+    <string name="provider_detail_paste">Paste</string>
+    <string name="provider_detail_save">Save key</string>
+    <string name="provider_detail_test">Test connection</string>
+    <string name="provider_detail_test_again">Test again</string>
+    <string name="provider_detail_testing">Testing</string>
+    <string name="provider_detail_test_target">Test connection calls %1$s</string>
+    <string name="provider_detail_testing_title">Testing the key</string>
+    <string name="provider_detail_accepted_title">Key accepted</string>
+    <plurals name="provider_detail_models_available">
+        <item quantity="one">%1$d model available.</item>
+        <item quantity="other">%1$d models available.</item>
+    </plurals>
+    <string name="provider_detail_rejected_title">Key rejected</string>
+    <string name="provider_detail_rejected_body">The provider did not accept this key. Check it and try again.</string>
+    <string name="provider_detail_offline_title">Could not connect</string>
+    <string name="provider_detail_offline_body">The provider did not answer. Check your connection and try again.</string>
+    <string name="provider_detail_blocked_title">Request blocked</string>
+    <string name="provider_detail_blocked_body">The provider blocked this request. Your region or account may not be supported.</string>
+    <string name="provider_detail_remove">Remove key</string>
+    <string name="provider_detail_remove_title">Remove the %1$s key?</string>
+    <string name="provider_detail_remove_body">Your sessions stay. You can add a key again later.</string>
+    <string name="provider_detail_dismiss">Dismiss</string>
+    <string name="provider_detail_message_load">Could not load this provider. Go back and try again.</string>
+    <string name="provider_detail_message_save">Could not save the key. Try again.</string>
+    <string name="provider_detail_message_remove">Could not remove the key. Try again.</string>
+    <string name="provider_detail_message_reveal">Could not show the saved key. Try again.</string>
+    <string name="provider_detail_message_test">Could not run the connection test. Try again.</string>
+
     <!-- Settings -->
+    <string name="settings_reveal_auth_title">Reveal API key</string>
+    <string name="settings_cancel">Cancel</string>
     <string name="settings_theme_title">Theme</string>
     <string name="settings_theme_system">System</string>
     <string name="settings_theme_light">Light</string>

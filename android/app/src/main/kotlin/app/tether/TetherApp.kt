@@ -10,7 +10,7 @@ class TetherApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        module = AppModule()
+        module = AppModule(this)
         module.core.start()
     }
 }

@@ -103,7 +103,7 @@ impl From<SecretsError> for SecretVaultError {
 /// a biometric check, to reveal it. Providers read keys inside the core, not through this.
 #[derive(uniffi::Object)]
 pub struct SecretVault {
-    store: SecretStore,
+    pub(crate) store: SecretStore,
 }
 
 #[uniffi::export]

@@ -8,6 +8,7 @@ description = "Engine: sessions, turn loop, permissions, executor router, checkp
 
 [dependencies]
 tether-types.workspace = true
+tether-providers.workspace = true
 reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true

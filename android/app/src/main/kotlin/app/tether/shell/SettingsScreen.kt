@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -14,18 +16,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.tether.R
+import app.tether.design.TetherIcons
 import app.tether.design.TetherTheme
 import app.tether.design.ThemeMode
+import app.tether.design.components.ListRow
+import app.tether.design.components.TetherIcon
 import app.tether.design.components.TetherTopBar
 import app.tether.design.tokens.TetherSpace
 import app.tether.di.AppModule
 import app.tether.nav.Route
 
-/** P0 settings: only the theme choice, so light and dark can be checked by hand. */
+/** The entry to model providers, and the theme choice. */
 @Composable
 fun SettingsScreen(
     module: AppModule,
     onBack: () -> Unit,
+    onOpenProviders: () -> Unit,
 ) {
     val mode by module.themeMode.collectAsStateWithLifecycle()
     val labels =
@@ -45,9 +51,27 @@ fun SettingsScreen(
         },
     ) { padding ->
         Column(
-            modifier = Modifier.padding(padding).padding(TetherSpace.space4).fillMaxWidth(),
+            modifier =
+                Modifier
+                    .padding(
+                        padding,
+                    ).verticalScroll(rememberScrollState())
+                    .padding(TetherSpace.space4)
+                    .fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(TetherSpace.space3),
         ) {
+            ListRow(
+                title = stringResource(R.string.providers_title),
+                subtitle = stringResource(R.string.providers_settings_subtitle),
+                trailing = {
+                    TetherIcon(
+                        icon = TetherIcons.ChevronRight,
+                        contentDescription = null,
+                        tint = TetherTheme.colors.text3,
+                    )
+                },
+                onClick = onOpenProviders,
+            )
             Text(
                 text = stringResource(R.string.settings_theme_title),
                 style = MaterialTheme.typography.titleSmall,

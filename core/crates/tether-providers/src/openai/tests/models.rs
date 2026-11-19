@@ -1,5 +1,5 @@
 use super::KEY;
-use crate::test_support::{Reply, start};
+use crate::test_support::{Reply, request_line_for, start};
 use crate::{ModelCatalog, OpenAiConfig, OpenAiProvider};
 use tether_types::{ModelCaps, ModelInfo, ModelPrice, PriceSource, Provider, Support};
 use tokio_util::sync::CancellationToken;
@@ -90,4 +90,23 @@ async fn excludes_search_models_from_the_catalog() {
             Some(price(2_000_000, 10_000_000, 200_000))
         )]
     );
+}
+
+#[test]
+fn list_url_is_the_exact_model_list() {
+    let client = crate::client_builder().build().unwrap();
+    let provider = OpenAiProvider::new(client, OpenAiConfig::new(KEY));
+    assert_eq!(provider.list_url(), "https://api.openai.com/v1/models");
+}
+
+#[tokio::test]
+async fn list_url_is_the_request_the_server_sees() {
+    let server = start(Reply::json("200 OK", &[], "{}")).await;
+    let provider = provider(server.base_url);
+    let list_url = provider.list_url();
+    let models = provider.list_models(CancellationToken::new()).await;
+    let seen = server.seen.await.unwrap().unwrap();
+    assert_eq!(models, Ok(Vec::new()));
+    assert_eq!(seen.request_line, request_line_for(&list_url));
+    assert_eq!(seen.request_line, "GET /v1/models HTTP/1.1");
 }

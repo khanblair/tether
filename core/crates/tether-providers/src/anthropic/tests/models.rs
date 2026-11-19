@@ -1,5 +1,5 @@
 use super::KEY;
-use crate::test_support::{Reply, start_many};
+use crate::test_support::{Reply, request_line_for, start_many};
 use crate::{AnthropicConfig, AnthropicProvider, ModelCatalog};
 use tether_types::{ModelCaps, ModelInfo, ModelPrice, PriceSource, Provider, Support};
 use tokio_util::sync::CancellationToken;
@@ -130,4 +130,26 @@ async fn percent_encodes_after_id() {
         seen[1].request_line,
         "GET /v1/models?limit=1000&after_id=a%2Bb%2Fc%3Dd%26e HTTP/1.1"
     );
+}
+
+#[test]
+fn list_url_is_the_exact_first_page() {
+    let client = crate::client_builder().build().unwrap();
+    let provider = AnthropicProvider::new(client, AnthropicConfig::new(KEY));
+    assert_eq!(
+        provider.list_url(),
+        "https://api.anthropic.com/v1/models?limit=1000"
+    );
+}
+
+#[tokio::test]
+async fn list_url_is_the_request_the_server_sees() {
+    let server = start_many(vec![Reply::json("200 OK", &[], "{}")]).await;
+    let provider = provider(server.base_url);
+    let list_url = provider.list_url();
+    let models = provider.list_models(CancellationToken::new()).await;
+    let seen = server.seen.await.unwrap().unwrap();
+    assert_eq!(models, Ok(Vec::new()));
+    assert_eq!(seen[0].request_line, request_line_for(&list_url));
+    assert_eq!(seen[0].request_line, "GET /v1/models?limit=1000 HTTP/1.1");
 }

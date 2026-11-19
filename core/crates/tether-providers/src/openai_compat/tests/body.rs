@@ -76,6 +76,99 @@ fn history_keeps_assistant_tools_and_tool_result() {
 }
 
 #[test]
+fn deepseek_replays_one_thinking_part_when_tools_are_present() {
+    let mut chat = request();
+    chat.tools = vec![tool()];
+    chat.messages = vec![message(
+        Role::Assistant,
+        vec![
+            MessagePart::Thinking {
+                text: "Plan".to_owned(),
+            },
+            text("Done."),
+            call("a"),
+        ],
+    )];
+    assert_eq!(
+        body(&chat, Dialect::DeepSeek)["messages"],
+        json!([{"role":"assistant","content":"Done.","reasoning_content":"Plan","tool_calls":[{"id":"a","type":"function","function":{"name":"read_file","arguments":"{}"}}]}])
+    );
+}
+
+#[test]
+fn deepseek_joins_several_thinking_parts_in_order() {
+    let mut chat = request();
+    chat.tools = vec![tool()];
+    chat.messages = vec![message(
+        Role::Assistant,
+        vec![
+            MessagePart::Thinking {
+                text: "A".to_owned(),
+            },
+            MessagePart::Thinking {
+                text: "B".to_owned(),
+            },
+            call("a"),
+        ],
+    )];
+    assert_eq!(
+        body(&chat, Dialect::DeepSeek)["messages"][0]["reasoning_content"],
+        "AB"
+    );
+}
+
+#[test]
+fn deepseek_omits_reasoning_when_no_thinking_parts_exist() {
+    let mut chat = request();
+    chat.tools = vec![tool()];
+    chat.messages = vec![message(Role::Assistant, vec![text("Done."), call("a")])];
+    assert_eq!(
+        body(&chat, Dialect::DeepSeek)["messages"],
+        json!([{"role":"assistant","content":"Done.","tool_calls":[{"id":"a","type":"function","function":{"name":"read_file","arguments":"{}"}}]}])
+    );
+}
+
+#[test]
+fn deepseek_replays_reasoning_on_an_assistant_message_without_tool_calls() {
+    let mut chat = request();
+    chat.tools = vec![tool()];
+    chat.messages = vec![message(
+        Role::Assistant,
+        vec![
+            MessagePart::Thinking {
+                text: "Plan".to_owned(),
+            },
+            text("Done."),
+        ],
+    )];
+    assert_eq!(
+        body(&chat, Dialect::DeepSeek)["messages"],
+        json!([{"role":"assistant","content":"Done.","reasoning_content":"Plan"}])
+    );
+}
+
+#[test]
+fn plain_and_openrouter_drop_assistant_reasoning() {
+    let mut chat = request();
+    chat.tools = vec![tool()];
+    chat.messages = vec![message(
+        Role::Assistant,
+        vec![
+            MessagePart::Thinking {
+                text: "Plan".to_owned(),
+            },
+            text("Done."),
+        ],
+    )];
+    for dialect in [Dialect::Plain, Dialect::OpenRouter] {
+        assert_eq!(
+            body(&chat, dialect)["messages"],
+            json!([{"role":"assistant","content":"Done."}])
+        );
+    }
+}
+
+#[test]
 fn dialect_reasoning_fields_are_exact() {
     let mut chat = request();
     chat.reasoning = Some(ReasoningEffort::High);
@@ -219,4 +312,60 @@ fn a_compaction_summary_is_a_user_message_whatever_its_role() {
         body(&chat, Dialect::Plain)["messages"],
         json!([{"role":"user","content":"[Summary of the earlier conversation]\nEarlier."}])
     );
+}
+
+fn thinking(text: &str) -> MessagePart {
+    MessagePart::Thinking {
+        text: text.to_owned(),
+    }
+}
+
+fn deepseek_messages(role: Role, parts: Vec<MessagePart>, with_tools: bool) -> Value {
+    let mut chat = request();
+    if with_tools {
+        chat.tools = vec![tool()];
+    }
+    chat.messages = vec![message(role, parts)];
+    body(&chat, Dialect::DeepSeek)["messages"].clone()
+}
+
+#[test]
+fn deepseek_reasoning_is_not_replayed_when_the_request_has_no_tools() {
+    let sent = deepseek_messages(
+        Role::Assistant,
+        vec![thinking("Plan."), text("Done.")],
+        false,
+    );
+    assert_eq!(sent, json!([{"role":"assistant","content":"Done."}]));
+}
+
+#[test]
+fn deepseek_reasoning_is_replayed_on_an_assistant_message_when_the_request_has_tools() {
+    let sent = deepseek_messages(
+        Role::Assistant,
+        vec![thinking("Plan."), text("Done.")],
+        true,
+    );
+    assert_eq!(
+        sent,
+        json!([{"role":"assistant","content":"Done.","reasoning_content":"Plan."}])
+    );
+}
+
+#[test]
+fn a_thinking_part_in_a_summary_message_is_never_sent_as_reasoning() {
+    let summary = MessagePart::CompactionSummary {
+        text: "Earlier.".to_owned(),
+    };
+    let sent = deepseek_messages(Role::Assistant, vec![thinking("Plan."), summary], true);
+    assert_eq!(
+        sent,
+        json!([{"role":"user","content":"[Summary of the earlier conversation]\nEarlier."}])
+    );
+}
+
+#[test]
+fn an_empty_thinking_part_is_not_replayed() {
+    let sent = deepseek_messages(Role::Assistant, vec![thinking(""), text("Done.")], true);
+    assert_eq!(sent, json!([{"role":"assistant","content":"Done."}]));
 }

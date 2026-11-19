@@ -14,7 +14,10 @@ pub(super) fn build_body(
     body.insert("stream".to_owned(), Value::Bool(true));
     body.insert("stream_options".to_owned(), json!({"include_usage": true}));
     body.insert("max_tokens".to_owned(), json!(request.max_output_tokens));
-    body.insert("messages".to_owned(), Value::Array(to_messages(request)?));
+    body.insert(
+        "messages".to_owned(),
+        Value::Array(to_messages(request, dialect)?),
+    );
     if !request.tools.is_empty() {
         body.insert("tools".to_owned(), tools_json(&request.tools)?);
     }

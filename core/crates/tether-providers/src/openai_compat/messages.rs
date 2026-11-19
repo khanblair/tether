@@ -7,7 +7,10 @@ use crate::ProviderError;
 
 const SUMMARY_HEADER: &str = "[Summary of the earlier conversation]\n";
 
-pub(super) fn to_messages(request: &crate::ChatRequest) -> Result<Vec<Value>, ProviderError> {
+pub(super) fn to_messages(
+    request: &crate::ChatRequest,
+    dialect: super::Dialect,
+) -> Result<Vec<Value>, ProviderError> {
     let mut messages = Vec::new();
     if !request.system.is_empty() {
         messages.push(json!({"role": "system", "content": request.system}));
@@ -16,20 +19,34 @@ pub(super) fn to_messages(request: &crate::ChatRequest) -> Result<Vec<Value>, Pr
         if message.role == Role::SystemNote {
             continue;
         }
-        messages.extend(message_values(message)?);
+        messages.extend(message_values(message, dialect, !request.tools.is_empty())?);
     }
     Ok(messages)
 }
 
-fn message_values(message: &Message) -> Result<Vec<Value>, ProviderError> {
+fn message_values(
+    message: &Message,
+    dialect: super::Dialect,
+    request_has_tools: bool,
+) -> Result<Vec<Value>, ProviderError> {
     let mut parts = collect_parts(&message.parts)?;
     // Every tool result is its own `tool` message, ahead of any text the message also holds.
     let mut values = std::mem::take(&mut parts.tool_results);
-    values.extend(text_and_calls_message(message.role, parts));
+    values.extend(text_and_calls_message(
+        message.role,
+        parts,
+        dialect,
+        request_has_tools,
+    ));
     Ok(values)
 }
 
-fn text_and_calls_message(role: Role, parts: Parts) -> Option<Value> {
+fn text_and_calls_message(
+    role: Role,
+    parts: Parts,
+    dialect: super::Dialect,
+    request_has_tools: bool,
+) -> Option<Value> {
     let role = if parts.has_summary {
         "user"
     } else {
@@ -51,6 +68,13 @@ fn text_and_calls_message(role: Role, parts: Parts) -> Option<Value> {
     if !parts.tool_calls.is_empty() {
         value["tool_calls"] = Value::Array(parts.tool_calls);
     }
+    if role == "assistant"
+        && dialect == super::Dialect::DeepSeek
+        && request_has_tools
+        && !parts.thinking.is_empty()
+    {
+        value["reasoning_content"] = Value::String(parts.thinking);
+    }
     Some(value)
 }
 
@@ -59,6 +83,7 @@ struct Parts {
     tool_calls: Vec<Value>,
     tool_results: Vec<Value>,
     has_summary: bool,
+    thinking: String,
 }
 
 fn collect_parts(parts: &[MessagePart]) -> Result<Parts, ProviderError> {
@@ -67,6 +92,7 @@ fn collect_parts(parts: &[MessagePart]) -> Result<Parts, ProviderError> {
         tool_calls: Vec::new(),
         tool_results: Vec::new(),
         has_summary: false,
+        thinking: String::new(),
     };
     for part in parts {
         collect_part(part, &mut values)?;
@@ -107,7 +133,8 @@ fn collect_part(part: &MessagePart, values: &mut Parts) -> Result<(), ProviderEr
                 message: "images are not supported by the OpenAI-compatible adapter yet".to_owned(),
             });
         }
-        MessagePart::Thinking { .. } | MessagePart::Text { .. } => {}
+        MessagePart::Thinking { text } => values.thinking.push_str(text),
+        MessagePart::Text { .. } => {}
     }
     Ok(())
 }

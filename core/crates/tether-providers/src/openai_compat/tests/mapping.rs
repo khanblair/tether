@@ -281,3 +281,97 @@ fn empty_text_deltas_are_ignored() {
         }]
     );
 }
+
+#[test]
+fn openrouter_cache_writes_are_reported_exactly() {
+    let input = concat!(
+        "data: {\"choices\":[],\"usage\":{\"prompt_tokens\":20,\"completion_tokens\":4,\"prompt_tokens_details\":{\"cached_tokens\":6,\"cache_write_tokens\":5}}}\n\n",
+        "data: [DONE]\n\n",
+    );
+    assert_eq!(
+        run_with(input, crate::Dialect::OpenRouter).0,
+        vec![
+            StreamEvent::Usage(ResponseUsage {
+                input_tokens: 9,
+                output_tokens: 4,
+                cache_read_tokens: 6,
+                cache_write_tokens: 5,
+            }),
+            StreamEvent::Finished {
+                stop_reason: StopReason::EndTurn
+            }
+        ]
+    );
+}
+
+#[test]
+fn cache_reads_and_writes_saturate_input_tokens() {
+    let input = concat!(
+        "data: {\"choices\":[],\"usage\":{\"prompt_tokens\":3,\"completion_tokens\":1,\"prompt_tokens_details\":{\"cached_tokens\":2,\"cache_write_tokens\":4}}}\n\n",
+        "data: [DONE]\n\n",
+    );
+    assert_eq!(
+        run(input).0,
+        vec![
+            StreamEvent::Usage(ResponseUsage {
+                input_tokens: 0,
+                output_tokens: 1,
+                cache_read_tokens: 2,
+                cache_write_tokens: 4,
+            }),
+            StreamEvent::Finished {
+                stop_reason: StopReason::EndTurn
+            }
+        ]
+    );
+}
+
+#[test]
+fn refusal_only_delta_is_forwarded() {
+    let input = "data: {\"choices\":[{\"delta\":{\"refusal\":\"No\"}}]}\n\ndata: [DONE]\n\n";
+    assert_eq!(
+        run(input).0,
+        vec![
+            StreamEvent::TextDelta {
+                text: "No".to_owned()
+            },
+            StreamEvent::Finished {
+                stop_reason: StopReason::EndTurn
+            }
+        ]
+    );
+}
+
+#[test]
+fn null_and_empty_refusal_deltas_are_ignored() {
+    let input = concat!(
+        "data: {\"choices\":[{\"delta\":{\"refusal\":null}}]}\n\n",
+        "data: {\"choices\":[{\"delta\":{\"refusal\":\"\"}}]}\n\n",
+        "data: [DONE]\n\n",
+    );
+    assert_eq!(
+        run(input).0,
+        vec![StreamEvent::Finished {
+            stop_reason: StopReason::EndTurn
+        }]
+    );
+}
+
+#[test]
+fn content_precedes_refusal_in_the_same_delta() {
+    let input = "data: {\"choices\":[{\"delta\":{\"content\":\"Answer\",\"refusal\":\"No\"}}]}\n\ndata: [DONE]\n\n";
+    assert_eq!(
+        run(input).0,
+        vec![
+            StreamEvent::TextDelta {
+                text: "Answer".to_owned()
+            },
+            StreamEvent::TextDelta {
+                text: "No".to_owned()
+            },
+            StreamEvent::Finished {
+                stop_reason: StopReason::EndTurn
+            },
+        ]
+    );
+}

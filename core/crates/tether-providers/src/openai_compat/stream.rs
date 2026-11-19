@@ -90,6 +90,7 @@ impl StreamState {
     fn choice_events(&mut self, choice: super::wire::Choice) -> Vec<StreamEvent> {
         let mut events = Vec::new();
         events.extend(text_event(choice.delta.content));
+        events.extend(text_event(choice.delta.refusal));
         events.extend(thinking_event(
             choice.delta.reasoning_content.or(choice.delta.reasoning),
         ));
@@ -182,11 +183,14 @@ fn usage_event(usage: &super::wire::Usage, dialect: super::Dialect) -> StreamEve
     } else {
         usage.prompt_tokens_details.cached_tokens
     };
+    let written = usage.prompt_tokens_details.cache_write_tokens;
     StreamEvent::Usage(ResponseUsage {
-        input_tokens: usage.prompt_tokens.saturating_sub(cached),
+        input_tokens: usage
+            .prompt_tokens
+            .saturating_sub(cached.saturating_add(written)),
         output_tokens: usage.completion_tokens,
         cache_read_tokens: cached,
-        cache_write_tokens: 0,
+        cache_write_tokens: written,
     })
 }
 

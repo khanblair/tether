@@ -25,6 +25,8 @@ pub(super) struct Delta {
     #[serde(default)]
     pub(super) content: Option<String>,
     #[serde(default)]
+    pub(super) refusal: Option<String>,
+    #[serde(default)]
     pub(super) reasoning_content: Option<String>,
     #[serde(default)]
     pub(super) reasoning: Option<String>,
@@ -66,6 +68,8 @@ pub(super) struct Usage {
 pub(super) struct TokenDetails {
     #[serde(default)]
     pub(super) cached_tokens: u64,
+    #[serde(default)]
+    pub(super) cache_write_tokens: u64,
 }
 
 #[derive(Debug, Deserialize)]

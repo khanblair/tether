@@ -7,6 +7,7 @@ pub mod anthropic;
 mod client;
 mod error;
 mod event;
+pub mod gemini;
 pub mod openai;
 mod request;
 pub mod sse;
@@ -25,6 +26,7 @@ pub use anthropic::{AnthropicConfig, AnthropicProvider};
 pub use client::{client_builder, http_client};
 pub use error::ProviderError;
 pub use event::{ResponseUsage, StopReason, StreamEvent};
+pub use gemini::{GeminiConfig, GeminiProvider};
 pub use openai::{OpenAiConfig, OpenAiProvider};
 pub use request::{ChatRequest, ReasoningEffort, ToolSpec};
 

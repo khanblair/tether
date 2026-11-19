@@ -3,6 +3,8 @@
 //! An adapter turns a [`ChatRequest`] into one provider's API call and streams the answer
 //! back as [`StreamEvent`] values. The engine owns retries, batching, and permissions.
 
+pub mod anthropic;
+mod client;
 mod error;
 mod event;
 mod request;
@@ -14,6 +16,8 @@ use std::pin::Pin;
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 
+pub use anthropic::{AnthropicConfig, AnthropicProvider};
+pub use client::{client_builder, http_client};
 pub use error::ProviderError;
 pub use event::{ResponseUsage, StopReason, StreamEvent};
 pub use request::{ChatRequest, ReasoningEffort, ToolSpec};

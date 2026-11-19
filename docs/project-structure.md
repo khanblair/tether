@@ -42,7 +42,7 @@ tether/
 │       ├── tether-store/      migrations/0001_init.sql; src/{lib,db,error,migrations,schema_tests}.rs
 │       ├── tether-engine/     VERSION, EventSink, Core (emits Ready and Test events)
 │       ├── tether-secrets/    SecretStore, SecretRef, Secret, SecretsPlatform trait, errors (src/{lib,error,platform,reference,secret,store,store_tests}.rs)
-│       ├── tether-providers/  lib.rs (ChatProvider), request.rs, event.rs, error.rs, sse.rs (SseParser), client.rs (shared HTTP client), anthropic/ (adapter), openai/ (adapter), gemini/ (adapter), transport.rs (shared request and stream code)
+│       ├── tether-providers/  lib.rs (ChatProvider), request.rs, event.rs, error.rs, sse.rs (SseParser), client.rs (shared HTTP client), anthropic/ (adapter), openai/ (adapter), gemini/ (adapter), openai_compat/ (adapter), deepseek.rs, openrouter.rs, transport.rs (shared request and stream code)
 │       ├── tether-ffi/        UniFFI surface, builds libtether_core.so
 │       │   ├── uniffi.toml
 │       │   └── src/{lib.rs, callbacks.rs, secrets.rs, views/{mod,event,types,error}.rs, bin/uniffi-bindgen.rs}
@@ -189,9 +189,9 @@ core/
     │       ├── anthropic.rs   Anthropic Messages API adapter
     │       ├── openai.rs      OpenAI Responses API adapter
     │       ├── gemini.rs      Gemini API adapter
-    │       ├── openai_compat.rs Chat Completions adapter shared by DeepSeek and OpenRouter
-    │       ├── deepseek.rs    DeepSeek settings over openai_compat
-    │       ├── openrouter.rs  OpenRouter settings, headers, model list
+    │       ├── openai_compat/ Chat Completions adapter shared by DeepSeek and OpenRouter (mod, http, request, messages, stream, wire)
+    │       ├── deepseek.rs    DeepSeek names over openai_compat
+    │       ├── openrouter.rs  OpenRouter names over openai_compat; its headers live in `OpenAiCompatConfig::openrouter`
     │       ├── sse.rs         Server-sent events parser
     │       ├── catalog.rs     Model list fetch and cache
     │       └── pricing.rs     Cost calculation

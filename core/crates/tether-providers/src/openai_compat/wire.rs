@@ -1,10 +1,20 @@
 //! Wire types for OpenAI-compatible streams and errors.
 
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
+
+/// Reads a field where a missing value and an explicit `null` both mean the default.
+/// `#[serde(default)]` alone handles only the missing case, and some servers send `null`.
+fn nullable<'de, D, T>(deserializer: D) -> Result<T, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de> + Default,
+{
+    Ok(Option::<T>::deserialize(deserializer)?.unwrap_or_default())
+}
 
 #[derive(Debug, Deserialize)]
 pub(super) struct Chunk {
-    #[serde(default)]
+    #[serde(default, deserialize_with = "nullable")]
     pub(super) choices: Vec<Choice>,
     #[serde(default)]
     pub(super) usage: Option<Usage>,
@@ -14,7 +24,7 @@ pub(super) struct Chunk {
 
 #[derive(Debug, Default, Deserialize)]
 pub(super) struct Choice {
-    #[serde(default)]
+    #[serde(default, deserialize_with = "nullable")]
     pub(super) delta: Delta,
     #[serde(default)]
     pub(super) finish_reason: Option<String>,
@@ -30,17 +40,17 @@ pub(super) struct Delta {
     pub(super) reasoning_content: Option<String>,
     #[serde(default)]
     pub(super) reasoning: Option<String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "nullable")]
     pub(super) tool_calls: Vec<ToolCallDelta>,
 }
 
 #[derive(Debug, Default, Deserialize)]
 pub(super) struct ToolCallDelta {
-    #[serde(default)]
+    #[serde(default, deserialize_with = "nullable")]
     pub(super) index: u64,
     #[serde(default)]
     pub(super) id: Option<String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "nullable")]
     pub(super) function: FunctionDelta,
 }
 
@@ -54,21 +64,21 @@ pub(super) struct FunctionDelta {
 
 #[derive(Debug, Default, Deserialize)]
 pub(super) struct Usage {
-    #[serde(default)]
+    #[serde(default, deserialize_with = "nullable")]
     pub(super) prompt_tokens: u64,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "nullable")]
     pub(super) completion_tokens: u64,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "nullable")]
     pub(super) prompt_tokens_details: TokenDetails,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "nullable")]
     pub(super) prompt_cache_hit_tokens: u64,
 }
 
 #[derive(Debug, Default, Deserialize)]
 pub(super) struct TokenDetails {
-    #[serde(default)]
+    #[serde(default, deserialize_with = "nullable")]
     pub(super) cached_tokens: u64,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "nullable")]
     pub(super) cache_write_tokens: u64,
 }
 

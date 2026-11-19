@@ -375,3 +375,79 @@ fn content_precedes_refusal_in_the_same_delta() {
         ]
     );
 }
+
+fn usage_of(sse: &str) -> Option<ResponseUsage> {
+    run(sse).0.into_iter().find_map(|event| match event {
+        StreamEvent::Usage(usage) => Some(usage),
+        _ => None,
+    })
+}
+
+#[test]
+fn null_prompt_token_details_count_as_no_cached_tokens() {
+    let sse = "data: {\"choices\":[],\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":2,\"prompt_tokens_details\":null}}\n\ndata: [DONE]\n\n";
+    assert_eq!(
+        usage_of(sse),
+        Some(ResponseUsage {
+            input_tokens: 10,
+            output_tokens: 2,
+            cache_read_tokens: 0,
+            cache_write_tokens: 0
+        })
+    );
+    assert_eq!(run(sse).1, Ok(()));
+}
+
+#[test]
+fn null_token_counts_count_as_zero() {
+    let sse = "data: {\"usage\":{\"prompt_tokens\":null,\"completion_tokens\":3,\"prompt_tokens_details\":{\"cached_tokens\":null,\"cache_write_tokens\":null},\"prompt_cache_hit_tokens\":null}}\n\n";
+    assert_eq!(
+        usage_of(sse),
+        Some(ResponseUsage {
+            input_tokens: 0,
+            output_tokens: 3,
+            cache_read_tokens: 0,
+            cache_write_tokens: 0
+        })
+    );
+}
+
+#[test]
+fn null_tool_calls_and_null_choices_are_ignored() {
+    let sse = concat!(
+        "data: {\"choices\":[{\"index\":0,\"delta\":{\"content\":\"Hi\",\"tool_calls\":null}}]}\n\n",
+        "data: {\"choices\":null}\n\n",
+        "data: [DONE]\n\n",
+    );
+    assert_eq!(
+        run(sse).0,
+        vec![
+            StreamEvent::TextDelta { text: "Hi".into() },
+            StreamEvent::Finished {
+                stop_reason: StopReason::EndTurn
+            },
+        ]
+    );
+}
+
+#[test]
+fn a_null_delta_and_a_null_function_do_not_break_the_chunk() {
+    let sse = concat!(
+        "data: {\"choices\":[{\"index\":0,\"delta\":null,\"finish_reason\":\"stop\"}]}\n\n",
+        "data: [DONE]\n\n",
+    );
+    assert_eq!(
+        run(sse).0,
+        vec![StreamEvent::Finished {
+            stop_reason: StopReason::EndTurn
+        }]
+    );
+    let call = "data: {\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"c1\",\"function\":null}]}}]}\n\n";
+    assert_eq!(
+        run(call).0,
+        vec![StreamEvent::ToolCallStarted {
+            id: ToolCallId::new("c1"),
+            name: String::new()
+        }]
+    );
+}

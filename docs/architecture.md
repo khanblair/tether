@@ -203,7 +203,7 @@ SQLite database at `files/db/tether.db`, WAL mode, foreign keys on. IDs are ULID
 
 | Table | Columns | Notes |
 |---|---|---|
-| `projects` | id, name, path, remote_url, default_branch, default_provider, default_model_id, default_mode, created_at, opened_at | `path` is relative to `files/workspaces/` |
+| `projects` | id, name, path, remote_url, default_branch, default_provider, default_model_id, default_mode, created_at, opened_at | `path` is relative to `files/workspaces/`; a `CHECK` rejects empty, absolute, and `..` paths |
 | `sessions` | id, project_id, title, provider, model_id, mode, status, created_at, updated_at, cost_micros, tokens_in, tokens_out | `cost_micros` is USD × 1,000,000 |
 | `messages` | id, session_id, role, seq, created_at, rewound | role: user, assistant, tool, system_note |
 | `message_parts` | id, message_id, seq, kind, body_json | kind: text, image_ref, tool_call, tool_result, thinking, compaction_summary |
@@ -217,7 +217,7 @@ SQLite database at `files/db/tether.db`, WAL mode, foreign keys on. IDs are ULID
 | `provider_configs` | provider, secret_ref, base_url, status, tested_at | no key material; `secret_ref` names the wrapped secret |
 | `models` | provider, model_id, context_window, input_price_micros, output_price_micros, caps_json, fetched_at | catalog cache; prices are USD × 1,000,000 per million tokens, NULL when unknown |
 | `mcp_servers` | id, name, url, transport, secret_ref, enabled | |
-| `usage_daily` | day, provider, model_id, project_id, tokens_in, tokens_out, cost_micros | for charts and budgets; `day` is `YYYY-MM-DD`; no foreign key on `project_id`, so cost history outlives a deleted project |
+| `usage_daily` | day, provider, model_id, project_id, tokens_in, tokens_out, cost_micros | for charts and budgets; `day` is a UTC date, `YYYY-MM-DD`; no foreign key on `project_id`, so cost history outlives a deleted project |
 | `message_fts` | FTS5 virtual table over message text: session_id, message_id, body | session search (F22); bundled SQLite with FTS5, never the Android framework SQLite |
 | `vault_notes` | path, title, description, type, tags_json, updated_at, hash | rebuildable index of the vault folder |
 | `vault_links` | src_path, dst_path, heading, kind, resolved | wikilinks and backlinks; `resolved = 0` means the target note does not exist yet |
@@ -225,7 +225,7 @@ SQLite database at `files/db/tether.db`, WAL mode, foreign keys on. IDs are ULID
 
 Blobs (file snapshots, large tool results, run output) live in `files/blobs/`, named by BLAKE3 hash, compressed with zstd. A blob is deleted when no row references it, by a cleanup job run on app start at most once a day.
 
-Migrations are numbered SQL files in `core/crates/tether-store/migrations/`. At core start each one newer than the database runs in its own transaction, and the version is kept in `PRAGMA user_version`, written in the same transaction, so a failed migration leaves the database at the version before it. A database newer than the app is refused. Tables use `STRICT`, and enum columns have `CHECK` lists that a store test keeps equal to the text forms in `tether-types`.
+Migrations are numbered SQL files in `core/crates/tether-store/migrations/`. At core start each one newer than the database runs in its own transaction, and the version is kept in `PRAGMA user_version`, written in the same transaction, so a failed migration leaves the database at the version before it. Foreign keys are off while a migration runs, because rebuilding a parent table to change a `CHECK` list would otherwise delete its children, and `PRAGMA foreign_key_check` must pass before the migration commits. A second opener that waited for the write lock skips migrations already applied. A database newer than the app is refused. Tables use `STRICT`, and enum columns have `CHECK` lists that a store test keeps equal to the text forms in `tether-types`.
 
 Status: schema 0001 (P1-02) creates `projects`, `sessions`, `messages`, `message_parts`, `provider_configs`, `models`, and `usage_daily`. The other tables arrive in numbered migrations with the task that first uses them. Until a release opens the database, 0001 may change; after that, only new migrations may.
 

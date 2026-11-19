@@ -263,8 +263,9 @@ core/
     │       ├── db.rs          Store: open, WAL, foreign keys, run migrations
     │       ├── error.rs       StoreError
     │       ├── migrations.rs  Migration list and runner (PRAGMA user_version)
-    │       ├── queries.rs     Typed queries per table
-    │       └── blobs.rs       Blob store and cleanup
+    │       ├── schema_tests.rs Tests for schema 0001 (test only)
+    │       ├── queries.rs     Typed queries per table (later)
+    │       └── blobs.rs       Blob store and cleanup (later)
     ├── tether-connectors/
     │   └── src/
     │       ├── lib.rs         Connector trait

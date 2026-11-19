@@ -40,22 +40,33 @@ jobs:
       - name: Tests
         run: cargo test --workspace
         working-directory: core
+      # Bundled SQLite compiles C code, so the Android check needs the NDK toolchain.
+      # It uses the same pinned NDK as the android job.
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk --locked --version "^4"
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ndk;${{ env.NDK_VERSION }}
       - name: Check Android targets
         run: |
-          cargo check --workspace --target aarch64-linux-android
-          cargo check --workspace --target x86_64-linux-android
+          export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/$NDK_VERSION"
+          cargo ndk -t arm64-v8a -t x86_64 check --workspace
         working-directory: core
       - name: Licenses and advisories
         run: |
           cargo deny check
           cargo deny --manifest-path ../tools/slop-lint/Cargo.toml --config deny.toml check
         working-directory: core
+      - name: Clippy fails on a function over the line limit
+        run: tools/check-smell-fixtures.sh rust
 
   tooling:
     name: tooling
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - run: rustup toolchain install
       - uses: Swatinem/rust-cache@v2
         with:
@@ -82,6 +93,13 @@ jobs:
         run: |
           tools/check-file-length.sh --self-test
           tools/check-file-length.sh
+      - name: Commit size self test
+        run: tools/check-commit-size.sh --self-test
+      - name: No commit touches more than 15 files
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: tools/check-commit-size.sh "origin/$BASE_REF"
       - name: Docs site builds and its links resolve
         run: node tools/site/build.ts
 
@@ -130,6 +148,8 @@ jobs:
           testFullDebugUnitTest testPlayDebugUnitTest
           assembleFullDebug assemblePlayDebug
         working-directory: android
+      - name: detekt fails on a function over the line limit
+        run: tools/check-smell-fixtures.sh kotlin
       - uses: actions/upload-artifact@v7
         with:
           name: debug-apks

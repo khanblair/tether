@@ -1,0 +1,12 @@
+[package]
+name = "smell-fixture"
+version = "0.0.0"
+edition = "2024"
+publish = false
+description = "Fails clippy on purpose. See tools/check-smell-fixtures.sh."
+
+# Own workspace, so cargo does not treat this crate as a member of core/.
+[workspace]
+
+[lints.clippy]
+too_many_lines = "warn"

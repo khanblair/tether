@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tether mobile UI prototype</title>
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="proto.css">
+<script>
+// Apply the saved theme before first paint.
+try { var s = JSON.parse(localStorage.getItem("tether-proto") || "{}"); if (s.theme === "light" || s.theme === "dark") document.documentElement.dataset.theme = s.theme; } catch (e) {}
+</script>
+</head>
+<body>
+<header class="viewer-top">
+  <div class="wrap">
+    <div class="brand"><img src="logo.svg" alt="" width="26" height="26">Tether <small>mobile UI prototype</small></div>
+    <span class="spacer"></span>
+    <div class="seg" role="group" aria-label="View"><button data-view="gallery">Gallery</button><button data-view="interactive">Interactive</button></div>
+  </div>
+  <div class="controls" role="group" aria-label="Display settings">
+    <div class="ctl">Theme<div class="seg"><button data-set="theme:system">System</button><button data-set="theme:light">Light</button><button data-set="theme:dark">Dark</button></div></div>
+    <div class="ctl">Device<div class="seg"><button data-set="device:phone-s">Phone S</button><button data-set="device:phone-l">Phone L</button><button data-set="device:tablet-s">Tablet S</button><button data-set="device:tablet-l">Tablet L</button></div></div>
+    <div class="ctl"><div class="seg"><button data-set="land:false">Portrait</button><button data-set="land:true">Landscape</button></div></div>
+    <div class="ctl">Text size<select data-select="fs" aria-label="Text size"><option value="85">85%</option><option value="100">100%</option><option value="115">115%</option><option value="130">130%</option><option value="150">150%</option><option value="200">200%</option></select></div>
+    <div class="ctl">Display size<select data-select="ds" aria-label="Display size"><option value="90">90%</option><option value="100">100%</option><option value="115">115%</option><option value="130">130%</option></select></div>
+    <div class="ctl">Network<div class="seg"><button data-set="offline:false">Online</button><button data-set="offline:true">Offline</button></div></div>
+    <div class="ctl">Motion<div class="seg"><button data-set="reduce:false">Normal</button><button data-set="reduce:true">Reduced</button></div></div>
+    <span class="readout" id="readout"></span>
+  </div>
+</header>
+<nav class="areas" id="areas" aria-label="Areas"></nav>
+<main id="view"></main>
+<p class="footnote">Sample data. Model names, prices, repositories, and people are placeholders. The prototype shows layout, flow, and states, not working features. Tokens, fonts, and icons are the same ones the app uses (IBM Plex, Lucide, <code>tokens/tokens.json</code>).</p>
+
+<script src="icons.js"></script>
+<script src="ui.js"></script>
+<script src="s-start.js"></script>
+<script src="s-session.js"></script>
+<script src="s-live.js"></script>
+<script src="s-toasts.js"></script>
+<script src="s-review.js"></script>
+<script src="s-files.js"></script>
+<script src="s-memory.js"></script>
+<script src="s-settings.js"></script>
+<script src="s-system.js"></script>
+<script src="s-adaptive.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

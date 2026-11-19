@@ -102,7 +102,9 @@ private fun TetherColors.toMaterial(dark: Boolean): ColorScheme {
         surfaceTint = Color.Transparent,
         inverseSurface = text,
         inverseOnSurface = bg,
-        inversePrimary = accentInk,
+        // Snackbar actions sit on inverseSurface (the text color). accentInk would be plum on dark
+        // plum in the light theme; tonal is mint in light and plum in dark, readable on both.
+        inversePrimary = tonal,
         error = danger,
         onError = dangerSoft,
         errorContainer = dangerSoft,

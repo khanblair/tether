@@ -6,6 +6,9 @@ android/designsystem/src/main/kotlin/app/tether/design/tokens/Tokens.kt linguist
 android/designsystem/src/main/res/values/tokens_colors.xml linguist-generated=true
 android/designsystem/src/main/res/values-night/tokens_colors.xml linguist-generated=true
 
+tools/prototype/tokens.css linguist-generated=true
+tools/prototype/icons.js linguist-vendored=true
+
 # Lockfiles
 core/Cargo.lock linguist-generated=true
 tools/slop-lint/Cargo.lock linguist-generated=true

@@ -19,6 +19,8 @@ Crates that show only `Cargo.toml` and `src/lib.rs` are empty libraries that hol
 ```
 tether/
 ├── README.md                  Landing page
+├── AGENTS.md                  Rules for coding agents: task flow, commits, done means
+├── CLAUDE.md                  Imports AGENTS.md; adds Claude Code workflow rules
 ├── .editorconfig  .gitattributes  .gitignore  .env.example
 ├── justfile                   Everyday commands
 ├── rust-toolchain.toml        Rust 1.99.1 with Android targets
@@ -34,14 +36,18 @@ tether/
 │   └── generate.ts            Generates Tokens.kt, Android color XML, and the site CSS; checks contrast
 ├── core/                      Rust workspace
 │   ├── Cargo.toml  Cargo.lock  deny.toml  clippy.toml  rustfmt.toml
+│   ├── fixtures/smells/       Crate with a function over the line limit; clippy must fail on it
 │   └── crates/
-│       ├── tether-types/      event.rs: CoreEvent
+│       ├── tether-types/      ids, message, session, text, usage, error, event (CoreEvent); no UniFFI code
+│       ├── tether-store/      migrations/0001_init.sql; src/{lib,db,error,migrations,schema_tests}.rs
 │       ├── tether-engine/     VERSION, EventSink, Core (emits Ready and Test events)
+│       ├── tether-secrets/    SecretStore, SecretRef, Secret, SecretsPlatform trait, errors (src/{lib,error,platform,reference,secret,store,store_tests}.rs)
+│       ├── tether-providers/  lib.rs (ChatProvider), request.rs, event.rs, error.rs, sse.rs (SseParser), client.rs (shared HTTP client), anthropic/ (adapter), openai/ (adapter), gemini/ (adapter), transport.rs (shared request and stream code)
 │       ├── tether-ffi/        UniFFI surface, builds libtether_core.so
 │       │   ├── uniffi.toml
-│       │   └── src/{lib.rs, callbacks.rs, views.rs, bin/uniffi-bindgen.rs}
+│       │   └── src/{lib.rs, callbacks.rs, secrets.rs, views/{mod,event,types,error}.rs, bin/uniffi-bindgen.rs}
 │       ├── tether-quality/    data/slop_words.txt and slop_patterns.toml (shared with slop-lint)
-│       └── tether-{providers,tools,workspace,vcs,sandbox,linux,ci,store,connectors,mcp,secrets,skills,memory}/
+│       └── tether-{tools,workspace,vcs,sandbox,linux,ci,connectors,mcp,skills,memory}/
 │                              Empty libraries
 ├── android/
 │   ├── settings.gradle.kts  build.gradle.kts  gradle.properties  gradlew  gradlew.bat
@@ -50,22 +56,24 @@ tether/
 │   │   └── src/main/kotlin/{tether.android.application, tether.android.library, tether.compose,
 │   │                        tether.quality, tether.rust-core}.gradle.kts, AndroidCommon.kt, CargoNdkTask.kt
 │   ├── config/{detekt.yml, lint.xml}
+│   ├── smell-fixtures/        Module with a function over the line limit; detekt must fail on it (built only with -Ptether.smellFixtures)
 │   ├── app/                   build.gradle.kts (flavors play and full; app version read from core/Cargo.toml), proguard-rules.pro
 │   │   └── src/{main, full, play, androidTest}   TetherApp, MainActivity, di/AppModule, nav/, shell/ (placeholder screens)
-│   ├── core-bridge/           CoreClient, EventBus, consumer-rules.pro, (gen) generated/tether_core.kt
+│   ├── core-bridge/           CoreClient, EventBus, KeystoreSecretsPlatform, consumer-rules.pro, (gen) generated/tether_core.kt
 │   └── designsystem/          TetherTheme, PrimaryButton, TetherTopBar, FONTS-LICENSE.txt, (gen) tokens/Tokens.kt and token colors, Plex fonts
 ├── ios/README.md              Plan for v2
 ├── runtimes/README.md  linux/README.md  bench/README.md   Planned folders, one README each
 ├── tools/
 │   ├── slop-lint/             Rust CLI with its own workspace and tests
 │   ├── site/{build.ts, site.css}   Builds the Pages site from docs/
-│   └── gen-bindings.sh  gen-icons.ts  check-file-length.sh  setup.sh
+│   ├── prototype/             Clickable mobile UI prototype (HTML, CSS, JavaScript; no build step)
+│   └── gen-bindings.sh  gen-icons.ts  check-file-length.sh  check-commit-size.sh  check-smell-fixtures.sh  setup.sh  setup-release-signing.sh
 └── .github/
-    ├── workflows/{ci.yml, release.yml, pages.yml}
+    ├── workflows/{ci.yml, pr.yml, release.yml, pages.yml}
     └── pull_request_template.md  CODEOWNERS  dependabot.yml
 ```
 
-Not present yet: `LICENSE` (no license chosen, see Q5), `nightly.yml` (nothing to run until P1), `core/benches/`, the contents of `core/fixtures/`, feature modules, `service`, `platform`, the `full` and `play` Linux mode files, and the real code of every Rust crate except `tether-types`, `tether-engine`, and `tether-ffi`.
+Not present yet: `LICENSE` (no license chosen, see Q5), `nightly.yml` (nothing to run until P1), `core/benches/`, the rest of `core/fixtures/` (only `smells/` and `provider-streams/` exist), feature modules, `service`, `platform`, the `full` and `play` Linux mode files, and the real code of every Rust crate except `tether-types`, `tether-engine`, `tether-ffi`, `tether-store`, `tether-secrets`, and `tether-providers`.
 
 ## Top level
 
@@ -74,6 +82,8 @@ Target layout from here on.
 ```
 tether/
 ├── README.md                  Repo landing page: what Tether is, how to build, link to docs/
+├── AGENTS.md                  Rules for coding agents: task flow, commits, done means
+├── CLAUDE.md                  Imports AGENTS.md; adds Claude Code workflow rules
 ├── LICENSE                    License text (not added yet: no license chosen, see product-scope Q5)
 ├── .editorconfig              Indentation and line endings for all editors
 ├── .gitignore                 Ignore build output, local.properties, keystores, .env
@@ -130,6 +140,8 @@ core/
 │   ├── search.rs              Glob and grep over a 10,000-file fixture
 │   └── store.rs               Database write and query timings
 ├── fixtures/
+│   ├── smells/                Crate that must fail clippy (see tools/check-smell-fixtures.sh)
+│   ├── provider-streams/      SSE streams for the parser and adapter tests, written from the providers' documented formats
 │   ├── repos/                 Small sample repos for tests (Python, JS, Rust)
 │   └── provider-streams/      Recorded provider SSE streams for adapter tests
 └── crates/
@@ -137,22 +149,25 @@ core/
     │   ├── Cargo.toml
     │   └── src/
     │       ├── lib.rs         Re-exports
-    │       ├── ids.rs         ProjectId, SessionId, ToolCallId newtypes
-    │       ├── message.rs     Canonical message and part types
-    │       ├── tool.rs        Tool call and result types
+    │       ├── ids.rs         ProjectId, SessionId, MessageId, ToolCallId newtypes
+    │       ├── message.rs     Role, MessagePart, Message
+    │       ├── session.rs     PermissionMode, Executor, Provider, ModelRef, SessionStatus, ToolCallStatus, ConnectionStatus
+    │       ├── tool.rs        Tool call and result types (later)
     │       ├── event.rs       CoreEvent enum
-    │       ├── permission.rs  PermissionMode, ApprovalScope
-    │       ├── executor.rs    Executor enum and run types
-    │       ├── usage.rs       Token and cost types
-    │       └── error.rs       CoreError with kind and retryable flag
+    │       ├── permission.rs  ApprovalScope (later)
+    │       ├── executor.rs    Run types (later)
+    │       ├── text.rs        Text forms (as_str, FromStr) for enums kept as text
+    │       ├── usage.rs       UsageSnapshot
+    │       └── error.rs       CoreError: a variant per kind, with a retryable flag
     ├── tether-ffi/
     │   ├── Cargo.toml         Builds cdylib libtether_core.so
     │   ├── uniffi.toml        Binding names and package for Kotlin and Swift
     │   ├── build.rs           UniFFI scaffolding
     │   └── src/
     │       ├── lib.rs         Exported TetherCore object
-    │       ├── callbacks.rs   EventSink, SecretsPlatform, NotifyPlatform, NetworkPlatform
-    │       └── views.rs       Engine types to FFI view types
+    │       ├── callbacks.rs   EventSink, NotifyPlatform, NetworkPlatform
+    │       ├── secrets.rs     SecretsPlatform callback, SecretVault
+    │       └── views/         Engine types to FFI view types: event.rs, types.rs, error.rs
     ├── tether-engine/
     │   └── src/
     │       ├── lib.rs         Engine entry point
@@ -249,9 +264,12 @@ core/
     │   │   └── 0001_init.sql  Initial schema
     │   └── src/
     │       ├── lib.rs
-    │       ├── db.rs          Connection, WAL, migrations
-    │       ├── queries.rs     Typed queries per table
-    │       └── blobs.rs       Blob store and cleanup
+    │       ├── db.rs          Store: open, WAL, foreign keys, run migrations
+    │       ├── error.rs       StoreError
+    │       ├── migrations.rs  Migration list and runner (PRAGMA user_version)
+    │       ├── schema_tests.rs Tests for schema 0001 (test only)
+    │       ├── queries.rs     Typed queries per table (later)
+    │       └── blobs.rs       Blob store and cleanup (later)
     ├── tether-connectors/
     │   └── src/
     │       ├── lib.rs         Connector trait
@@ -317,6 +335,7 @@ android/
 ├── config/
 │   ├── detekt.yml             Detekt rules and thresholds
 │   └── lint.xml               Android lint config
+├── smell-fixtures/            detekt must fail on its long function; included only with -Ptether.smellFixtures
 ├── app/
 │   ├── build.gradle.kts       Flavors: full, play; signing configs
 │   ├── proguard-rules.pro     Keep rules for JNA and UniFFI (core-bridge/consumer-rules.pro has the same rules)
@@ -444,12 +463,16 @@ tools/
 │   ├── Cargo.toml
 │   └── src/main.rs          Checks docs, strings.xml, comments, commit messages
 ├── check-file-length.sh     Fails on files over the limits in code-standards.md
+├── check-commit-size.sh     Fails on a commit that touches more than 15 files
+├── check-smell-fixtures.sh  Proves Clippy and detekt fail on a function over the line limit
+├── setup-release-signing.sh One-time: create the release keystore and store it as GitHub secrets
 ├── gen-bindings.sh          Regenerates UniFFI Kotlin bindings
 ├── gen-icons.ts             Renders PNG brand assets from images/logo.svg
 ├── setup.sh                 Toolchain check behind `just setup`
-└── site/
-    ├── build.ts             Builds the Pages site from docs/, tokens, and images
-    └── site.css             Site styles on top of the generated token CSS
+├── site/
+│   ├── build.ts             Builds the Pages site from docs/, tokens, and images
+│   └── site.css             Site styles on top of the generated token CSS
+└── prototype/               Clickable mobile UI prototype; see its README
 ```
 
 ## .github/
@@ -458,9 +481,10 @@ tools/
 .github/
 ├── workflows/
 │   ├── ci.yml               rust, tooling, bindings, android jobs
+│   ├── pr.yml               issue-link check on every pull request and description edit
 │   ├── nightly.yml          Benchmarks and live provider smoke tests (planned, P1)
 │   ├── pages.yml            Builds and deploys the docs site to GitHub Pages
-│   └── release.yml          Build, sign, and open a draft GitHub Release for both flavors
+│   └── release.yml          Build, sign, and publish a GitHub Release for both flavors when the core version has no tag
 ├── pull_request_template.md Checklist including docs and progress tracker
 ├── dependabot.yml           Weekly dependency update PRs
 └── CODEOWNERS               Review owners per folder
@@ -514,6 +538,6 @@ tools/
 | `images/logo.svg` | Only master of the logo; the Android vector icons are traced from it by hand |
 | `android/app/src/main/res/values/strings.xml` | Only place user-facing English text lives |
 | `core/crates/tether-quality/data/*` | Shared by the in-app gate and `tools/slop-lint` |
-| `core/crates/tether-types/src/event.rs` | Changing it changes the FFI; regenerate bindings |
+| `core/crates/tether-types/src/*.rs` and `core/crates/tether-ffi/src/views/` | Changing a type the UI sees changes the FFI; regenerate bindings (`just bindings`) |
 | `rust-toolchain.toml` and `gradle.properties` | Toolchain pins; change only with a decisions log entry |
 | `runtimes/manifest.template.json` and `linux/rootfs-manifest.json` | Security-relevant; changes need review from CODEOWNERS |

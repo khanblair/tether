@@ -1,6 +1,6 @@
 # Progress tracker
 
-Last updated: 18 Nov 2026.
+Last updated: 19 Nov 2026.
 
 ## How to update this file
 
@@ -25,7 +25,7 @@ Last updated: 18 Nov 2026.
 
 ## Current phase
 
-**P0. Foundations: In progress.** The repo, Rust workspace, Android app, tokens, brand assets, CI files, and docs site are in place and verified locally. Open: CI must go green on `main` (P0-09), the release workflow has not run (P0-16), and the smell fixtures are not written (P0-13). Next phase: P1, providers and sessions.
+**P1. Providers and sessions: In progress** (started with P1-01). **P0. Foundations: In progress.** The repo is public at github.com/khanblair/tether. CI is green on `main`, the docs site is live, and the app runs on an arm64 emulator. The first release, `v0.0.1`, is published and downloadable from GitHub Releases, signed with the pinned key. Open: the Android smoke test of that APK on a device.
 
 ## Phase status
 
@@ -34,7 +34,7 @@ Phases run in numeric order except P11, which runs before P10 (see build-plan.md
 | Phase | Name | Status | Started | Finished |
 |---|---|---|---|---|
 | P0 | Foundations | In progress | 2026-11-18 | |
-| P1 | Providers and sessions | Not started | | |
+| P1 | Providers and sessions | In progress | 2026-11-18 | |
 | P2 | Workspace, tools, diffs | Not started | | |
 | P3 | Control | Not started | | |
 | P4 | Git and GitHub | Not started | | |
@@ -60,19 +60,40 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 | P0-06 | Token pipeline | Blair with Claude | Done | n/a | `tokens/generate.ts` writes `Tokens.kt` and color XML, checks about 50 contrast pairs in both themes |
 | P0-07 | TetherTheme | Blair with Claude | Done | n/a | Light and dark follow the system; in-app override works. Screenshot tests moved to P1-19 |
 | P0-08 | Navigation shell | Blair with Claude | Done | n/a | All 10 routes reachable on the emulator; back returns to Projects |
-| P0-09 | CI workflow | Blair with Claude | In progress | n/a | `ci.yml` has four jobs. Becomes Done when green on `main` after the first push |
+| P0-09 | CI workflow | Blair with Claude | Done | n/a | `ci.yml` has four jobs (rust, tooling, bindings, android). First run on `main` was green. Branch protection requires all four |
 | P0-10 | `slop-lint` first version | Blair with Claude | Done | n/a | Fails on the bad fixture, passes on current docs, README, and `strings.xml` |
 | P0-11 | Smell checks in CI | Blair with Claude | Done | n/a | Thresholds match code-standards.md. File length self test proves the failure path |
 | P0-12 | `CoreClient` event bus skeleton | Blair with Claude | Done | n/a | "Send test event" on the emulator shows the event from Rust; `NativeLibraryTest` passes on the emulator |
-| P0-13 | Smell fixtures for Clippy and detekt | | Not started | | Added during P0; only the file length check has a failing fixture so far |
-| P0-14 | Docs site on GitHub Pages | Blair with Claude | In progress | n/a | Site builds with all links resolving. Deploys after the first push enables Pages |
+| P0-13 | Smell fixtures for Clippy and detekt | Blair with Claude | Done | #132 | Merged; issue #3 closed on its own. Fixture crate and module fail their gates; CI runs both through `tools/check-smell-fixtures.sh` |
+| P0-14 | Docs site on GitHub Pages | Blair with Claude | Done | n/a | Live at khanblair.github.io/tether; `pages.yml` deploys on docs, images, tokens, or site tool changes |
 | P0-15 | Brand assets and launcher icon | Blair with Claude | Done | n/a | Logo traced to `images/logo.svg`; adaptive and monochrome icons; PNG exports. Blair to check the launcher icon by eye |
-| P0-16 | Release workflow | Blair with Claude | In progress | n/a | `release.yml` written, not run. Needs a keystore, four secrets, and a tag |
+| P0-18 | Mobile UI prototype | Blair with Claude | Done | n/a | `tools/prototype`, run with `just prototype`. 102 screens in 12 areas; checked by a Node render test, not yet in a browser by Claude |
+| P0-17 | Commit size check | Blair with Claude | Done | n/a | `tools/check-commit-size.sh`, `just commits`, and a `tooling` CI step on pull requests |
+| P0-19 | Publish a signed release automatically | Blair with Claude | Done | #134, #136 | Merged; `v0.0.1` published as the latest release, signed with the pinned key. Releases are never pre-releases (#136) |
+| P0-16 | Release workflow | Blair with Claude | Done | #134 | Ran on the merge of #134 and published `v0.0.1`; issue #4 closed |
+| P1-07 | Gemini adapter | Blair with Codex and Claude | In review | #146 | Issue #11 (stays open for the nightly run). Written by a Codex CLI session (GPT-5.6 Luna), reviewed and mutation-tested by Claude; 127 provider tests. Two Codex review findings fixed (unique generated call ids, `parametersJsonSchema`) |
+| P1-06 | OpenAI adapter (Responses API) | Blair with Codex and Claude | In review | #144 | Issue #10 (stays open for the nightly run). Written by a Codex CLI session (GPT-5.6 Luna), reviewed and mutation-tested by Claude; 99 tests with the Anthropic ones |
+| P1-05 | Anthropic adapter: streaming, tool calls, usage, caching headers | Blair with Claude | In review | #143 | Issue #9 (stays open for the nightly run). Adapter, shared HTTP client, 49 new tests, fixtures, and an ignored live smoke test. Not done: the nightly run of the live test needs an `ANTHROPIC_API_KEY` repository secret |
+| P1-03 | `tether-secrets` with Keystore wrap and unwrap callback | Blair with Claude | In review | #142 | Issue #7. Rust store with 19 tests, FFI vault with 3, Kotlin `KeystoreSecretsPlatform`, and 5 device tests on the emulator. Codex found two concurrency bugs (shared temp file, per-instance key lock); both reproduced and fixed |
+| P1-02 | `tether-store` schema 0001 and migrations runner | Blair with Claude | In review | #140 | Issue #6. Schema 0001 for 7 tables, runner, and 28 tests; the CI Android check now uses `cargo ndk`. Codex found no issues; a Sonnet review found a table-rebuild data loss, a concurrent-open failure, and weak tests, all fixed |
+| P1-04 | SSE parser and provider trait | Blair with Claude | In review | #141 | Issue #8. `ChatProvider` trait and types, `SseParser` with 29 tests including every split position |
+| P1-01 | `tether-types` message, part, event, usage, error types | Blair with Claude | Done | #138 | Merged; issue #5 closed. Types, 15 new events, and FFI views; bindings regenerated. Sonnet and Codex reviews done |
 
 ## Decisions log
 
 | Date | ID | Decision | Why | Docs affected |
 |---|---|---|---|---|
+| 2026-11-19 | D30 | The Gemini adapter sends the key only in the `x-goog-api-key` header and rejects model ids with characters outside letters, digits, `.`, `-`, and `_`. It uses the documented `v1beta` streaming endpoint and `thinkingBudget` (1024, 8192, 24576) even though Google now calls `generateContent` legacy in favour of its Interactions API. Thought signatures are not sent, because Google documents no way to skip them | A key in a URL lands in logs and proxies. A model id in the URL path must not be able to add a query or change the path. The adapter follows the documented endpoint that exists today; moving to the Interactions API is a later decision. Task P1-07, issue #11. Tool schemas use `parametersJsonSchema` (full JSON Schema), and generated call ids carry a per-response prefix | architecture |
+| 2026-11-19 | D29 | The adapters share one transport (`transport.rs`). The OpenAI adapter sends `store: false` and sends tool calls as `function_call` items without an `id`, and never replays reasoning. Codex tasks run as local Codex CLI sessions (`codex exec`, GPT-5.6 Luna, workspace-write sandbox) in the current checkout, because the Codex cloud environment does not exist and worktrees are not used | One copy of the code that handles the key, redirects, and cancellation. `store: false` stops OpenAI keeping the response for later retrieval; it does not stop OpenAI's abuse-monitoring retention (up to 30 days) or enable Zero Data Retention, which is an account setting. A reasoning effort also asks for a summary (`summary: "auto"`), which OpenAI sends only on request. An `id` on a function call makes the API ask for its paired reasoning item. The local CLI needs no cloud setup | architecture, project-structure |
+| 2026-11-19 | D27 | Every provider sends through one client from `http_client()`: HTTPS only, no redirects, 10 s connect and 120 s read timeouts. The Anthropic adapter leaves `thinking` out of a request that answers tool calls until signatures are stored, and never sends rewound messages. The license allow list gains `CDLA-Permissive-2.0`, which `webpki-roots` (the root certificate list reqwest uses) carries | reqwest strips only `Authorization` and `Cookie` headers on a cross-host redirect, so an `x-api-key` header would follow it. Anthropic rejects thinking in a tool loop without the signed blocks. CDLA-Permissive-2.0 is a permissive data license. Task P1-05, issue #9 | architecture, library-docs, deny.toml |
+| 2026-11-19 | D26 | The core never holds an encryption key: the platform wraps and unwraps, and Rust keeps only the wrapped bytes. The secret's reference is passed to the platform as authenticated data, so a wrapped file copied to another reference fails to unwrap. Secret bytes are wiped on drop with the `zeroize` crate, which is new in library-docs and awaits the owner's approval at merge. `SecretVault` is its own FFI object until the engine owns the store | Matches the existing design (architecture 4 and 10). Without the reference binding, an attacker who can write app files could copy the GitHub token over a provider key and have it sent to a third party. Task P1-03, issue #7 | architecture, library-docs, project-structure |
+| 2026-11-19 | D24 | The store tracks the schema in `PRAGMA user_version`, one transaction per migration, and refuses a database newer than the app. Schema 0001 holds only the 7 tables P1 uses and may change until a release opens the database. Tables are `STRICT` with `CHECK` lists for enum columns, kept equal to the new text forms in `tether-types` by a test. Model and price columns changed from the section 7 draft: `provider` plus `model_id` instead of `model`, and integer `*_price_micros` instead of prices. Foreign keys are off during a migration and checked before it commits, so a table rebuild cannot delete child rows. The CI Android check runs through `cargo ndk` with the pinned NDK because bundled SQLite compiles C code | Keeps one source for each version and text form, and catches a mismatch between Rust and SQL in a test. Task P1-02, issue #6 | architecture, project-structure, library-docs |
+| 2026-11-19 | D25 | A provider streams one response into a Tokio channel and stops when a cancellation token fires or the receiver is dropped. It does not retry; the engine does. The trait is dyn-compatible without an extra crate (it returns a boxed future). `Usage` events are running totals, not increments. The SSE parser drops a line over 1 MiB and an event over 8 MiB | A channel gives backpressure and lets the engine batch deltas every 32 ms; a token gives clean interruption (architecture 5.1); retries belong where the retryable flag is decided. Task P1-04, issue #8 | architecture, project-structure |
+| 2026-11-19 | D28 | Build workflow, updated. Codex writes the core Rust tasks, always with GPT-5.6 Luna until the owner says otherwise: Claude writes the task down and runs it as a local Codex CLI session (`codex exec`) in the current checkout, then reviews the result, commits it, and opens the pull request. Claude Code reviews what Codex wrote and writes the Android UI, with Haiku subagents for screen translation and other mechanical Compose work. `@codex review` is requested on every pull request, and fresh-context Sonnet reviews run only when the owner asks. No git worktrees: one issue at a time in the current checkout. Replaces the Sonnet review part of D20.Codex cloud tasks need an environment that does not exist, so they are not used; the `@codex review` comment on a pull request works without one | Owner's decision. The reviewer is always the other model than the writer, and one issue at a time keeps each pull request small | code-standards, AGENTS.md, CLAUDE.md |
+| 2026-11-18 | D23 | `tether-types` holds plain Rust types with no UniFFI code; `tether-ffi` converts the types the UI sees into `View` types, with ids as plain strings. `CoreError` is an enum with one variant per kind and a `retryable()` method. Its view is a record (`kind`, `message`, `retryable`), not an error enum, because a UniFFI error is a Kotlin exception: it cannot carry shared fields, compares by reference, and a field named `message` does not compile. Every session event carries `session_id`. P1-01 defines 15 of the 25 events; the other 10 arrive with the task that first emits them | Keeps UniFFI out of the engine crates and matches the P0 pattern. Doing it in `tether-types` would need external types across crates in UniFFI. Task P1-01, issue #5 | architecture, project-structure |
+| 2026-11-18 | D22 | The `full` build updates itself: Settings > About > Updates checks the latest GitHub Release, downloads the APK, verifies it against `SHA256SUMS`, and installs it over the running app. The `play` build links to Google Play. Releases are never marked as pre-releases, because the latest release lookup skips them. Risk: a release is offered to every `full` user as soon as it is published, with no staged rollout; a bad release is fixed by publishing a higher version | Owner's request. Replaces the default of notify only in M-Q2. Task P1-20, issue #135 | mobile, build-plan |
+| 2026-11-18 | D21 | Releases publish automatically when the version in `core/Cargo.toml` has no tag, from a merged pull request, with no manual tag and no draft; the release fails unless the APK is signed with the key whose fingerprint is pinned in `TETHER_CERT_SHA256` | Owner's decision: merge, then download and test. A failed release leaves no tag, so the next push retries | development, architecture, project-structure, build-plan |
+| 2026-11-18 | D20 | Build workflow: Codex writes core Rust tasks and Haiku subagents translate prototype screens to Compose, each task on its own issue and pull request; a fresh-context Sonnet subagent reviews every pull request before merge, with `@codex review` for security-relevant code; subagents never commit, run only the checks for their own files, and run at most 4 at a time; at most 15 files per commit; pull requests are rebase-merged, never squashed; `main` requires a pull request | Owner's decision. Small reviewed PRs catch bugs that a phase-sized diff hides, and a different model reviews than wrote | code-standards, architecture, development, project-structure, build-plan |
 | 2026-11-18 | D19 | The docs site is built from `docs/` by `tools/site/build.ts` and deployed with GitHub Pages | One source of truth; the build fails on a broken link. No new top-level folder | README, project-structure, development, architecture |
 | 2026-11-18 | D18 | Toolchain: JDK 21 runs Gradle (code targets Java 17), `compileSdk` 37, AGP 9.5.1, Kotlin 2.4.21, Gradle 9.6.1, NDK 27.1.12297006, Rust 1.99.1 | AndroidX 1.19 needs `compileSdk` 37; these are the versions installed and tested. Replaces "JDK 17" in development.md | development, library-docs |
 | 2026-11-18 | D17 | Repo is public at `khanblair/tether` with no license yet; `main` gets branch protection after CI is green | Owner's decision. No license means all rights reserved, so the license is still open (Q5) | README, product-scope |
@@ -109,27 +130,65 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 | Q9 | Vault in shared storage so Obsidian opens it directly? | Blair | P11 |
 | Q10 | Approval defaults for agent-written skills, memory, and vault notes | Blair | P11 |
 | M-Q1 | Foreground service type for `play` | Blair | P9 |
-| M-Q2 | In-app update download for `full` | Blair | P10 |
 | M-Q5 | Vault storage location (same as Q9, platform side) | Blair | P11 |
 
 ## Session log
 
 | Date | Who | What happened | Next |
 |---|---|---|---|
-| 2026-11-18 | Blair with Claude | Scaffolded the repo: Rust workspace with UniFFI, Android app with flavors and a Velvet Plum theme, logo and launcher icon, tokens pipeline, slop-lint, CI, release and Pages workflows, docs site. Updated every doc to match, added skills, memory, and the vault (F21 to F23, phase P11). Verified on a Pixel 9 arm64 emulator: core version and event path, navigation, theme switch, instrumented test | Push to `khanblair/tether`, watch CI to green, add branch protection, enable Pages; then P0-13 and P1 |
+| 2026-11-19 | Blair with Codex and Claude | Resumed P1-07 after the owner's go-ahead. A Codex CLI session (GPT-5.6 Luna) fixed two Codex review findings: generated tool call ids restarted at zero in every response, and tool schemas went in the field that accepts only Google's restricted schema. Claude added a test that the id prefix carries the time | Merge PR 146 when CI and Codex are green, then P1-08 |
+| 2026-11-19 | Blair with Codex and Claude | Built P1-07 as a local Codex CLI session (GPT-5.6 Luna). Claude's review ran 20 mutations: 15 caught, 5 slipped through (loose `contains` assertions), closed with exact tests. Claude also added model id validation and the unspecified finish reason handling | Codex review of the PR, then P1-08 |
+| 2026-11-19 | Blair with Codex and Claude | Built P1-06 as a local Codex CLI session (GPT-5.6 Luna) after the owner clarified the flow. Claude extracted the shared transport first, then reviewed the result: 16 mutations, 14 caught, 2 gaps (bad tool arguments, empty fragments) closed with new tests | Codex review of #144, then P1-07 and P1-08 |
+| 2026-11-19 | Blair with Claude | Built P1-05 in a worktree stacked on the P1-04 branch: a Sonnet agent wrote the adapter from a detailed spec, and the main session reviewed it, mutation-tested it (3 of 12 mutations slipped through, tests added), and added the shared client, the tool-loop thinking rule, and the rewound filter | Codex review; Blair decides on the nightly live smoke test |
+| 2026-11-19 | Blair with Claude | Built P1-03 in the main session (security code): the `tether-secrets` crate, the FFI vault, `KeystoreSecretsPlatform`, and device tests on the emulator. Ran P1-04 and P1-05 in parallel in separate worktrees | Codex review of #7 |
+| 2026-11-19 | Blair with Claude | Built P1-02 on `feat/p1-02-store-schema`: the `tether-store` crate, schema 0001, the migration runner, text forms in `tether-types`, and 17 store tests. Found that `cargo check --target aarch64-linux-android` cannot compile bundled SQLite without the NDK toolchain; the CI step now uses `cargo ndk` | Open the pull request with `@codex review` |
+| 2026-11-19 | Blair with Claude | Built P1-04: the main session wrote the provider contract, a Haiku agent wrote the SSE parser and fixtures in its own worktree, and the main session reviewed it, added the event size cap, and mutation-tested it. The first agent run used the wrong base branch and stopped without changes; it was re-run in a worktree on the right branch | Codex review, then P1-05 builds on this |
+| 2026-11-19 | Blair with Claude | The owner asked why Codex was not writing code. It had only reviewed pull requests, because Codex needs a cloud environment that does not exist yet and the work had drifted to Claude agents. Recorded the workflow in `AGENTS.md`, `CLAUDE.md`, and code-standards (D28), and started P1-06 as a draft pull request for Codex | Owner creates the Codex environment; Claude reviews what Codex pushes to #144 |
+| 2026-11-18 | Blair with Claude | Opened PR #139 with `AGENTS.md` and `CLAUDE.md`. A Sonnet review found wrong claims about what `just check` and `slop-lint` cover, commands that only run from a subfolder, and missing pointers to code-standards section 13; fixed | Merge #139 after review |
+| 2026-11-18 | Blair with Claude | Built P1-01 on `feat/p1-01-tether-types`: the shared types, the 15 new events, and their FFI views. Found that a UniFFI error enum becomes a Kotlin exception whose generated `message` clashes with a field of that name; made the error view a record instead. Sonnet review: fixed the doc, tests, and dead code it found | Sonnet review, then Blair's go to commit and open the pull request |
+| 2026-11-18 | Blair with Claude | Opened PR #134 for P0-19 (automatic release) after PR #132 merged and issue #3 closed on its own. A Sonnet review found the key could be replaced silently and the version was not validated; both fixed | Merge #134, which releases v0.0.1; download and test the APK; back up the keystore |
+| 2026-11-18 | Blair with Claude | Opened PR #132 for P0-13 (smell fixtures), the first task on its own issue and branch, with a Sonnet review before merge | Merge #132 and check that issue #3 closes |
+| 2026-11-18 | Blair with Claude | Pushed 18 commits (15 files or fewer each) to `khanblair/tether`; CI green on the first run; Pages deployed; branch protection added with the four CI checks (admins not enforced, no review requirement). Earlier the same day: scaffolded the repo: Rust workspace with UniFFI, Android app with flavors and a Velvet Plum theme, logo and launcher icon, tokens pipeline, slop-lint, CI, release and Pages workflows, docs site. Updated every doc to match, added skills, memory, and the vault (F21 to F23, phase P11). Verified on a Pixel 9 arm64 emulator: core version and event path, navigation, theme switch, instrumented test | P0-13 and P0-16, then P1 |
 | 2026-11-18 | Blair with Claude | Defined the idea, made stack, provider, executor, platform, and name decisions; drafted all 14 docs | Review docs; create the repo (P0-01) |
 
 ## File changes log
 
 | Date | Files | Change | PR |
 |---|---|---|---|
+| 2026-11-19 | `core/crates/tether-providers/src/gemini/`, `core/fixtures/provider-streams/gemini-*.sse` | Gemini adapter, tests, and fixtures for P1-07 | #146 |
+| 2026-11-19 | `core/crates/tether-providers/src/{openai/,transport.rs,test_support.rs}`, `core/fixtures/provider-streams/openai-*.sse` | Shared transport, OpenAI adapter, shared test server, and fixtures for P1-06 | #144 |
+| 2026-11-19 | `core/crates/tether-providers/src/{anthropic/,client.rs}`, `core/fixtures/provider-streams/anthropic-*.sse`, `core/deny.toml`, `core/Cargo.*` | Anthropic adapter, shared HTTP client, fixtures, and the license allowance for P1-05 | #143 |
+| 2026-11-19 | `core/crates/tether-secrets/`, `core/crates/tether-ffi/src/secrets.rs`, `android/core-bridge/.../KeystoreSecretsPlatform.kt`, `android/app/src/androidTest/.../SecretVaultTest.kt`, generated bindings, `core/Cargo.*` | Secret store, FFI vault, Keystore wrapper, and device tests for P1-03 | #142 |
+| 2026-11-19 | `core/crates/tether-store/`, `core/crates/tether-types/src/{text,session,message,lib}.rs`, `core/Cargo.*`, `.github/workflows/ci.yml` | Schema 0001, migration runner, text forms, and the cargo-ndk Android check for P1-02; fixes after review | #140 |
+| 2026-11-19 | `core/crates/tether-providers/`, `core/fixtures/provider-streams/`, `core/Cargo.*` | Provider trait, request, event and error types, and the SSE parser for P1-04 | #141 |
+| 2026-11-19 | `AGENTS.md`, `CLAUDE.md`, `docs/code-standards.md`, `docs/project-structure.md`, `docs/progress-tracker.md` | Codex writes core Rust, Haiku helps with UI, `@codex review` on every pull request, no worktrees (D28) | |
+| 2026-11-18 | `AGENTS.md`, `CLAUDE.md`, `docs/README.md`, `docs/project-structure.md`, `docs/progress-tracker.md` | Agent instruction files at the repo root, listed in the structure doc and linked from the docs README | #139 |
+| 2026-11-18 | `core/crates/tether-types/`, `core/crates/tether-ffi/src/views/`, `core/Cargo.*`, generated Kotlin bindings, `ProjectsScreen.kt`, `strings.xml` | Shared types, events, and FFI views for P1-01 | #138 |
+| 2026-11-18 | `.github/workflows/release.yml`, `docs/development.md`, `docs/progress-tracker.md` | Every release is published as the latest, never a pre-release; tracker brought up to date | #136 |
 | 2026-11-18 | Repo root, `core/`, `android/`, `tokens/`, `images/`, `tools/`, `.github/`, and placeholder READMEs | Created the P0 scaffold. The full list is in project-structure.md under Present now | n/a |
+| 2026-11-18 | `.github/workflows/release.yml`, `tools/setup-release-signing.sh`, `justfile` | Automatic release on a version with no tag; keystore and secrets setup script | #134 |
 | 2026-11-18 | `docs/*` (14 files) | Created | n/a |
 
 ## Doc changes log
 
 | Date | Doc | Change |
 |---|---|---|
+| 2026-11-19 | architecture, project-structure, progress-tracker | The Gemini adapter as built (D30) |
+| 2026-11-19 | architecture, project-structure, progress-tracker | The shared transport and the OpenAI adapter as built (D29) |
+| 2026-11-19 | architecture, library-docs, project-structure, progress-tracker | The Anthropic adapter and the shared client as built (D27) |
+| 2026-11-19 | architecture, library-docs, project-structure, progress-tracker | Secret store design as built, the reference binding threat row, `zeroize` proposed, and decision D26 |
+| 2026-11-19 | architecture, project-structure, library-docs, progress-tracker | Store schema 0001 as built, migration rules, the cargo-ndk CI check, and decision D24 |
+| 2026-11-19 | architecture, project-structure, progress-tracker | The provider contract as built (D25) and the new files |
+| 2026-11-19 | code-standards, project-structure, progress-tracker | Review rule and workflow updated (D28) |
+| 2026-11-18 | README, project-structure | `AGENTS.md` and `CLAUDE.md` added to both trees; the README sends agents to `AGENTS.md` first |
+| 2026-11-18 | architecture, project-structure, progress-tracker | Shared types and events as built: plain Rust types, `View` types in `tether-ffi`, `CoreError` shape, 15 events defined (D23) |
+| 2026-11-18 | mobile, build-plan | In-app updates for the full build: P1-20 added, M-Q2 decided (D22) |
+| 2026-11-18 | development, progress-tracker | Releases are always the latest, never pre-releases (D21 reworded); P0-16 and P0-19 marked Done after `v0.0.1` published |
+| 2026-11-18 | development, architecture, project-structure, build-plan | Release publishes on a version bump; `just release-signing`; P0-19 added, P0-16 reworded |
+| 2026-11-18 | architecture, development, project-structure | Smell fixtures for Clippy and detekt (P0-13) |
+| 2026-11-18 | code-standards, architecture, project-structure | Pull requests must close an issue (`Closes #N`) or say `No issue`; `pr.yml` checks it |
+| 2026-11-18 | project-structure, development, build-plan | Added `tools/prototype` and `just prototype`; P0-18 added |
+| 2026-11-18 | code-standards, architecture, development, project-structure, build-plan | Git workflow: rebase merge, 15 file commit limit with its CI check, model review before merge; P0-17 added |
 | 2026-11-18 | ui-tokens | Rewritten for Velvet Plum: design direction, every color table, contrast table from the checker, generated outputs, no CSS block copy |
 | 2026-11-18 | ui-rules, ui-registry | Amber replaced by the accent; P0 components marked Built; screenshot test rule scoped to P1 on |
 | 2026-11-18 | project-structure | Added the Present now tree; target tree updated for build-logic, images, tools, skills and memory crates, workflows |
@@ -144,6 +203,15 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 ## Notes for later
 
+- P1-11 (event pipeline) owns three gaps found in the P1-01 review: Kotlin needs a way to read the session id of any `CoreEventView` without a per-variant `when` (add `CoreEvent::session_id()` in the engine and expose it); `EventBus` replays 16 events and drops the oldest of any kind, but architecture section 4 says only `TextDelta` drops, and `ApprovalRequired` and `TurnFinished` must not drop; and the 400-line file limit will need `views/event.rs` split by event group once about 10 more events land.
+- P1-02 defined the text forms of `Role`, `SessionStatus`, `PermissionMode`, `Provider`, and `ConnectionStatus`. The text forms of `Executor` and `ToolCallStatus` arrive with the tables that store them. P1-11 decides what to do with an unknown part kind in `body_json`.
+- P1-11 sizes the store for the session actor: `Store` owns one connection (`Send`, not `Sync`), `Store::open` cannot serve read connections, and sessions have no stop-reason, archive, or context-size column yet. Add them in a numbered migration when the turn loop needs them.
+- P1-15 adds `message_fts` with triggers or cleanup, because `ON DELETE CASCADE` does not reach a virtual table.
+- P1-09 maps a catalog context window of 0 to NULL, because the schema rejects 0.
+- When `Store::open` is wired into the core, add a guard for a development database whose 0001 was edited after it was created.
+- `ToolProposed` and `ApprovalRequired` carry only the tool and the target. The approval bar will also need the executor and the rule text for "Always allow"; add the fields in the task that builds that bar.
+- Reasoning replay: Anthropic thinking signatures, Gemini thought signatures, and OpenAI reasoning items are all dropped today, so a tool loop on a model that requires them can fail (Anthropic and OpenAI are worked around; Gemini has no documented bypass). Fixing it needs `MessagePart::Thinking` to carry opaque provider data and the store to keep it. Decide before the tool phase (P2).
+- Google calls `generateContent` legacy and recommends its Interactions API. Revisit the Gemini endpoint when that API is stable.
 - Consider sub-agents for read-only exploration early in v1.1; the turn engine should not assume one agent per session.
 - Scheduled tasks (v1.2) should only run while charging and on Wi-Fi by default.
 - Watch for a stable Node-compatible WASI runtime; it would move many JavaScript tasks from Linux mode into the sandbox.

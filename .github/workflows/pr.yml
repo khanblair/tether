@@ -1,0 +1,26 @@
+name: PR
+
+# Runs on every description edit, so fixing a missing issue link clears the check without a new push.
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  issue-link:
+    name: issue-link
+    if: github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: The description closes an issue or says why not
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          if printf '%s' "$PR_BODY" | grep -Eiq '\b(close[sd]?|fix(e[sd])?|resolve[sd]?):?[[:space:]]+#[0-9]+|no issue:[[:space:]]*[^[:space:]]'; then
+            echo "Issue link found."
+          else
+            echo "::error::Start the pull request description with 'Closes #<issue number>', or write 'No issue: <reason>'."
+            exit 1
+          fi

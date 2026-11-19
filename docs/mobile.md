@@ -92,6 +92,7 @@ Status: planned. The P0 manifest declares none of these; `INTERNET` arrives with
 | `WAKE_LOCK` | Partial wake lock during turns | Install time |
 | `USE_BIOMETRIC` | Key reveal, Bypass, app lock | Install time |
 | `RECORD_AUDIO` | Voice input | First tap on the microphone |
+| `REQUEST_INSTALL_PACKAGES` (`full` only) | Install a downloaded update through `PackageInstaller` (P1-20); `play` never declares it | First tap on Install update, through the system settings screen |
 
 No location, contacts, or broad storage permissions.
 
@@ -185,7 +186,7 @@ Setup, commands, and troubleshooting are in development.md. For mobile work spec
 Release steps are in development.md section 13. Mobile-specific items:
 
 - Google Play: Data safety form states that no data is collected by Tether; data goes to providers and GitHub at the user's direction. Foreground service type declaration and justification. Policy decision on Linux mode (product-scope.md Q1).
-- GitHub Releases (`full`): one universal APK now (split APKs per ABI plan for P10), a `SHA256SUMS` file attached to the release, and an in-app update check that reads the latest release tag (no automatic download).
+- GitHub Releases (`full`): one universal APK now (split APKs per ABI plan for P10), a `SHA256SUMS` file attached to the release, and in-app updates (P1-20): the app checks the latest release, and the user can download, verify against `SHA256SUMS`, and install it from Settings > About > Updates. The system installer asks the user to confirm, and the new APK must carry the same signing certificate as the installed app.
 - Staged rollout on Play: 10%, 50%, 100% over a week, watching locally exported crash logs from beta testers.
 
 ## 14. Tasks
@@ -197,6 +198,7 @@ Mobile-specific tasks from build-plan.md:
 | P0-05 | cargo-ndk build into jniLibs |
 | P1-03 | Keystore secrets |
 | P1-17 | Voice input |
+| P1-20 | In-app updates for the `full` build |
 | P3-03 | Bypass with biometric |
 | P7-01 | PRoot as `lib*.so` from `nativeLibraryDir` |
 | P7-09 | `play` flavor stub |
@@ -213,7 +215,7 @@ Mobile-specific tasks from build-plan.md:
 | ID | Question | Default until decided |
 |---|---|---|
 | M-Q1 | Foreground service type: `dataSync` (6-hour daily cap on Android 15+) or `specialUse` (needs Play justification)? | `specialUse` in `full`; decide for `play` during P10 review |
-| M-Q2 | Offer an in-app update download for `full`, or only notify? | Notify only |
+| M-Q2 | Offer an in-app update download for `full`, or only notify? | Decided (D22): the `full` build downloads, verifies, and installs updates from Settings > About > Updates; `play` links to Google Play |
 | M-Q3 | Support Android 9 (API 28) for older devices? | No; Android 10+ |
 | M-Q4 | Ship x86_64 in the Play bundle or emulator builds only? | Ship both ABIs |
 | M-Q5 | Keep the vault in app storage with zip and folder sync, or in shared storage so Obsidian opens it directly? | App storage plus sync (product-scope Q9) |

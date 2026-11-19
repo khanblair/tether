@@ -65,7 +65,7 @@ Names below are token names. In Kotlin they are camel case: `color.accent-ink` i
 | `color.accent-soft` | `#C6F0E4` | `#17352F` | Background tint behind accent content |
 | `color.accent-2` | `#8A176E` | `#F0A3DC` | Secondary emphasis as text or icon: section markers, links to related items. Never a fill |
 | `color.on-accent-2` | `#FFFFFF` | `#3A0D36` | Text on an `accent-2` fill, where one is needed |
-| `color.tonal` | `#A7E8D7` | `#64165D` | Quiet fills: selected chips, filled tonal buttons, navigation selection |
+| `color.tonal` | `#A7E8D7` | `#64165D` | Quiet fills: selected chips, filled tonal buttons, navigation selection. Also the action color on the inverse surface (snackbars) |
 | `color.on-tonal` | `#0B3B31` | `#FFD6F4` | Text and icons on `color.tonal` |
 
 ### Status
@@ -126,6 +126,7 @@ Syntax colors are the one place a second hue family appears; they never appear o
 | `accent-2` on `surface` | 8.65 | 9.52 | 4.5 |
 | `on-accent-2` on `accent-2` | 8.65 | 8.50 | 4.5 |
 | `on-tonal` on `tonal` | 9.01 | 8.91 | 4.5 |
+| `tonal` on `text` (snackbar action on the inverse surface) | 13.15 | 9.87 | 4.5 |
 | `danger` on `surface` | 6.57 | 6.54 | 4.5 |
 | `danger` on `danger-soft` | 5.61 | 5.74 | 4.5 |
 | `success` on `surface` | 6.52 | 9.17 | 4.5 |

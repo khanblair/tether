@@ -1,0 +1,4 @@
+data: {"candidates":[{"content":{"parts":[{"thought":true,"text":"Plan"}]}}]}
+
+data: {"candidates":[{"content":{"parts":[{"text":"Answer"}]},"finishReason":"STOP"}]}
+

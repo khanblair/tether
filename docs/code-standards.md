@@ -94,10 +94,11 @@ Rules:
 
 - Trunk-based. `main` is always releasable. Short-lived branches: `feat/<id>-<slug>`, `fix/<id>-<slug>`, `docs/<slug>`, where `<id>` is the build-plan task ID.
 - Commit messages: Conventional Commits. `feat(session): add approval bar (P3-02)`. Imperative mood, under 72 characters for the subject. Body explains why.
-- Squash merge. The squash message follows the same format.
-- Every PR fills the template: task ID, what changed, how it was tested, docs updated, progress tracker updated.
-- At least one approving review. Security-relevant files need a CODEOWNERS review.
-- Never force push to `main`. Tags `v<major>.<minor>.<patch>` only from `main`.
+- Rebase merge, never squash. A squash puts a whole pull request into one commit and breaks the 15 file limit below.
+- At most 15 files per commit. `tools/check-commit-size.sh` runs in CI on every pull request and fails when a commit goes over.
+- Every PR fills the template: the issue it closes (`Closes #N`, or `No issue: <reason>`), what changed, how it was tested, docs updated, progress tracker updated. The `issue-link` check fails a PR whose description has neither.
+- Every pull request is reviewed before merge by a different model than the one that wrote it: Claude Code reviews what Codex wrote, and `@codex review` is requested on every pull request. A fresh-context Sonnet review runs only when the owner asks for one (D28). The owner merges. Security-relevant files need a CODEOWNERS review. GitHub approvals are required once there is a second maintainer.
+- Never force push to `main`. Never push release tags by hand: `release.yml` creates `v<major>.<minor>.<patch>` when it publishes a release, and a tag that already exists stops that version from releasing.
 
 ## 11. Code smells
 

@@ -78,7 +78,19 @@ Why one process: the core holds session state in memory and SQLite; splitting it
 
 Rule: only `tether-engine` coordinates other crates. Leaf crates never call each other except where the table lists the dependency.
 
-Status: at P0 only `tether-types`, `tether-engine`, and `tether-ffi` contain code. The other crates are empty libraries that hold their place in the workspace (see project-structure.md, Present now).
+Status: `tether-types`, `tether-engine`, `tether-ffi`, `tether-store`, `tether-secrets`, and `tether-providers` contain code. The other crates are empty libraries that hold their place in the workspace (see project-structure.md, Present now).
+
+`tether-secrets` (P1-03): `SecretStore` keeps one file per secret and asks the platform to wrap and unwrap through the `SecretsPlatform` callback, which takes the secret's reference as a second argument and must bind it as authenticated data. The core never holds an encryption key. `Secret` wipes its bytes when dropped and never prints. Writes go to a temporary file with mode 0600 that only that call uses, and are renamed over the target, so a crash leaves the old file or the new one, and two writers to one reference never share a file (the last rename wins). `SecretVault` is the UniFFI face: Kotlin calls `put`, `reveal` (after a biometric check), `has`, and `delete`. Providers will read keys inside the core, not through the vault. The vault is its own object until the engine owns the store; the `init` call in section 8 takes it over then. On Android, `KeystoreSecretsPlatform` in `core-bridge` uses an AES-256-GCM key in the Keystore (StrongBox when available) that needs no user authentication. A process-wide lock guards creating that key, so two platform instances cannot each create one and make the first unreadable.
+
+`tether-providers` (P1-04) holds the provider contract. `ChatProvider::stream_chat(request, events, cancel)` streams one response into a channel as `StreamEvent` values (`TextDelta`, `ThinkingDelta`, `ToolCallStarted`, `ToolCallArgsDelta`, `ToolCallFinished`, `Usage`, `Finished`). `Usage` events carry running totals for the response, with cache read and write tokens kept apart. The last event of a successful stream is always `Finished`. An adapter stops when `cancel` fires or the receiver is dropped, and never retries; the engine retries when the converted `CoreError` is retryable. `ChatRequest` puts the system prompt and tools first so adapters can cache them. `ProviderError` converts to `CoreError`. `SseParser` turns byte chunks into events, follows the WHATWG rules, and drops a line over 1 MiB and an event over 8 MiB.
+
+The Anthropic adapter (P1-05, `tether-providers/src/anthropic/`) posts to `/v1/messages` with `stream: true`. It marks the system block and the last tool with `cache_control`, maps `message_start`, `content_block_*`, `message_delta`, `message_stop`, and `error` events to `StreamEvent` values (unknown event types are ignored), and maps HTTP statuses to `ProviderError` (401 and 403 to `Auth`, 429 to `RateLimited` with `retry-after`, 400, 404, 413, and 422 to `InvalidRequest`, anything else to `Server`). Rewound messages, system notes, and thinking parts are not sent. A request that answers tool calls is sent without `thinking`, because Anthropic wants the signed thinking blocks of the last assistant turn back and Tether does not store the signatures yet. The key is sent in a sensitive header and never appears in `Debug` output or an error. Every provider sends through the client from `http_client()`: HTTPS only, no redirects, a 10 s connect timeout, and a 120 s read timeout.
+
+The adapters share `tether-providers/src/transport.rs`: it sends the request, maps HTTP statuses to `ProviderError`, reads the event stream through `SseParser`, and stops at once when the caller cancels or drops the receiver. An adapter supplies a `StreamMapper` (its events to `StreamEvent` values) and an `ErrorStyle` (how it words errors, and any status it reuses for several failures).
+
+The OpenAI adapter (P1-06, `tether-providers/src/openai/`) posts to `/v1/responses` with `stream: true` and `store: false`, so OpenAI does not keep the response for later retrieval. That flag does not turn off OpenAI's own abuse-monitoring retention, which can last up to 30 days on a default account; only account-level Zero Data Retention does, and the adapter cannot set it. With a reasoning effort it also asks for a reasoning summary (`summary: "auto"`), because OpenAI sends summary deltas only on request; `OpenAiConfig::reasoning_summary` turns that off for an organization that is not cleared to receive summaries. The system prompt goes in `instructions`, messages become a flat list of input items, and a tool call is a `function_call` item without an `id`, because an `id` makes OpenAI demand the reasoning item Tether does not store. OpenAI caches the stable prefix on its own, so there are no cache markers. It maps `response.output_text.delta`, reasoning summary deltas, function call argument deltas, `response.completed`, `response.incomplete`, `response.failed`, and `error` events, and ignores unknown types. Cached input tokens are split out of the input count. A 429 with the code `insufficient_quota` is `Auth`, because a billing problem is not retryable.
+
+The Gemini adapter (P1-07, `tether-providers/src/gemini/`) posts to `/v1beta/models/<model>:streamGenerateContent?alt=sse`. The key goes only in the `x-goog-api-key` header, never in the URL, and a model id with any character other than letters, digits, `.`, `-`, and `_` is rejected so it cannot change the path. Tool schemas go in `parametersJsonSchema`, which takes full JSON Schema (`additionalProperties` and the like); the older `parameters` field accepts only Google's restricted schema and would fail with a 400. Messages become `contents` with the roles `user` and `model`, and a tool result finds its function name from the earlier call with the same id. Each stream chunk is a full response: function calls arrive whole and become a started, arguments, and finished event, and a call that has no `id` gets one built from the current time, a process-wide counter, and its position in the response (`gemini_<ms>_<n>_<i>`), so ids stay unique across responses and restarts; parts marked `thought` become thinking deltas; usage counts thinking tokens as output and splits out cached tokens. There is no end event, so the stream is finished by a `finishReason` (the placeholder `FINISH_REASON_UNSPECIFIED` does not count) or a blocked prompt. HTTP 400 with "API key not valid" is `Auth`. Google does not document a way to skip thought signatures, and Tether does not store them, so a tool loop on a model that requires them may fail until reasoning replay is built (see the tracker notes).
 
 ### Android (`android/`)
 
@@ -122,7 +134,7 @@ Status: at P0 the app shell is an exception to the rule that composables never c
    - Blocked: return an error result to the model explaining the mode.
 5. If the tool calls included edits, close the edit batch: write the checkpoint, run the quality gate, emit `DiffReady` and `QualityReport`.
 6. Send tool results back to the model; repeat from step 3 until the model ends the turn or the user interrupts.
-7. Store usage; emit `TurnFinished` with tokens and cost.
+7. Store usage; emit `UsageUpdated`, then `TurnFinished`.
 
 ### 5.2 Approval while backgrounded
 
@@ -203,8 +215,8 @@ SQLite database at `files/db/tether.db`, WAL mode, foreign keys on. IDs are ULID
 
 | Table | Columns | Notes |
 |---|---|---|
-| `projects` | id, name, path, remote_url, default_branch, default_model, default_mode, created_at, opened_at | `path` is relative to `files/workspaces/` |
-| `sessions` | id, project_id, title, model, mode, status, created_at, updated_at, cost_micros, tokens_in, tokens_out | `cost_micros` is USD × 1,000,000 |
+| `projects` | id, name, path, remote_url, default_branch, default_provider, default_model_id, default_mode, created_at, opened_at | `path` is relative to `files/workspaces/`; a `CHECK` rejects empty, absolute, and `..` paths |
+| `sessions` | id, project_id, title, provider, model_id, mode, status, created_at, updated_at, cost_micros, tokens_in, tokens_out | `cost_micros` is USD × 1,000,000 |
 | `messages` | id, session_id, role, seq, created_at, rewound | role: user, assistant, tool, system_note |
 | `message_parts` | id, message_id, seq, kind, body_json | kind: text, image_ref, tool_call, tool_result, thinking, compaction_summary |
 | `tool_calls` | id, message_id, tool, args_json, status, executor, started_at, finished_at, result_ref | `result_ref` points to a blob for large results |
@@ -215,9 +227,9 @@ SQLite database at `files/db/tether.db`, WAL mode, foreign keys on. IDs are ULID
 | `quality_reports` | id, checkpoint_id, findings_json, blocking_count | |
 | `runs` | id, tool_call_id, executor, command, exit_code, duration_ms, output_ref, ci_run_id | |
 | `provider_configs` | provider, secret_ref, base_url, status, tested_at | no key material; `secret_ref` names the wrapped secret |
-| `models` | provider, model_id, context_window, input_price, output_price, caps_json, fetched_at | catalog cache |
+| `models` | provider, model_id, context_window, input_price_micros, output_price_micros, caps_json, fetched_at | catalog cache; prices are USD × 1,000,000 per million tokens, NULL when unknown |
 | `mcp_servers` | id, name, url, transport, secret_ref, enabled | |
-| `usage_daily` | day, provider, model, project_id, tokens_in, tokens_out, cost_micros | for charts and budgets |
+| `usage_daily` | day, provider, model_id, project_id, tokens_in, tokens_out, cost_micros | for charts and budgets; `day` is a UTC date, `YYYY-MM-DD`; no foreign key on `project_id`, so cost history outlives a deleted project |
 | `message_fts` | FTS5 virtual table over message text: session_id, message_id, body | session search (F22); bundled SQLite with FTS5, never the Android framework SQLite |
 | `vault_notes` | path, title, description, type, tags_json, updated_at, hash | rebuildable index of the vault folder |
 | `vault_links` | src_path, dst_path, heading, kind, resolved | wikilinks and backlinks; `resolved = 0` means the target note does not exist yet |
@@ -225,7 +237,9 @@ SQLite database at `files/db/tether.db`, WAL mode, foreign keys on. IDs are ULID
 
 Blobs (file snapshots, large tool results, run output) live in `files/blobs/`, named by BLAKE3 hash, compressed with zstd. A blob is deleted when no row references it, by a cleanup job run on app start at most once a day.
 
-Migrations are numbered SQL files in `core/crates/tether-store/migrations/`, run in a transaction at core start.
+Migrations are numbered SQL files in `core/crates/tether-store/migrations/`. At core start each one newer than the database runs in its own transaction, and the version is kept in `PRAGMA user_version`, written in the same transaction, so a failed migration leaves the database at the version before it. Foreign keys are off while a migration runs, because rebuilding a parent table to change a `CHECK` list would otherwise delete its children, and `PRAGMA foreign_key_check` must pass before the migration commits. A second opener that waited for the write lock skips migrations already applied. A database newer than the app is refused. Tables use `STRICT`, and enum columns have `CHECK` lists that a store test keeps equal to the text forms in `tether-types`.
+
+Status: schema 0001 (P1-02) creates `projects`, `sessions`, `messages`, `message_parts`, `provider_configs`, `models`, and `usage_daily`. The other tables arrive in numbered migrations with the task that first uses them. Until a release opens the database, 0001 may change; after that, only new migrations may.
 
 ## 8. API
 
@@ -255,11 +269,19 @@ The core's API is the UniFFI surface. There are no HTTP routes.
 
 ### Events (Rust calls Kotlin through `EventSink.on_event`)
 
+Every event for one session carries its `session_id`, so ViewModels can filter on it. `SessionUpdated` is the source of truth for session state; the turn and network events add detail the state cannot hold, and the engine emits them from the same transition so they never disagree.
+
 `SessionUpdated`, `TextDelta`, `ThinkingDelta`, `ToolProposed`, `ApprovalRequired`, `ToolStarted`, `ToolOutput` (streaming run output), `ToolFinished`, `DiffReady`, `QualityReport`, `PlanReady`, `TodoUpdated`, `AskUser`, `RunProgress`, `CompactionDone`, `UsageUpdated`, `TurnFinished`, `TurnInterrupted`, `TurnFailed`, `SessionRewound`, `LinuxStatus`, `RuntimeStatus`, `ProviderStatus`, `NetworkPaused`, `NetworkResumed`.
+
+Status: P1-01 defines `Ready` and `Test` (from P0), `SessionUpdated`, `TextDelta`, `ThinkingDelta`, `ToolProposed`, `ApprovalRequired`, `ToolStarted`, `ToolOutput`, `ToolFinished`, `UsageUpdated`, `TurnFinished`, `TurnInterrupted`, `TurnFailed`, `NetworkPaused`, `NetworkResumed`, and `ProviderStatus`. `DiffReady`, `QualityReport`, `PlanReady`, `TodoUpdated`, `AskUser`, `RunProgress`, `CompactionDone`, `SessionRewound`, `LinuxStatus`, and `RuntimeStatus` arrive with the task that first emits them.
 
 ### Shared types
 
-Defined in `tether-types` and exported as UniFFI records and enums: `ProjectId`, `SessionId`, `ToolCallId` (newtypes over strings), `PermissionMode`, `Executor`, `Provider`, `ModelRef`, `UserInput`, `Attachment`, `ToolCallView`, `DiffSummary`, `Hunk`, `Finding`, `Severity`, `UsageSnapshot`, `CoreError` (enum with `kind`, `message`, `retryable`).
+Defined in `tether-types` as plain Rust with no UniFFI code. `tether-ffi` converts the types the UI sees into UniFFI view types with a `View` suffix (`CoreEventView`, `MessageView`, `ModelRefView`, and so on). Ids cross the boundary as plain strings, and the Kotlin layer wraps them in value classes where it keeps them.
+
+Present now: `ProjectId`, `SessionId`, `MessageId`, `ToolCallId` (newtypes over strings), `Role`, `MessagePart`, `Message`, `PermissionMode`, `Executor`, `Provider`, `ModelRef`, `SessionStatus`, `ToolCallStatus`, `ConnectionStatus`, `UsageSnapshot`, and `CoreError`. Later tasks add `UserInput`, `Attachment`, `ToolCallView`, `DiffSummary`, `Hunk`, `Finding`, and `Severity`.
+
+`CoreError` is an enum with one variant per kind: `Internal`, `Network`, `Auth`, `RateLimited`, `InvalidInput`, `NotFound`, and `Cancelled`. Each variant carries a `message`. `retryable()` is true for `Network` and `RateLimited`. Over the FFI it is `CoreErrorView`, a record with `kind`, `message`, and `retryable`. Events such as `TurnFailed` carry it. It is a record and not a Kotlin exception, so events compare by value. The error type that commands return arrives with the first command that fails.
 
 Rule: every type the UI sees is a view type built for display. Internal engine types do not cross the FFI boundary.
 
@@ -272,7 +294,7 @@ All under the app's private `files/` directory unless noted.
 | `workspaces/<project-id>/` | Project files and `.git` |
 | `db/tether.db` | SQLite database |
 | `blobs/<aa>/<hash>` | Content-addressed blobs |
-| `secrets/<ref>.bin` | Secrets encrypted with AES-GCM using a Keystore key |
+| `secrets/<ref>.bin` | The bytes `SecretsPlatform.wrap` returned (AES-GCM with a Keystore key: 12-byte IV, ciphertext, tag), after a 5-byte header (`TSEC` and a format version). `<ref>` allows only `a-z`, `0-9`, `-`, and `_`, up to 64 characters |
 | `memory/MEMORY.md`, `memory/USER.md` | Agent notes and user profile, capped in size (F22) |
 | `memory/vault/` | The Obsidian-compatible vault: plain Markdown notes, `index.md`, `log.md` (F23) |
 | `skills/<category>/<name>/SKILL.md` | User skills, with optional `references/`, `templates/`, `scripts/`, `assets/` (F21) |
@@ -294,12 +316,14 @@ Backups: `secrets/`, `linux/`, `runtimes/`, `blobs/`, `logs/`, and `cache/` are 
 | Threat | Control |
 |---|---|
 | Key theft from storage | Keys encrypted with an AES-GCM key held in Android Keystore (StrongBox when available); never written in plaintext; excluded from backup |
+| A wrapped secret file copied over another reference (for example the GitHub token over a provider key, to send it to a third party) | The reference is passed to the platform as authenticated data when wrapping and unwrapping, so a file moved to another reference fails to unwrap |
 | Keys leaking into logs, transcripts, exports | Redaction layer in the logger and exporter matches known key formats and every stored secret; S7 test |
 | Agent-run code reading keys | Secrets never enter executor environments; sandbox sees only `/workspace`; Linux mode binds only the project folder and a temp folder |
 | Path escape | Path guard canonicalizes every path, rejects `..` outside the root, rejects symlinks pointing outside, rejects writes inside `.git/` |
 | Prompt injection via repo files or web content | Network tools, pushes, and non-sandbox runs need approval below Bypass; tool results are marked as data in the prompt; no tool can change permission settings |
 | Destructive remote actions | Push to default branch, force push, and remote branch delete always ask (force push asks even in Bypass) |
 | Tampered runtime packs or root filesystem | Signed manifest (Ed25519, key in the app) lists SHA-256 for every download; mismatch aborts |
+| Tampered update APK | The Rust core downloads the APK and checks its SHA-256 against the release `SHA256SUMS`; the Kotlin layer then hands it to `PackageInstaller`, and Android rejects an APK signed with a different key |
 | Runaway cost | Budgets with pause; cost visible at all times |
 | Shoulder surfing and screenshots | Optional `FLAG_SECURE`; key reveal needs biometric |
 | Malicious MCP server | Servers added only by the user; each tool approval-gated by default; server output treated as data |
@@ -353,14 +377,14 @@ Two separate systems: the in-app quality gate that checks the user's code, and t
 
 | Job | Runs |
 |---|---|
-| `rust` | `cargo fmt --check`, `cargo clippy -D warnings` (which carries the smell thresholds), `cargo test`, `cargo check` for both Android targets, `cargo deny check` |
-| `tooling` | Token generation is current and every contrast pair passes; `tools/slop-lint` tests, then slop-lint over `docs/`, `README.md`, and `strings.xml`; the file length check and its self test; the docs site builds and every link between its pages resolves |
+| `rust` | `cargo fmt --check`, `cargo clippy -D warnings` (which carries the smell thresholds, proven by a fixture crate that must fail it), `cargo test`, `cargo ndk check` for both Android ABIs (bundled SQLite compiles C code), `cargo deny check` |
+| `tooling` | Token generation is current and every contrast pair passes; `tools/slop-lint` tests, then slop-lint over `docs/`, `README.md`, and `strings.xml`; the file length check and its self test; the commit size check self test, and on pull requests no commit touching more than 15 files; the docs site builds and every link between its pages resolves |
 | `bindings` | Regenerate UniFFI bindings and fail if they differ from committed output |
-| `android` | `ktlint` and `detekt` (through `qualityCheck`), Android lint with warnings as errors, unit tests, `assemble` both flavors; uploads the debug APKs |
+| `android` | `ktlint` and `detekt` (through `qualityCheck`; a fixture module must fail detekt), Android lint with warnings as errors, unit tests, `assemble` both flavors; uploads the debug APKs |
 
 Not in CI yet: instrumented and Compose UI tests on an emulator (run locally with `just test-device`), the `bench` job, and the nightly live provider smoke tests. Slop-lint does not yet check code comments or commit messages.
 
-Other workflows: `pages.yml` builds and deploys the docs site on changes to docs, images, tokens, or the site tools. `release.yml` runs on a `vX.Y.Z` tag and opens a draft GitHub Release (see development.md section 13).
+Other workflows: `pr.yml` runs the `issue-link` check on every pull request and on every edit of its description. `pages.yml` builds and deploys the docs site on changes to docs, images, tokens, or the site tools. `release.yml` runs on every push to `main`. When the version in `core/Cargo.toml` has no tag yet, it publishes a signed GitHub Release (see development.md section 13).
 
 `tools/slop-lint` reuses the same rule data as the in-app gate, so the product and the repo follow one definition of AI slop.
 

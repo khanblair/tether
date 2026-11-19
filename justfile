@@ -65,6 +65,15 @@ smells:
     tools/check-file-length.sh --self-test
     tools/check-file-length.sh
 
+# Prove Clippy and detekt fail on a function over the line limit.
+smell-fixtures:
+    tools/check-smell-fixtures.sh
+
+# Fail if a commit on this branch touches more than 15 files.
+commits:
+    tools/check-commit-size.sh --self-test
+    tools/check-commit-size.sh
+
 # Regenerate the UniFFI Kotlin bindings.
 bindings:
     tools/gen-bindings.sh
@@ -81,10 +90,19 @@ icons:
 site:
     node tools/site/build.ts
 
+# Serve the mobile UI prototype at http://127.0.0.1:4173/ (regenerates its token CSS first).
+prototype:
+    node tokens/generate.ts --css tools/prototype/tokens.css
+    python3 -m http.server 4173 --bind 127.0.0.1 --directory tools/prototype
+
 # Run before every push.
-check: lint slop smells test
+check: lint slop smells smell-fixtures test
     tools/gen-bindings.sh
     git diff --exit-code -- android/core-bridge/src/main/kotlin/app/tether/core/generated
+
+# One-time: create the release keystore and store it, with its password, as GitHub secrets. Run in your own terminal.
+release-signing:
+    tools/setup-release-signing.sh
 
 # Build the signed release artifacts. Needs the signing variables from docs/development.md section 5.
 release:

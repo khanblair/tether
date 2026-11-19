@@ -653,6 +653,12 @@ internal interface UniffiForeignFutureCompleteVoid : com.sun.jna.Callback {
 internal interface UniffiCallbackInterfaceEventSinkMethod0 : com.sun.jna.Callback {
     fun callback(`uniffiHandle`: Long,`event`: RustBuffer.ByValue,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,)
 }
+internal interface UniffiCallbackInterfaceSecretsPlatformMethod0 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`plaintext`: RustBuffer.ByValue,`context`: RustBuffer.ByValue,`uniffiOutReturn`: RustBuffer,uniffiCallStatus: UniffiRustCallStatus,)
+}
+internal interface UniffiCallbackInterfaceSecretsPlatformMethod1 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`wrapped`: RustBuffer.ByValue,`context`: RustBuffer.ByValue,`uniffiOutReturn`: RustBuffer,uniffiCallStatus: UniffiRustCallStatus,)
+}
 @Structure.FieldOrder("uniffiFree", "uniffiClone", "onEvent")
 internal open class UniffiVTableCallbackInterfaceEventSink(
     @JvmField internal var `uniffiFree`: UniffiCallbackInterfaceFree? = null,
@@ -669,6 +675,28 @@ internal open class UniffiVTableCallbackInterfaceEventSink(
         `uniffiFree` = other.`uniffiFree`
         `uniffiClone` = other.`uniffiClone`
         `onEvent` = other.`onEvent`
+    }
+
+}
+@Structure.FieldOrder("uniffiFree", "uniffiClone", "wrap", "unwrap")
+internal open class UniffiVTableCallbackInterfaceSecretsPlatform(
+    @JvmField internal var `uniffiFree`: UniffiCallbackInterfaceFree? = null,
+    @JvmField internal var `uniffiClone`: UniffiCallbackInterfaceClone? = null,
+    @JvmField internal var `wrap`: UniffiCallbackInterfaceSecretsPlatformMethod0? = null,
+    @JvmField internal var `unwrap`: UniffiCallbackInterfaceSecretsPlatformMethod1? = null,
+) : Structure() {
+    class UniffiByValue(
+        `uniffiFree`: UniffiCallbackInterfaceFree? = null,
+        `uniffiClone`: UniffiCallbackInterfaceClone? = null,
+        `wrap`: UniffiCallbackInterfaceSecretsPlatformMethod0? = null,
+        `unwrap`: UniffiCallbackInterfaceSecretsPlatformMethod1? = null,
+    ): UniffiVTableCallbackInterfaceSecretsPlatform(`uniffiFree`,`uniffiClone`,`wrap`,`unwrap`,), Structure.ByValue
+
+   internal fun uniffiSetValue(other: UniffiVTableCallbackInterfaceSecretsPlatform) {
+        `uniffiFree` = other.`uniffiFree`
+        `uniffiClone` = other.`uniffiClone`
+        `wrap` = other.`wrap`
+        `unwrap` = other.`unwrap`
     }
 
 }
@@ -703,7 +731,21 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_tether_core_checksum_method_eventsink_on_event(
     ): Int
+    external fun uniffi_tether_core_checksum_method_secretvault_delete(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_secretvault_has(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_secretvault_put(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_secretvault_reveal(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_secretsplatform_wrap(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_secretsplatform_unwrap(
+    ): Int
     external fun uniffi_tether_core_checksum_constructor_tethercore_new(
+    ): Int
+    external fun uniffi_tether_core_checksum_constructor_secretvault_new(
     ): Int
     external fun ffi_tether_core_uniffi_contract_version(
     ): Int
@@ -722,6 +764,7 @@ internal object UniffiLib {
     init {
         Native.register(UniffiLib::class.java, findLibraryName(componentName = "tether_core"))
         uniffiCallbackInterfaceEventSink.register(this)
+        uniffiCallbackInterfaceSecretsPlatform.register(this)
         
     }
 
@@ -742,6 +785,30 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_tether_core_fn_method_eventsink_on_event(`ptr`: Long,`event`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_tether_core_fn_clone_secretvault(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_tether_core_fn_free_secretvault(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_constructor_secretvault_new(`dir`: RustBuffer.ByValue,`platform`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_tether_core_fn_method_secretvault_delete(`ptr`: Long,`reference`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_method_secretvault_has(`ptr`: Long,`reference`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_tether_core_fn_method_secretvault_put(`ptr`: Long,`reference`: RustBuffer.ByValue,`value`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_method_secretvault_reveal(`ptr`: Long,`reference`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_tether_core_fn_clone_secretsplatform(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_tether_core_fn_free_secretsplatform(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_init_callback_vtable_secretsplatform(`vtable`: UniffiVTableCallbackInterfaceSecretsPlatform,
+    ): Unit
+    external fun uniffi_tether_core_fn_method_secretsplatform_wrap(`ptr`: Long,`plaintext`: RustBuffer.ByValue,`context`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_tether_core_fn_method_secretsplatform_unwrap(`ptr`: Long,`wrapped`: RustBuffer.ByValue,`context`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_tether_core_fn_func_version(uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun ffi_tether_core_rustbuffer_alloc(`size`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -869,10 +936,31 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_tether_core_checksum_method_tethercore_emit_test_event() and 0xFFFF) != 57350) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_tether_core_checksum_method_eventsink_on_event() and 0xFFFF) != 26203) {
+    if ((lib.uniffi_tether_core_checksum_method_eventsink_on_event() and 0xFFFF) != 54286) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_secretvault_delete() and 0xFFFF) != 49153) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_secretvault_has() and 0xFFFF) != 13182) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_secretvault_put() and 0xFFFF) != 4057) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_secretvault_reveal() and 0xFFFF) != 32733) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_secretsplatform_wrap() and 0xFFFF) != 3851) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_secretsplatform_unwrap() and 0xFFFF) != 62493) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_constructor_tethercore_new() and 0xFFFF) != 22145) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_constructor_secretvault_new() and 0xFFFF) != 45283) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
 }
@@ -1066,6 +1154,98 @@ private class JavaLangRefCleanable(
 /**
  * @suppress
  */
+public object FfiConverterUInt: FfiConverter<UInt, Int> {
+    override fun lift(value: Int): UInt {
+        return value.toUInt()
+    }
+
+    override fun read(buf: ByteBuffer): UInt {
+        return lift(buf.getInt())
+    }
+
+    override fun lower(value: UInt): Int {
+        return value.toInt()
+    }
+
+    override fun allocationSize(value: UInt) = 4UL
+
+    override fun write(value: UInt, buf: ByteBuffer) {
+        buf.putInt(value.toInt())
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterULong: FfiConverter<ULong, Long> {
+    override fun lift(value: Long): ULong {
+        return value.toULong()
+    }
+
+    override fun read(buf: ByteBuffer): ULong {
+        return lift(buf.getLong())
+    }
+
+    override fun lower(value: ULong): Long {
+        return value.toLong()
+    }
+
+    override fun allocationSize(value: ULong) = 8UL
+
+    override fun write(value: ULong, buf: ByteBuffer) {
+        buf.putLong(value.toLong())
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterLong: FfiConverter<Long, Long> {
+    override fun lift(value: Long): Long {
+        return value
+    }
+
+    override fun read(buf: ByteBuffer): Long {
+        return buf.getLong()
+    }
+
+    override fun lower(value: Long): Long {
+        return value
+    }
+
+    override fun allocationSize(value: Long) = 8UL
+
+    override fun write(value: Long, buf: ByteBuffer) {
+        buf.putLong(value)
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterBoolean: FfiConverter<Boolean, Byte> {
+    override fun lift(value: Byte): Boolean {
+        return value.toInt() != 0
+    }
+
+    override fun read(buf: ByteBuffer): Boolean {
+        return lift(buf.get())
+    }
+
+    override fun lower(value: Boolean): Byte {
+        return if (value) 1.toByte() else 0.toByte()
+    }
+
+    override fun allocationSize(value: Boolean) = 1UL
+
+    override fun write(value: Boolean, buf: ByteBuffer) {
+        buf.put(lower(value))
+    }
+}
+
+/**
+ * @suppress
+ */
 public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
     // Note: we don't inherit from FfiConverterRustBuffer, because we use a
     // special encoding when lowering/lifting.  We can use `RustBuffer.len` to
@@ -1117,6 +1297,25 @@ public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
         val byteBuf = toUtf8(value)
         buf.putInt(byteBuf.limit())
         buf.put(byteBuf)
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterByteArray: FfiConverterRustBuffer<ByteArray> {
+    override fun read(buf: ByteBuffer): ByteArray {
+        val len = buf.getInt()
+        val byteArr = ByteArray(len)
+        buf.get(byteArr)
+        return byteArr
+    }
+    override fun allocationSize(value: ByteArray): ULong {
+        return 4UL + value.size.toULong()
+    }
+    override fun write(value: ByteArray, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        buf.put(value)
     }
 }
 
@@ -1540,6 +1739,779 @@ public object FfiConverterTypeEventSink: FfiConverter<EventSink, Long> {
 
 
 /**
+ * Stores secrets wrapped by the platform keystore. Kotlin uses it to save a key and, after
+ * a biometric check, to reveal it. Providers read keys inside the core, not through this.
+ */
+public interface SecretVaultInterface {
+    
+    /**
+     * Removes the secret. Removing one that does not exist is not an error.
+     *
+     * # Errors
+     * Returns an error when the reference is invalid or the file cannot be removed.
+     */
+    fun `delete`(`reference`: kotlin.String)
+    
+    /**
+     * True when a secret exists under `reference`.
+     *
+     * # Errors
+     * Returns an error when the reference is invalid or the folder cannot be read.
+     */
+    fun `has`(`reference`: kotlin.String): kotlin.Boolean
+    
+    /**
+     * Stores `value` under `reference`, replacing any earlier value.
+     *
+     * # Errors
+     * Returns an error when the reference is invalid or the platform or file system fails.
+     */
+    fun `put`(`reference`: kotlin.String, `value`: kotlin.String)
+    
+    /**
+     * The stored value, or `None` when there is none. Callers check biometrics first.
+     *
+     * # Errors
+     * Returns an error when the reference is invalid, the file is damaged, or the
+     * platform cannot unwrap it.
+     */
+    fun `reveal`(`reference`: kotlin.String): kotlin.String?
+    
+    companion object
+}
+
+/**
+ * Stores secrets wrapped by the platform keystore. Kotlin uses it to save a key and, after
+ * a biometric check, to reveal it. Providers read keys inside the core, not through this.
+ */
+open class SecretVault: Disposable, AutoCloseable, SecretVaultInterface
+{
+
+    @Suppress("UNUSED_PARAMETER")
+    /**
+     * @suppress
+     */
+    constructor(withHandle: UniffiWithHandle, handle: Long) {
+        this.handle = handle
+        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(handle))
+    }
+
+    /**
+     * @suppress
+     *
+     * This constructor can be used to instantiate a fake object. Only used for tests. Any
+     * attempt to actually use an object constructed this way will fail as there is no
+     * connected Rust object.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    constructor(noHandle: NoHandle) {
+        this.handle = 0
+        this.cleanable = null
+    }
+    /**
+     * Opens the vault over `dir` (the app's private `secrets` folder).
+     */
+    constructor(`dir`: kotlin.String, `platform`: SecretsPlatform) :
+        this(UniffiWithHandle, 
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_tether_core_fn_constructor_secretvault_new(
+    
+        
+        FfiConverterString.lower(`dir`),
+        FfiConverterTypeSecretsPlatform.lower(`platform`),_status)
+}
+    )
+
+    protected val handle: Long
+    protected val cleanable: UniffiCleaner.Cleanable?
+
+    private val wasDestroyed = AtomicBoolean(false)
+    private val callCounter = AtomicLong(1)
+
+    /**
+     * Whether the current object has been destroyed and its reference is gone in the Rust side.
+     */
+    val uniffiIsDestroyed: Boolean get() = wasDestroyed.get()
+
+    override fun destroy() {
+        // Only allow a single call to this method.
+        // TODO: maybe we should log a warning if called more than once?
+        if (this.wasDestroyed.compareAndSet(false, true)) {
+            // This decrement always matches the initial count of 1 given at creation time.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    @Synchronized
+    override fun close() {
+        this.destroy()
+    }
+
+    internal inline fun <R> callWithHandle(block: (handle: Long) -> R): R {
+        // Check and increment the call counter, to keep the object alive.
+        // This needs a compare-and-set retry loop in case of concurrent updates.
+        do {
+            val c = this.callCounter.get()
+            if (c == 0L) {
+                throw IllegalStateException("${this.javaClass.simpleName} object has already been destroyed")
+            }
+            if (c == Long.MAX_VALUE) {
+                throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
+            }
+        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        // Now we can safely do the method call without the handle being freed concurrently.
+        try {
+            return block(this.uniffiCloneHandle())
+        } finally {
+            // This decrement always matches the increment we performed above.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    // Use a static inner class instead of a closure so as not to accidentally
+    // capture `this` as part of the cleanable's action.
+    private class UniffiCleanAction(private val handle: Long) : Runnable {
+        override fun run() {
+            if (handle == 0.toLong()) {
+                // Fake object created with `NoHandle`, don't try to free.
+                return;
+            }
+            uniffiRustCall { status ->
+                UniffiLib.uniffi_tether_core_fn_free_secretvault(handle, status)
+            }
+        }
+    }
+
+    /**
+     * @suppress
+     */
+    fun uniffiCloneHandle(): Long {
+        if (handle == 0.toLong()) {
+            throw InternalException("uniffiCloneHandle() called on NoHandle object");
+        }
+        return uniffiRustCall() { status ->
+            UniffiLib.uniffi_tether_core_fn_clone_secretvault(handle, status)
+        }
+    }
+
+    
+    /**
+     * Removes the secret. Removing one that does not exist is not an error.
+     *
+     * # Errors
+     * Returns an error when the reference is invalid or the file cannot be removed.
+     */
+    @Throws(SecretVaultException::class)override fun `delete`(`reference`: kotlin.String)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(SecretVaultException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_secretvault_delete(
+        it,
+        
+        FfiConverterString.lower(`reference`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * True when a secret exists under `reference`.
+     *
+     * # Errors
+     * Returns an error when the reference is invalid or the folder cannot be read.
+     */
+    @Throws(SecretVaultException::class)override fun `has`(`reference`: kotlin.String): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCallWithError(SecretVaultException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_secretvault_has(
+        it,
+        
+        FfiConverterString.lower(`reference`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Stores `value` under `reference`, replacing any earlier value.
+     *
+     * # Errors
+     * Returns an error when the reference is invalid or the platform or file system fails.
+     */
+    @Throws(SecretVaultException::class)override fun `put`(`reference`: kotlin.String, `value`: kotlin.String)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(SecretVaultException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_secretvault_put(
+        it,
+        
+        FfiConverterString.lower(`reference`),
+        FfiConverterString.lower(`value`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * The stored value, or `None` when there is none. Callers check biometrics first.
+     *
+     * # Errors
+     * Returns an error when the reference is invalid, the file is damaged, or the
+     * platform cannot unwrap it.
+     */
+    @Throws(SecretVaultException::class)override fun `reveal`(`reference`: kotlin.String): kotlin.String? {
+            return FfiConverterOptionalString.lift(
+    callWithHandle {
+    uniffiRustCallWithError(SecretVaultException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_secretvault_reveal(
+        it,
+        
+        FfiConverterString.lower(`reference`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+
+    
+
+
+    
+    
+    /**
+     * @suppress
+     */
+    companion object
+    
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeSecretVault: FfiConverter<SecretVault, Long> {
+    override fun lower(value: SecretVault): Long {
+        return value.uniffiCloneHandle()
+    }
+
+    override fun lift(value: Long): SecretVault {
+        return SecretVault(UniffiWithHandle, value)
+    }
+
+    override fun read(buf: ByteBuffer): SecretVault {
+        return lift(buf.getLong())
+    }
+
+    override fun allocationSize(value: SecretVault) = 8UL
+
+    override fun write(value: SecretVault, buf: ByteBuffer) {
+        buf.putLong(lower(value))
+    }
+}
+
+
+// This template implements a class for working with a Rust struct via a handle
+// to the live Rust struct on the other side of the FFI.
+//
+// There's some subtlety here, because we have to be careful not to operate on a Rust
+// struct after it has been dropped, and because we must expose a public API for freeing
+// theq Kotlin wrapper object in lieu of reliable finalizers. The core requirements are:
+//
+//   * Each instance holds an opaque handle to the underlying Rust struct.
+//     Method calls need to read this handle from the object's state and pass it in to
+//     the Rust FFI.
+//
+//   * When an instance is no longer needed, its handle should be passed to a
+//     special destructor function provided by the Rust FFI, which will drop the
+//     underlying Rust struct.
+//
+//   * Given an instance, calling code is expected to call the special
+//     `destroy` method in order to free it after use, either by calling it explicitly
+//     or by using a higher-level helper like the `use` method. Failing to do so risks
+//     leaking the underlying Rust struct.
+//
+//   * We can't assume that calling code will do the right thing, and must be prepared
+//     to handle Kotlin method calls executing concurrently with or even after a call to
+//     `destroy`, and to handle multiple (possibly concurrent!) calls to `destroy`.
+//
+//   * We must never allow Rust code to operate on the underlying Rust struct after
+//     the destructor has been called, and must never call the destructor more than once.
+//     Doing so may trigger memory unsafety.
+//
+//   * To mitigate many of the risks of leaking memory and use-after-free unsafety, a `Cleaner`
+//     is implemented to call the destructor when the Kotlin object becomes unreachable.
+//     This is done in a background thread. This is not a panacea, and client code should be aware that
+//      1. the thread may starve if some there are objects that have poorly performing
+//     `drop` methods or do significant work in their `drop` methods.
+//      2. the thread is shared across the whole library. This can be tuned by using `android_cleaner = true`,
+//         or `android = true` in the [`kotlin` section of the `uniffi.toml` file](https://mozilla.github.io/uniffi-rs/kotlin/configuration.html).
+//
+// If we try to implement this with mutual exclusion on access to the handle, there is the
+// possibility of a race between a method call and a concurrent call to `destroy`:
+//
+//    * Thread A starts a method call, reads the value of the handle, but is interrupted
+//      before it can pass the handle over the FFI to Rust.
+//    * Thread B calls `destroy` and frees the underlying Rust struct.
+//    * Thread A resumes, passing the already-read handle value to Rust and triggering
+//      a use-after-free.
+//
+// One possible solution would be to use a `ReadWriteLock`, with each method call taking
+// a read lock (and thus allowed to run concurrently) and the special `destroy` method
+// taking a write lock (and thus blocking on live method calls). However, we aim not to
+// generate methods with any hidden blocking semantics, and a `destroy` method that might
+// block if called incorrectly seems to meet that bar.
+//
+// So, we achieve our goals by giving each instance an associated `AtomicLong` counter to track
+// the number of in-flight method calls, and an `AtomicBoolean` flag to indicate whether `destroy`
+// has been called. These are updated according to the following rules:
+//
+//    * The initial value of the counter is 1, indicating a live object with no in-flight calls.
+//      The initial value for the flag is false.
+//
+//    * At the start of each method call, we atomically check the counter.
+//      If it is 0 then the underlying Rust struct has already been destroyed and the call is aborted.
+//      If it is nonzero them we atomically increment it by 1 and proceed with the method call.
+//
+//    * At the end of each method call, we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+//    * When `destroy` is called, we atomically flip the flag from false to true.
+//      If the flag was already true we silently fail.
+//      Otherwise we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+// Astute readers may observe that this all sounds very similar to the way that Rust's `Arc<T>` works,
+// and indeed it is, with the addition of a flag to guard against multiple calls to `destroy`.
+//
+// The overall effect is that the underlying Rust struct is destroyed only when `destroy` has been
+// called *and* all in-flight method calls have completed, avoiding violating any of the expectations
+// of the underlying Rust code.
+//
+// This makes a cleaner a better alternative to _not_ calling `destroy()` as
+// and when the object is finished with, but the abstraction is not perfect: if the Rust object's `drop`
+// method is slow, and/or there are many objects to cleanup, and it's on a low end Android device, then the cleaner
+// thread may be starved, and the app will leak memory.
+//
+// In this case, `destroy`ing manually may be a better solution.
+//
+// The cleaner can live side by side with the manual calling of `destroy`. In the order of responsiveness, uniffi objects
+// with Rust peers are reclaimed:
+//
+// 1. By calling the `destroy` method of the object, which calls `rustObject.free()`. If that doesn't happen:
+// 2. When the object becomes unreachable, AND the Cleaner thread gets to call `rustObject.free()`. If the thread is starved then:
+// 3. The memory is reclaimed when the process terminates.
+//
+// [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
+//
+
+
+/**
+ * Implemented in Kotlin with an Android Keystore key.
+ *
+ * Both calls take a `context` (the secret's reference) that the implementation must bind
+ * to the wrapped bytes as authenticated data, so a wrapped file moved to another reference
+ * fails to unwrap.
+ */
+public interface SecretsPlatform {
+    
+    /**
+     * Encrypts `plaintext` with a platform key and binds it to `context`.
+     *
+     * # Errors
+     * Returns an error when the Keystore key is unavailable or encryption fails.
+     */
+    fun `wrap`(`plaintext`: kotlin.ByteArray, `context`: kotlin.ByteArray): kotlin.ByteArray
+    
+    /**
+     * Decrypts bytes from `wrap`. It fails when `context` differs or the bytes changed.
+     *
+     * # Errors
+     * Returns an error when decryption or the integrity check fails.
+     */
+    fun `unwrap`(`wrapped`: kotlin.ByteArray, `context`: kotlin.ByteArray): kotlin.ByteArray
+    
+    companion object
+}
+
+/**
+ * Implemented in Kotlin with an Android Keystore key.
+ *
+ * Both calls take a `context` (the secret's reference) that the implementation must bind
+ * to the wrapped bytes as authenticated data, so a wrapped file moved to another reference
+ * fails to unwrap.
+ */
+open class SecretsPlatformImpl: Disposable, AutoCloseable, SecretsPlatform
+{
+
+    @Suppress("UNUSED_PARAMETER")
+    /**
+     * @suppress
+     */
+    constructor(withHandle: UniffiWithHandle, handle: Long) {
+        this.handle = handle
+        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(handle))
+    }
+
+    /**
+     * @suppress
+     *
+     * This constructor can be used to instantiate a fake object. Only used for tests. Any
+     * attempt to actually use an object constructed this way will fail as there is no
+     * connected Rust object.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    constructor(noHandle: NoHandle) {
+        this.handle = 0
+        this.cleanable = null
+    }
+
+    protected val handle: Long
+    protected val cleanable: UniffiCleaner.Cleanable?
+
+    private val wasDestroyed = AtomicBoolean(false)
+    private val callCounter = AtomicLong(1)
+
+    /**
+     * Whether the current object has been destroyed and its reference is gone in the Rust side.
+     */
+    val uniffiIsDestroyed: Boolean get() = wasDestroyed.get()
+
+    override fun destroy() {
+        // Only allow a single call to this method.
+        // TODO: maybe we should log a warning if called more than once?
+        if (this.wasDestroyed.compareAndSet(false, true)) {
+            // This decrement always matches the initial count of 1 given at creation time.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    @Synchronized
+    override fun close() {
+        this.destroy()
+    }
+
+    internal inline fun <R> callWithHandle(block: (handle: Long) -> R): R {
+        // Check and increment the call counter, to keep the object alive.
+        // This needs a compare-and-set retry loop in case of concurrent updates.
+        do {
+            val c = this.callCounter.get()
+            if (c == 0L) {
+                throw IllegalStateException("${this.javaClass.simpleName} object has already been destroyed")
+            }
+            if (c == Long.MAX_VALUE) {
+                throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
+            }
+        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        // Now we can safely do the method call without the handle being freed concurrently.
+        try {
+            return block(this.uniffiCloneHandle())
+        } finally {
+            // This decrement always matches the increment we performed above.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    // Use a static inner class instead of a closure so as not to accidentally
+    // capture `this` as part of the cleanable's action.
+    private class UniffiCleanAction(private val handle: Long) : Runnable {
+        override fun run() {
+            if (handle == 0.toLong()) {
+                // Fake object created with `NoHandle`, don't try to free.
+                return;
+            }
+            uniffiRustCall { status ->
+                UniffiLib.uniffi_tether_core_fn_free_secretsplatform(handle, status)
+            }
+        }
+    }
+
+    /**
+     * @suppress
+     */
+    fun uniffiCloneHandle(): Long {
+        if (handle == 0.toLong()) {
+            throw InternalException("uniffiCloneHandle() called on NoHandle object");
+        }
+        return uniffiRustCall() { status ->
+            UniffiLib.uniffi_tether_core_fn_clone_secretsplatform(handle, status)
+        }
+    }
+
+    
+    /**
+     * Encrypts `plaintext` with a platform key and binds it to `context`.
+     *
+     * # Errors
+     * Returns an error when the Keystore key is unavailable or encryption fails.
+     */
+    @Throws(SecretsPlatformFailure::class)override fun `wrap`(`plaintext`: kotlin.ByteArray, `context`: kotlin.ByteArray): kotlin.ByteArray {
+            return FfiConverterByteArray.lift(
+    callWithHandle {
+    uniffiRustCallWithError(SecretsPlatformFailure) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_secretsplatform_wrap(
+        it,
+        
+        FfiConverterByteArray.lower(`plaintext`),
+        FfiConverterByteArray.lower(`context`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Decrypts bytes from `wrap`. It fails when `context` differs or the bytes changed.
+     *
+     * # Errors
+     * Returns an error when decryption or the integrity check fails.
+     */
+    @Throws(SecretsPlatformFailure::class)override fun `unwrap`(`wrapped`: kotlin.ByteArray, `context`: kotlin.ByteArray): kotlin.ByteArray {
+            return FfiConverterByteArray.lift(
+    callWithHandle {
+    uniffiRustCallWithError(SecretsPlatformFailure) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_secretsplatform_unwrap(
+        it,
+        
+        FfiConverterByteArray.lower(`wrapped`),
+        FfiConverterByteArray.lower(`context`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+
+    
+
+
+    
+    
+    /**
+     * @suppress
+     */
+    companion object
+    
+}
+
+
+
+// Put the implementation in an object so we don't pollute the top-level namespace
+internal object uniffiCallbackInterfaceSecretsPlatform {
+    internal object `wrap`: UniffiCallbackInterfaceSecretsPlatformMethod0 {
+        override fun callback(`uniffiHandle`: Long,`plaintext`: RustBuffer.ByValue,`context`: RustBuffer.ByValue,`uniffiOutReturn`: RustBuffer,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeSecretsPlatform.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`wrap`(
+                    FfiConverterByteArray.lift(`plaintext`),
+                    FfiConverterByteArray.lift(`context`),
+                )
+            }
+            val writeReturn = { value: kotlin.ByteArray -> uniffiOutReturn.setValue(FfiConverterByteArray.lower(value)) }
+            uniffiTraitInterfaceCallWithError(
+                uniffiCallStatus,
+                makeCall,
+                writeReturn,
+                { e: SecretsPlatformFailure -> FfiConverterTypeSecretsPlatformFailure.lower(e) }
+            )
+        }
+    }
+    internal object `unwrap`: UniffiCallbackInterfaceSecretsPlatformMethod1 {
+        override fun callback(`uniffiHandle`: Long,`wrapped`: RustBuffer.ByValue,`context`: RustBuffer.ByValue,`uniffiOutReturn`: RustBuffer,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeSecretsPlatform.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`unwrap`(
+                    FfiConverterByteArray.lift(`wrapped`),
+                    FfiConverterByteArray.lift(`context`),
+                )
+            }
+            val writeReturn = { value: kotlin.ByteArray -> uniffiOutReturn.setValue(FfiConverterByteArray.lower(value)) }
+            uniffiTraitInterfaceCallWithError(
+                uniffiCallStatus,
+                makeCall,
+                writeReturn,
+                { e: SecretsPlatformFailure -> FfiConverterTypeSecretsPlatformFailure.lower(e) }
+            )
+        }
+    }
+
+    internal object uniffiFree: UniffiCallbackInterfaceFree {
+        override fun callback(handle: Long) {
+            FfiConverterTypeSecretsPlatform.handleMap.remove(handle)
+        }
+    }
+
+    internal object uniffiClone: UniffiCallbackInterfaceClone {
+        override fun callback(handle: Long): Long {
+            return FfiConverterTypeSecretsPlatform.handleMap.clone(handle)
+        }
+    }
+
+    internal var vtable = UniffiVTableCallbackInterfaceSecretsPlatform.UniffiByValue(
+        uniffiFree,
+        uniffiClone,
+        `wrap`,
+        `unwrap`,
+    )
+
+    // Registers the foreign callback with the Rust side.
+    // This method is generated for each callback interface.
+    internal fun register(lib: UniffiLib) {
+        lib.uniffi_tether_core_fn_init_callback_vtable_secretsplatform(vtable)
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeSecretsPlatform: FfiConverter<SecretsPlatform, Long> {
+    internal val handleMap = UniffiHandleMap<SecretsPlatform>()
+
+    override fun lower(value: SecretsPlatform): Long {
+        if (value is SecretsPlatformImpl) {
+             // Rust-implemented object.  Clone the handle and return it
+            return value.uniffiCloneHandle()
+         } else {
+            // Kotlin object, generate a new vtable handle and return that.
+            return handleMap.insert(value)
+         }
+    }
+
+    override fun lift(value: Long): SecretsPlatform {
+        if ((value and 1.toLong()) == 0.toLong()) {
+            // Rust-generated handle, construct a new class that uses the handle to implement the
+            // interface
+            return SecretsPlatformImpl(UniffiWithHandle, value)
+        } else {
+            // Kotlin-generated handle, get the object from the handle map
+            return handleMap.remove(value)
+        }
+    }
+
+    override fun read(buf: ByteBuffer): SecretsPlatform {
+        return lift(buf.getLong())
+    }
+
+    override fun allocationSize(value: SecretsPlatform) = 8UL
+
+    override fun write(value: SecretsPlatform, buf: ByteBuffer) {
+        buf.putLong(lower(value))
+    }
+}
+
+
+// This template implements a class for working with a Rust struct via a handle
+// to the live Rust struct on the other side of the FFI.
+//
+// There's some subtlety here, because we have to be careful not to operate on a Rust
+// struct after it has been dropped, and because we must expose a public API for freeing
+// theq Kotlin wrapper object in lieu of reliable finalizers. The core requirements are:
+//
+//   * Each instance holds an opaque handle to the underlying Rust struct.
+//     Method calls need to read this handle from the object's state and pass it in to
+//     the Rust FFI.
+//
+//   * When an instance is no longer needed, its handle should be passed to a
+//     special destructor function provided by the Rust FFI, which will drop the
+//     underlying Rust struct.
+//
+//   * Given an instance, calling code is expected to call the special
+//     `destroy` method in order to free it after use, either by calling it explicitly
+//     or by using a higher-level helper like the `use` method. Failing to do so risks
+//     leaking the underlying Rust struct.
+//
+//   * We can't assume that calling code will do the right thing, and must be prepared
+//     to handle Kotlin method calls executing concurrently with or even after a call to
+//     `destroy`, and to handle multiple (possibly concurrent!) calls to `destroy`.
+//
+//   * We must never allow Rust code to operate on the underlying Rust struct after
+//     the destructor has been called, and must never call the destructor more than once.
+//     Doing so may trigger memory unsafety.
+//
+//   * To mitigate many of the risks of leaking memory and use-after-free unsafety, a `Cleaner`
+//     is implemented to call the destructor when the Kotlin object becomes unreachable.
+//     This is done in a background thread. This is not a panacea, and client code should be aware that
+//      1. the thread may starve if some there are objects that have poorly performing
+//     `drop` methods or do significant work in their `drop` methods.
+//      2. the thread is shared across the whole library. This can be tuned by using `android_cleaner = true`,
+//         or `android = true` in the [`kotlin` section of the `uniffi.toml` file](https://mozilla.github.io/uniffi-rs/kotlin/configuration.html).
+//
+// If we try to implement this with mutual exclusion on access to the handle, there is the
+// possibility of a race between a method call and a concurrent call to `destroy`:
+//
+//    * Thread A starts a method call, reads the value of the handle, but is interrupted
+//      before it can pass the handle over the FFI to Rust.
+//    * Thread B calls `destroy` and frees the underlying Rust struct.
+//    * Thread A resumes, passing the already-read handle value to Rust and triggering
+//      a use-after-free.
+//
+// One possible solution would be to use a `ReadWriteLock`, with each method call taking
+// a read lock (and thus allowed to run concurrently) and the special `destroy` method
+// taking a write lock (and thus blocking on live method calls). However, we aim not to
+// generate methods with any hidden blocking semantics, and a `destroy` method that might
+// block if called incorrectly seems to meet that bar.
+//
+// So, we achieve our goals by giving each instance an associated `AtomicLong` counter to track
+// the number of in-flight method calls, and an `AtomicBoolean` flag to indicate whether `destroy`
+// has been called. These are updated according to the following rules:
+//
+//    * The initial value of the counter is 1, indicating a live object with no in-flight calls.
+//      The initial value for the flag is false.
+//
+//    * At the start of each method call, we atomically check the counter.
+//      If it is 0 then the underlying Rust struct has already been destroyed and the call is aborted.
+//      If it is nonzero them we atomically increment it by 1 and proceed with the method call.
+//
+//    * At the end of each method call, we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+//    * When `destroy` is called, we atomically flip the flag from false to true.
+//      If the flag was already true we silently fail.
+//      Otherwise we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+// Astute readers may observe that this all sounds very similar to the way that Rust's `Arc<T>` works,
+// and indeed it is, with the addition of a flag to guard against multiple calls to `destroy`.
+//
+// The overall effect is that the underlying Rust struct is destroyed only when `destroy` has been
+// called *and* all in-flight method calls have completed, avoiding violating any of the expectations
+// of the underlying Rust code.
+//
+// This makes a cleaner a better alternative to _not_ calling `destroy()` as
+// and when the object is finished with, but the abstraction is not perfect: if the Rust object's `drop`
+// method is slow, and/or there are many objects to cleanup, and it's on a low end Android device, then the cleaner
+// thread may be starved, and the app will leak memory.
+//
+// In this case, `destroy`ing manually may be a better solution.
+//
+// The cleaner can live side by side with the manual calling of `destroy`. In the order of responsiveness, uniffi objects
+// with Rust peers are reclaimed:
+//
+// 1. By calling the `destroy` method of the object, which calls `rustObject.free()`. If that doesn't happen:
+// 2. When the object becomes unreachable, AND the Cleaner thread gets to call `rustObject.free()`. If the thread is starved then:
+// 3. The memory is reclaimed when the process terminates.
+//
+// [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
+//
+
+
+/**
  * The object the platform layer holds for the life of the process.
  */
 public interface TetherCoreInterface {
@@ -1725,7 +2697,293 @@ public object FfiConverterTypeTetherCore: FfiConverter<TetherCore, Long> {
 
 
 /**
- * FFI view of [`CoreEvent`].
+ * FFI view of [`CoreError`]. It is a plain record, not a Kotlin exception, so
+ * events that carry it compare by value and cost no stack trace.
+ */
+data class CoreErrorView (
+    /**
+     * What kind of failure it is.
+     */
+    var `kind`: ErrorKindView
+    , 
+    /**
+     * What went wrong, safe to show.
+     */
+    var `message`: kotlin.String
+    , 
+    /**
+     * True when the same request can succeed on a retry.
+     */
+    var `retryable`: kotlin.Boolean
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCoreErrorView: FfiConverterRustBuffer<CoreErrorView> {
+    override fun read(buf: ByteBuffer): CoreErrorView {
+        return CoreErrorView(
+            FfiConverterTypeErrorKindView.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CoreErrorView) = (
+            FfiConverterTypeErrorKindView.allocationSize(value.`kind`) +
+            FfiConverterString.allocationSize(value.`message`) +
+            FfiConverterBoolean.allocationSize(value.`retryable`)
+    )
+
+    override fun write(value: CoreErrorView, buf: ByteBuffer) {
+            FfiConverterTypeErrorKindView.write(value.`kind`, buf)
+            FfiConverterString.write(value.`message`, buf)
+            FfiConverterBoolean.write(value.`retryable`, buf)
+    }
+}
+
+
+
+/**
+ * FFI view of [`Message`].
+ */
+data class MessageView (
+    /**
+     * Message identifier.
+     */
+    var `id`: kotlin.String
+    , 
+    /**
+     * The session the message belongs to.
+     */
+    var `sessionId`: kotlin.String
+    , 
+    /**
+     * Who wrote it.
+     */
+    var `role`: RoleView
+    , 
+    /**
+     * Position in the session, starting at 0.
+     */
+    var `seq`: kotlin.UInt
+    , 
+    /**
+     * Creation time in Unix milliseconds.
+     */
+    var `createdAtMs`: kotlin.Long
+    , 
+    /**
+     * True when a rewind removed this message from the live transcript.
+     */
+    var `rewound`: kotlin.Boolean
+    , 
+    /**
+     * The parts in order.
+     */
+    var `parts`: List<MessagePartView>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeMessageView: FfiConverterRustBuffer<MessageView> {
+    override fun read(buf: ByteBuffer): MessageView {
+        return MessageView(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterTypeRoleView.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterSequenceTypeMessagePartView.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: MessageView) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`sessionId`) +
+            FfiConverterTypeRoleView.allocationSize(value.`role`) +
+            FfiConverterUInt.allocationSize(value.`seq`) +
+            FfiConverterLong.allocationSize(value.`createdAtMs`) +
+            FfiConverterBoolean.allocationSize(value.`rewound`) +
+            FfiConverterSequenceTypeMessagePartView.allocationSize(value.`parts`)
+    )
+
+    override fun write(value: MessageView, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`sessionId`, buf)
+            FfiConverterTypeRoleView.write(value.`role`, buf)
+            FfiConverterUInt.write(value.`seq`, buf)
+            FfiConverterLong.write(value.`createdAtMs`, buf)
+            FfiConverterBoolean.write(value.`rewound`, buf)
+            FfiConverterSequenceTypeMessagePartView.write(value.`parts`, buf)
+    }
+}
+
+
+
+/**
+ * FFI view of [`ModelRef`].
+ */
+data class ModelRefView (
+    /**
+     * The provider that serves the model.
+     */
+    var `provider`: ProviderView
+    , 
+    /**
+     * The provider's own model identifier.
+     */
+    var `modelId`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeModelRefView: FfiConverterRustBuffer<ModelRefView> {
+    override fun read(buf: ByteBuffer): ModelRefView {
+        return ModelRefView(
+            FfiConverterTypeProviderView.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ModelRefView) = (
+            FfiConverterTypeProviderView.allocationSize(value.`provider`) +
+            FfiConverterString.allocationSize(value.`modelId`)
+    )
+
+    override fun write(value: ModelRefView, buf: ByteBuffer) {
+            FfiConverterTypeProviderView.write(value.`provider`, buf)
+            FfiConverterString.write(value.`modelId`, buf)
+    }
+}
+
+
+
+/**
+ * FFI view of [`UsageSnapshot`].
+ */
+data class UsageSnapshotView (
+    /**
+     * Input tokens sent to the provider.
+     */
+    var `tokensIn`: kotlin.ULong
+    , 
+    /**
+     * Output tokens received from the provider.
+     */
+    var `tokensOut`: kotlin.ULong
+    , 
+    /**
+     * Cost in millionths of a US dollar.
+     */
+    var `costMicros`: kotlin.ULong
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeUsageSnapshotView: FfiConverterRustBuffer<UsageSnapshotView> {
+    override fun read(buf: ByteBuffer): UsageSnapshotView {
+        return UsageSnapshotView(
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: UsageSnapshotView) = (
+            FfiConverterULong.allocationSize(value.`tokensIn`) +
+            FfiConverterULong.allocationSize(value.`tokensOut`) +
+            FfiConverterULong.allocationSize(value.`costMicros`)
+    )
+
+    override fun write(value: UsageSnapshotView, buf: ByteBuffer) {
+            FfiConverterULong.write(value.`tokensIn`, buf)
+            FfiConverterULong.write(value.`tokensOut`, buf)
+            FfiConverterULong.write(value.`costMicros`, buf)
+    }
+}
+
+
+
+/**
+ * FFI view of [`ConnectionStatus`].
+ */
+
+enum class ConnectionStatusView {
+    
+    UNSET,
+    TESTING,
+    OK,
+    BAD_KEY,
+    NETWORK_ERROR,
+    BLOCKED;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeConnectionStatusView: FfiConverterRustBuffer<ConnectionStatusView> {
+    override fun read(buf: ByteBuffer) = try {
+        ConnectionStatusView.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: ConnectionStatusView) = 4UL
+
+    override fun write(value: ConnectionStatusView, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
+ * FFI view of [`CoreEvent`]. Ids are plain strings.
  */
 sealed class CoreEventView {
     
@@ -1759,6 +3017,307 @@ sealed class CoreEventView {
         companion object
     }
     
+    /**
+     * The session moved to a new state.
+     */
+    data class SessionUpdated(
+        /**
+         * The session that changed.
+         */
+        val `sessionId`: kotlin.String, 
+        /**
+         * Its new state.
+         */
+        val `status`: app.tether.core.generated.SessionStatusView) : CoreEventView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * A batch of reply text.
+     */
+    data class TextDelta(
+        /**
+         * The session the text belongs to.
+         */
+        val `sessionId`: kotlin.String, 
+        /**
+         * The assistant message being written.
+         */
+        val `messageId`: kotlin.String, 
+        /**
+         * The new text.
+         */
+        val `text`: kotlin.String) : CoreEventView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * A batch of model reasoning.
+     */
+    data class ThinkingDelta(
+        /**
+         * The session the text belongs to.
+         */
+        val `sessionId`: kotlin.String, 
+        /**
+         * The assistant message being written.
+         */
+        val `messageId`: kotlin.String, 
+        /**
+         * The new text.
+         */
+        val `text`: kotlin.String) : CoreEventView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * The model proposed a tool call.
+     */
+    data class ToolProposed(
+        /**
+         * The session that owns the call.
+         */
+        val `sessionId`: kotlin.String, 
+        /**
+         * The proposed call.
+         */
+        val `toolCallId`: kotlin.String, 
+        /**
+         * Tool name.
+         */
+        val `tool`: kotlin.String, 
+        /**
+         * The exact command, path, or URL the tool will touch.
+         */
+        val `target`: kotlin.String) : CoreEventView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * A tool call waits for the user to allow or deny it.
+     */
+    data class ApprovalRequired(
+        /**
+         * The session that owns the call.
+         */
+        val `sessionId`: kotlin.String, 
+        /**
+         * The call that needs approval.
+         */
+        val `toolCallId`: kotlin.String, 
+        /**
+         * Tool name.
+         */
+        val `tool`: kotlin.String, 
+        /**
+         * The exact command, path, or URL the tool will touch.
+         */
+        val `target`: kotlin.String) : CoreEventView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * A tool call started running.
+     */
+    data class ToolStarted(
+        /**
+         * The session that owns the call.
+         */
+        val `sessionId`: kotlin.String, 
+        /**
+         * The call that started.
+         */
+        val `toolCallId`: kotlin.String) : CoreEventView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * A chunk of output from a running tool call.
+     */
+    data class ToolOutput(
+        /**
+         * The session that owns the call.
+         */
+        val `sessionId`: kotlin.String, 
+        /**
+         * The call that produced the output.
+         */
+        val `toolCallId`: kotlin.String, 
+        /**
+         * The new output text.
+         */
+        val `chunk`: kotlin.String) : CoreEventView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * A tool call reached a final state.
+     */
+    data class ToolFinished(
+        /**
+         * The session that owns the call.
+         */
+        val `sessionId`: kotlin.String, 
+        /**
+         * The call that finished.
+         */
+        val `toolCallId`: kotlin.String, 
+        /**
+         * How it ended.
+         */
+        val `status`: app.tether.core.generated.ToolCallStatusView) : CoreEventView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * Session totals changed.
+     */
+    data class UsageUpdated(
+        /**
+         * The session the totals belong to.
+         */
+        val `sessionId`: kotlin.String, 
+        /**
+         * The new totals.
+         */
+        val `usage`: app.tether.core.generated.UsageSnapshotView) : CoreEventView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * The turn ended normally.
+     */
+    data class TurnFinished(
+        /**
+         * The session whose turn ended.
+         */
+        val `sessionId`: kotlin.String) : CoreEventView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * The user or the system stopped the turn.
+     */
+    data class TurnInterrupted(
+        /**
+         * The session whose turn stopped.
+         */
+        val `sessionId`: kotlin.String) : CoreEventView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * The turn ended with an error.
+     */
+    data class TurnFailed(
+        /**
+         * The session whose turn failed.
+         */
+        val `sessionId`: kotlin.String, 
+        /**
+         * What went wrong.
+         */
+        val `error`: app.tether.core.generated.CoreErrorView) : CoreEventView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * The network went down and the session paused.
+     */
+    data class NetworkPaused(
+        /**
+         * The session that paused.
+         */
+        val `sessionId`: kotlin.String) : CoreEventView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * The network came back and the session resumed.
+     */
+    data class NetworkResumed(
+        /**
+         * The session that resumed.
+         */
+        val `sessionId`: kotlin.String) : CoreEventView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * A provider connection changed state.
+     */
+    data class ProviderStatus(
+        /**
+         * The provider that changed.
+         */
+        val `provider`: app.tether.core.generated.ProviderView, 
+        /**
+         * Its new state.
+         */
+        val `status`: app.tether.core.generated.ConnectionStatusView) : CoreEventView()
+        
+    {
+        
+
+        companion object
+    }
+    
 
     
 
@@ -1781,6 +3340,70 @@ public object FfiConverterTypeCoreEventView : FfiConverterRustBuffer<CoreEventVi
             2 -> CoreEventView.Test(
                 FfiConverterString.read(buf),
                 )
+            3 -> CoreEventView.SessionUpdated(
+                FfiConverterString.read(buf),
+                FfiConverterTypeSessionStatusView.read(buf),
+                )
+            4 -> CoreEventView.TextDelta(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                )
+            5 -> CoreEventView.ThinkingDelta(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                )
+            6 -> CoreEventView.ToolProposed(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                )
+            7 -> CoreEventView.ApprovalRequired(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                )
+            8 -> CoreEventView.ToolStarted(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                )
+            9 -> CoreEventView.ToolOutput(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                )
+            10 -> CoreEventView.ToolFinished(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                FfiConverterTypeToolCallStatusView.read(buf),
+                )
+            11 -> CoreEventView.UsageUpdated(
+                FfiConverterString.read(buf),
+                FfiConverterTypeUsageSnapshotView.read(buf),
+                )
+            12 -> CoreEventView.TurnFinished(
+                FfiConverterString.read(buf),
+                )
+            13 -> CoreEventView.TurnInterrupted(
+                FfiConverterString.read(buf),
+                )
+            14 -> CoreEventView.TurnFailed(
+                FfiConverterString.read(buf),
+                FfiConverterTypeCoreErrorView.read(buf),
+                )
+            15 -> CoreEventView.NetworkPaused(
+                FfiConverterString.read(buf),
+                )
+            16 -> CoreEventView.NetworkResumed(
+                FfiConverterString.read(buf),
+                )
+            17 -> CoreEventView.ProviderStatus(
+                FfiConverterTypeProviderView.read(buf),
+                FfiConverterTypeConnectionStatusView.read(buf),
+                )
             else -> throw RuntimeException("invalid enum value, something is very wrong!!")
         }
     }
@@ -1800,6 +3423,130 @@ public object FfiConverterTypeCoreEventView : FfiConverterRustBuffer<CoreEventVi
                 + FfiConverterString.allocationSize(value.`message`)
             )
         }
+        is CoreEventView.SessionUpdated -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`sessionId`)
+                + FfiConverterTypeSessionStatusView.allocationSize(value.`status`)
+            )
+        }
+        is CoreEventView.TextDelta -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`sessionId`)
+                + FfiConverterString.allocationSize(value.`messageId`)
+                + FfiConverterString.allocationSize(value.`text`)
+            )
+        }
+        is CoreEventView.ThinkingDelta -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`sessionId`)
+                + FfiConverterString.allocationSize(value.`messageId`)
+                + FfiConverterString.allocationSize(value.`text`)
+            )
+        }
+        is CoreEventView.ToolProposed -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`sessionId`)
+                + FfiConverterString.allocationSize(value.`toolCallId`)
+                + FfiConverterString.allocationSize(value.`tool`)
+                + FfiConverterString.allocationSize(value.`target`)
+            )
+        }
+        is CoreEventView.ApprovalRequired -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`sessionId`)
+                + FfiConverterString.allocationSize(value.`toolCallId`)
+                + FfiConverterString.allocationSize(value.`tool`)
+                + FfiConverterString.allocationSize(value.`target`)
+            )
+        }
+        is CoreEventView.ToolStarted -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`sessionId`)
+                + FfiConverterString.allocationSize(value.`toolCallId`)
+            )
+        }
+        is CoreEventView.ToolOutput -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`sessionId`)
+                + FfiConverterString.allocationSize(value.`toolCallId`)
+                + FfiConverterString.allocationSize(value.`chunk`)
+            )
+        }
+        is CoreEventView.ToolFinished -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`sessionId`)
+                + FfiConverterString.allocationSize(value.`toolCallId`)
+                + FfiConverterTypeToolCallStatusView.allocationSize(value.`status`)
+            )
+        }
+        is CoreEventView.UsageUpdated -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`sessionId`)
+                + FfiConverterTypeUsageSnapshotView.allocationSize(value.`usage`)
+            )
+        }
+        is CoreEventView.TurnFinished -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`sessionId`)
+            )
+        }
+        is CoreEventView.TurnInterrupted -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`sessionId`)
+            )
+        }
+        is CoreEventView.TurnFailed -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`sessionId`)
+                + FfiConverterTypeCoreErrorView.allocationSize(value.`error`)
+            )
+        }
+        is CoreEventView.NetworkPaused -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`sessionId`)
+            )
+        }
+        is CoreEventView.NetworkResumed -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`sessionId`)
+            )
+        }
+        is CoreEventView.ProviderStatus -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterTypeProviderView.allocationSize(value.`provider`)
+                + FfiConverterTypeConnectionStatusView.allocationSize(value.`status`)
+            )
+        }
     }
 
     override fun write(value: CoreEventView, buf: ByteBuffer) {
@@ -1814,11 +3561,906 @@ public object FfiConverterTypeCoreEventView : FfiConverterRustBuffer<CoreEventVi
                 FfiConverterString.write(value.`message`, buf)
                 Unit
             }
+            is CoreEventView.SessionUpdated -> {
+                buf.putInt(3)
+                FfiConverterString.write(value.`sessionId`, buf)
+                FfiConverterTypeSessionStatusView.write(value.`status`, buf)
+                Unit
+            }
+            is CoreEventView.TextDelta -> {
+                buf.putInt(4)
+                FfiConverterString.write(value.`sessionId`, buf)
+                FfiConverterString.write(value.`messageId`, buf)
+                FfiConverterString.write(value.`text`, buf)
+                Unit
+            }
+            is CoreEventView.ThinkingDelta -> {
+                buf.putInt(5)
+                FfiConverterString.write(value.`sessionId`, buf)
+                FfiConverterString.write(value.`messageId`, buf)
+                FfiConverterString.write(value.`text`, buf)
+                Unit
+            }
+            is CoreEventView.ToolProposed -> {
+                buf.putInt(6)
+                FfiConverterString.write(value.`sessionId`, buf)
+                FfiConverterString.write(value.`toolCallId`, buf)
+                FfiConverterString.write(value.`tool`, buf)
+                FfiConverterString.write(value.`target`, buf)
+                Unit
+            }
+            is CoreEventView.ApprovalRequired -> {
+                buf.putInt(7)
+                FfiConverterString.write(value.`sessionId`, buf)
+                FfiConverterString.write(value.`toolCallId`, buf)
+                FfiConverterString.write(value.`tool`, buf)
+                FfiConverterString.write(value.`target`, buf)
+                Unit
+            }
+            is CoreEventView.ToolStarted -> {
+                buf.putInt(8)
+                FfiConverterString.write(value.`sessionId`, buf)
+                FfiConverterString.write(value.`toolCallId`, buf)
+                Unit
+            }
+            is CoreEventView.ToolOutput -> {
+                buf.putInt(9)
+                FfiConverterString.write(value.`sessionId`, buf)
+                FfiConverterString.write(value.`toolCallId`, buf)
+                FfiConverterString.write(value.`chunk`, buf)
+                Unit
+            }
+            is CoreEventView.ToolFinished -> {
+                buf.putInt(10)
+                FfiConverterString.write(value.`sessionId`, buf)
+                FfiConverterString.write(value.`toolCallId`, buf)
+                FfiConverterTypeToolCallStatusView.write(value.`status`, buf)
+                Unit
+            }
+            is CoreEventView.UsageUpdated -> {
+                buf.putInt(11)
+                FfiConverterString.write(value.`sessionId`, buf)
+                FfiConverterTypeUsageSnapshotView.write(value.`usage`, buf)
+                Unit
+            }
+            is CoreEventView.TurnFinished -> {
+                buf.putInt(12)
+                FfiConverterString.write(value.`sessionId`, buf)
+                Unit
+            }
+            is CoreEventView.TurnInterrupted -> {
+                buf.putInt(13)
+                FfiConverterString.write(value.`sessionId`, buf)
+                Unit
+            }
+            is CoreEventView.TurnFailed -> {
+                buf.putInt(14)
+                FfiConverterString.write(value.`sessionId`, buf)
+                FfiConverterTypeCoreErrorView.write(value.`error`, buf)
+                Unit
+            }
+            is CoreEventView.NetworkPaused -> {
+                buf.putInt(15)
+                FfiConverterString.write(value.`sessionId`, buf)
+                Unit
+            }
+            is CoreEventView.NetworkResumed -> {
+                buf.putInt(16)
+                FfiConverterString.write(value.`sessionId`, buf)
+                Unit
+            }
+            is CoreEventView.ProviderStatus -> {
+                buf.putInt(17)
+                FfiConverterTypeProviderView.write(value.`provider`, buf)
+                FfiConverterTypeConnectionStatusView.write(value.`status`, buf)
+                Unit
+            }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
     }
 }
 
 
+
+
+
+/**
+ * What kind of failure a [`CoreErrorView`] reports.
+ */
+
+enum class ErrorKindView {
+    
+    /**
+     * A bug in Tether.
+     */
+    INTERNAL,
+    /**
+     * The network failed or timed out.
+     */
+    NETWORK,
+    /**
+     * A provider or GitHub rejected the credentials.
+     */
+    AUTH,
+    /**
+     * A provider asked the client to slow down.
+     */
+    RATE_LIMITED,
+    /**
+     * The request itself was wrong.
+     */
+    INVALID_INPUT,
+    /**
+     * The thing asked for does not exist.
+     */
+    NOT_FOUND,
+    /**
+     * The user or the system cancelled the work.
+     */
+    CANCELLED;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeErrorKindView: FfiConverterRustBuffer<ErrorKindView> {
+    override fun read(buf: ByteBuffer) = try {
+        ErrorKindView.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: ErrorKindView) = 4UL
+
+    override fun write(value: ErrorKindView, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
+ * FFI view of [`Executor`].
+ */
+
+enum class ExecutorView {
+    
+    SANDBOX,
+    LINUX,
+    CI;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeExecutorView: FfiConverterRustBuffer<ExecutorView> {
+    override fun read(buf: ByteBuffer) = try {
+        ExecutorView.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: ExecutorView) = 4UL
+
+    override fun write(value: ExecutorView, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
+ * FFI view of [`MessagePart`]. Ids are plain strings.
+ */
+sealed class MessagePartView {
+    
+    /**
+     * Plain text.
+     */
+    data class Text(
+        /**
+         * The text.
+         */
+        val `text`: kotlin.String) : MessagePartView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * An image held in the blob store.
+     */
+    data class ImageRef(
+        /**
+         * BLAKE3 hash that names the blob.
+         */
+        val `blobHash`: kotlin.String, 
+        /**
+         * Media type, such as `image/png`.
+         */
+        val `mediaType`: kotlin.String) : MessagePartView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * A tool call the model proposed.
+     */
+    data class ToolCall(
+        /**
+         * The call this part describes.
+         */
+        val `id`: kotlin.String, 
+        /**
+         * Tool name.
+         */
+        val `tool`: kotlin.String, 
+        /**
+         * Arguments as JSON text.
+         */
+        val `argsJson`: kotlin.String) : MessagePartView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * The result of a tool call.
+     */
+    data class ToolResult(
+        /**
+         * The call this result answers.
+         */
+        val `toolCallId`: kotlin.String, 
+        /**
+         * True when the tool failed.
+         */
+        val `isError`: kotlin.Boolean, 
+        /**
+         * Result text, cut when it is large.
+         */
+        val `text`: kotlin.String, 
+        /**
+         * Blob hash of the full output when the text was cut.
+         */
+        val `resultRef`: kotlin.String?) : MessagePartView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * Model reasoning shown to the user.
+     */
+    data class Thinking(
+        /**
+         * The reasoning text.
+         */
+        val `text`: kotlin.String) : MessagePartView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * A summary that replaced older messages during compaction.
+     */
+    data class CompactionSummary(
+        /**
+         * The summary text.
+         */
+        val `text`: kotlin.String) : MessagePartView()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeMessagePartView : FfiConverterRustBuffer<MessagePartView>{
+    override fun read(buf: ByteBuffer): MessagePartView {
+        return when(buf.getInt()) {
+            1 -> MessagePartView.Text(
+                FfiConverterString.read(buf),
+                )
+            2 -> MessagePartView.ImageRef(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                )
+            3 -> MessagePartView.ToolCall(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                )
+            4 -> MessagePartView.ToolResult(
+                FfiConverterString.read(buf),
+                FfiConverterBoolean.read(buf),
+                FfiConverterString.read(buf),
+                FfiConverterOptionalString.read(buf),
+                )
+            5 -> MessagePartView.Thinking(
+                FfiConverterString.read(buf),
+                )
+            6 -> MessagePartView.CompactionSummary(
+                FfiConverterString.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: MessagePartView): ULong = when(value) {
+        is MessagePartView.Text -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`text`)
+            )
+        }
+        is MessagePartView.ImageRef -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`blobHash`)
+                + FfiConverterString.allocationSize(value.`mediaType`)
+            )
+        }
+        is MessagePartView.ToolCall -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`id`)
+                + FfiConverterString.allocationSize(value.`tool`)
+                + FfiConverterString.allocationSize(value.`argsJson`)
+            )
+        }
+        is MessagePartView.ToolResult -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`toolCallId`)
+                + FfiConverterBoolean.allocationSize(value.`isError`)
+                + FfiConverterString.allocationSize(value.`text`)
+                + FfiConverterOptionalString.allocationSize(value.`resultRef`)
+            )
+        }
+        is MessagePartView.Thinking -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`text`)
+            )
+        }
+        is MessagePartView.CompactionSummary -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`text`)
+            )
+        }
+    }
+
+    override fun write(value: MessagePartView, buf: ByteBuffer) {
+        when(value) {
+            is MessagePartView.Text -> {
+                buf.putInt(1)
+                FfiConverterString.write(value.`text`, buf)
+                Unit
+            }
+            is MessagePartView.ImageRef -> {
+                buf.putInt(2)
+                FfiConverterString.write(value.`blobHash`, buf)
+                FfiConverterString.write(value.`mediaType`, buf)
+                Unit
+            }
+            is MessagePartView.ToolCall -> {
+                buf.putInt(3)
+                FfiConverterString.write(value.`id`, buf)
+                FfiConverterString.write(value.`tool`, buf)
+                FfiConverterString.write(value.`argsJson`, buf)
+                Unit
+            }
+            is MessagePartView.ToolResult -> {
+                buf.putInt(4)
+                FfiConverterString.write(value.`toolCallId`, buf)
+                FfiConverterBoolean.write(value.`isError`, buf)
+                FfiConverterString.write(value.`text`, buf)
+                FfiConverterOptionalString.write(value.`resultRef`, buf)
+                Unit
+            }
+            is MessagePartView.Thinking -> {
+                buf.putInt(5)
+                FfiConverterString.write(value.`text`, buf)
+                Unit
+            }
+            is MessagePartView.CompactionSummary -> {
+                buf.putInt(6)
+                FfiConverterString.write(value.`text`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+/**
+ * FFI view of [`PermissionMode`].
+ */
+
+enum class PermissionModeView {
+    
+    PLAN,
+    ASK,
+    ACCEPT_EDITS,
+    AUTO,
+    BYPASS;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypePermissionModeView: FfiConverterRustBuffer<PermissionModeView> {
+    override fun read(buf: ByteBuffer) = try {
+        PermissionModeView.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: PermissionModeView) = 4UL
+
+    override fun write(value: PermissionModeView, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
+ * FFI view of [`Provider`].
+ */
+
+enum class ProviderView {
+    
+    ANTHROPIC,
+    OPEN_AI,
+    GEMINI,
+    DEEP_SEEK,
+    OPEN_ROUTER;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeProviderView: FfiConverterRustBuffer<ProviderView> {
+    override fun read(buf: ByteBuffer) = try {
+        ProviderView.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: ProviderView) = 4UL
+
+    override fun write(value: ProviderView, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
+ * FFI view of [`Role`].
+ */
+
+enum class RoleView {
+    
+    USER,
+    ASSISTANT,
+    TOOL,
+    SYSTEM_NOTE;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeRoleView: FfiConverterRustBuffer<RoleView> {
+    override fun read(buf: ByteBuffer) = try {
+        RoleView.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: RoleView) = 4UL
+
+    override fun write(value: RoleView, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+
+
+/**
+ * A secret operation failed.
+ */
+sealed class SecretVaultException: kotlin.Exception() {
+    
+    /**
+     * The reference is not a valid name.
+     */
+    class InvalidReference(
+        
+        /**
+         * Which rule the reference broke.
+         */
+        val `detail`: kotlin.String
+        ) : SecretVaultException() {
+        override val message
+            get() = "detail=${ `detail` }"
+    }
+    
+    /**
+     * The secret could not be stored, read, or removed.
+     */
+    class Failed(
+        
+        /**
+         * What went wrong. It never contains secret values.
+         */
+        val `detail`: kotlin.String
+        ) : SecretVaultException() {
+        override val message
+            get() = "detail=${ `detail` }"
+    }
+    
+
+    
+
+
+    companion object ErrorHandler : UniffiRustCallStatusErrorHandler<SecretVaultException> {
+        override fun lift(error_buf: RustBuffer.ByValue): SecretVaultException = FfiConverterTypeSecretVaultError.lift(error_buf)
+    }
+
+    
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeSecretVaultError : FfiConverterRustBuffer<SecretVaultException> {
+    override fun read(buf: ByteBuffer): SecretVaultException {
+        
+
+        return when(buf.getInt()) {
+            1 -> SecretVaultException.InvalidReference(
+                FfiConverterString.read(buf),
+                )
+            2 -> SecretVaultException.Failed(
+                FfiConverterString.read(buf),
+                )
+            else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: SecretVaultException): ULong {
+        return when(value) {
+            is SecretVaultException.InvalidReference -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`detail`)
+            )
+            is SecretVaultException.Failed -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`detail`)
+            )
+        }
+    }
+
+    override fun write(value: SecretVaultException, buf: ByteBuffer) {
+        when(value) {
+            is SecretVaultException.InvalidReference -> {
+                buf.putInt(1)
+                FfiConverterString.write(value.`detail`, buf)
+                Unit
+            }
+            is SecretVaultException.Failed -> {
+                buf.putInt(2)
+                FfiConverterString.write(value.`detail`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+
+}
+
+
+
+
+
+/**
+ * The platform could not wrap or unwrap a secret.
+ *
+ * The field is `detail`, not `message`: UniFFI gives every Kotlin exception a `message`
+ * property, and a field with that name does not compile.
+ */
+sealed class SecretsPlatformFailure: kotlin.Exception() {
+    
+    /**
+     * The Keystore call failed. The text never contains secret bytes.
+     */
+    class Failed(
+        
+        /**
+         * What went wrong.
+         */
+        val `detail`: kotlin.String
+        ) : SecretsPlatformFailure() {
+        override val message
+            get() = "detail=${ `detail` }"
+    }
+    
+
+    
+
+
+    companion object ErrorHandler : UniffiRustCallStatusErrorHandler<SecretsPlatformFailure> {
+        override fun lift(error_buf: RustBuffer.ByValue): SecretsPlatformFailure = FfiConverterTypeSecretsPlatformFailure.lift(error_buf)
+    }
+
+    
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeSecretsPlatformFailure : FfiConverterRustBuffer<SecretsPlatformFailure> {
+    override fun read(buf: ByteBuffer): SecretsPlatformFailure {
+        
+
+        return when(buf.getInt()) {
+            1 -> SecretsPlatformFailure.Failed(
+                FfiConverterString.read(buf),
+                )
+            else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: SecretsPlatformFailure): ULong {
+        return when(value) {
+            is SecretsPlatformFailure.Failed -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`detail`)
+            )
+        }
+    }
+
+    override fun write(value: SecretsPlatformFailure, buf: ByteBuffer) {
+        when(value) {
+            is SecretsPlatformFailure.Failed -> {
+                buf.putInt(1)
+                FfiConverterString.write(value.`detail`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+
+}
+
+
+
+/**
+ * FFI view of [`SessionStatus`].
+ */
+
+enum class SessionStatusView {
+    
+    IDLE,
+    REQUESTING,
+    STREAMING,
+    CHECKING_TOOL,
+    RUNNING_TOOL,
+    AWAITING_APPROVAL,
+    PAUSED,
+    INTERRUPTED,
+    FAILED;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeSessionStatusView: FfiConverterRustBuffer<SessionStatusView> {
+    override fun read(buf: ByteBuffer) = try {
+        SessionStatusView.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: SessionStatusView) = 4UL
+
+    override fun write(value: SessionStatusView, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
+ * FFI view of [`ToolCallStatus`].
+ */
+
+enum class ToolCallStatusView {
+    
+    PROPOSED,
+    ALLOWED,
+    AWAITING_APPROVAL,
+    RUNNING,
+    DENIED,
+    BLOCKED,
+    SUCCEEDED,
+    FAILED,
+    TIMED_OUT,
+    CANCELLED;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeToolCallStatusView: FfiConverterRustBuffer<ToolCallStatusView> {
+    override fun read(buf: ByteBuffer) = try {
+        ToolCallStatusView.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: ToolCallStatusView) = 4UL
+
+    override fun write(value: ToolCallStatusView, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalString: FfiConverterRustBuffer<kotlin.String?> {
+    override fun read(buf: ByteBuffer): kotlin.String? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterString.read(buf)
+    }
+
+    override fun allocationSize(value: kotlin.String?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterString.allocationSize(value)
+        }
+    }
+
+    override fun write(value: kotlin.String?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterString.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeMessagePartView: FfiConverterRustBuffer<List<MessagePartView>> {
+    override fun read(buf: ByteBuffer): List<MessagePartView> {
+        val len = buf.getInt()
+        return List<MessagePartView>(len) {
+            FfiConverterTypeMessagePartView.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<MessagePartView>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeMessagePartView.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<MessagePartView>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeMessagePartView.write(it, buf)
+        }
+    }
+}
         /**
          * Returns the core version. It equals the app version.
          */ fun `version`(): kotlin.String {

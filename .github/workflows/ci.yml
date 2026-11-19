@@ -41,11 +41,16 @@ jobs:
         run: cargo test --workspace
         working-directory: core
       # Bundled SQLite compiles C code, so the Android check needs the NDK toolchain.
-      # The runner image provides the NDK and sets ANDROID_NDK_HOME.
+      # It uses the same pinned NDK as the android job.
       - name: Install cargo-ndk
         run: cargo install cargo-ndk --locked --version "^4"
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: ndk;${{ env.NDK_VERSION }}
       - name: Check Android targets
-        run: cargo ndk -t arm64-v8a -t x86_64 check --workspace
+        run: |
+          export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/$NDK_VERSION"
+          cargo ndk -t arm64-v8a -t x86_64 check --workspace
         working-directory: core
       - name: Licenses and advisories
         run: |

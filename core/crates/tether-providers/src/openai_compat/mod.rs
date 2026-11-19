@@ -2,6 +2,7 @@
 
 mod http;
 mod messages;
+mod models;
 mod request;
 mod stream;
 mod wire;

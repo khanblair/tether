@@ -12,7 +12,7 @@ use super::wire::ErrorBody;
 use crate::transport::{Call, ErrorStyle, run, secret_header};
 use crate::{ChatRequest, ProviderError, StreamEvent};
 
-struct CompatErrors;
+pub(super) struct CompatErrors;
 
 impl ErrorStyle for CompatErrors {
     fn message(&self, body: &[u8]) -> Option<String> {
@@ -43,6 +43,18 @@ pub(super) async fn stream_chat(
     cancel: CancellationToken,
 ) -> Result<(), ProviderError> {
     let body = build_body(request, config.dialect)?;
+    let headers = build_headers(config)?;
+    let call = Call {
+        client,
+        url: format!("{}/chat/completions", config.base_url.trim_end_matches('/')),
+        headers,
+        body: &body,
+        errors: &CompatErrors,
+    };
+    run(call, StreamState::new(config.dialect), events, cancel).await
+}
+
+pub(super) fn build_headers(config: &OpenAiCompatConfig) -> Result<HeaderMap, ProviderError> {
     let mut headers = HeaderMap::new();
     headers.insert(
         AUTHORIZATION,
@@ -62,12 +74,5 @@ pub(super) async fn stream_chat(
         })?;
         headers.insert(name, value);
     }
-    let call = Call {
-        client,
-        url: format!("{}/chat/completions", config.base_url.trim_end_matches('/')),
-        headers,
-        body: &body,
-        errors: &CompatErrors,
-    };
-    run(call, StreamState::new(config.dialect), events, cancel).await
+    Ok(headers)
 }

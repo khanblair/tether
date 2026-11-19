@@ -16,7 +16,7 @@ use crate::{ChatRequest, ProviderError, StreamEvent};
 const API_VERSION: &str = "2023-06-01";
 
 /// Anthropic's error bodies are `{"type":"error","error":{"type":..,"message":..}}`.
-struct AnthropicErrors;
+pub(super) struct AnthropicErrors;
 
 impl ErrorStyle for AnthropicErrors {
     fn message(&self, body: &[u8]) -> Option<String> {

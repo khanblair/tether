@@ -6,6 +6,7 @@
 
 mod http;
 mod messages;
+mod models;
 mod request;
 mod stream;
 mod wire;
@@ -90,6 +91,15 @@ impl ChatProvider for AnthropicProvider {
             events,
             cancel,
         ))
+    }
+}
+
+impl crate::ModelCatalog for AnthropicProvider {
+    fn list_models(
+        &self,
+        cancel: CancellationToken,
+    ) -> BoxFuture<'_, Result<Vec<tether_types::ModelInfo>, ProviderError>> {
+        Box::pin(models::list(&self.client, &self.config, cancel))
     }
 }
 

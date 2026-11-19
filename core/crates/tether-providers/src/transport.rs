@@ -31,8 +31,9 @@ pub(crate) trait ErrorStyle: Sync {
     fn message(&self, body: &[u8]) -> Option<String>;
 
     /// A kind that replaces the status mapping, for providers that reuse a status code
-    /// for several failures. `None` keeps the default mapping.
-    fn classify(&self, _status: StatusCode, _message: &str) -> Option<ProviderError> {
+    /// for several failures. `None` keeps the default mapping. The raw body is provided so
+    /// implementations can inspect provider error codes without exposing them in messages.
+    fn classify(&self, _status: StatusCode, _body: &[u8]) -> Option<ProviderError> {
         None
     }
 }
@@ -165,7 +166,7 @@ pub(crate) fn status_error(
             .unwrap_or("unknown status")
             .to_owned()
     });
-    if let Some(kind) = errors.classify(status, &message) {
+    if let Some(kind) = errors.classify(status, body) {
         return kind;
     }
     match status.as_u16() {

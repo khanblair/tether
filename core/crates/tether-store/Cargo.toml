@@ -8,12 +8,12 @@ description = "SQLite storage: schema, migrations, queries, blobs."
 
 [dependencies]
 rusqlite.workspace = true
+serde_json.workspace = true
+tether-types.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
-serde_json.workspace = true
 tempfile.workspace = true
-tether-types.workspace = true
 
 [lints]
 workspace = true

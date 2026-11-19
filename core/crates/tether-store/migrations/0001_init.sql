@@ -74,14 +74,27 @@ CREATE TABLE provider_configs (
 
 -- Catalog cache. Prices are USD times 1,000,000 per million tokens; NULL means unknown.
 CREATE TABLE models (
-    provider           TEXT NOT NULL CHECK (provider IN ('anthropic', 'openai', 'gemini', 'deepseek', 'openrouter')),
-    model_id           TEXT NOT NULL,
-    context_window     INTEGER CHECK (context_window > 0),
-    input_price_micros INTEGER CHECK (input_price_micros >= 0),
-    output_price_micros INTEGER CHECK (output_price_micros >= 0),
-    caps_json          TEXT NOT NULL DEFAULT '{}',
-    fetched_at         INTEGER NOT NULL,
-    PRIMARY KEY (provider, model_id)
+    provider                TEXT NOT NULL CHECK (provider IN ('anthropic', 'openai', 'gemini', 'deepseek', 'openrouter')),
+    model_id                TEXT NOT NULL CHECK (model_id <> ''),
+    display_name            TEXT NOT NULL,
+    context_window          INTEGER CHECK (context_window > 0),
+    max_output_tokens       INTEGER CHECK (max_output_tokens > 0),
+    input_price_micros      INTEGER CHECK (input_price_micros >= 0),
+    output_price_micros     INTEGER CHECK (output_price_micros >= 0),
+    cache_read_price_micros INTEGER CHECK (cache_read_price_micros >= 0),
+    cache_write_price_micros INTEGER CHECK (cache_write_price_micros >= 0),
+    price_source            TEXT CHECK (price_source IN ('provider', 'bundled')),
+    caps_json               TEXT NOT NULL DEFAULT '{}',
+    position                INTEGER NOT NULL CHECK (position >= 0),
+    PRIMARY KEY (provider, model_id),
+    CHECK ((input_price_micros IS NULL) = (output_price_micros IS NULL)),
+    CHECK ((input_price_micros IS NULL) = (price_source IS NULL)),
+    CHECK (input_price_micros IS NOT NULL OR (cache_read_price_micros IS NULL AND cache_write_price_micros IS NULL))
+) STRICT;
+
+CREATE TABLE models_fetch (
+    provider   TEXT PRIMARY KEY CHECK (provider IN ('anthropic', 'openai', 'gemini', 'deepseek', 'openrouter')),
+    fetched_at INTEGER NOT NULL
 ) STRICT;
 
 -- No foreign key on project_id: cost history outlives a deleted project. Days are UTC dates.

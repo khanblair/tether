@@ -3,7 +3,9 @@
 use std::collections::BTreeSet;
 
 use rusqlite::params;
-use tether_types::{ConnectionStatus, MessagePart, PermissionMode, Provider, Role, SessionStatus};
+use tether_types::{
+    ConnectionStatus, MessagePart, PermissionMode, PriceSource, Provider, Role, SessionStatus,
+};
 
 use crate::Store;
 
@@ -64,6 +66,7 @@ fn check_lists_equal_the_rust_text_forms() {
     let statuses = texts(SessionStatus::ALL, SessionStatus::as_str);
     let connections = texts(ConnectionStatus::ALL, ConnectionStatus::as_str);
     let roles = texts(Role::ALL, Role::as_str);
+    let price_sources = texts(PriceSource::ALL, PriceSource::as_str);
     let kinds: BTreeSet<String> = MessagePart::KINDS.iter().map(|k| (*k).to_owned()).collect();
     let cases = [
         ("projects", "default_provider", &providers),
@@ -76,6 +79,8 @@ fn check_lists_equal_the_rust_text_forms() {
         ("provider_configs", "provider", &providers),
         ("provider_configs", "status", &connections),
         ("models", "provider", &providers),
+        ("models_fetch", "provider", &providers),
+        ("models", "price_source", &price_sources),
         ("usage_daily", "provider", &providers),
     ];
     for (table, column, expected) in cases {
@@ -256,7 +261,7 @@ fn strict_tables_reject_text_in_an_integer_column() {
         [],
     );
     let text_window = store.conn.execute(
-        "INSERT INTO models (provider, model_id, context_window, fetched_at) VALUES ('gemini', 'm', 'big', 1)",
+        "INSERT INTO models (provider, model_id, display_name, context_window, position) VALUES ('gemini', 'm', 'M', 'big', 0)",
         [],
     );
     assert!(text_seq.is_err());

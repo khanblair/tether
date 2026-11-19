@@ -11,6 +11,16 @@ pub trait ModelCatalog: Send + Sync {
     /// It is empty when the base URL is not a valid URL, and `list_models` then fails.
     fn list_url(&self) -> String;
 
+    /// The URL of a separate authenticated key check, when the list endpoint is public.
+    fn verify_url(&self) -> Option<String> {
+        None
+    }
+
+    /// Verifies the key before the model list request.
+    fn verify_key(&self, _cancel: CancellationToken) -> BoxFuture<'_, Result<(), ProviderError>> {
+        Box::pin(std::future::ready(Ok(())))
+    }
+
     /// Lists models with context, price, and capability badges.
     fn list_models(
         &self,
@@ -85,5 +95,74 @@ fn merge_support(live: Support, bundled: Support) -> Support {
         bundled
     } else {
         live
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        AnthropicConfig, AnthropicProvider, DeepSeekProvider, GeminiConfig, GeminiProvider,
+        OpenAiCompatConfig, OpenAiCompatProvider, OpenAiConfig, OpenAiProvider,
+    };
+
+    fn client() -> reqwest::Client {
+        crate::client_builder().no_proxy().build().unwrap()
+    }
+
+    #[tokio::test]
+    async fn default_key_verification_is_immediate_for_catalogs_without_a_verify_url() {
+        let closed = "http://127.0.0.1:9".to_owned();
+        let catalogs: Vec<Box<dyn ModelCatalog>> = vec![
+            Box::new(AnthropicProvider::new(
+                client(),
+                AnthropicConfig {
+                    api_key: "test".to_owned(),
+                    base_url: closed.clone(),
+                },
+            )),
+            Box::new(OpenAiProvider::new(
+                client(),
+                OpenAiConfig {
+                    api_key: "test".to_owned(),
+                    base_url: closed.clone(),
+                    reasoning_summary: true,
+                },
+            )),
+            Box::new(GeminiProvider::new(
+                client(),
+                GeminiConfig {
+                    api_key: "test".to_owned(),
+                    base_url: closed.clone(),
+                },
+            )),
+            Box::new(DeepSeekProvider::new(
+                client(),
+                OpenAiCompatConfig {
+                    base_url: closed,
+                    ..OpenAiCompatConfig::deepseek("test")
+                },
+            )),
+        ];
+
+        let mut catalogs = catalogs.into_iter();
+        assert_default_verification(catalogs.next().unwrap()).await;
+        assert_default_verification(catalogs.next().unwrap()).await;
+        assert_default_verification(catalogs.next().unwrap()).await;
+        assert_default_verification(catalogs.next().unwrap()).await;
+    }
+
+    async fn assert_default_verification(catalog: Box<dyn ModelCatalog>) {
+        assert_eq!(catalog.verify_url(), None);
+        assert_eq!(catalog.verify_key(CancellationToken::new()).await, Ok(()));
+    }
+
+    #[test]
+    fn openrouter_has_an_authenticated_verify_url() {
+        let provider = OpenAiCompatProvider::new(client(), OpenAiCompatConfig::openrouter("test"));
+        assert_eq!(
+            provider.verify_url(),
+            Some("https://openrouter.ai/api/v1/key".to_owned())
+        );
     }
 }

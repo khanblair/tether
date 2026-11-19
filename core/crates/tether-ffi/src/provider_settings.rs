@@ -182,10 +182,10 @@ impl ProviderSettings {
             .map_err(|_| ProviderSettingsError::Unavailable)
     }
 
-    /// The URL that a key test sends its first request to. It never holds a key.
+    /// The URLs that a key test sends, one per line, in request order. They never hold a key.
     #[must_use]
     pub fn test_target(&self, provider: ProviderView) -> String {
-        tether_engine::provider_test_target(provider.into())
+        tether_engine::provider_test_targets(provider.into()).join("\n")
     }
 
     /// Checks the saved key with the provider and saves the result. A key that is not
@@ -818,7 +818,7 @@ mod tests {
     }
 
     #[test]
-    fn test_target_matches_the_engine_for_every_provider() {
+    fn test_target_matches_the_engine_targets_for_every_provider() {
         let fx = fixture(outcome(ConnectionStatus::Unset, &[]));
         let cases = [
             (ProviderView::Anthropic, Provider::Anthropic),
@@ -830,10 +830,14 @@ mod tests {
         for (view, provider) in cases {
             assert_eq!(
                 fx.settings.test_target(view),
-                tether_engine::provider_test_target(provider),
+                tether_engine::provider_test_targets(provider).join("\n"),
                 "{provider:?}"
             );
         }
+        assert_eq!(
+            fx.settings.test_target(ProviderView::OpenRouter),
+            "https://openrouter.ai/api/v1/key\nhttps://openrouter.ai/api/v1/models"
+        );
     }
 
     #[test]

@@ -38,13 +38,19 @@ pub async fn check_provider(provider: Provider, key: &str) -> ProviderCheck {
     check_key(key, CHECK_LIMIT, || catalog_for(provider, key)).await
 }
 
-/// The URL that a key check sends its first request to. It never holds a key.
+/// The URLs that a key check sends, in request order. They never hold a key.
 ///
-/// Returns an empty string when the shared HTTP client cannot start.
+/// Returns an empty list when the shared HTTP client cannot start.
 #[must_use]
-pub fn provider_test_target(provider: Provider) -> String {
+pub fn provider_test_targets(provider: Provider) -> Vec<String> {
     catalog_for(provider, "")
-        .map(|catalog| catalog.list_url())
+        .map(|catalog| {
+            catalog
+                .verify_url()
+                .into_iter()
+                .chain(std::iter::once(catalog.list_url()))
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -65,10 +71,24 @@ where
 
 /// Lists models through the catalog, and gives up after `limit`.
 async fn check(catalog: &dyn ModelCatalog, limit: Duration) -> ProviderCheck {
-    let request = catalog.list_models(CancellationToken::new());
+    let cancel = CancellationToken::new();
+    let request = async {
+        if let Err(error) = catalog.verify_key(cancel.clone()).await {
+            return status_for_error(&error);
+        }
+        status_for_result(catalog.list_models(cancel).await)
+    };
     match tokio::time::timeout(limit, request).await {
-        Ok(result) => status_for_result(result),
+        Ok(result) => result,
         Err(_elapsed) => ProviderCheck::with_status(ConnectionStatus::NetworkError),
+    }
+}
+
+fn status_for_error(error: &ProviderError) -> ProviderCheck {
+    match error {
+        ProviderError::Auth { .. } => ProviderCheck::with_status(ConnectionStatus::BadKey),
+        ProviderError::Blocked { .. } => ProviderCheck::with_status(ConnectionStatus::Blocked),
+        _ => ProviderCheck::with_status(ConnectionStatus::NetworkError),
     }
 }
 
@@ -104,7 +124,10 @@ fn catalog_for(provider: Provider, key: &str) -> Result<Box<dyn ModelCatalog>, P
 #[cfg(test)]
 mod tests {
     use std::future::pending;
-    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    };
 
     use tether_providers::BoxFuture;
     use tether_types::ModelCaps;
@@ -140,6 +163,38 @@ mod tests {
             _cancel: CancellationToken,
         ) -> BoxFuture<'_, Result<Vec<ModelInfo>, ProviderError>> {
             Box::pin(pending())
+        }
+    }
+
+    struct Scripted {
+        verify: Option<Result<(), ProviderError>>,
+        list: Result<Vec<ModelInfo>, ProviderError>,
+        verify_calls: Arc<AtomicUsize>,
+        list_calls: Arc<AtomicUsize>,
+    }
+
+    impl ModelCatalog for Scripted {
+        fn list_url(&self) -> String {
+            String::new()
+        }
+
+        fn verify_key(
+            &self,
+            _cancel: CancellationToken,
+        ) -> BoxFuture<'_, Result<(), ProviderError>> {
+            self.verify_calls.fetch_add(1, Ordering::SeqCst);
+            match &self.verify {
+                Some(result) => Box::pin(std::future::ready(result.clone())),
+                None => Box::pin(pending()),
+            }
+        }
+
+        fn list_models(
+            &self,
+            _cancel: CancellationToken,
+        ) -> BoxFuture<'_, Result<Vec<ModelInfo>, ProviderError>> {
+            self.list_calls.fetch_add(1, Ordering::SeqCst);
+            Box::pin(std::future::ready(self.list.clone()))
         }
     }
 
@@ -235,6 +290,106 @@ mod tests {
         );
     }
 
+    fn scripted_catalog(
+        verify: Option<Result<(), ProviderError>>,
+        list: Result<Vec<ModelInfo>, ProviderError>,
+    ) -> (Scripted, Arc<AtomicUsize>, Arc<AtomicUsize>) {
+        let verify_calls = Arc::new(AtomicUsize::new(0));
+        let list_calls = Arc::new(AtomicUsize::new(0));
+        (
+            Scripted {
+                verify,
+                list,
+                verify_calls: Arc::clone(&verify_calls),
+                list_calls: Arc::clone(&list_calls),
+            },
+            verify_calls,
+            list_calls,
+        )
+    }
+
+    #[tokio::test]
+    async fn a_failed_key_verification_maps_and_skips_model_listing() {
+        let message = String::new;
+        let cases = [
+            (
+                ProviderError::Auth { message: message() },
+                ConnectionStatus::BadKey,
+            ),
+            (
+                ProviderError::Blocked { message: message() },
+                ConnectionStatus::Blocked,
+            ),
+            (
+                ProviderError::RateLimited {
+                    message: message(),
+                    retry_after_secs: Some(7),
+                },
+                ConnectionStatus::NetworkError,
+            ),
+            (
+                ProviderError::InvalidRequest { message: message() },
+                ConnectionStatus::NetworkError,
+            ),
+            (
+                ProviderError::Server {
+                    status: 503,
+                    message: message(),
+                },
+                ConnectionStatus::NetworkError,
+            ),
+            (
+                ProviderError::Network { message: message() },
+                ConnectionStatus::NetworkError,
+            ),
+            (
+                ProviderError::MalformedStream { message: message() },
+                ConnectionStatus::NetworkError,
+            ),
+            (ProviderError::Cancelled, ConnectionStatus::NetworkError),
+        ];
+        assert_failed_verification(cases[0].0.clone(), cases[0].1).await;
+        assert_failed_verification(cases[1].0.clone(), cases[1].1).await;
+        assert_failed_verification(cases[2].0.clone(), cases[2].1).await;
+        assert_failed_verification(cases[3].0.clone(), cases[3].1).await;
+        assert_failed_verification(cases[4].0.clone(), cases[4].1).await;
+        assert_failed_verification(cases[5].0.clone(), cases[5].1).await;
+        assert_failed_verification(cases[6].0.clone(), cases[6].1).await;
+        assert_failed_verification(cases[7].0.clone(), cases[7].1).await;
+    }
+
+    async fn assert_failed_verification(error: ProviderError, expected: ConnectionStatus) {
+        let (catalog, verify_calls, list_calls) =
+            scripted_catalog(Some(Err(error)), Ok(vec![model("not-called")]));
+        let check = check(&catalog, CHECK_LIMIT).await;
+
+        assert_eq!(check.status, expected);
+        assert_eq!(check.models, Vec::<ModelInfo>::new());
+        assert_eq!(verify_calls.load(Ordering::SeqCst), 1);
+        assert_eq!(list_calls.load(Ordering::SeqCst), 0);
+    }
+
+    #[tokio::test]
+    async fn successful_key_verification_then_lists_models() {
+        let models = vec![model("gpt-a")];
+        let (catalog, verify_calls, list_calls) =
+            scripted_catalog(Some(Ok(())), Ok(models.clone()));
+
+        assert_eq!(check(&catalog, CHECK_LIMIT).await.models, models);
+        assert_eq!(verify_calls.load(Ordering::SeqCst), 1);
+        assert_eq!(list_calls.load(Ordering::SeqCst), 1);
+    }
+
+    #[tokio::test]
+    async fn a_key_verification_that_never_answers_is_a_network_error() {
+        let (catalog, verify_calls, list_calls) = scripted_catalog(None, Ok(Vec::new()));
+        let check = check(&catalog, Duration::from_millis(10)).await;
+
+        assert_eq!(check.status, ConnectionStatus::NetworkError);
+        assert_eq!(verify_calls.load(Ordering::SeqCst), 1);
+        assert_eq!(list_calls.load(Ordering::SeqCst), 0);
+    }
+
     /// Counts a build, then returns a catalog that lists one model.
     fn counted_catalog(builds: &AtomicUsize) -> Box<dyn ModelCatalog> {
         builds.fetch_add(1, Ordering::SeqCst);
@@ -275,26 +430,29 @@ mod tests {
     }
 
     #[test]
-    fn provider_test_target_is_the_model_list_url_of_each_provider() {
+    fn provider_test_targets_are_exact_and_ordered_for_each_provider() {
         assert_eq!(
-            provider_test_target(Provider::Anthropic),
-            "https://api.anthropic.com/v1/models?limit=1000"
+            provider_test_targets(Provider::Anthropic),
+            vec!["https://api.anthropic.com/v1/models?limit=1000"]
         );
         assert_eq!(
-            provider_test_target(Provider::OpenAi),
-            "https://api.openai.com/v1/models"
+            provider_test_targets(Provider::OpenAi),
+            vec!["https://api.openai.com/v1/models"]
         );
         assert_eq!(
-            provider_test_target(Provider::Gemini),
-            "https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000"
+            provider_test_targets(Provider::Gemini),
+            vec!["https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000"]
         );
         assert_eq!(
-            provider_test_target(Provider::DeepSeek),
-            "https://api.deepseek.com/models"
+            provider_test_targets(Provider::DeepSeek),
+            vec!["https://api.deepseek.com/models"]
         );
         assert_eq!(
-            provider_test_target(Provider::OpenRouter),
-            "https://openrouter.ai/api/v1/models"
+            provider_test_targets(Provider::OpenRouter),
+            vec![
+                "https://openrouter.ai/api/v1/key",
+                "https://openrouter.ai/api/v1/models"
+            ]
         );
     }
 }

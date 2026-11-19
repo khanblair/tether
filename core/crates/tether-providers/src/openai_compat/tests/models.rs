@@ -251,8 +251,13 @@ async fn extra_authorization_header_is_rejected_for_both_catalogs() {
 fn list_url_is_the_exact_model_list_for_each_catalog() {
     let deepseek = OpenAiCompatProvider::new(client(), OpenAiCompatConfig::deepseek(KEY));
     assert_eq!(deepseek.list_url(), "https://api.deepseek.com/models");
+    assert_eq!(deepseek.verify_url(), None);
     let openrouter = OpenAiCompatProvider::new(client(), OpenAiCompatConfig::openrouter(KEY));
     assert_eq!(openrouter.list_url(), "https://openrouter.ai/api/v1/models");
+    assert_eq!(
+        openrouter.verify_url(),
+        Some("https://openrouter.ai/api/v1/key".to_owned())
+    );
 }
 
 #[tokio::test]
@@ -271,4 +276,93 @@ async fn list_url_is_the_request_the_server_sees_for_each_catalog() {
         );
         assert_eq!(seen.request_line, "GET /models HTTP/1.1", "{dialect:?}");
     }
+}
+
+async fn verify_with(reply: Reply) -> Result<(), ProviderError> {
+    let server = start(reply).await;
+    let config = OpenAiCompatConfig {
+        base_url: server.base_url,
+        ..OpenAiCompatConfig::openrouter(KEY)
+    };
+    OpenAiCompatProvider::new(client(), config)
+        .verify_key(CancellationToken::new())
+        .await
+}
+
+#[tokio::test]
+async fn openrouter_verify_key_authenticates_and_uses_its_url() {
+    let server = start(Reply::json("200 OK", &[], "{}")).await;
+    let config = OpenAiCompatConfig {
+        base_url: server.base_url,
+        ..OpenAiCompatConfig::openrouter(KEY)
+    };
+    let provider = OpenAiCompatProvider::new(client(), config);
+    let verify_url = provider.verify_url().unwrap();
+
+    assert_eq!(provider.verify_key(CancellationToken::new()).await, Ok(()));
+
+    let seen = server.seen.await.unwrap().unwrap();
+    assert_eq!(seen.request_line, request_line_for(&verify_url));
+    assert_eq!(seen.request_line, "GET /key HTTP/1.1");
+    assert_eq!(seen.header("authorization"), Some("Bearer test-key-123"));
+    assert_eq!(
+        seen.header("http-referer"),
+        Some("https://github.com/khanblair/tether")
+    );
+    assert_eq!(seen.header("x-title"), Some("Tether"));
+}
+
+#[tokio::test]
+async fn openrouter_verify_key_maps_auth_and_rate_limit_statuses() {
+    let body = r#"{"error":{"message":"bad","type":"x","code":"x"}}"#;
+    assert_eq!(
+        verify_with(Reply::json("401 Unauthorized", &[], body)).await,
+        Err(ProviderError::Auth {
+            message: "bad".to_owned()
+        })
+    );
+    assert_eq!(
+        verify_with(Reply::json("403 Forbidden", &[], body)).await,
+        Err(ProviderError::Auth {
+            message: "bad".to_owned()
+        })
+    );
+    let rate = r#"{"error":{"message":"slow","type":"x","code":429}}"#;
+    assert_eq!(
+        verify_with(Reply::json(
+            "429 Too Many Requests",
+            &["retry-after: 7"],
+            rate
+        ))
+        .await,
+        Err(ProviderError::RateLimited {
+            message: "slow".to_owned(),
+            retry_after_secs: Some(7)
+        })
+    );
+}
+
+#[tokio::test]
+async fn openrouter_verify_key_sends_extra_headers_and_rejects_authorization_override() {
+    let server = start(Reply::json("200 OK", &[], "{}")).await;
+    let mut config = OpenAiCompatConfig::openrouter(KEY);
+    config.base_url = server.base_url;
+    let provider = OpenAiCompatProvider::new(client(), config);
+    assert_eq!(provider.verify_key(CancellationToken::new()).await, Ok(()));
+    let seen = server.seen.await.unwrap().unwrap();
+    assert_eq!(seen.header("x-title"), Some("Tether"));
+    assert_eq!(seen.header("authorization"), Some("Bearer test-key-123"));
+
+    let mut config = OpenAiCompatConfig::openrouter(KEY);
+    config.base_url = "http://127.0.0.1:9".to_owned();
+    config
+        .extra_headers
+        .push(("Authorization".to_owned(), "Bearer other".to_owned()));
+    let provider = OpenAiCompatProvider::new(client(), config);
+    assert_eq!(
+        provider.verify_key(CancellationToken::new()).await,
+        Err(ProviderError::InvalidRequest {
+            message: "an extra header cannot replace the Authorization header".to_owned()
+        })
+    );
 }

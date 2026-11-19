@@ -4,7 +4,7 @@
 
 mod provider_connection;
 
-pub use provider_connection::{ProviderCheck, check_provider, provider_test_target};
+pub use provider_connection::{ProviderCheck, check_provider, provider_test_targets};
 
 use std::sync::Arc;
 

@@ -993,7 +993,7 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_tether_core_checksum_method_providersettings_test_connection() and 0xFFFF) != 11435) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_tether_core_checksum_method_providersettings_test_target() and 0xFFFF) != 18009) {
+    if ((lib.uniffi_tether_core_checksum_method_providersettings_test_target() and 0xFFFF) != 18423) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_method_secretvault_delete() and 0xFFFF) != 49153) {
@@ -1857,7 +1857,7 @@ public interface ProviderSettingsInterface {
     fun `testConnection`(`provider`: ProviderView): ProviderStatusView
     
     /**
-     * The URL that a key test sends its first request to. It never holds a key.
+     * The URLs that a key test sends, one per line, in request order. They never hold a key.
      */
     fun `testTarget`(`provider`: ProviderView): kotlin.String
     
@@ -2116,7 +2116,7 @@ open class ProviderSettings: Disposable, AutoCloseable, ProviderSettingsInterfac
 
     
     /**
-     * The URL that a key test sends its first request to. It never holds a key.
+     * The URLs that a key test sends, one per line, in request order. They never hold a key.
      */override fun `testTarget`(`provider`: ProviderView): kotlin.String {
             return FfiConverterString.lift(
     callWithHandle {

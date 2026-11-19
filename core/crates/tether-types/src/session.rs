@@ -1,5 +1,7 @@
 //! Session settings and states: permission mode, executor, provider, model, status.
 
+use crate::text::text_enum;
+
 /// Which tool calls need the user's approval (product-scope F5).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PermissionMode {
@@ -14,6 +16,14 @@ pub enum PermissionMode {
     /// Everything runs without asking, except a force push.
     Bypass,
 }
+
+text_enum!(PermissionMode {
+    Plan => "plan",
+    Ask => "ask",
+    AcceptEdits => "accept_edits",
+    Auto => "auto",
+    Bypass => "bypass",
+});
 
 /// Where a command runs (product-scope F10).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -40,6 +50,14 @@ pub enum Provider {
     /// OpenRouter.
     OpenRouter,
 }
+
+text_enum!(Provider {
+    Anthropic => "anthropic",
+    OpenAi => "openai",
+    Gemini => "gemini",
+    DeepSeek => "deepseek",
+    OpenRouter => "openrouter",
+});
 
 /// Names one model at one provider.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -72,6 +90,18 @@ pub enum SessionStatus {
     /// A fatal error ended the turn; the user can retry.
     Failed,
 }
+
+text_enum!(SessionStatus {
+    Idle => "idle",
+    Requesting => "requesting",
+    Streaming => "streaming",
+    CheckingTool => "checking_tool",
+    RunningTool => "running_tool",
+    AwaitingApproval => "awaiting_approval",
+    Paused => "paused",
+    Interrupted => "interrupted",
+    Failed => "failed",
+});
 
 /// The tool call state machine from architecture section 6.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -115,9 +145,43 @@ pub enum ConnectionStatus {
     Blocked,
 }
 
+text_enum!(ConnectionStatus {
+    Unset => "unset",
+    Testing => "testing",
+    Ok => "ok",
+    BadKey => "bad_key",
+    NetworkError => "network_error",
+    Blocked => "blocked",
+});
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn every_text_form_parses_back_to_its_variant() {
+        for &v in PermissionMode::ALL {
+            assert_eq!(v.as_str().parse::<PermissionMode>().unwrap(), v);
+        }
+        for &v in Provider::ALL {
+            assert_eq!(v.as_str().parse::<Provider>().unwrap(), v);
+        }
+        for &v in SessionStatus::ALL {
+            assert_eq!(v.as_str().parse::<SessionStatus>().unwrap(), v);
+        }
+        for &v in ConnectionStatus::ALL {
+            assert_eq!(v.as_str().parse::<ConnectionStatus>().unwrap(), v);
+        }
+    }
+
+    #[test]
+    fn text_forms_are_distinct_and_unknown_text_is_rejected() {
+        let modes: std::collections::HashSet<_> =
+            PermissionMode::ALL.iter().map(|m| m.as_str()).collect();
+        assert_eq!(modes.len(), PermissionMode::ALL.len());
+        let err = "yolo".parse::<PermissionMode>().unwrap_err();
+        assert_eq!(err.to_string(), "unknown PermissionMode value: yolo");
+    }
 
     #[test]
     fn model_refs_compare_by_provider_and_id() {

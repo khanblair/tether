@@ -30,8 +30,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -239,7 +237,7 @@ private fun NotesBox(notes: String) {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .heightIn(max = NOTES_MAX_HEIGHT)
+                .heightIn(max = TetherSize.notesMax)
                 .clip(shape)
                 .background(TetherTheme.colors.surfaceSunken)
                 .border(TetherBorder.hairline, TetherTheme.colors.line, shape)
@@ -327,7 +325,6 @@ private fun labelFor(action: UpdateAction): Int =
 private fun secondaryLabelFor(action: UpdateAction): Int =
     if (action == UpdateAction.Check) R.string.updates_check_again else labelFor(action)
 
-private val NOTES_MAX_HEIGHT: Dp = 240.dp
 private const val PERCENT_MAX = 100f
 private val VERSIONED_TITLES =
     setOf(

@@ -7,6 +7,10 @@ use crate::{BoxFuture, ProviderError};
 
 /// Lists the chat models served by a provider.
 pub trait ModelCatalog: Send + Sync {
+    /// The URL of the first model-list request, exactly as it is sent. It never holds the key.
+    /// It is empty when the base URL is not a valid URL, and `list_models` then fails.
+    fn list_url(&self) -> String;
+
     /// Lists models with context, price, and capability badges.
     fn list_models(
         &self,

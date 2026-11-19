@@ -64,15 +64,8 @@ pub(super) async fn list(
     Ok(result)
 }
 
-async fn get_page(
-    client: &reqwest::Client,
-    config: &AnthropicConfig,
-    after: Option<&str>,
-    cancel: &CancellationToken,
-) -> Result<Page, ProviderError> {
-    let mut headers = HeaderMap::new();
-    headers.insert("x-api-key", secret_header(&config.api_key)?);
-    headers.insert("anthropic-version", HeaderValue::from_static("2023-06-01"));
+/// The URL of one page of the model list. `after` is the last id of the previous page.
+fn page_url(config: &AnthropicConfig, after: Option<&str>) -> Result<reqwest::Url, ProviderError> {
     let mut url = reqwest::Url::parse(&format!(
         "{}/v1/models",
         config.base_url.trim_end_matches('/')
@@ -84,10 +77,27 @@ async fn get_page(
     if let Some(id) = after {
         url.query_pairs_mut().append_pair("after_id", id);
     }
+    Ok(url)
+}
+
+/// The URL of the first page. `list_url` reports this same URL.
+pub(super) fn list_url(config: &AnthropicConfig) -> String {
+    page_url(config, None).map_or_else(|_| String::new(), |url| url.to_string())
+}
+
+async fn get_page(
+    client: &reqwest::Client,
+    config: &AnthropicConfig,
+    after: Option<&str>,
+    cancel: &CancellationToken,
+) -> Result<Page, ProviderError> {
+    let mut headers = HeaderMap::new();
+    headers.insert("x-api-key", secret_header(&config.api_key)?);
+    headers.insert("anthropic-version", HeaderValue::from_static("2023-06-01"));
     get_json(
         GetCall {
             client,
-            url: url.to_string(),
+            url: page_url(config, after)?.to_string(),
             headers,
             errors: &http::AnthropicErrors,
         },

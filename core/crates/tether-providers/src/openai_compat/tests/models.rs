@@ -1,5 +1,5 @@
 use super::KEY;
-use crate::test_support::{Reply, start};
+use crate::test_support::{Reply, request_line_for, start};
 use crate::{Dialect, ModelCatalog, OpenAiCompatConfig, OpenAiCompatProvider, ProviderError};
 use tether_types::{ModelCaps, ModelInfo, ModelPrice, PriceSource, Provider, Support};
 use tokio_util::sync::CancellationToken;
@@ -244,5 +244,31 @@ async fn extra_authorization_header_is_rejected_for_both_catalogs() {
                 message: "an extra header cannot replace the Authorization header".to_owned(),
             })
         );
+    }
+}
+
+#[test]
+fn list_url_is_the_exact_model_list_for_each_catalog() {
+    let deepseek = OpenAiCompatProvider::new(client(), OpenAiCompatConfig::deepseek(KEY));
+    assert_eq!(deepseek.list_url(), "https://api.deepseek.com/models");
+    let openrouter = OpenAiCompatProvider::new(client(), OpenAiCompatConfig::openrouter(KEY));
+    assert_eq!(openrouter.list_url(), "https://openrouter.ai/api/v1/models");
+}
+
+#[tokio::test]
+async fn list_url_is_the_request_the_server_sees_for_each_catalog() {
+    for dialect in [Dialect::DeepSeek, Dialect::OpenRouter] {
+        let server = start(Reply::json("200 OK", &[], "{}")).await;
+        let provider = provider(server.base_url, dialect);
+        let list_url = provider.list_url();
+        let models = provider.list_models(CancellationToken::new()).await;
+        let seen = server.seen.await.unwrap().unwrap();
+        assert_eq!(models, Ok(Vec::new()), "{dialect:?}");
+        assert_eq!(
+            seen.request_line,
+            request_line_for(&list_url),
+            "{dialect:?}"
+        );
+        assert_eq!(seen.request_line, "GET /models HTTP/1.1", "{dialect:?}");
     }
 }

@@ -95,6 +95,10 @@ impl ChatProvider for AnthropicProvider {
 }
 
 impl crate::ModelCatalog for AnthropicProvider {
+    fn list_url(&self) -> String {
+        models::list_url(&self.config)
+    }
+
     fn list_models(
         &self,
         cancel: CancellationToken,

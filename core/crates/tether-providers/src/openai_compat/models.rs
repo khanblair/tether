@@ -91,6 +91,11 @@ pub(super) async fn list(
         .collect())
 }
 
+/// The URL of the model list. It is the only page, so `list_url` reports it too.
+pub(super) fn list_url(config: &OpenAiCompatConfig) -> String {
+    format!("{}/models", config.base_url.trim_end_matches('/'))
+}
+
 async fn get_page(
     client: &reqwest::Client,
     config: &OpenAiCompatConfig,
@@ -100,7 +105,7 @@ async fn get_page(
     get_json(
         GetCall {
             client,
-            url: format!("{}/models", config.base_url.trim_end_matches('/')),
+            url: list_url(config),
             headers,
             errors: &http::CompatErrors,
         },
@@ -228,6 +233,10 @@ fn router_price(pricing: Option<&Pricing>) -> Option<ModelPrice> {
 }
 
 impl crate::ModelCatalog for super::OpenAiCompatProvider {
+    fn list_url(&self) -> String {
+        list_url(&self.config)
+    }
+
     fn list_models(
         &self,
         cancel: CancellationToken,

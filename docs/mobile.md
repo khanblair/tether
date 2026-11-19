@@ -69,7 +69,7 @@ The offline banner appears under the status line. Turns never fail only because 
 | Partial wake lock | `PowerManager.PARTIAL_WAKE_LOCK`, held only during an active turn, released on finish, 30-minute timeout renewed per tool call | Keep CPU awake for long tool runs with the screen off |
 | Notifications with actions | `NotificationCompat` with `PendingIntent`s | Approvals, run status |
 | Keystore | AES-GCM key, StrongBox when available | Wrap secrets |
-| Biometric | AndroidX Biometric, class 3 when available | Reveal keys, Bypass, app lock |
+| Biometric | Platform `BiometricPrompt` (`android.hardware.biometrics`). Biometric, and from Android 11 also the screen lock (PIN, pattern, or password), so a phone with no enrolled fingerprint still works | Reveal keys, Bypass, app lock |
 | Speech input | `SpeechRecognizer` | Voice prompts |
 | Photo picker and camera intent | `PickVisualMedia`, `ACTION_IMAGE_CAPTURE` | Image attachments, no storage permission needed |
 | Storage Access Framework | `OpenDocument`, `CreateDocument`, `OpenDocumentTree` | Zip import and export; the shared folder for vault sync (the Kotlin layer copies files, because the Rust core cannot open content URIs) |

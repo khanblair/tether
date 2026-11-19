@@ -1271,7 +1271,10 @@ version = "0.0.2"
 name = "tether-engine"
 version = "0.0.2"
 dependencies = [
+ "tether-providers",
  "tether-types",
+ "tokio",
+ "tokio-util",
 ]
 
 [[package]]
@@ -1281,8 +1284,10 @@ dependencies = [
  "tempfile",
  "tether-engine",
  "tether-secrets",
+ "tether-store",
  "tether-types",
  "thiserror",
+ "tokio",
  "uniffi",
 ]
 

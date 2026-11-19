@@ -229,3 +229,13 @@ async fn write_reply(socket: &mut TcpStream, reply: Reply) -> io::Result<()> {
     }
     socket.shutdown().await
 }
+
+/// The request line a server should see for `url`: the method, then the path and query.
+pub(crate) fn request_line_for(url: &str) -> String {
+    let parsed = reqwest::Url::parse(url).unwrap();
+    let query = parsed
+        .query()
+        .map(|query| format!("?{query}"))
+        .unwrap_or_default();
+    format!("GET {}{query} HTTP/1.1", parsed.path())
+}

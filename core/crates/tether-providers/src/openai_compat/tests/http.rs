@@ -8,6 +8,19 @@ use super::{KEY, collect, request};
 use crate::test_support::{Reply, start};
 use crate::{ChatProvider, OpenAiCompatConfig, OpenAiCompatProvider, ProviderError, StreamEvent};
 
+/// Streams one request to `reply`, using the given configuration with the server's address.
+async fn stream_with(config: OpenAiCompatConfig, reply: Reply) -> Result<(), ProviderError> {
+    let server = start(reply).await;
+    let config = OpenAiCompatConfig {
+        base_url: server.base_url,
+        ..config
+    };
+    let (sender, _receiver) = tokio::sync::mpsc::channel(8);
+    OpenAiCompatProvider::new(client(), config)
+        .stream_chat(&request(), sender, CancellationToken::new())
+        .await
+}
+
 const TEXT: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../../fixtures/provider-streams/deepseek-text.sse"
@@ -162,4 +175,20 @@ async fn an_extra_header_cannot_replace_the_authorization_header() {
         .stream_chat(&request(), sender, CancellationToken::new())
         .await;
     assert!(matches!(result, Err(ProviderError::InvalidRequest { .. })));
+}
+
+#[tokio::test]
+async fn a_403_maps_to_auth_for_deepseek_and_openrouter() {
+    let body = r#"{"error":{"message":"permission denied","type":"x","code":"x"}}"#;
+    for config in [
+        OpenAiCompatConfig::deepseek(KEY),
+        OpenAiCompatConfig::openrouter(KEY),
+    ] {
+        assert_eq!(
+            stream_with(config, Reply::json("403 Forbidden", &[], body)).await,
+            Err(ProviderError::Auth {
+                message: "permission denied".to_owned()
+            })
+        );
+    }
 }

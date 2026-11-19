@@ -5,8 +5,15 @@ use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 
 use super::{KEY, collect, request};
+use crate::openai::http::OpenAiErrors;
 use crate::test_support::{Reply, start};
+use crate::transport::ErrorStyle;
 use crate::{ChatProvider, OpenAiConfig, OpenAiProvider, ProviderError, StreamEvent};
+use reqwest::StatusCode;
+
+const REGION_MESSAGE: &str = "Country, region, or territory not supported";
+const REGION_BODY: &str = r#"{"error":{"message":"Country, region, or territory not supported","type":"request_forbidden","param":null,"code":"unsupported_country_region_territory"}}"#;
+const PERMISSION_BODY: &str = r#"{"error":{"message":"insufficient permissions","type":"invalid_request_error","param":null,"code":"insufficient_permissions"}}"#;
 
 const TEXT: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
@@ -129,4 +136,78 @@ fn debug_output_hides_key() {
     let client = crate::client_builder().build().unwrap();
     let provider = OpenAiProvider::new(client, config.clone());
     assert!(!format!("{config:?} {provider:?}").contains(KEY));
+}
+
+#[tokio::test]
+async fn a_region_403_maps_to_blocked_with_the_providers_message() {
+    let (_, result) = run(Reply::json("403 Forbidden", &[], REGION_BODY)).await;
+    assert_eq!(
+        result,
+        Err(ProviderError::Blocked {
+            message: REGION_MESSAGE.to_owned()
+        })
+    );
+}
+
+#[tokio::test]
+async fn a_plain_403_maps_to_auth() {
+    let (_, result) = run(Reply::json("403 Forbidden", &[], PERMISSION_BODY)).await;
+    assert_eq!(
+        result,
+        Err(ProviderError::Auth {
+            message: "insufficient permissions".to_owned()
+        })
+    );
+}
+
+#[tokio::test]
+async fn a_403_code_classification_ignores_unrelated_messages() {
+    let region_body = r#"{"error":{"message":"Request failed.","type":"request_forbidden","param":null,"code":"unsupported_country_region_territory"}}"#;
+    let (_, region_result) = run(Reply::json("403 Forbidden", &[], region_body)).await;
+    assert_eq!(
+        region_result,
+        Err(ProviderError::Blocked {
+            message: "Request failed.".to_owned()
+        })
+    );
+
+    let permission_body = r#"{"error":{"message":"Request failed.","type":"invalid_request_error","param":null,"code":"insufficient_permissions"}}"#;
+    let (_, permission_result) = run(Reply::json("403 Forbidden", &[], permission_body)).await;
+    assert_eq!(
+        permission_result,
+        Err(ProviderError::Auth {
+            message: "Request failed.".to_owned()
+        })
+    );
+}
+
+#[test]
+fn classify_blocks_a_region_403_by_code_or_by_message_in_any_case() {
+    let blocked = |message: &str| {
+        Some(ProviderError::Blocked {
+            message: message.to_owned(),
+        })
+    };
+    assert_eq!(
+        OpenAiErrors.classify(StatusCode::FORBIDDEN, REGION_BODY.as_bytes()),
+        blocked(REGION_MESSAGE)
+    );
+    let by_message =
+        br#"{"error":{"message":"COUNTRY, REGION, OR TERRITORY not supported","code":null}}"#;
+    assert_eq!(
+        OpenAiErrors.classify(StatusCode::FORBIDDEN, by_message),
+        blocked("COUNTRY, REGION, OR TERRITORY not supported")
+    );
+}
+
+#[test]
+fn classify_leaves_other_403s_and_other_statuses_to_the_default_mapping() {
+    assert_eq!(
+        OpenAiErrors.classify(StatusCode::FORBIDDEN, PERMISSION_BODY.as_bytes()),
+        None
+    );
+    assert_eq!(
+        OpenAiErrors.classify(StatusCode::UNAUTHORIZED, REGION_BODY.as_bytes()),
+        None
+    );
 }

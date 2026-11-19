@@ -40,6 +40,19 @@ mirror_enum!(
     /// FFI view of [`Provider`].
     ProviderView <=> Provider { Anthropic, OpenAi, Gemini, DeepSeek, OpenRouter }
 );
+
+/// Maps the FFI provider to the engine's provider. Each variant maps one to one.
+impl From<ProviderView> for Provider {
+    fn from(view: ProviderView) -> Self {
+        match view {
+            ProviderView::Anthropic => Self::Anthropic,
+            ProviderView::OpenAi => Self::OpenAi,
+            ProviderView::Gemini => Self::Gemini,
+            ProviderView::DeepSeek => Self::DeepSeek,
+            ProviderView::OpenRouter => Self::OpenRouter,
+        }
+    }
+}
 mirror_enum!(
     /// FFI view of [`SessionStatus`].
     SessionStatusView <=> SessionStatus {

@@ -9,6 +9,7 @@ mod migrations;
 mod models;
 #[cfg(test)]
 mod models_tests;
+mod provider_configs;
 #[cfg(test)]
 mod schema_tests;
 

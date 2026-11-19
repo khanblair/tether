@@ -30,7 +30,7 @@ All components start as **Planned**. Screenshot tests start with the first featu
 | `TetherSurface` | Tonal surface wrapper | `tone` (bg, surface, sunken, raised), `elevation` | each tone × light, dark | P0 | Planned |
 | `TetherText` | Text bound to type tokens | `text`, `style` token, `color` token, `maxLines` | default, truncated | P0 | Planned |
 | `MonoText` | Inline code, paths, commands | `text`, `size` (mono, mono-s, mono-label) | default, truncated middle for paths | P0 | Planned |
-| `TetherIcon` | Lucide icon with token sizing | `icon`, `size`, `tint`, `contentDescription` | default, active, disabled | P0 | Planned |
+| `TetherIcon` | Lucide icon with token sizing; the icons live in `TetherIcons`: circle-check, circle-x, circle-dot, chevron-left, chevron-right, zap, trash-2, eye, eye-off, key-round | `icon`, `contentDescription`, `tint`, `size` | default, tinted | P0 | Built |
 | `FocusRing` | Keyboard focus indicator modifier | `shape` | unfocused, focused | P0 | Planned |
 
 ## Buttons and inputs
@@ -39,10 +39,10 @@ All components start as **Planned**. Screenshot tests start with the first featu
 |---|---|---|---|---|---|
 | `PrimaryButton` | The one accent action per screen | `label`, `onClick`, `enabled`, `loading` | enabled, pressed, disabled, loading, focused | P0 | Built |
 | `SecondaryButton` | Neutral filled action | same as primary | same as primary | P0 | Planned |
-| `TextButton` | Low-emphasis action | `label`, `onClick`, `tone` (neutral, danger) | enabled, pressed, disabled, danger | P0 | Planned |
+| `TetherTextButton` | Low-emphasis action | `label`, `onClick`, `tone` (`TextButtonTone`: neutral, danger), `icon`, `enabled` | enabled, disabled, danger | P0 | Built |
 | `IconButton` | Icon-only action, 48 dp target | `icon`, `contentDescription`, `onClick` | enabled, pressed, disabled, active | P0 | Planned |
 | `TetherTextField` | Single-line input | `value`, `onValueChange`, `label`, `placeholder`, `error` | empty, filled, focused, error, disabled | P1 | Planned |
-| `SecretField` | Masked key input with paste and reveal | `value`, `onValueChange`, `onReveal` (biometric) | empty, masked, revealed, error | P1 | Planned |
+| `SecretField` | Masked key input with paste and reveal. Reveal asks the caller for a biometric check | `value`, `onValueChange`, `label`, `revealed`, `onToggleReveal`, `onPaste`, `hint`, `error` | empty, masked, revealed, error | P1 | Built |
 | `ToggleRow` | Setting with a switch | `title`, `description`, `checked`, `onCheckedChange` | on, off, disabled | P1 | Planned |
 | `SelectRow` | Setting that opens a picker | `title`, `value`, `onClick` | default, disabled | P1 | Planned |
 | `SegmentedControl` | Two to four exclusive options | `options`, `selected`, `onSelect` | each selected, disabled | P1 | Planned |
@@ -55,7 +55,7 @@ All components start as **Planned**. Screenshot tests start with the first featu
 | `TetherTopBar` | Top app bar | `title`, `subtitle`, `navigationIcon`, `actions` | default (scrolled shadow is planned) | P0 | Built |
 | `ProjectDrawer` | Projects and sessions navigation | `projects`, `sessions`, `current`, `onSelect`, `onNew` | full, empty, loading | P1 | Planned |
 | `SectionHeader` | Heading in lists and settings | `title`, `action` | default, with action | P1 | Planned |
-| `ListRow` | Generic row: icon, title, subtitle, trailing | `leading`, `title`, `subtitle`, `trailing`, `onClick` | default, pressed, selected, disabled | P1 | Planned |
+| `ListRow` | Generic row: icon, title, subtitle, trailing | `title`, `subtitle`, `leading`, `trailing`, `onClick`, `enabled` | default, pressed, disabled | P1 | Built |
 | `TetherBottomSheet` | Modal sheet with drag handle | `title`, `content`, `onDismiss` | partial, expanded | P1 | Planned |
 | `TetherDialog` | Confirmation dialog | `title`, `body`, `confirm`, `dismiss`, `destructive` | default, destructive | P1 | Planned |
 | `TwoPaneScaffold` | Expanded and large layouts | `primary`, `detail`, `list` | compact, medium, expanded, large | P10 | Planned |
@@ -148,8 +148,8 @@ All components start as **Planned**. Screenshot tests start with the first featu
 
 | Name | Purpose | Props | States | Phase | Status |
 |---|---|---|---|---|---|
-| `ProviderRow` | Provider with key status | `provider`, `status`, `onClick` | unset, ok, bad key, network error, blocked | P1 | Planned |
-| `TestConnectionButton` | Tests a provider key | `state`, `onTest` | idle, testing, ok, failed | P1 | Planned |
+| `ProviderRow` | Provider with key status: icon, name, subtitle, chevron | `name`, `subtitle`, `status` (`ProviderRowStatus`), `statusDescription`, `onClick` | unset, ok, bad key, network error, blocked | P1 | Built |
+| `TestConnectionButton` | Outlined full-width button that starts a key test | `state` (`TestState`), `label`, `onTest`, `enabled` | idle, testing, ok, failed, disabled | P1 | Built |
 | `ModelPicker` | Searchable model list with badges | `models`, `selected`, `onPick` | loading, list, filtered, no tools model disabled | P1 | Planned |
 | `CapabilityBadges` | Tools, images, reasoning badges | `caps` | each combination | P1 | Planned |
 | `GitHubAccountCard` | GitHub sign-in state | `state`, `onSignIn`, `onSignOut` | signed out, device code shown, signed in | P4 | Planned |
@@ -166,7 +166,7 @@ All components start as **Planned**. Screenshot tests start with the first featu
 | `EmptyState` | One sentence and one action | `text`, `action` | default | P1 | Planned |
 | `SkeletonRow` | Loading placeholder row | `lines` | 1 line, 2 lines | P1 | Planned |
 | `TetherSnackbar` | Undoable action feedback | `message`, `action` | default, with Undo | P1 | Planned |
-| `InlineBanner` | Persistent notice in a screen | `tone`, `text`, `action` | info, warning, danger | P1 | Planned |
+| `InlineBanner` | Persistent notice in a screen, announced politely to TalkBack | `text`, `tone` (`BannerTone`: info, success, warning, danger), `title`, `actionLabel`, `onAction` | info, success, warning, danger | P1 | Built |
 
 ## Onboarding
 

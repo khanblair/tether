@@ -40,13 +40,13 @@ tether/
 │   ├── fixtures/model-lists/ Provider list responses for catalog tests
 │   └── crates/
 │       ├── tether-types/      ids, message, model catalog, session, text, usage, error, event (CoreEvent); no UniFFI code
-│       ├── tether-store/      migrations/0001_init.sql; src/{lib,db,error,migrations,models,models_tests,schema_tests}.rs
-│       ├── tether-engine/     VERSION, EventSink, Core (emits Ready and Test events)
+│       ├── tether-store/      migrations/0001_init.sql; src/{lib,db,error,migrations,models,models_tests,provider_configs,schema_tests}.rs
+│       ├── tether-engine/     VERSION, EventSink, Core (emits Ready and Test events), provider_connection.rs (key check)
 │       ├── tether-secrets/    SecretStore, SecretRef, Secret, SecretsPlatform trait, errors (src/{lib,error,platform,reference,secret,store,store_tests}.rs)
 │       ├── tether-providers/  lib.rs (ChatProvider, ModelCatalog), catalog.rs, pricing/ and data/prices/, request.rs, event.rs, error.rs, sse.rs (SseParser), client.rs (shared HTTP client), anthropic/ (adapter), openai/ (adapter), gemini/ (adapter), openai_compat/ (adapter), deepseek.rs, openrouter.rs, transport.rs (shared request and stream code)
 │       ├── tether-ffi/        UniFFI surface, builds libtether_core.so
 │       │   ├── uniffi.toml
-│       │   └── src/{lib.rs, callbacks.rs, secrets.rs, views/{mod,event,types,error}.rs, bin/uniffi-bindgen.rs}
+│       │   └── src/{lib.rs, callbacks.rs, provider_settings.rs, secrets.rs, views/{mod,event,types,error}.rs, bin/uniffi-bindgen.rs}
 │       ├── tether-quality/    data/slop_words.txt and slop_patterns.toml (shared with slop-lint)
 │       └── tether-{tools,workspace,vcs,sandbox,linux,ci,connectors,mcp,skills,memory}/
 │                              Empty libraries
@@ -59,9 +59,9 @@ tether/
 │   ├── config/{detekt.yml, lint.xml}
 │   ├── smell-fixtures/        Module with a function over the line limit; detekt must fail on it (built only with -Ptether.smellFixtures)
 │   ├── app/                   build.gradle.kts (flavors play and full; app version read from core/Cargo.toml), proguard-rules.pro
-│   │   └── src/{main, full, play, androidTest}   TetherApp, MainActivity, di/AppModule, nav/, shell/ (placeholder screens)
+│   │   └── src/{main, full, play, androidTest}   TetherApp, MainActivity, di/AppModule, nav/, shell/ (provider settings and placeholder screens)
 │   ├── core-bridge/           CoreClient, EventBus, KeystoreSecretsPlatform, consumer-rules.pro, (gen) generated/tether_core.kt
-│   └── designsystem/          TetherTheme, PrimaryButton, TetherTopBar, FONTS-LICENSE.txt, (gen) tokens/Tokens.kt and token colors, Plex fonts
+│   └── designsystem/          TetherTheme, TetherIcons, PrimaryButton, TetherTopBar, ListRow, ProviderRow, SecretField, InlineBanner, TestConnectionButton, TetherTextButton, FONTS-LICENSE.txt, (gen) tokens/Tokens.kt and token colors, Plex fonts
 ├── ios/README.md              Plan for v2
 ├── runtimes/README.md  linux/README.md  bench/README.md   Planned folders, one README each
 ├── tools/
@@ -348,7 +348,8 @@ android/
 │       │   │   ├── MainActivity.kt   Single activity host
 │       │   │   ├── nav/Route.kt          Every route
 │       │   │   ├── nav/TetherNavHost.kt  Navigation graph
-│       │   │   ├── shell/                Placeholder screens until feature modules exist
+│       │   │   ├── shell/                SettingsScreen, ProjectsScreen, and placeholder screens until feature modules exist
+│       │   │   ├── providers/            ProvidersScreen, ProviderDetailScreen, their ViewModels and UI state, ProviderGateway (the only door to the core's ProviderSettings)
 │       │   │   └── di/AppModule.kt   Hand-wired dependencies
 │       │   └── res/
 │       │       ├── values/strings.xml  All user-facing strings

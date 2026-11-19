@@ -1,7 +1,11 @@
 package app.tether
 
 import android.graphics.Color
+import android.hardware.biometrics.BiometricManager
+import android.hardware.biometrics.BiometricPrompt
+import android.os.Build
 import android.os.Bundle
+import android.os.CancellationSignal
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -15,6 +19,51 @@ import app.tether.nav.TetherNavHost
 
 /** The single activity. All screens are Compose destinations. */
 class MainActivity : ComponentActivity() {
+    /**
+     * Asks the system for a biometric check before a saved key is shown. On Android 11 and later
+     * the screen lock PIN, pattern, or password is also accepted, so a phone with no enrolled
+     * fingerprint can still reveal a key. [onError] runs for a cancel and for a failure alike.
+     */
+    fun authenticateForKeyReveal(
+        onSuccess: () -> Unit,
+        onError: () -> Unit,
+    ) {
+        val builder =
+            BiometricPrompt
+                .Builder(
+                    this,
+                ).setTitle(getString(R.string.settings_reveal_auth_title))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            builder.setAllowedAuthenticators(
+                BiometricManager.Authenticators.BIOMETRIC_STRONG or
+                    BiometricManager.Authenticators.DEVICE_CREDENTIAL,
+            )
+        } else {
+            builder.setNegativeButton(
+                getString(R.string.settings_cancel),
+                mainExecutor,
+            ) { _, _ -> onError() }
+        }
+        builder.build().authenticate(
+            CancellationSignal(),
+            mainExecutor,
+            object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(
+                    result: BiometricPrompt.AuthenticationResult,
+                ) {
+                    onSuccess()
+                }
+
+                override fun onAuthenticationError(
+                    errorCode: Int,
+                    errString: CharSequence,
+                ) {
+                    onError()
+                }
+            },
+        )
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val module = (application as TetherApp).module

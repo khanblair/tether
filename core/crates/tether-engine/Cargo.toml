@@ -8,6 +8,9 @@ description = "Engine: sessions, turn loop, permissions, executor router, checkp
 
 [dependencies]
 tether-types.workspace = true
+tether-providers.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
 
 [lints]
 workspace = true

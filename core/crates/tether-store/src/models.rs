@@ -76,6 +76,36 @@ impl Store {
             .optional()
             .map_err(StoreError::from)
     }
+
+    /// Returns how many cached models `provider` has. Rows are counted, not decoded.
+    ///
+    /// # Errors
+    /// Returns an error when SQLite fails.
+    pub fn models_count(&self, provider: Provider) -> Result<u32, StoreError> {
+        Ok(self.conn.query_row(
+            "SELECT COUNT(*) FROM models WHERE provider = ?1",
+            [provider.as_str()],
+            |row| row.get(0),
+        )?)
+    }
+
+    /// Removes `provider`'s cached list and its fetch time in one transaction.
+    /// Other providers are untouched.
+    ///
+    /// # Errors
+    /// Returns an error when SQLite fails.
+    pub fn clear_models(&mut self, provider: Provider) -> Result<(), StoreError> {
+        let tx = self.conn.transaction()?;
+        tx.execute(
+            "DELETE FROM models WHERE provider = ?1",
+            [provider.as_str()],
+        )?;
+        tx.execute(
+            "DELETE FROM models_fetch WHERE provider = ?1",
+            [provider.as_str()],
+        )?;
+        Ok(tx.commit()?)
+    }
 }
 
 type StoredModel = (

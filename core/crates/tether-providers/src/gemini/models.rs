@@ -53,6 +53,27 @@ pub(super) async fn list(
     Ok(result)
 }
 
+/// The URL of one page of the model list. `token` is the previous page's next token.
+fn page_url(config: &GeminiConfig, token: Option<&str>) -> Result<reqwest::Url, ProviderError> {
+    let mut url = reqwest::Url::parse(&format!(
+        "{}/v1beta/models",
+        config.base_url.trim_end_matches('/')
+    ))
+    .map_err(|_| ProviderError::InvalidRequest {
+        message: "the model catalog URL is invalid".to_owned(),
+    })?;
+    url.query_pairs_mut().append_pair("pageSize", "1000");
+    if let Some(token) = token {
+        url.query_pairs_mut().append_pair("pageToken", token);
+    }
+    Ok(url)
+}
+
+/// The URL of the first page. `list_url` reports this same URL.
+pub(super) fn list_url(config: &GeminiConfig) -> String {
+    page_url(config, None).map_or_else(|_| String::new(), |url| url.to_string())
+}
+
 async fn get_page(
     client: &reqwest::Client,
     config: &GeminiConfig,
@@ -61,21 +82,10 @@ async fn get_page(
 ) -> Result<Page, ProviderError> {
     let mut headers = HeaderMap::new();
     headers.insert("x-goog-api-key", secret_header(&config.api_key)?);
-    let mut url = reqwest::Url::parse(&format!(
-        "{}/v1beta/models",
-        config.base_url.trim_end_matches('/')
-    ))
-    .map_err(|_| crate::ProviderError::InvalidRequest {
-        message: "the model catalog URL is invalid".to_owned(),
-    })?;
-    url.query_pairs_mut().append_pair("pageSize", "1000");
-    if let Some(token) = token {
-        url.query_pairs_mut().append_pair("pageToken", token);
-    }
     get_json(
         GetCall {
             client,
-            url: url.to_string(),
+            url: page_url(config, token)?.to_string(),
             headers,
             errors: &http::GeminiErrors,
         },
@@ -115,6 +125,10 @@ fn add_model(result: &mut Vec<ModelInfo>, seen: &mut HashSet<String>, model: &Mo
 }
 
 impl crate::ModelCatalog for super::GeminiProvider {
+    fn list_url(&self) -> String {
+        list_url(&self.config)
+    }
+
     fn list_models(
         &self,
         cancel: CancellationToken,

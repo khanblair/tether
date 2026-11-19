@@ -7,7 +7,7 @@ use tokio_util::sync::CancellationToken;
 use super::{Dialect, OpenAiCompatConfig, http};
 use crate::catalog::{LiveDetails, details, support, token_limit};
 use crate::pricing::parse_usd_micros;
-use crate::transport::{GetCall, get_json};
+use crate::transport::{GetCall, get_json, get_status};
 use crate::{BoxFuture, ProviderError};
 
 #[derive(Deserialize)]
@@ -91,6 +91,36 @@ pub(super) async fn list(
         .collect())
 }
 
+/// The URL of the model list. It is the only page, so `list_url` reports it too.
+pub(super) fn list_url(config: &OpenAiCompatConfig) -> String {
+    format!("{}/models", config.base_url.trim_end_matches('/'))
+}
+
+fn key_url(config: &OpenAiCompatConfig) -> String {
+    format!("{}/key", config.base_url.trim_end_matches('/'))
+}
+
+async fn verify(
+    client: &reqwest::Client,
+    config: &OpenAiCompatConfig,
+    cancel: CancellationToken,
+) -> Result<(), ProviderError> {
+    if config.dialect != Dialect::OpenRouter {
+        return Ok(());
+    }
+    let headers = http::build_headers(config)?;
+    get_status(
+        GetCall {
+            client,
+            url: key_url(config),
+            headers,
+            errors: &http::CompatErrors,
+        },
+        &cancel,
+    )
+    .await
+}
+
 async fn get_page(
     client: &reqwest::Client,
     config: &OpenAiCompatConfig,
@@ -100,7 +130,7 @@ async fn get_page(
     get_json(
         GetCall {
             client,
-            url: format!("{}/models", config.base_url.trim_end_matches('/')),
+            url: list_url(config),
             headers,
             errors: &http::CompatErrors,
         },
@@ -228,6 +258,18 @@ fn router_price(pricing: Option<&Pricing>) -> Option<ModelPrice> {
 }
 
 impl crate::ModelCatalog for super::OpenAiCompatProvider {
+    fn list_url(&self) -> String {
+        list_url(&self.config)
+    }
+
+    fn verify_url(&self) -> Option<String> {
+        (self.config.dialect == Dialect::OpenRouter).then(|| key_url(&self.config))
+    }
+
+    fn verify_key(&self, cancel: CancellationToken) -> BoxFuture<'_, Result<(), ProviderError>> {
+        Box::pin(verify(&self.client, &self.config, cancel))
+    }
+
     fn list_models(
         &self,
         cancel: CancellationToken,

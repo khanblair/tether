@@ -34,7 +34,7 @@ pub(super) async fn list(
     let page: Page = get_json(
         GetCall {
             client,
-            url: format!("{}/v1/models", config.base_url.trim_end_matches('/')),
+            url: list_url(config),
             headers,
             errors: &http::OpenAiErrors,
         },
@@ -85,7 +85,16 @@ fn is_chat_model(id: &str) -> bool {
     prefix && BLOCKED.iter().all(|word| !id.contains(word))
 }
 
+/// The URL of the model list. It is the only page, so `list_url` reports it too.
+pub(super) fn list_url(config: &OpenAiConfig) -> String {
+    format!("{}/v1/models", config.base_url.trim_end_matches('/'))
+}
+
 impl crate::ModelCatalog for super::OpenAiProvider {
+    fn list_url(&self) -> String {
+        list_url(&self.config)
+    }
+
     fn list_models(
         &self,
         cancel: CancellationToken,

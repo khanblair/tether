@@ -116,7 +116,7 @@ GitHub REST and GraphQL calls use `reqwest` directly with typed request and resp
 | kotlinx-serialization-json | 1.x | Navigation arguments and small UI-side data | Official; no reflection |
 | DataStore Preferences | Latest stable | UI-only preferences (theme override, onboarding seen). Planned: P0 keeps the theme override in memory | Everything else lives in the core |
 | JNA (`@aar`) | 5.19.x | Runtime for UniFFI Kotlin bindings | Required by UniFFI |
-| AndroidX Biometric | Latest stable | Key reveal, Bypass, app lock | Official |
+| AndroidX Biometric | Not used yet | The platform `BiometricPrompt` covers minSdk 29; add this library only if a feature needs what the platform API lacks | Official |
 | AndroidX Core and Activity Compose | Core 1.19.x, Activity 1.13.x | `NotificationCompat`, `ServiceCompat`, edge-to-edge | Official |
 | AndroidX ProfileInstaller | Latest stable | Baseline profiles for startup | Cold start budget |
 

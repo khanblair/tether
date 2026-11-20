@@ -3,6 +3,7 @@
 //! P0 holds only the version and the event hand-off used by the FFI layer.
 
 mod provider_connection;
+mod checkpoint_capture;
 mod session;
 mod session_provider;
 mod tool_loop;
@@ -15,6 +16,7 @@ mod session_usage_tests;
 pub mod updates;
 
 pub use provider_connection::{ProviderCheck, check_provider, provider_test_targets};
+pub use checkpoint_capture::capture_checkpoint;
 pub use session::{ProviderFactory, SessionActor, SessionActorError, SessionHandle};
 pub use session_provider::provider_for;
 pub use tool_loop::{ToolLoop, ToolLoopResult};

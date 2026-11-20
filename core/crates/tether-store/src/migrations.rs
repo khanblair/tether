@@ -21,6 +21,10 @@ pub(crate) const MIGRATIONS: &[Migration] = &[
         version: 2,
         sql: include_str!("../migrations/0002_message_fts.sql"),
     },
+    Migration {
+        version: 3,
+        sql: include_str!("../migrations/0003_checkpoints.sql"),
+    },
 ];
 
 /// The schema version kept in `PRAGMA user_version`. A new database reports 0.

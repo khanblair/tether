@@ -4,6 +4,7 @@
 //! tasks that need them.
 
 mod db;
+mod checkpoints;
 mod error;
 mod migrations;
 mod models;
@@ -21,6 +22,7 @@ mod sessions_rules_tests;
 mod sessions_tests;
 
 pub use db::Store;
+pub use checkpoints::{BlobStore, Checkpoint, CheckpointFile, SnapshotInput};
 pub use error::StoreError;
 pub use models::{CATALOG_TTL_MS, catalog_is_fresh};
 pub use session_fts::SessionSearchHit;

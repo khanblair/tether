@@ -53,7 +53,8 @@ tether/
 │       ├── tether-skills/      SKILL.md scalar frontmatter parser and validator
 │       ├── tether-memory/     src/{lib,files,files/tests,snapshot}.rs, vault/{mod,tests,tools,sync,sync/tests}.rs; capped files, frozen snapshot, Markdown rebuild view, vault file tool operations, and the sync contract
 │       ├── tether-vcs/         src/{lib,oauth,oauth/tests,pat,pat/tests}.rs; GitHub auth core
-│       └── tether-{sandbox,linux,ci,connectors,mcp}/
+│       ├── tether-sandbox/     src/{lib,module_cache}.rs; process Wasmtime engine and compiled module cache
+│       └── tether-{linux,ci,connectors,mcp}/
 │                              Empty libraries
 ├── android/
 │   ├── settings.gradle.kts  build.gradle.kts  gradle.properties  gradlew  gradlew.bat

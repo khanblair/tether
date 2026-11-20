@@ -65,7 +65,7 @@ GitHub REST and GraphQL calls use `reqwest` directly with typed request and resp
 
 | Library | Version | Use | Reason |
 |---|---|---|---|
-| `wasmtime` | Pinned major (monthly releases; upgrade quarterly) | Sandbox engine | Mature, epoch interruption, AOT precompile, interpreter mode for iOS |
+| `wasmtime` | 37.x pinned major (upgrade quarterly) | Sandbox engine | Mature, epoch interruption, AOT precompile, interpreter mode for iOS |
 | `wasmtime-wasi` | Same as wasmtime | WASI for sandbox runs | Matches the engine |
 | `tar` | 0.4.x | Extract root filesystem and packs | Standard |
 | `flate2` | 1.x | Gzip for the Alpine tarball | Standard |

@@ -65,7 +65,7 @@ Why one process: the core holds session state in memory and SQLite; splitting it
 | `tether-tools` | Tool definitions, JSON schemas, argument validation, result formatting | `tether-workspace`, `tether-vcs` |
 | `tether-workspace` | PathGuard and a basic file index, glob, and text search; full ignore semantics, file ops, and watcher follow | none |
 | `tether-vcs` | Git through gitoxide: clone, status, diff, commit, branch, push; P4-01 adds the GitHub device-flow core; P4-02 validates personal access tokens through `/user` and reports available scopes | `tether-types`, `tether-secrets` |
-| `tether-sandbox` | Wasmtime engine, runtime packs, WASI setup, limits | `tether-types` |
+| `tether-sandbox` | Wasmtime engine, runtime packs, WASI setup, limits; P5-01 adds a process engine and in-memory module cache | `tether-types` |
 | `tether-linux` | Root filesystem manager, PRoot command builder, process I/O | `tether-types` |
 | `tether-ci` | GitHub Actions: workflow file, dispatch, polling, log fetch, failure parsing | `tether-connectors` |
 | `tether-quality` | Tree-sitter parsing, smell rules, slop rules, report building | `tether-types` |

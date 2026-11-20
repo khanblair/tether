@@ -49,7 +49,7 @@ tether/
 │       │   └── src/{lib.rs, callbacks.rs, provider_settings.rs, sessions.rs, updater.rs, secrets.rs, views/{mod,event,types,error}.rs, bin/uniffi-bindgen.rs}
 │       ├── tether-quality/    data/slop_words.txt and slop_patterns.toml (shared with slop-lint)
 │       ├── tether-workspace/   PathGuard and FileIndex: path checks, scan, glob, grep
-│       ├── tether-tools/       src/{lib,edit,edit/tests}.rs; guarded atomic text edits
+│       ├── tether-tools/       src/{lib,fs,fs/tests,edit,edit/tests}.rs; guarded read and edit tools
 │       ├── tether-skills/      SKILL.md scalar frontmatter parser and validator
 │       ├── tether-memory/     src/{lib,files,files/tests,snapshot}.rs, vault/{mod,tests,tools,sync,sync/tests}.rs; capped files, frozen snapshot, Markdown rebuild view, vault file tool operations, and the sync contract
 │       ├── tether-vcs/         src/{lib,oauth,oauth/tests,pat,pat/tests}.rs; GitHub auth core
@@ -206,7 +206,7 @@ core/
     ├── tether-tools/
     │   └── src/
     │       ├── lib.rs         Tool registry and schema export
-    │       ├── fs.rs          read_file, list_dir, glob, grep
+    │       ├── fs.rs          read_file, list_dir, glob, literal grep
     │       ├── edit.rs        write_file, edit_file, multi_edit, move, delete
     │       ├── run.rs         run tool (calls the router through the engine)
     │       ├── git.rs         git tools

@@ -25,12 +25,13 @@ tether-secrets.workspace = true
 tether-store.workspace = true
 tether-types.workspace = true
 thiserror.workspace = true
-tokio.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread"] }
 tokio-util.workspace = true
 uniffi.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
+rusqlite.workspace = true
 
 # Not `workspace = true`: UniFFI scaffolding needs `unsafe` and generates undocumented items.
 [lints.rust]

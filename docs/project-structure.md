@@ -52,7 +52,7 @@ tether/
 │       ├── tether-tools/       src/{lib,edit,edit/tests}.rs; guarded atomic text edits
 │       ├── tether-skills/      SKILL.md scalar frontmatter parser and validator
 │       ├── tether-memory/     src/{lib,files,files/tests,snapshot}.rs, vault/{mod,tests,tools,sync,sync/tests}.rs; capped files, frozen snapshot, Markdown rebuild view, vault file tool operations, and the sync contract
-│       ├── tether-vcs/         src/{lib,oauth,oauth/tests}.rs; GitHub device flow core
+│       ├── tether-vcs/         src/{lib,oauth,oauth/tests,pat,pat/tests}.rs; GitHub auth core
 │       └── tether-{sandbox,linux,ci,connectors,mcp}/
 │                              Empty libraries
 ├── android/

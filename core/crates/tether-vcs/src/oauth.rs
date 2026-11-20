@@ -131,7 +131,7 @@ impl GithubDeviceAuth {
     }
 }
 
-fn token_ref() -> SecretRef { SecretRef::new("github-oauth").expect("fixed reference") }
+pub(crate) fn token_ref() -> SecretRef { SecretRef::new("github-oauth").expect("fixed reference") }
 
 fn parse_start(bytes: &[u8]) -> Result<DeviceGrant, OAuthError> {
     let value: Value = serde_json::from_slice(bytes).map_err(|_| OAuthError::InvalidResponse)?;

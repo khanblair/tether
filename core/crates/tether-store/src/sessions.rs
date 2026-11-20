@@ -29,6 +29,21 @@ pub struct SessionRecord {
 }
 
 impl Store {
+    /// Returns the project directory relative to the private workspaces root.
+    ///
+    /// # Errors
+    /// Returns an error when SQLite cannot read the project.
+    pub fn project_path(&self, id: &ProjectId) -> Result<Option<String>, StoreError> {
+        self.conn
+            .query_row(
+                "SELECT path FROM projects WHERE id = ?1",
+                [id.as_str()],
+                |row| row.get(0),
+            )
+            .optional()
+            .map_err(Into::into)
+    }
+
     /// Creates an empty session in an existing project.
     ///
     /// # Errors
@@ -175,6 +190,44 @@ impl Store {
         let message_id = insert_message(&tx, id, Role::Assistant, now_ms)?;
         tx.commit()?;
         Ok(message_id)
+    }
+
+    /// Appends one complete assistant or tool message and its parts atomically.
+    ///
+    /// # Errors
+    /// Returns an error when SQLite fails, a part cannot be encoded, or the sequence overflows.
+    pub fn append_message(
+        &mut self,
+        session_id: &SessionId,
+        role: Role,
+        parts: &[MessagePart],
+        now_ms: i64,
+    ) -> Result<Message, StoreError> {
+        let tx = self
+            .conn
+            .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let id = insert_message(&tx, session_id, role, now_ms)?;
+        let seq: i64 = tx.query_row(
+            "SELECT seq FROM messages WHERE id = ?1",
+            [id.as_str()],
+            |row| row.get(0),
+        )?;
+        for (position, part) in parts.iter().enumerate() {
+            let position =
+                i64::try_from(position).map_err(|_| StoreError::SessionCounterOverflow)?;
+            insert_part(&tx, &id, position, part)?;
+        }
+        let seq = u32::try_from(seq).map_err(|_| StoreError::SessionCounterOverflow)?;
+        tx.commit()?;
+        Ok(Message {
+            id,
+            session_id: session_id.clone(),
+            role,
+            seq,
+            created_at_ms: now_ms,
+            rewound: false,
+            parts: parts.to_vec(),
+        })
     }
 
     /// Replaces the in-progress text and thinking parts atomically.

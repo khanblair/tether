@@ -1,5 +1,5 @@
 use tether_types::{
-    MessagePart, ModelRef, PermissionMode, ProjectId, Provider, Role, SessionStatus,
+    MessagePart, ModelRef, PermissionMode, ProjectId, Provider, Role, SessionStatus, ToolCallId,
 };
 
 use crate::Store;
@@ -183,4 +183,56 @@ fn assistant_message_waits_for_another_writer_before_reading_sequence() {
     writer.conn.execute_batch("COMMIT").unwrap();
     assert!(done_rx.recv().unwrap().is_ok());
     worker.join().unwrap();
+}
+
+#[test]
+fn tool_exchange_messages_survive_reopening() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("tether.db");
+    let mut store = Store::open(&path).unwrap();
+    let project = seed_project(&store);
+    let session = store
+        .create_session(
+            &project,
+            &ModelRef {
+                provider: Provider::Anthropic,
+                model_id: "fixture".into(),
+            },
+            PermissionMode::Ask,
+            1,
+        )
+        .unwrap();
+    let call = ToolCallId::new("call-1");
+    let assistant = store
+        .append_message(
+            &session.id,
+            Role::Assistant,
+            &[MessagePart::ToolCall {
+                id: call.clone(),
+                tool: "read_file".into(),
+                args_json: "{}".into(),
+            }],
+            2,
+        )
+        .unwrap();
+    let result = store
+        .append_message(
+            &session.id,
+            Role::Tool,
+            &[MessagePart::ToolResult {
+                tool_call_id: call,
+                is_error: false,
+                text: "ok".into(),
+                result_ref: None,
+            }],
+            3,
+        )
+        .unwrap();
+    assert_eq!(assistant.seq, 0);
+    assert_eq!(result.seq, 1);
+    drop(store);
+    assert_eq!(
+        Store::open(&path).unwrap().messages(&session.id).unwrap(),
+        vec![assistant, result]
+    );
 }

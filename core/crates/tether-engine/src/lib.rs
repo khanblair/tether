@@ -2,24 +2,28 @@
 
 //! P0 holds only the version and the event hand-off used by the FFI layer.
 
-mod provider_connection;
 mod checkpoint_capture;
+mod provider_connection;
 mod session;
 mod session_provider;
-mod tool_loop;
 #[cfg(test)]
 mod session_stream_tests;
 #[cfg(test)]
 mod session_tests;
 #[cfg(test)]
+mod session_tool_tests;
+#[cfg(test)]
 mod session_usage_tests;
+mod tool_loop;
 pub mod updates;
 
-pub use provider_connection::{ProviderCheck, check_provider, provider_test_targets};
 pub use checkpoint_capture::capture_checkpoint;
-pub use session::{ProviderFactory, SessionActor, SessionActorError, SessionHandle};
+pub use provider_connection::{ProviderCheck, check_provider, provider_test_targets};
+pub use session::{
+    ProviderFactory, SessionActor, SessionActorError, SessionHandle, ToolApproval, ToolRuntime,
+};
 pub use session_provider::provider_for;
-pub use tool_loop::{ToolLoop, ToolLoopResult};
+pub use tool_loop::{ToolLoop, ToolLoopContext, ToolLoopResult};
 
 use std::sync::Arc;
 

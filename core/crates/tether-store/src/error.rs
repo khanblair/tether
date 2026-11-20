@@ -87,6 +87,9 @@ pub enum StoreError {
     /// A session or message id did not name an existing row.
     #[error("session or message not found")]
     MissingSessionRow,
+    /// A session title has no visible text.
+    #[error("session title is empty")]
+    EmptySessionTitle,
     /// A session row has an enum value this version does not know.
     #[error("session row has invalid {field} value: {value}")]
     InvalidSessionEnum {

@@ -7,6 +7,7 @@ publish.workspace = true
 description = "Agent tool registry and tool implementations."
 
 [dependencies]
+regex.workspace = true
 tether-workspace = { path = "../tether-workspace" }
 
 [dev-dependencies]

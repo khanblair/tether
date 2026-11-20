@@ -407,11 +407,27 @@ mod tests {
             .unwrap();
         assert!(matches!(
             next_event(&mut rx).await,
+            CoreEvent::SessionUpdated {
+                status: tether_types::SessionStatus::Idle,
+                ..
+            }
+        ));
+        assert!(matches!(
+            next_event(&mut rx).await,
             CoreEvent::SessionRewound { .. }
         ));
         assert_eq!(
             fs::read(root.path().join("workspace/note.txt")).unwrap(),
             b"latest"
+        );
+        assert_eq!(
+            Store::open(&root.path().join("store.db"))
+                .unwrap()
+                .load_session(&session)
+                .unwrap()
+                .unwrap()
+                .status,
+            tether_types::SessionStatus::Idle
         );
         drop(handle);
         task.await.unwrap();

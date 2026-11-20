@@ -61,6 +61,7 @@ tether/
 │   ├── app/                   build.gradle.kts (flavors play and full; app version read from core/Cargo.toml), proguard-rules.pro
 │   │   └── src/{main, debug, release, full, play, androidTest}   TetherApp, MainActivity, di/AppModule, nav/, home/ (Projects home, drawer, Needs attention; sample sources in debug, empty sources in release), shell/ (settings and placeholder screens)
 │   ├── core-bridge/           CoreClient, EventBus, KeystoreSecretsPlatform, consumer-rules.pro, (gen) generated/tether_core.kt
+│   │   └── src/main/kotlin/app/tether/workspace/ProjectArchive.kt  ZIP project folders
 │   └── designsystem/          TetherTheme, TetherIcons, PrimaryButton, TetherTopBar, ListRow, ProviderRow, SecretField, InlineBanner, TestConnectionButton, TetherTextButton, TetherIconButton, NotificationBell, StatusBadge, StatusMark, ProjectRow, SessionRow, SectionTitle, ListGroup, TetherSearchField, TetherSheet, FONTS-LICENSE.txt, (gen) tokens/Tokens.kt and token colors, Plex fonts
 ├── ios/README.md              Plan for v2
 ├── runtimes/README.md  linux/README.md  bench/README.md   Planned folders, one README each

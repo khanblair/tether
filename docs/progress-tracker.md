@@ -35,7 +35,7 @@ Phases run in numeric order except P11, which runs before P10 (see build-plan.md
 |---|---|---|---|---|
 | P0 | Foundations | In progress | 2026-11-18 | |
 | P1 | Providers and sessions | In progress | 2026-11-18 | |
-| P2 | Workspace, tools, diffs | Not started | | |
+| P2 | Workspace, tools, diffs | In progress | 2026-11-20 | |
 | P3 | Control | Not started | | |
 | P4 | Git and GitHub | Not started | | |
 | P5 | Sandbox | Not started | | |
@@ -85,6 +85,7 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 | P1-02 | `tether-store` schema 0001 and migrations runner | Blair with Claude | Done | #140 | Merged; issue #6 closed. Schema 0001 for 7 tables, runner, and 28 tests; the CI Android check now uses `cargo ndk`. Codex found no issues; a Sonnet review found a table-rebuild data loss, a concurrent-open failure, and weak tests, all fixed |
 | P1-04 | SSE parser and provider trait | Blair with Claude | Done | #141 | Merged; issue #8 closed. `ChatProvider` trait and types, `SseParser` with 29 tests including every split position |
 | P1-01 | `tether-types` message, part, event, usage, error types | Blair with Claude | Done | #138 | Merged; issue #5 closed. Types, 15 new events, and FFI views; bindings regenerated. Sonnet and Codex reviews done |
+| P2-01 | Projects: create empty, import zip, export zip | Codex | In progress | pending | Archive layer and tests; project UI and database wiring remain |
 
 ## Decisions log
 
@@ -146,6 +147,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Who | What happened | Next |
 |---|---|---|---|
+| 2026-11-20 | Codex | Added P2-01 project folder and ZIP round-trip layer with tests | Wire Android project screens and database rows |
 | 2026-11-20 | Blair with Claude | Merged #153 (P1-11), #154 (file length), and #156 (P1-21). None changed the version, so `release.yml` ran and skipped the release job (`v0.0.3` already tagged). Blair chose to keep bumping by hand (D33). Added `tools/bump-version.sh` with a self test (3 of 3 arithmetic mutations caught), `just bump`, and a CI step; set the version to 0.0.4 | Merge this PR to publish `v0.0.4` with the Home dashboard and the session actor; then check the assets, the signature, and `versionCode` 400 |
 | 2026-11-19 | Blair with Haiku and Claude | Started P1-21 (issue #155) after Blair saw the P0 shell. First pick: a Projects home with a menu and a bell. After the first build Blair asked for a dashboard home, a fuller drawer, a theme toggle, themed toasts, arrow back buttons, and no extra "Tether" bar (the system action bar, now off). Decided with Blair (D32): Home dashboard with five cards, drawer links for Home, Projects, Needs attention, Usage and cost, and Runs. Haiku agents built the prototype, the design system components, and the app screens; Claude reviewed them, fixed three review items (an uncaught core failure on Home, a stale theme note, a duplicate refresh), and added tests for the mutants that survived. `just check` and `assembleFullDebug` pass | Blair checks Home, the drawer, the theme toggle, and the toast in the emulator; Codex review; then merge on Blair's go |
 | 2026-11-19 | Blair with Claude | Codex's P1-11 tests sat in `src/session_tests.rs`, which the file length check counted in full (431 lines against 400), because the check skips only `tests/` folders and inline `#[cfg(test)]` code. Blair asked why 400 and not 900; the answer is that 400 was set in the first docs and is the right limit for code. Test files now get 800 (`*_tests.rs`, `*_test.rs`, `*Test.kt`, `*Tests.kt`), with self test cases for both sides of the line and for names that only look like test files | Review and merge |
@@ -182,6 +184,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Files | Change | PR |
 |---|---|---|---|
+| 2026-11-20 | `android/app/src/{main,test}/kotlin/app/tether/workspace/` | P2-01 project archive layer and round-trip tests | pending |
 | 2026-11-20 | `core/Cargo.toml`, `core/Cargo.lock`, `tools/bump-version.sh`, `justfile`, `.github/workflows/ci.yml` | Version 0.0.4; a bump script with a self test and `just bump` | - |
 | 2026-11-19 | `android/app/src/{main,debug,release}/`, `android/designsystem/`, `tokens/tokens.json`, `tools/prototype/` | P1-21: Home dashboard, drawer, Needs attention, usage and sample sources (`debug`) and empty sources (`release`), a saved theme choice, a snackbar host, 22 design system component files and 21 icons, `size.chart-height`, arrow back buttons, the action bar off, the Rust core card moved into About, prototype Home and drawer (106 screens) | #156 |
 | 2026-11-19 | `tools/check-file-length.sh`, `docs/code-standards.md`, `docs/progress-tracker.md` | 800 line limit for test files in the file length check and its self test | |
@@ -212,6 +215,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Doc | Change |
 |---|---|---|
+| 2026-11-20 | progress-tracker, project-structure | P2-01 started and archive file listed |
 | 2026-11-20 | development, project-structure, progress-tracker | Release steps use `just bump`; D33 records that versions are bumped by hand; P1-11 and P1-21 marked Done |
 | 2026-11-19 | ui-rules, ui-registry, ui-tokens, project-structure, architecture, mobile, build-plan, progress-tracker | P1-21: the Home dashboard, the drawer, the theme toggle, snackbars and toasts, arrow back buttons, Needs attention, new component rows, `size.chart-height`; a newer app version shows on the bell and in Needs attention instead of a home banner (D32) |
 | 2026-11-19 | code-standards, progress-tracker | File length: 800 lines for a file that holds only tests, 400 for everything else |

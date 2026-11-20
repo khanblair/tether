@@ -20,7 +20,7 @@ reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.10"
-wasmtime = { version = "37", default-features = false, features = ["runtime", "cranelift"] }
+wasmtime = { version = "50", default-features = false, features = ["runtime", "cranelift"] }
 tempfile = "3"
 thiserror = "2"
 tokio = { version = "1", features = ["sync", "time", "rt", "macros", "fs", "io-util"] }

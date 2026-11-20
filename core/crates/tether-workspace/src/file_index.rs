@@ -34,7 +34,7 @@ pub struct FileIndex {
 }
 
 impl FileIndex {
-    /// Scans files, skipping `.git` and root `.gitignore` patterns.
+    /// Scans files, skipping `.git` at every depth and root `.gitignore` patterns.
     ///
     /// # Errors
     /// Returns an error when a directory cannot be read.
@@ -137,10 +137,7 @@ fn walk(
         let path = entry.path();
         let relative = path.strip_prefix(root).expect("walk stays under root");
         let name = relative.to_string_lossy();
-        if name == ".git"
-            || name.starts_with(".git/")
-            || ignores.iter().any(|pattern| glob_match(pattern, &name))
-        {
+        if entry.file_name() == ".git" || ignores.iter().any(|pattern| glob_match(pattern, &name)) {
             continue;
         }
         let kind = entry.file_type()?;

@@ -20,6 +20,22 @@ fn scan_glob_and_grep_respect_root_ignore() {
     fs::remove_dir_all(root).unwrap();
 }
 
+#[test]
+fn scan_excludes_git_metadata_inside_nested_checkouts() {
+    let root = std::env::temp_dir().join(format!("tether-index-{}", ulid::Ulid::new()));
+    fs::create_dir_all(root.join("vendor/repo/.git")).unwrap();
+    fs::write(root.join("vendor/repo/.git/config"), "needle\n").unwrap();
+    fs::write(root.join("vendor/repo/source.rs"), "needle\n").unwrap();
+    let index = FileIndex::scan(PathGuard::new(&root).unwrap()).unwrap();
+    assert_eq!(index.glob("*").len(), 1);
+    assert_eq!(index.grep("needle", 10).unwrap().len(), 1);
+    assert_eq!(
+        index.files()[0].path.to_string_lossy(),
+        "vendor/repo/source.rs"
+    );
+    fs::remove_dir_all(root).unwrap();
+}
+
 #[cfg(unix)]
 #[test]
 fn scan_ignores_external_gitignore_symlink() {

@@ -41,7 +41,7 @@ tether/
 │   └── crates/
 │       ├── tether-types/      ids, message, model catalog, session, text, usage, error, event (CoreEvent); no UniFFI code
 │       ├── tether-store/      migrations/{0001_init,0002_message_fts,0003_checkpoints}.sql; src/{lib,db,error,migrations,models,models_tests,provider_configs,schema_tests,sessions,sessions_tests,session_search,checkpoints,checkpoints/tests}.rs
-│       ├── tether-engine/     VERSION, EventSink, Core, provider_connection.rs (key check), session.rs (plain chat actor), tool_loop.rs and tool_loop/ (file tool exchanges), checkpoint_capture.rs (guarded snapshots), rewind.rs (restore modes), session_provider.rs (provider factory), session_tests.rs, updates/ (app updates)
+│       ├── tether-engine/     VERSION, EventSink, Core, provider_connection.rs (key check), session.rs and session/rewind.rs (actor commands), tool_loop.rs and tool_loop/ (file tool exchanges), checkpoint_capture.rs (guarded snapshots), rewind.rs (restore modes), session_provider.rs (provider factory), session_tests.rs, updates/ (app updates)
 │       ├── tether-secrets/    SecretStore, SecretRef, Secret, SecretsPlatform trait, errors (src/{lib,error,platform,reference,secret,store,store_tests}.rs)
 │       ├── tether-providers/  lib.rs (ChatProvider, ModelCatalog), catalog.rs, pricing/ and data/prices/, request.rs, event.rs, error.rs, sse.rs (SseParser), client.rs (shared HTTP client), anthropic/ (adapter), openai/ (adapter), gemini/ (adapter), openai_compat/ (adapter), deepseek.rs, openrouter.rs, transport.rs (shared request and stream code)
 │       ├── tether-ffi/        UniFFI surface, builds libtether_core.so

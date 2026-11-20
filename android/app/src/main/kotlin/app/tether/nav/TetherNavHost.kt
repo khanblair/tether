@@ -31,11 +31,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import app.tether.core.generated.SessionRuntimeException
 import app.tether.design.components.TetherSnackbarHost
 import app.tether.di.AppModule
 import app.tether.home.AttentionViewModel
 import app.tether.home.HomeDrawer
 import app.tether.session.SessionConnection
+import app.tether.session.SessionUnavailableScreen
 import app.tether.session.TranscriptScreen
 import app.tether.share.ShareProjectScreen
 import kotlinx.coroutines.Dispatchers
@@ -151,18 +153,27 @@ private fun SessionRoute(
     onBack: () -> Unit,
 ) {
     var connection by remember(sessionId) { mutableStateOf<SessionConnection?>(null) }
+    var unavailable by remember(sessionId) { mutableStateOf(sessionId == null) }
     LaunchedEffect(sessionId) {
         if (sessionId != null) {
-            connection =
-                withContext(Dispatchers.IO) {
-                    SessionConnection(module.databasePath, module.vault, sessionId)
-                }
+            try {
+                connection =
+                    withContext(Dispatchers.IO) {
+                        SessionConnection(module.databasePath, module.vault, sessionId)
+                    }
+            } catch (_: SessionRuntimeException) {
+                unavailable = true
+            }
         }
     }
     DisposableEffect(connection) {
         onDispose { connection?.close() }
     }
-    TranscriptScreen(connection = connection, onBack = onBack)
+    if (unavailable) {
+        SessionUnavailableScreen(onBack = onBack)
+    } else {
+        TranscriptScreen(connection = connection, onBack = onBack)
+    }
 }
 
 /** The drawer's content. Its query and session list live here, and every item closes the drawer. */

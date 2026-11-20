@@ -40,6 +40,8 @@
 
     <!-- Shared -->
     <string name="nav_back_label">Back</string>
+    <string name="session_unavailable_title">Session</string>
+    <string name="session_unavailable_body">This session is not available. It may have been deleted, or it is sample data.</string>
     <string name="placeholder_body">This screen arrives in a later phase. See the build plan.</string>
 
     <!-- Rust core card (About, debug builds only) -->

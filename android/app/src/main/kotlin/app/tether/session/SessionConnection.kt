@@ -6,6 +6,7 @@ import app.tether.core.generated.MessageView
 import app.tether.core.generated.SecretVault
 import app.tether.core.generated.SessionRunner
 import app.tether.core.generated.SessionRuntime
+import app.tether.core.generated.SessionRuntimeException
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 
@@ -24,8 +25,21 @@ class SessionConnection(
             }
         }
     private val runtime = SessionRuntime(databasePath, vault, sink)
-    private val runner: SessionRunner = runtime.openSession(sessionId)
-    val modelId: String = runtime.loadSession(sessionId).modelId
+    private val runner: SessionRunner =
+        try {
+            runtime.openSession(sessionId)
+        } catch (error: SessionRuntimeException) {
+            runtime.close()
+            throw error
+        }
+    val modelId: String =
+        try {
+            runtime.loadSession(sessionId).modelId
+        } catch (error: SessionRuntimeException) {
+            runner.close()
+            runtime.close()
+            throw error
+        }
 
     fun transcript(): List<MessageView> = runtime.transcript(sessionId)
 

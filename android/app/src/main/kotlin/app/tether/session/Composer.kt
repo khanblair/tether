@@ -48,8 +48,8 @@ fun Composer(
             } else {
                 Button(
                     onClick = {
-                        val text = input.trim()
-                        if (text.isNotEmpty()) {
+                        val text = outgoingText(input)
+                        if (text != null) {
                             onSend(text)
                             input = ""
                         }
@@ -60,3 +60,6 @@ fun Composer(
         }
     }
 }
+
+/** Blank input never starts a turn. Preserve line breaks inside a message. */
+internal fun outgoingText(input: String): String? = input.trim().takeIf(String::isNotEmpty)

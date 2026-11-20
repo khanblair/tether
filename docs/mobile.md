@@ -75,7 +75,7 @@ The offline banner appears under the status line. Turns never fail only because 
 | Storage Access Framework | `OpenDocument`, `CreateDocument`, `OpenDocumentTree` | Zip import and export; the shared folder for vault sync (the Kotlin layer copies files, because the Rust core cannot open content URIs) |
 | Adaptive and themed launcher icon | Adaptive icon with a vector foreground, `mint-100` background, and a monochrome layer | Logo on every launcher; tinted on Android 13 and later |
 | Window and splash colors | `Theme.Tether` with the `bg` token as window and splash background | No white flash in the dark theme |
-| Share sheet intake | `ACTION_SEND` intent filter for text and files | Start a session from another app |
+| Share sheet intake | `ACTION_SEND` text/plain filter; project picker is staged | Session creation and file shares remain |
 | App shortcuts | Static and dynamic shortcuts | Jump to the last session; new session in a recent project |
 | Screen capture blocking | `FLAG_SECURE`, optional | Privacy setting |
 | Battery settings intent | `ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS` | Guidance screen; we do not request the restricted direct-exemption permission |

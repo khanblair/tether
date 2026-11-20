@@ -1,5 +1,6 @@
 package app.tether
 
+import android.content.Intent
 import android.graphics.Color
 import android.hardware.biometrics.BiometricManager
 import android.hardware.biometrics.BiometricPrompt
@@ -67,6 +68,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val module = (application as TetherApp).module
+        module.shareInbox.accept(intent)
         setContent {
             val mode by module.themeMode.collectAsStateWithLifecycle()
             TetherTheme(mode = mode) {
@@ -74,6 +76,12 @@ class MainActivity : ComponentActivity() {
                 TetherNavHost(module = module)
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        (application as TetherApp).module.shareInbox.accept(intent)
     }
 
     /** Keeps system bar icons readable when the in-app theme differs from the system theme. */

@@ -11,7 +11,10 @@ use tether_store::{BlobStore, SessionRecord, Store};
 use tether_types::{CoreError, ModelRef, PermissionMode, ProjectId, Provider, SessionId};
 use tether_workspace::PathGuard;
 
-use crate::{EventSink, MessageView, ProviderView, SecretVault, SessionStatusView};
+use crate::{
+    CheckpointView, EventSink, MessageView, ProviderView, RewindScopeView, SecretVault,
+    SessionStatusView,
+};
 
 /// A session could not be created, opened, or updated.
 #[derive(Debug, thiserror::Error, uniffi::Error)]
@@ -157,6 +160,29 @@ impl SessionRuntime {
         store
             .messages(&id)
             .map(|messages| messages.into_iter().map(Into::into).collect())
+            .map_err(|_| SessionRuntimeError::Unavailable)
+    }
+
+    /// Lists the session's checkpoints from newest to oldest.
+    ///
+    /// # Errors
+    /// Returns an error when the session is absent or the database cannot be read.
+    pub fn list_checkpoints(
+        &self,
+        session_id: &str,
+    ) -> Result<Vec<CheckpointView>, SessionRuntimeError> {
+        let store = self.store()?;
+        let id = SessionId::new(session_id);
+        if store
+            .load_session(&id)
+            .map_err(|_| SessionRuntimeError::Unavailable)?
+            .is_none()
+        {
+            return Err(SessionRuntimeError::NotFound);
+        }
+        store
+            .list_checkpoints(&id)
+            .map(|checkpoints| checkpoints.into_iter().map(Into::into).collect())
             .map_err(|_| SessionRuntimeError::Unavailable)
     }
 
@@ -310,6 +336,26 @@ impl SessionRunner {
     pub fn interrupt(&self) {
         self.handle.interrupt();
     }
+
+    /// Stops a running turn and restores a saved checkpoint in actor order.
+    /// Call from a background thread.
+    ///
+    /// # Errors
+    /// Returns an error when the checkpoint is absent or restoration fails.
+    pub fn rewind(
+        &self,
+        checkpoint_id: String,
+        scope: RewindScopeView,
+    ) -> Result<(), SessionRuntimeError> {
+        self.runtime
+            .block_on(self.handle.rewind(checkpoint_id, scope.into()))
+            .map_err(|error| match error {
+                tether_engine::SessionActorError::Rewind(tether_engine::RewindError::Store(
+                    tether_store::StoreError::MissingCheckpoint,
+                )) => SessionRuntimeError::NotFound,
+                _ => SessionRuntimeError::Unavailable,
+            })
+    }
 }
 
 fn now_ms() -> i64 {
@@ -446,6 +492,38 @@ mod tests {
                 .open_session_with_workspace(session_id.as_str(), root.to_str().unwrap())
                 .is_ok()
         );
+    }
+
+    #[test]
+    fn checkpoint_list_exposes_saved_paths_and_message_anchor() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = dir.path().join("tether.db");
+        let session_id = seeded_session(&db);
+        let mut store = Store::open(&db).unwrap();
+        let anchor = store.messages(&session_id).unwrap()[0].id.clone();
+        let blobs = BlobStore::open(dir.path().join("blobs")).unwrap();
+        let checkpoint = store
+            .save_checkpoint(
+                &session_id,
+                Some(&anchor),
+                &blobs,
+                &[tether_store::SnapshotInput {
+                    path: "note.txt".into(),
+                    content: None,
+                }],
+                4,
+            )
+            .unwrap();
+        let vault = SecretVault::new(
+            dir.path().join("secrets").to_string_lossy().into_owned(),
+            Arc::new(PlainPlatform),
+        );
+        let runtime = SessionRuntime::new(db.to_str().unwrap(), vault, Arc::new(NoopSink)).unwrap();
+        let listed = runtime.list_checkpoints(session_id.as_str()).unwrap();
+        assert_eq!(listed.len(), 1);
+        assert_eq!(listed[0].id, checkpoint.id);
+        assert_eq!(listed[0].message_id.as_deref(), Some(anchor.as_str()));
+        assert_eq!(listed[0].paths, vec!["note.txt"]);
     }
 
     #[test]

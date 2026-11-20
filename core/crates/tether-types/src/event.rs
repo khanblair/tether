@@ -26,6 +26,11 @@ pub enum CoreEvent {
         /// Its new state.
         status: SessionStatus,
     },
+    /// A saved checkpoint restored files, conversation, or both.
+    SessionRewound {
+        /// The session whose state changed.
+        session_id: SessionId,
+    },
     /// A batch of reply text, sent at most every 32 ms or 64 characters.
     TextDelta {
         /// The session the text belongs to.

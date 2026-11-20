@@ -5,7 +5,7 @@ use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read, Write};
 use std::path::{Component, Path, PathBuf};
 
-use rusqlite::params;
+use rusqlite::{OptionalExtension, params};
 use tether_types::{MessageId, SessionId};
 use ulid::Ulid;
 
@@ -181,6 +181,102 @@ pub struct SnapshotInput {
 }
 
 impl Store {
+    /// Lists a session's checkpoints from newest to oldest.
+    ///
+    /// # Errors
+    /// Returns an error if SQLite cannot read a checkpoint.
+    pub fn list_checkpoints(&self, session_id: &SessionId) -> Result<Vec<Checkpoint>, StoreError> {
+        let mut statement = self
+            .conn
+            .prepare("SELECT id FROM checkpoints WHERE session_id = ?1 ORDER BY rowid DESC")?;
+        let ids = statement
+            .query_map([session_id.as_str()], |row| row.get::<_, String>(0))?
+            .collect::<Result<Vec<_>, _>>()?;
+        ids.iter()
+            .map(|id| {
+                self.load_checkpoint(id)?
+                    .ok_or(StoreError::MissingCheckpoint)
+            })
+            .collect()
+    }
+
+    /// Loads the target and every later checkpoint in reverse edit order.
+    ///
+    /// # Errors
+    /// Returns an error if the checkpoint is absent, belongs to another session, or SQLite fails.
+    pub fn checkpoint_chain(
+        &self,
+        session_id: &SessionId,
+        checkpoint_id: &str,
+    ) -> Result<Vec<Checkpoint>, StoreError> {
+        let mut statement = self.conn.prepare(
+            "SELECT id FROM checkpoints WHERE session_id = ?1 AND rowid >= \
+             (SELECT rowid FROM checkpoints WHERE id = ?2 AND session_id = ?1) ORDER BY rowid DESC",
+        )?;
+        let ids = statement
+            .query_map(params![session_id.as_str(), checkpoint_id], |row| {
+                row.get::<_, String>(0)
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        if ids.is_empty() {
+            return Err(StoreError::MissingCheckpoint);
+        }
+        ids.iter()
+            .map(|id| {
+                self.load_checkpoint(id)?
+                    .ok_or(StoreError::MissingCheckpoint)
+            })
+            .collect()
+    }
+
+    /// Hides the checkpoint's assistant call and every following message from future context.
+    /// The call is included because its tool results will be rewound with it.
+    ///
+    /// # Errors
+    /// Returns an error if its message is absent, belongs to another session, or SQLite fails.
+    pub fn rewind_conversation(
+        &mut self,
+        session_id: &SessionId,
+        message_id: &MessageId,
+    ) -> Result<(), StoreError> {
+        self.validate_rewind_anchor(session_id, message_id)?;
+        let tx = self.conn.transaction()?;
+        let changed = tx.execute(
+            "UPDATE messages SET rewound = 1 WHERE session_id = ?1 AND seq >= \
+             (SELECT seq FROM messages WHERE id = ?2 AND session_id = ?1)",
+            params![session_id.as_str(), message_id.as_str()],
+        )?;
+        if changed == 0 {
+            return Err(StoreError::MissingCheckpointMessage);
+        }
+        tx.commit()?;
+        Ok(())
+    }
+
+    /// Checks that a conversation rewind anchor belongs to the given session.
+    ///
+    /// # Errors
+    /// Returns an error when the anchor is absent, belongs to another session, or SQLite fails.
+    pub fn validate_rewind_anchor(
+        &self,
+        session_id: &SessionId,
+        message_id: &MessageId,
+    ) -> Result<(), StoreError> {
+        let exists = self
+            .conn
+            .query_row(
+                "SELECT 1 FROM messages WHERE id = ?1 AND session_id = ?2",
+                params![message_id.as_str(), session_id.as_str()],
+                |_| Ok(()),
+            )
+            .optional()?
+            .is_some();
+        if !exists {
+            return Err(StoreError::MissingCheckpointMessage);
+        }
+        Ok(())
+    }
+
     /// Saves each supplied file's prior content before an edit batch changes it.
     /// The engine captures bytes through its workspace guard. Paths must be
     /// unique and workspace-relative. Blob files are written

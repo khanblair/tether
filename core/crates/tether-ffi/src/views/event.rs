@@ -27,6 +27,11 @@ pub enum CoreEventView {
         /// Its new state.
         status: SessionStatusView,
     },
+    /// A checkpoint restored part or all of a session.
+    SessionRewound {
+        /// The session whose state changed.
+        session_id: String,
+    },
     /// A batch of reply text.
     TextDelta {
         /// The session the text belongs to.
@@ -147,6 +152,9 @@ impl From<CoreEvent> for CoreEventView {
             CoreEvent::SessionUpdated { session_id, status } => Self::SessionUpdated {
                 session_id: session_id.into(),
                 status: status.into(),
+            },
+            CoreEvent::SessionRewound { session_id } => Self::SessionRewound {
+                session_id: session_id.into(),
             },
             CoreEvent::TextDelta {
                 session_id,

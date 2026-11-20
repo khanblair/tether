@@ -8,10 +8,13 @@ use tether_store::{BlobStore, SessionRecord, Store, StoreError};
 use tether_types::{CoreError, CoreEvent, SessionId, SessionStatus, UsageSnapshot};
 use tether_workspace::PathGuard;
 use thiserror::Error;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, oneshot};
 use tokio_util::sync::CancellationToken;
 
-use crate::{EventSink, ToolLoop, tool_loop::ToolLoopContext};
+use crate::{
+    EventSink, RewindError, RewindScope, ToolLoop, rewind_checkpoint, rewind_conversation_only,
+    tool_loop::ToolLoopContext,
+};
 
 mod stream;
 
@@ -50,10 +53,21 @@ pub enum SessionActorError {
     /// The store could not open or read the session.
     #[error("session store failed: {0}")]
     Store(#[from] StoreError),
+    /// The actor has no guarded workspace for restoring files.
+    #[error("session has no workspace runtime")]
+    NoWorkspace,
+    /// A checkpoint could not be restored.
+    #[error(transparent)]
+    Rewind(#[from] RewindError),
 }
 
 enum Command {
     Send(String),
+    Rewind {
+        checkpoint_id: String,
+        scope: RewindScope,
+        reply: oneshot::Sender<Result<(), SessionActorError>>,
+    },
 }
 
 /// Commands for one running session. Clones share its queue and interrupt token.
@@ -85,6 +99,28 @@ impl SessionHandle {
         {
             token.cancel();
         }
+    }
+
+    /// Cancels the running turn and queues a serialized checkpoint restore.
+    ///
+    /// # Errors
+    /// Returns an error when the actor stopped or the checkpoint cannot be restored.
+    pub async fn rewind(
+        &self,
+        checkpoint_id: String,
+        scope: RewindScope,
+    ) -> Result<(), SessionActorError> {
+        self.interrupt();
+        let (reply, result) = oneshot::channel();
+        self.tx
+            .send(Command::Rewind {
+                checkpoint_id,
+                scope,
+                reply,
+            })
+            .await
+            .map_err(|_| SessionActorError::Stopped)?;
+        result.await.map_err(|_| SessionActorError::Stopped)?
     }
 }
 
@@ -172,11 +208,44 @@ impl SessionActor {
         reason = "the serialized actor loop handles each turn's result"
     )]
     pub async fn run(mut self) {
-        while let Some(Command::Send(text)) = self.rx.recv().await {
-            if let Err(error) = self.turn(text).await {
-                self.end_with_error(error);
+        while let Some(command) = self.rx.recv().await {
+            match command {
+                Command::Send(text) => {
+                    if let Err(error) = self.turn(text).await {
+                        self.end_with_error(error);
+                    }
+                }
+                Command::Rewind {
+                    checkpoint_id,
+                    scope,
+                    reply,
+                } => {
+                    let result = self.rewind(&checkpoint_id, scope);
+                    drop(reply.send(result));
+                }
             }
         }
+    }
+
+    fn rewind(&mut self, checkpoint_id: &str, scope: RewindScope) -> Result<(), SessionActorError> {
+        if let Some(tools) = self.tools.as_ref() {
+            rewind_checkpoint(
+                &mut self.store,
+                &self.session.id,
+                checkpoint_id,
+                scope,
+                &tools.guard,
+                &tools.blobs,
+            )?;
+        } else if scope == RewindScope::Conversation {
+            rewind_conversation_only(&mut self.store, &self.session.id, checkpoint_id)?;
+        } else {
+            return Err(SessionActorError::NoWorkspace);
+        }
+        self.sink.on_event(CoreEvent::SessionRewound {
+            session_id: self.session.id.clone(),
+        });
+        Ok(())
     }
 
     #[expect(
@@ -188,7 +257,13 @@ impl SessionActor {
         self.store
             .begin_turn(&id, &text, now_ms())
             .map_err(store_error)?;
-        let messages = self.store.messages(&id).map_err(store_error)?;
+        let messages = self
+            .store
+            .messages(&id)
+            .map_err(store_error)?
+            .into_iter()
+            .filter(|message| !message.rewound)
+            .collect();
         let request = ChatRequest {
             model_id: self.session.model_id.clone(),
             system: String::new(),

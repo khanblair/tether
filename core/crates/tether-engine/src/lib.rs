@@ -4,6 +4,7 @@
 
 mod checkpoint_capture;
 mod provider_connection;
+mod rewind;
 mod session;
 mod session_provider;
 #[cfg(test)]
@@ -19,6 +20,7 @@ pub mod updates;
 
 pub use checkpoint_capture::capture_checkpoint;
 pub use provider_connection::{ProviderCheck, check_provider, provider_test_targets};
+pub use rewind::{RewindError, RewindScope, rewind_checkpoint, rewind_conversation_only};
 pub use session::{
     ProviderFactory, SessionActor, SessionActorError, SessionHandle, ToolApproval, ToolRuntime,
 };

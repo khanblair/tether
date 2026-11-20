@@ -781,9 +781,13 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_tether_core_checksum_method_sessionrunner_interrupt(
     ): Int
+    external fun uniffi_tether_core_checksum_method_sessionrunner_rewind(
+    ): Int
     external fun uniffi_tether_core_checksum_method_sessionrunner_send_message(
     ): Int
     external fun uniffi_tether_core_checksum_method_sessionruntime_create_session(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_sessionruntime_list_checkpoints(
     ): Int
     external fun uniffi_tether_core_checksum_method_sessionruntime_load_session(
     ): Int
@@ -900,6 +904,8 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_tether_core_fn_method_sessionrunner_interrupt(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_tether_core_fn_method_sessionrunner_rewind(`ptr`: Long,`checkpointId`: RustBuffer.ByValue,`scope`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_tether_core_fn_method_sessionrunner_send_message(`ptr`: Long,`text`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_tether_core_fn_clone_sessionruntime(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -909,6 +915,8 @@ internal object UniffiLib {
     external fun uniffi_tether_core_fn_constructor_sessionruntime_new(`databasePath`: RustBuffer.ByValue,`vault`: Long,`sink`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
     external fun uniffi_tether_core_fn_method_sessionruntime_create_session(`ptr`: Long,`projectId`: RustBuffer.ByValue,`provider`: RustBuffer.ByValue,`modelId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_tether_core_fn_method_sessionruntime_list_checkpoints(`ptr`: Long,`sessionId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_tether_core_fn_method_sessionruntime_load_session(`ptr`: Long,`sessionId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -1110,10 +1118,16 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_tether_core_checksum_method_sessionrunner_interrupt() and 0xFFFF) != 55447) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_tether_core_checksum_method_sessionrunner_rewind() and 0xFFFF) != 26945) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_tether_core_checksum_method_sessionrunner_send_message() and 0xFFFF) != 11183) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_method_sessionruntime_create_session() and 0xFFFF) != 12433) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_sessionruntime_list_checkpoints() and 0xFFFF) != 36722) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_method_sessionruntime_load_session() and 0xFFFF) != 47856) {
@@ -3506,6 +3520,15 @@ public interface SessionRunnerInterface {
     fun `interrupt`()
     
     /**
+     * Stops a running turn and restores a saved checkpoint in actor order.
+     * Call from a background thread.
+     *
+     * # Errors
+     * Returns an error when the checkpoint is absent or restoration fails.
+     */
+    fun `rewind`(`checkpointId`: kotlin.String, `scope`: RewindScopeView)
+    
+    /**
      * Queues a plain text turn. Events arrive through the runtime's sink.
      * Call from a background thread.
      *
@@ -3631,6 +3654,28 @@ open class SessionRunner: Disposable, AutoCloseable, SessionRunnerInterface
     UniffiLib.uniffi_tether_core_fn_method_sessionrunner_interrupt(
         it,
         _status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Stops a running turn and restores a saved checkpoint in actor order.
+     * Call from a background thread.
+     *
+     * # Errors
+     * Returns an error when the checkpoint is absent or restoration fails.
+     */
+    @Throws(SessionRuntimeException::class)override fun `rewind`(`checkpointId`: kotlin.String, `scope`: RewindScopeView)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(SessionRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_sessionrunner_rewind(
+        it,
+        
+        FfiConverterString.lower(`checkpointId`),
+        FfiConverterTypeRewindScopeView.lower(`scope`),_status)
 }
     }
     
@@ -3805,6 +3850,14 @@ public interface SessionRuntimeInterface {
     fun `createSession`(`projectId`: kotlin.String, `provider`: ProviderView, `modelId`: kotlin.String): SessionRecordView
     
     /**
+     * Lists the session's checkpoints from newest to oldest.
+     *
+     * # Errors
+     * Returns an error when the session is absent or the database cannot be read.
+     */
+    fun `listCheckpoints`(`sessionId`: kotlin.String): List<CheckpointView>
+    
+    /**
      * Reads saved session settings, including a recovered Interrupted status.
      *
      * # Errors
@@ -3977,6 +4030,27 @@ open class SessionRuntime: Disposable, AutoCloseable, SessionRuntimeInterface
         FfiConverterString.lower(`projectId`),
         FfiConverterTypeProviderView.lower(`provider`),
         FfiConverterString.lower(`modelId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Lists the session's checkpoints from newest to oldest.
+     *
+     * # Errors
+     * Returns an error when the session is absent or the database cannot be read.
+     */
+    @Throws(SessionRuntimeException::class)override fun `listCheckpoints`(`sessionId`: kotlin.String): List<CheckpointView> {
+            return FfiConverterSequenceTypeCheckpointView.lift(
+    callWithHandle {
+    uniffiRustCallWithError(SessionRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_sessionruntime_list_checkpoints(
+        it,
+        
+        FfiConverterString.lower(`sessionId`),_status)
 }
     }
     )
@@ -4727,6 +4801,69 @@ public object FfiConverterTypeUpdater: FfiConverter<Updater, Long> {
 
 
 /**
+ * One saved edit point in a session transcript.
+ */
+data class CheckpointView (
+    /**
+     * Checkpoint id used for rewind.
+     */
+    var `id`: kotlin.String
+    , 
+    /**
+     * The assistant message that began the edit batch.
+     */
+    var `messageId`: kotlin.String?
+    , 
+    /**
+     * Time in Unix milliseconds.
+     */
+    var `createdAtMs`: kotlin.Long
+    , 
+    /**
+     * Workspace-relative paths captured by this batch.
+     */
+    var `paths`: List<kotlin.String>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCheckpointView: FfiConverterRustBuffer<CheckpointView> {
+    override fun read(buf: ByteBuffer): CheckpointView {
+        return CheckpointView(
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterSequenceString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CheckpointView) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterOptionalString.allocationSize(value.`messageId`) +
+            FfiConverterLong.allocationSize(value.`createdAtMs`) +
+            FfiConverterSequenceString.allocationSize(value.`paths`)
+    )
+
+    override fun write(value: CheckpointView, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterOptionalString.write(value.`messageId`, buf)
+            FfiConverterLong.write(value.`createdAtMs`, buf)
+            FfiConverterSequenceString.write(value.`paths`, buf)
+    }
+}
+
+
+
+/**
  * FFI view of [`CoreError`]. It is a plain record, not a Kotlin exception, so
  * events that carry it compare by value and cost no stack trace.
  */
@@ -5280,6 +5417,21 @@ sealed class CoreEventView {
     }
     
     /**
+     * A checkpoint restored part or all of a session.
+     */
+    data class SessionRewound(
+        /**
+         * The session whose state changed.
+         */
+        val `sessionId`: kotlin.String) : CoreEventView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
      * A batch of reply text.
      */
     data class TextDelta(
@@ -5587,63 +5739,66 @@ public object FfiConverterTypeCoreEventView : FfiConverterRustBuffer<CoreEventVi
                 FfiConverterString.read(buf),
                 FfiConverterTypeSessionStatusView.read(buf),
                 )
-            4 -> CoreEventView.TextDelta(
+            4 -> CoreEventView.SessionRewound(
+                FfiConverterString.read(buf),
+                )
+            5 -> CoreEventView.TextDelta(
                 FfiConverterString.read(buf),
                 FfiConverterString.read(buf),
                 FfiConverterString.read(buf),
                 )
-            5 -> CoreEventView.ThinkingDelta(
+            6 -> CoreEventView.ThinkingDelta(
                 FfiConverterString.read(buf),
                 FfiConverterString.read(buf),
                 FfiConverterString.read(buf),
                 )
-            6 -> CoreEventView.ToolProposed(
-                FfiConverterString.read(buf),
-                FfiConverterString.read(buf),
-                FfiConverterString.read(buf),
-                FfiConverterString.read(buf),
-                )
-            7 -> CoreEventView.ApprovalRequired(
+            7 -> CoreEventView.ToolProposed(
                 FfiConverterString.read(buf),
                 FfiConverterString.read(buf),
                 FfiConverterString.read(buf),
                 FfiConverterString.read(buf),
                 )
-            8 -> CoreEventView.ToolStarted(
+            8 -> CoreEventView.ApprovalRequired(
                 FfiConverterString.read(buf),
-                FfiConverterString.read(buf),
-                )
-            9 -> CoreEventView.ToolOutput(
                 FfiConverterString.read(buf),
                 FfiConverterString.read(buf),
                 FfiConverterString.read(buf),
                 )
-            10 -> CoreEventView.ToolFinished(
+            9 -> CoreEventView.ToolStarted(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                )
+            10 -> CoreEventView.ToolOutput(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                )
+            11 -> CoreEventView.ToolFinished(
                 FfiConverterString.read(buf),
                 FfiConverterString.read(buf),
                 FfiConverterTypeToolCallStatusView.read(buf),
                 )
-            11 -> CoreEventView.UsageUpdated(
+            12 -> CoreEventView.UsageUpdated(
                 FfiConverterString.read(buf),
                 FfiConverterTypeUsageSnapshotView.read(buf),
                 )
-            12 -> CoreEventView.TurnFinished(
+            13 -> CoreEventView.TurnFinished(
                 FfiConverterString.read(buf),
                 )
-            13 -> CoreEventView.TurnInterrupted(
+            14 -> CoreEventView.TurnInterrupted(
                 FfiConverterString.read(buf),
                 )
-            14 -> CoreEventView.TurnFailed(
+            15 -> CoreEventView.TurnFailed(
                 FfiConverterString.read(buf),
                 FfiConverterTypeCoreErrorView.read(buf),
                 )
-            15 -> CoreEventView.NetworkPaused(
+            16 -> CoreEventView.NetworkPaused(
                 FfiConverterString.read(buf),
                 )
-            16 -> CoreEventView.NetworkResumed(
+            17 -> CoreEventView.NetworkResumed(
                 FfiConverterString.read(buf),
                 )
-            17 -> CoreEventView.ProviderStatus(
+            18 -> CoreEventView.ProviderStatus(
                 FfiConverterTypeProviderView.read(buf),
                 FfiConverterTypeConnectionStatusView.read(buf),
                 )
@@ -5672,6 +5827,13 @@ public object FfiConverterTypeCoreEventView : FfiConverterRustBuffer<CoreEventVi
                 4UL
                 + FfiConverterString.allocationSize(value.`sessionId`)
                 + FfiConverterTypeSessionStatusView.allocationSize(value.`status`)
+            )
+        }
+        is CoreEventView.SessionRewound -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`sessionId`)
             )
         }
         is CoreEventView.TextDelta -> {
@@ -5810,29 +5972,26 @@ public object FfiConverterTypeCoreEventView : FfiConverterRustBuffer<CoreEventVi
                 FfiConverterTypeSessionStatusView.write(value.`status`, buf)
                 Unit
             }
-            is CoreEventView.TextDelta -> {
+            is CoreEventView.SessionRewound -> {
                 buf.putInt(4)
                 FfiConverterString.write(value.`sessionId`, buf)
-                FfiConverterString.write(value.`messageId`, buf)
-                FfiConverterString.write(value.`text`, buf)
                 Unit
             }
-            is CoreEventView.ThinkingDelta -> {
+            is CoreEventView.TextDelta -> {
                 buf.putInt(5)
                 FfiConverterString.write(value.`sessionId`, buf)
                 FfiConverterString.write(value.`messageId`, buf)
                 FfiConverterString.write(value.`text`, buf)
                 Unit
             }
-            is CoreEventView.ToolProposed -> {
+            is CoreEventView.ThinkingDelta -> {
                 buf.putInt(6)
                 FfiConverterString.write(value.`sessionId`, buf)
-                FfiConverterString.write(value.`toolCallId`, buf)
-                FfiConverterString.write(value.`tool`, buf)
-                FfiConverterString.write(value.`target`, buf)
+                FfiConverterString.write(value.`messageId`, buf)
+                FfiConverterString.write(value.`text`, buf)
                 Unit
             }
-            is CoreEventView.ApprovalRequired -> {
+            is CoreEventView.ToolProposed -> {
                 buf.putInt(7)
                 FfiConverterString.write(value.`sessionId`, buf)
                 FfiConverterString.write(value.`toolCallId`, buf)
@@ -5840,60 +5999,68 @@ public object FfiConverterTypeCoreEventView : FfiConverterRustBuffer<CoreEventVi
                 FfiConverterString.write(value.`target`, buf)
                 Unit
             }
-            is CoreEventView.ToolStarted -> {
+            is CoreEventView.ApprovalRequired -> {
                 buf.putInt(8)
+                FfiConverterString.write(value.`sessionId`, buf)
+                FfiConverterString.write(value.`toolCallId`, buf)
+                FfiConverterString.write(value.`tool`, buf)
+                FfiConverterString.write(value.`target`, buf)
+                Unit
+            }
+            is CoreEventView.ToolStarted -> {
+                buf.putInt(9)
                 FfiConverterString.write(value.`sessionId`, buf)
                 FfiConverterString.write(value.`toolCallId`, buf)
                 Unit
             }
             is CoreEventView.ToolOutput -> {
-                buf.putInt(9)
+                buf.putInt(10)
                 FfiConverterString.write(value.`sessionId`, buf)
                 FfiConverterString.write(value.`toolCallId`, buf)
                 FfiConverterString.write(value.`chunk`, buf)
                 Unit
             }
             is CoreEventView.ToolFinished -> {
-                buf.putInt(10)
+                buf.putInt(11)
                 FfiConverterString.write(value.`sessionId`, buf)
                 FfiConverterString.write(value.`toolCallId`, buf)
                 FfiConverterTypeToolCallStatusView.write(value.`status`, buf)
                 Unit
             }
             is CoreEventView.UsageUpdated -> {
-                buf.putInt(11)
+                buf.putInt(12)
                 FfiConverterString.write(value.`sessionId`, buf)
                 FfiConverterTypeUsageSnapshotView.write(value.`usage`, buf)
                 Unit
             }
             is CoreEventView.TurnFinished -> {
-                buf.putInt(12)
-                FfiConverterString.write(value.`sessionId`, buf)
-                Unit
-            }
-            is CoreEventView.TurnInterrupted -> {
                 buf.putInt(13)
                 FfiConverterString.write(value.`sessionId`, buf)
                 Unit
             }
-            is CoreEventView.TurnFailed -> {
+            is CoreEventView.TurnInterrupted -> {
                 buf.putInt(14)
+                FfiConverterString.write(value.`sessionId`, buf)
+                Unit
+            }
+            is CoreEventView.TurnFailed -> {
+                buf.putInt(15)
                 FfiConverterString.write(value.`sessionId`, buf)
                 FfiConverterTypeCoreErrorView.write(value.`error`, buf)
                 Unit
             }
             is CoreEventView.NetworkPaused -> {
-                buf.putInt(15)
-                FfiConverterString.write(value.`sessionId`, buf)
-                Unit
-            }
-            is CoreEventView.NetworkResumed -> {
                 buf.putInt(16)
                 FfiConverterString.write(value.`sessionId`, buf)
                 Unit
             }
-            is CoreEventView.ProviderStatus -> {
+            is CoreEventView.NetworkResumed -> {
                 buf.putInt(17)
+                FfiConverterString.write(value.`sessionId`, buf)
+                Unit
+            }
+            is CoreEventView.ProviderStatus -> {
+                buf.putInt(18)
                 FfiConverterTypeProviderView.write(value.`provider`, buf)
                 FfiConverterTypeConnectionStatusView.write(value.`status`, buf)
                 Unit
@@ -6419,6 +6586,53 @@ public object FfiConverterTypeProviderView: FfiConverterRustBuffer<ProviderView>
     override fun allocationSize(value: ProviderView) = 4UL
 
     override fun write(value: ProviderView, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
+ * Part of a session to restore.
+ */
+
+enum class RewindScopeView {
+    
+    /**
+     * Workspace files only.
+     */
+    FILES,
+    /**
+     * Conversation context only.
+     */
+    CONVERSATION,
+    /**
+     * Files and conversation together.
+     */
+    BOTH;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeRewindScopeView: FfiConverterRustBuffer<RewindScopeView> {
+    override fun read(buf: ByteBuffer) = try {
+        RewindScopeView.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: RewindScopeView) = 4UL
+
+    override fun write(value: RewindScopeView, buf: ByteBuffer) {
         buf.putInt(value.ordinal + 1)
     }
 }
@@ -7194,6 +7408,62 @@ public object FfiConverterOptionalString: FfiConverterRustBuffer<kotlin.String?>
         } else {
             buf.put(1)
             FfiConverterString.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceString: FfiConverterRustBuffer<List<kotlin.String>> {
+    override fun read(buf: ByteBuffer): List<kotlin.String> {
+        val len = buf.getInt()
+        return List<kotlin.String>(len) {
+            FfiConverterString.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<kotlin.String>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterString.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<kotlin.String>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterString.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeCheckpointView: FfiConverterRustBuffer<List<CheckpointView>> {
+    override fun read(buf: ByteBuffer): List<CheckpointView> {
+        val len = buf.getInt()
+        return List<CheckpointView>(len) {
+            FfiConverterTypeCheckpointView.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<CheckpointView>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeCheckpointView.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<CheckpointView>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeCheckpointView.write(it, buf)
         }
     }
 }

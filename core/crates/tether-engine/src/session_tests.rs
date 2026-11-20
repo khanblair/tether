@@ -292,3 +292,54 @@ async fn text_reaches_the_sink_before_the_provider_finishes() {
         }]
     );
 }
+
+#[tokio::test]
+async fn later_turn_omits_rewound_messages_from_provider_context() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("sessions.db");
+    let (mut store, id) = seeded_store(&path);
+    store.begin_turn(&id, "old request", 2).unwrap();
+    let old_assistant = store
+        .append_message(
+            &id,
+            Role::Assistant,
+            &[MessagePart::Text {
+                text: "old reply".into(),
+            }],
+            3,
+        )
+        .unwrap();
+    store.rewind_conversation(&id, &old_assistant.id).unwrap();
+    let requests = Arc::new(Mutex::new(Vec::new()));
+    let provider = Arc::new(ScriptedProvider {
+        requests: Arc::clone(&requests),
+    });
+    let (tx, mut rx) = mpsc::unbounded_channel();
+    let (actor, handle) = SessionActor::new(store, &id, provider, Arc::new(Recorder(tx))).unwrap();
+    let task = tokio::spawn(actor.run());
+    handle.send_message("new request".into()).await.unwrap();
+    loop {
+        if matches!(next_event(&mut rx).await, CoreEvent::TurnFinished { .. }) {
+            break;
+        }
+    }
+    {
+        let requests = requests.lock().unwrap();
+        assert_eq!(requests.len(), 1);
+        assert_eq!(requests[0].messages.len(), 2);
+        assert_eq!(
+            requests[0].messages[0].parts,
+            vec![MessagePart::Text {
+                text: "old request".into()
+            }]
+        );
+        assert_eq!(
+            requests[0].messages[1].parts,
+            vec![MessagePart::Text {
+                text: "new request".into()
+            }]
+        );
+    }
+    drop(handle);
+    task.await.unwrap();
+}

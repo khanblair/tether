@@ -13,6 +13,12 @@ pub enum StoreError {
     /// A requested snapshot path is invalid or duplicated.
     #[error("invalid checkpoint path")]
     InvalidCheckpointPath,
+    /// A checkpoint id is absent or belongs to another session.
+    #[error("checkpoint not found in session")]
+    MissingCheckpoint,
+    /// Conversation rewind needs an assistant message tied to the checkpoint.
+    #[error("checkpoint has no message in its session")]
+    MissingCheckpointMessage,
     /// SQLite reported an error.
     #[error("database error: {0}")]
     Sqlite(#[from] rusqlite::Error),

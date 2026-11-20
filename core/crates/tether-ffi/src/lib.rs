@@ -17,9 +17,9 @@ pub use secrets::{SecretVault, SecretVaultError, SecretsPlatform, SecretsPlatfor
 pub use sessions::{SessionRecordView, SessionRunner, SessionRuntime, SessionRuntimeError};
 pub use updater::{DownloadProgress, ReleaseView, UpdateCheckView, Updater, UpdaterError};
 pub use views::{
-    ConnectionStatusView, CoreErrorView, CoreEventView, ErrorKindView, ExecutorView,
-    MessagePartView, MessageView, ModelRefView, PermissionModeView, ProviderView, RoleView,
-    SessionStatusView, ToolCallStatusView, UsageSnapshotView,
+    CheckpointView, ConnectionStatusView, CoreErrorView, CoreEventView, ErrorKindView,
+    ExecutorView, MessagePartView, MessageView, ModelRefView, PermissionModeView, ProviderView,
+    RewindScopeView, RoleView, SessionStatusView, ToolCallStatusView, UsageSnapshotView,
 };
 
 uniffi::setup_scaffolding!();

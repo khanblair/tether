@@ -4,13 +4,14 @@ use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use tether_providers::{ChatProvider, ChatRequest};
-use tether_store::{SessionRecord, Store, StoreError};
-use tether_types::{CoreError, CoreEvent, SessionId, SessionStatus};
+use tether_store::{BlobStore, SessionRecord, Store, StoreError};
+use tether_types::{CoreError, CoreEvent, SessionId, SessionStatus, UsageSnapshot};
+use tether_workspace::PathGuard;
 use thiserror::Error;
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 
-use crate::EventSink;
+use crate::{EventSink, ToolLoop, tool_loop::ToolLoopContext};
 
 mod stream;
 
@@ -20,6 +21,19 @@ const MAX_OUTPUT_TOKENS: u32 = 4096;
 
 /// Resolves the provider and its current credentials when a turn begins.
 pub type ProviderFactory = Arc<dyn Fn() -> Result<Arc<dyn ChatProvider>, CoreError> + Send + Sync>;
+
+/// Approval callback for a proposed tool mutation.
+pub type ToolApproval = Arc<dyn Fn(&str, &str) -> bool + Send + Sync>;
+
+/// A guarded workspace and checkpoint store used by tool turns.
+pub struct ToolRuntime {
+    /// Restricts tools to one project workspace.
+    pub guard: PathGuard,
+    /// Stores prior bytes before file mutations.
+    pub blobs: BlobStore,
+    /// Decides whether a proposed file mutation may proceed.
+    pub approve: ToolApproval,
+}
 
 /// A session command could not be accepted or the session could not open.
 #[derive(Debug, Error)]
@@ -82,6 +96,7 @@ pub struct SessionActor {
     sink: Arc<dyn EventSink>,
     rx: mpsc::Receiver<Command>,
     active: Arc<Mutex<Option<CancellationToken>>>,
+    tools: Option<ToolRuntime>,
 }
 
 impl SessionActor {
@@ -128,9 +143,27 @@ impl SessionActor {
                 sink,
                 rx,
                 active,
+                tools: None,
             },
             handle,
         ))
+    }
+
+    /// Loads a session that can run guarded file tools and save checkpoints.
+    ///
+    /// # Errors
+    /// Returns an error when the id is absent or the store cannot read it.
+    pub fn new_with_tool_runtime(
+        store: Store,
+        id: &SessionId,
+        provider_for_turn: ProviderFactory,
+        sink: Arc<dyn EventSink>,
+        tools: ToolRuntime,
+    ) -> Result<(Self, SessionHandle), SessionActorError> {
+        let (mut actor, handle) =
+            Self::new_with_provider_factory(store, id, provider_for_turn, sink)?;
+        actor.tools = Some(tools);
+        Ok((actor, handle))
     }
 
     /// Processes messages until the caller drops every handle.
@@ -146,6 +179,11 @@ impl SessionActor {
         }
     }
 
+    #[expect(
+        clippy::too_many_lines,
+        clippy::excessive_nesting,
+        reason = "one serialized turn owns persistence, tool execution, usage, and status"
+    )]
     async fn turn(&mut self, text: String) -> Result<(), CoreError> {
         let id = self.session.id.clone();
         self.store
@@ -166,7 +204,43 @@ impl SessionActor {
             *active = Some(cancel.clone());
         }
         self.emit_status(SessionStatus::Requesting);
-        let result = self.stream(provider, request, cancel).await;
+        let result = if let Some(tools) = &self.tools {
+            let loop_runner = ToolLoop::new(tools.guard.clone());
+            let mut context = ToolLoopContext {
+                session_id: &id,
+                store: &mut self.store,
+                blobs: &tools.blobs,
+                cancel: cancel.clone(),
+                approve: tools.approve.as_ref(),
+            };
+            let completed = loop_runner.run(provider, request, &mut context).await;
+            drop(context);
+            match completed {
+                Ok(completed) => {
+                    if !completed.final_text.is_empty() {
+                        let message_id = completed
+                            .messages
+                            .last()
+                            .expect("final reply exists")
+                            .id
+                            .clone();
+                        self.store
+                            .set_session_status(&id, SessionStatus::Streaming, now_ms())
+                            .map_err(store_error)?;
+                        self.emit_status(SessionStatus::Streaming);
+                        self.sink.on_event(CoreEvent::TextDelta {
+                            session_id: id.clone(),
+                            message_id,
+                            text: completed.final_text,
+                        });
+                    }
+                    (completed.usage, Ok(()))
+                }
+                Err(error) => (UsageSnapshot::default(), Err(error)),
+            }
+        } else {
+            self.stream(provider, request, cancel).await
+        };
         if let Ok(mut active) = self.active.lock() {
             *active = None;
         }

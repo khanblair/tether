@@ -22,7 +22,10 @@ impl PathGuard {
         }
         let root = fs::canonicalize(root)?;
         if !root.is_dir() {
-            return Err(io::Error::new(io::ErrorKind::NotADirectory, "workspace is not a directory"));
+            return Err(io::Error::new(
+                io::ErrorKind::NotADirectory,
+                "workspace is not a directory",
+            ));
         }
         Ok(Self { root })
     }
@@ -33,28 +36,37 @@ impl PathGuard {
     /// Returns an error if any component escapes the workspace or the filesystem fails.
     pub fn resolve(&self, relative: impl AsRef<Path>) -> io::Result<PathBuf> {
         let relative = relative.as_ref();
-        if relative.as_os_str().is_empty() {
+        if relative.as_os_str().is_empty() || has_current_dir_segment(relative) {
             return Err(denied());
         }
         let mut current = self.root.clone();
         for component in relative.components() {
-            let Component::Normal(name) = component else {
-                return Err(denied());
-            };
-            let candidate = current.join(name);
-            match fs::symlink_metadata(&candidate) {
-                Ok(metadata) if metadata.file_type().is_symlink() => return Err(denied()),
-                Ok(_) => {
-                    current = fs::canonicalize(candidate)?;
-                    if !current.starts_with(&self.root) {
-                        return Err(denied());
-                    }
-                }
-                Err(error) if error.kind() == io::ErrorKind::NotFound => current = candidate,
-                Err(error) => return Err(error),
-            }
+            current = self.step(&current, component)?;
         }
         Ok(current)
+    }
+
+    /// Adds one component to `current`, rejecting anything but a plain name,
+    /// a symlink, or a path that canonicalizes outside the root.
+    fn step(&self, current: &Path, component: Component<'_>) -> io::Result<PathBuf> {
+        let Component::Normal(name) = component else {
+            return Err(denied());
+        };
+        let candidate = current.join(name);
+        match fs::symlink_metadata(&candidate) {
+            Ok(metadata) if metadata.file_type().is_symlink() => Err(denied()),
+            Ok(_) => self.inside_root(fs::canonicalize(candidate)?),
+            Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(candidate),
+            Err(error) => Err(error),
+        }
+    }
+
+    fn inside_root(&self, path: PathBuf) -> io::Result<PathBuf> {
+        if path.starts_with(&self.root) {
+            Ok(path)
+        } else {
+            Err(denied())
+        }
     }
 
     /// The canonical workspace directory.
@@ -66,4 +78,11 @@ impl PathGuard {
 
 fn denied() -> io::Error {
     io::Error::new(io::ErrorKind::PermissionDenied, "path leaves the workspace")
+}
+
+fn has_current_dir_segment(path: &Path) -> bool {
+    path.as_os_str()
+        .as_encoded_bytes()
+        .split(|byte| *byte == std::path::MAIN_SEPARATOR as u8)
+        .any(|part| part == b".")
 }

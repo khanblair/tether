@@ -8,14 +8,20 @@ fn fixture() -> (std::path::PathBuf, PathGuard) {
     fs::create_dir_all(root.join("nested")).unwrap();
     fs::write(root.join("nested/file.txt"), b"text").unwrap();
     let guard = PathGuard::new(&root).unwrap();
-    (root, guard)
+    (guard.root().to_path_buf(), guard)
 }
 
 #[test]
 fn existing_and_new_paths_stay_under_root() {
     let (root, guard) = fixture();
-    assert_eq!(guard.resolve("nested/file.txt").unwrap(), root.join("nested/file.txt"));
-    assert_eq!(guard.resolve("nested/new.txt").unwrap(), root.join("nested/new.txt"));
+    assert_eq!(
+        guard.resolve("nested/file.txt").unwrap(),
+        root.join("nested/file.txt")
+    );
+    assert_eq!(
+        guard.resolve("nested/new.txt").unwrap(),
+        root.join("nested/new.txt")
+    );
     fs::remove_dir_all(root).unwrap();
 }
 

@@ -55,9 +55,10 @@ impl FileIndex {
     /// Files whose relative path matches a simple `*` glob.
     #[must_use]
     pub fn glob(&self, pattern: &str) -> Vec<&IndexedFile> {
-        self.files.iter().filter(|file| {
-            glob_match(pattern, &file.path.to_string_lossy())
-        }).collect()
+        self.files
+            .iter()
+            .filter(|file| glob_match(pattern, &file.path.to_string_lossy()))
+            .collect()
     }
 
     /// Finds text in indexed files, stopping after `limit` matching lines.
@@ -69,25 +70,39 @@ impl FileIndex {
         if needle.is_empty() || limit == 0 {
             return Ok(hits);
         }
-        for file in &self.files {
+        let mut files = self.files.iter();
+        while let Some(file) = files.next().filter(|_| hits.len() < limit) {
             let path = self.guard.resolve(&file.path)?;
-            let reader = BufReader::new(File::open(path)?);
-            for (number, line) in reader.lines().enumerate() {
-                let line = line?;
-                if line.contains(needle) {
-                    hits.push(SearchHit {
-                        path: file.path.clone(),
-                        line: number + 1,
-                        text: line,
-                    });
-                    if hits.len() == limit {
-                        return Ok(hits);
-                    }
-                }
-            }
+            grep_file(&path, &file.path, needle, limit, &mut hits)?;
         }
         Ok(hits)
     }
+}
+
+/// Appends matching lines from one file until `hits` reaches `limit`.
+fn grep_file(
+    path: &Path,
+    relative: &Path,
+    needle: &str,
+    limit: usize,
+    hits: &mut Vec<SearchHit>,
+) -> io::Result<()> {
+    let reader = BufReader::new(File::open(path)?);
+    let matches = reader
+        .lines()
+        .enumerate()
+        .map(|(number, line)| line.map(|text| (number + 1, text)))
+        .filter(|item| item.is_err() || item.as_ref().is_ok_and(|(_, text)| text.contains(needle)))
+        .take(limit - hits.len());
+    for item in matches {
+        let (line, text) = item?;
+        hits.push(SearchHit {
+            path: relative.to_path_buf(),
+            line,
+            text,
+        });
+    }
+    Ok(())
 }
 
 fn read_ignores(root: &Path) -> io::Result<Vec<String>> {
@@ -97,21 +112,29 @@ fn read_ignores(root: &Path) -> io::Result<Vec<String>> {
         Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
         Err(error) => return Err(error),
     };
-    Ok(text.lines()
+    Ok(text
+        .lines()
         .map(str::trim)
         .filter(|line| !line.is_empty() && !line.starts_with('#'))
         .map(str::to_owned)
         .collect())
 }
 
-fn walk(root: &Path, directory: &Path, ignores: &[String], files: &mut Vec<IndexedFile>) -> io::Result<()> {
+fn walk(
+    root: &Path,
+    directory: &Path,
+    ignores: &[String],
+    files: &mut Vec<IndexedFile>,
+) -> io::Result<()> {
     for entry in fs::read_dir(directory)? {
         let entry = entry?;
         let path = entry.path();
         let relative = path.strip_prefix(root).expect("walk stays under root");
         let name = relative.to_string_lossy();
-        if name == ".git" || name.starts_with(".git/") ||
-            ignores.iter().any(|pattern| glob_match(pattern, &name)) {
+        if name == ".git"
+            || name.starts_with(".git/")
+            || ignores.iter().any(|pattern| glob_match(pattern, &name))
+        {
             continue;
         }
         let kind = entry.file_type()?;
@@ -121,7 +144,10 @@ fn walk(root: &Path, directory: &Path, ignores: &[String], files: &mut Vec<Index
         if kind.is_dir() {
             walk(root, &path, ignores, files)?;
         } else if kind.is_file() {
-            files.push(IndexedFile { path: relative.to_path_buf(), bytes: entry.metadata()?.len() });
+            files.push(IndexedFile {
+                path: relative.to_path_buf(),
+                bytes: entry.metadata()?.len(),
+            });
         }
     }
     Ok(())

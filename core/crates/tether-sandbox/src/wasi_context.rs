@@ -55,7 +55,12 @@ pub trait OutputSink {
 
 /// Which guest stream an adapter writes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum OutputChannel { Stdout, Stderr }
+pub enum OutputChannel {
+    /// The guest standard output stream.
+    Stdout,
+    /// The guest standard error stream.
+    Stderr,
+}
 
 /// `Write` adapter for a guest stream. It forwards chunks without buffering a whole run.
 pub struct StreamWriter<'a> {
@@ -79,7 +84,9 @@ impl Write for StreamWriter<'_> {
         Ok(bytes.len())
     }
 
-    fn flush(&mut self) -> io::Result<()> { Ok(()) }
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -88,8 +95,12 @@ mod tests {
 
     struct Chunks(Vec<Vec<u8>>, Vec<Vec<u8>>);
     impl OutputSink for Chunks {
-        fn stdout(&mut self, bytes: &[u8]) { self.0.push(bytes.to_vec()); }
-        fn stderr(&mut self, bytes: &[u8]) { self.1.push(bytes.to_vec()); }
+        fn stdout(&mut self, bytes: &[u8]) {
+            self.0.push(bytes.to_vec());
+        }
+        fn stderr(&mut self, bytes: &[u8]) {
+            self.1.push(bytes.to_vec());
+        }
     }
 
     #[test]
@@ -98,15 +109,26 @@ mod tests {
         let spec = WasiContextSpec::new(dir.path()).unwrap();
         assert_eq!(spec.workspace, fs::canonicalize(dir.path()).unwrap());
         assert_eq!(spec.env.get("HOME").map(String::as_str), Some("/workspace"));
-        assert!(!spec.env.keys().any(|key| key.contains("KEY") || key.contains("TOKEN")));
+        assert!(
+            !spec
+                .env
+                .keys()
+                .any(|key| key.contains("KEY") || key.contains("TOKEN"))
+        );
     }
 
     #[test]
     fn output_is_forwarded_in_separate_chunks_and_channels() {
         let mut chunks = Chunks(Vec::new(), Vec::new());
-        StreamWriter::new(&mut chunks, OutputChannel::Stdout).write_all(b"one").unwrap();
-        StreamWriter::new(&mut chunks, OutputChannel::Stdout).write_all(b"two").unwrap();
-        StreamWriter::new(&mut chunks, OutputChannel::Stderr).write_all(b"error").unwrap();
+        StreamWriter::new(&mut chunks, OutputChannel::Stdout)
+            .write_all(b"one")
+            .unwrap();
+        StreamWriter::new(&mut chunks, OutputChannel::Stdout)
+            .write_all(b"two")
+            .unwrap();
+        StreamWriter::new(&mut chunks, OutputChannel::Stderr)
+            .write_all(b"error")
+            .unwrap();
         assert_eq!(chunks.0, vec![b"one".to_vec(), b"two".to_vec()]);
         assert_eq!(chunks.1, vec![b"error".to_vec()]);
     }

@@ -31,13 +31,17 @@ impl RunLimits {
     /// Builds Wasmtime's memory limiter for attachment to a per-run store.
     #[must_use]
     pub fn store_limits(self) -> StoreLimits {
-        StoreLimitsBuilder::new().memory_size(self.memory_bytes).build()
+        StoreLimitsBuilder::new()
+            .memory_size(self.memory_bytes)
+            .build()
     }
 
     /// Number of epoch ticks needed to cover the timeout, rounded up.
     #[must_use]
     pub fn epoch_ticks(self, tick: Duration) -> u64 {
-        if tick.is_zero() { return 0; }
+        if tick.is_zero() {
+            return 0;
+        }
         let total = self.timeout.as_nanos();
         let step = tick.as_nanos();
         u64::try_from(total.div_ceil(step)).unwrap_or(u64::MAX)
@@ -55,31 +59,53 @@ pub struct CappedOutput<'a> {
 impl<'a> CappedOutput<'a> {
     /// Wraps the output sink with one shared cap for both channels.
     pub fn new(inner: &'a mut dyn OutputSink, limit: usize) -> Self {
-        Self { inner, limit, sent: 0, truncated: false }
+        Self {
+            inner,
+            limit,
+            sent: 0,
+            truncated: false,
+        }
     }
 
     /// Whether any bytes were discarded.
     #[must_use]
-    pub fn truncated(&self) -> bool { self.truncated }
+    pub fn truncated(&self) -> bool {
+        self.truncated
+    }
 
     /// Number of bytes forwarded.
     #[must_use]
-    pub fn sent(&self) -> usize { self.sent }
+    pub fn sent(&self) -> usize {
+        self.sent
+    }
 
     fn forward(&mut self, bytes: &[u8], stderr: bool) {
         let count = bytes.len().min(self.limit.saturating_sub(self.sent));
         if count > 0 {
-            if stderr { self.inner.stderr(&bytes[..count]); }
-            else { self.inner.stdout(&bytes[..count]); }
+            self.send(&bytes[..count], stderr);
             self.sent += count;
         }
-        if count < bytes.len() { self.truncated = true; }
+        if count < bytes.len() {
+            self.truncated = true;
+        }
+    }
+
+    fn send(&mut self, bytes: &[u8], stderr: bool) {
+        if stderr {
+            self.inner.stderr(bytes);
+        } else {
+            self.inner.stdout(bytes);
+        }
     }
 }
 
 impl OutputSink for CappedOutput<'_> {
-    fn stdout(&mut self, bytes: &[u8]) { self.forward(bytes, false); }
-    fn stderr(&mut self, bytes: &[u8]) { self.forward(bytes, true); }
+    fn stdout(&mut self, bytes: &[u8]) {
+        self.forward(bytes, false);
+    }
+    fn stderr(&mut self, bytes: &[u8]) {
+        self.forward(bytes, true);
+    }
 }
 
 #[cfg(test)]
@@ -88,8 +114,12 @@ mod tests {
 
     struct Collected(Vec<u8>);
     impl OutputSink for Collected {
-        fn stdout(&mut self, bytes: &[u8]) { self.0.extend_from_slice(bytes); }
-        fn stderr(&mut self, bytes: &[u8]) { self.0.extend_from_slice(bytes); }
+        fn stdout(&mut self, bytes: &[u8]) {
+            self.0.extend_from_slice(bytes);
+        }
+        fn stderr(&mut self, bytes: &[u8]) {
+            self.0.extend_from_slice(bytes);
+        }
     }
 
     #[test]
@@ -105,7 +135,10 @@ mod tests {
 
     #[test]
     fn epoch_ticks_round_up() {
-        let limits = RunLimits { timeout: Duration::from_millis(250), ..RunLimits::default() };
+        let limits = RunLimits {
+            timeout: Duration::from_millis(250),
+            ..RunLimits::default()
+        };
         assert_eq!(limits.epoch_ticks(Duration::from_millis(100)), 3);
     }
 }

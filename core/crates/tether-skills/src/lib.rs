@@ -36,11 +36,54 @@ pub enum SkillError {
     InvalidFrontmatter,
 }
 
+struct Frontmatter {
+    fields: BTreeMap<String, String>,
+    metadata: BTreeMap<String, String>,
+    body: String,
+}
+
 /// Parses the common scalar form of Agent Skills frontmatter.
 ///
 /// # Errors
 /// Returns a validation error for malformed fields or a name that differs from `folder`.
 pub fn parse_skill(folder: &str, source: &str) -> Result<SkillDocument, SkillError> {
+    let Frontmatter {
+        mut fields,
+        metadata,
+        body,
+    } = frontmatter_fields(source)?;
+    let name = fields
+        .remove("name")
+        .ok_or(SkillError::MissingField("name"))?;
+    let valid = !name.is_empty()
+        && name.len() <= 64
+        && name
+            .bytes()
+            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-');
+    if !valid || name != folder {
+        return Err(SkillError::InvalidName);
+    }
+    let description = fields
+        .remove("description")
+        .ok_or(SkillError::MissingField("description"))?;
+    if description.trim().is_empty() {
+        return Err(SkillError::MissingField("description"));
+    }
+    if description.chars().count() > 1024 {
+        return Err(SkillError::DescriptionTooLong);
+    }
+    Ok(SkillDocument {
+        name,
+        description,
+        license: fields.remove("license"),
+        compatibility: fields.remove("compatibility"),
+        allowed_tools: fields.remove("allowed-tools"),
+        metadata,
+        body,
+    })
+}
+
+fn frontmatter_fields(source: &str) -> Result<Frontmatter, SkillError> {
     let mut lines = source.lines();
     if lines.next().map(str::trim) != Some("---") {
         return Err(SkillError::MissingFrontmatter);
@@ -79,34 +122,22 @@ pub fn parse_skill(folder: &str, source: &str) -> Result<SkillDocument, SkillErr
     if !closed {
         return Err(SkillError::MissingFrontmatter);
     }
-    let name = fields.remove("name").ok_or(SkillError::MissingField("name"))?;
-    let valid = !name.is_empty()
-        && name.len() <= 64
-        && name.bytes().all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-');
-    if !valid || name != folder {
-        return Err(SkillError::InvalidName);
-    }
-    let description = fields.remove("description").ok_or(SkillError::MissingField("description"))?;
-    if description.trim().is_empty() {
-        return Err(SkillError::MissingField("description"));
-    }
-    if description.chars().count() > 1024 {
-        return Err(SkillError::DescriptionTooLong);
-    }
-    Ok(SkillDocument {
-        name,
-        description,
-        license: fields.remove("license"),
-        compatibility: fields.remove("compatibility"),
-        allowed_tools: fields.remove("allowed-tools"),
+    Ok(Frontmatter {
+        fields,
         metadata,
         body: lines.collect::<Vec<_>>().join("\n"),
     })
 }
 
 fn scalar(value: &str) -> String {
-    value.strip_prefix('"').and_then(|text| text.strip_suffix('"'))
-        .or_else(|| value.strip_prefix('\'').and_then(|text| text.strip_suffix('\'')))
+    value
+        .strip_prefix('"')
+        .and_then(|text| text.strip_suffix('"'))
+        .or_else(|| {
+            value
+                .strip_prefix('\'')
+                .and_then(|text| text.strip_suffix('\''))
+        })
         .unwrap_or(value)
         .to_owned()
 }

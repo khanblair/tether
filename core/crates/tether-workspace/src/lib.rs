@@ -1,12 +1,12 @@
 //! Project workspace: path guard, file index, search, watcher.
 
-mod path_guard;
 mod file_index;
+mod path_guard;
 
-pub use path_guard::PathGuard;
 pub use file_index::{FileIndex, IndexedFile, SearchHit};
+pub use path_guard::PathGuard;
 
-#[cfg(test)]
-mod path_guard_tests;
 #[cfg(test)]
 mod file_index_tests;
+#[cfg(test)]
+mod path_guard_tests;

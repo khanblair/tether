@@ -24,8 +24,14 @@ fn names_must_match_the_folder_and_fit_the_limit() {
 #[test]
 fn missing_and_long_descriptions_fail() {
     let missing = "---\nname: test\n---\nBody";
-    assert_eq!(parse_skill("test", missing), Err(SkillError::MissingField("description")));
+    assert_eq!(
+        parse_skill("test", missing),
+        Err(SkillError::MissingField("description"))
+    );
     let long = "a".repeat(1025);
     let source = format!("---\nname: test\ndescription: {long}\n---\nBody");
-    assert_eq!(parse_skill("test", &source), Err(SkillError::DescriptionTooLong));
+    assert_eq!(
+        parse_skill("test", &source),
+        Err(SkillError::DescriptionTooLong)
+    );
 }

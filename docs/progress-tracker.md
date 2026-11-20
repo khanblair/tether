@@ -52,7 +52,7 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 
 | ID | Task | Owner | Status | PR | Notes |
 |---|---|---|---|---|---|
-| P2-06 | Tool loop in the turn | Codex | In progress | pending | Standalone in-memory loop and five-call fixture; actor persistence, events, full schema validation, and runtime checks remain |
+| P2-06 | Tool loop in the turn | Codex | In review | #185 | Draft stacked on #184; standalone in-memory loop and five-call fixture; actor persistence, events, full schema validation, and runtime checks remain |
 | P2-04 | Read tools | Codex | In review | #184 | Draft with guarded file read, directory list, glob, and literal grep; regex and engine wiring remain; checks not run here |
 | P0-01 | Repo layout | Blair with Claude | Done | n/a | Every top-level folder exists; root README links the docs |
 | P0-02 | Rust workspace with all crates | Blair with Claude | Done | n/a | 17 crates: `tether-types`, `tether-engine`, and `tether-ffi` have code; the other 14 are empty libs. Host build, `cargo ndk` for both ABIs, clippy, and tests pass locally |
@@ -237,7 +237,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Files | Change | PR |
 |---|---|---|---|
-| 2026-11-20 | `core/crates/tether-engine/{Cargo.toml,src/{lib,tool_loop,tool_loop/*}.rs}` | P2-06 tool loop and fixture | pending |
+| 2026-11-20 | `core/crates/tether-engine/{Cargo.toml,src/{lib,tool_loop,tool_loop/*}.rs}` | P2-06 tool loop and fixture | #185 |
 | 2026-11-20 | `core/crates/tether-tools/src/{lib,fs,fs/tests}.rs` | P2-04 read tools and fixtures | #184 |
 | 2026-11-20 | `android/app/src/main/kotlin/app/tether/session/`, `strings.xml`, session tests | P1-14 status snapshot and line | #160 |
 | 2026-11-20 | `android/app/src/main/kotlin/app/tether/session/`, `strings.xml`, image draft tests | P1-16 picker and intake gate | #162 |

@@ -17,7 +17,8 @@ class SessionConnection(
 ) : AutoCloseable {
     private val events = MutableSharedFlow<CoreEventView>(extraBufferCapacity = 64)
     val changes: SharedFlow<CoreEventView> = events
-    private val sink = object : EventSink {
+    private val sink =
+        object : EventSink {
         override fun onEvent(event: CoreEventView) {
             events.tryEmit(event)
         }

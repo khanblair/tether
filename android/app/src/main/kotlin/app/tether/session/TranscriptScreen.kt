@@ -55,18 +55,21 @@ fun TranscriptScreen(
     LaunchedEffect(connection) {
         if (connection != null) {
             try {
-                messages = withContext(Dispatchers.IO) { connection.transcript() }
-                    .filterNot(MessageView::rewound)
-                    .sortedBy(MessageView::seq)
+                messages =
+                    withContext(Dispatchers.IO) { connection.transcript() }
+                        .filterNot(MessageView::rewound)
+                        .sortedBy(MessageView::seq)
                 connection.changes.collect { event ->
                     when (event) {
                         is CoreEventView.TurnFinished,
-                        is CoreEventView.TurnFailed -> running = false
+                        is CoreEventView.TurnFailed,
+                        -> running = false
                         else -> Unit
                     }
-                    messages = withContext(Dispatchers.IO) { connection.transcript() }
-                        .filterNot(MessageView::rewound)
-                        .sortedBy(MessageView::seq)
+                    messages =
+                        withContext(Dispatchers.IO) { connection.transcript() }
+                            .filterNot(MessageView::rewound)
+                            .sortedBy(MessageView::seq)
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
@@ -79,16 +82,17 @@ fun TranscriptScreen(
         messages = messages,
         failed = failed,
         onBack = onBack,
-        composer = connection?.let { active ->
-            {
-                ComposerControls(
-                    connection = active,
-                    running = running,
-                    onRunningChange = { running = it },
-                    onFailure = { failed = true },
-                )
-            }
-        },
+        composer =
+            connection?.let { active ->
+                {
+                    ComposerControls(
+                        connection = active,
+                        running = running,
+                        onRunningChange = { running = it },
+                        onFailure = { failed = true },
+                    )
+                }
+            },
     )
 }
 
@@ -139,12 +143,10 @@ fun TranscriptContent(
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             Box(modifier = Modifier.weight(1f)) {
                 if (messages.isEmpty()) {
+                    val emptyLabel =
+                        if (failed) R.string.transcript_load_failed else R.string.transcript_empty
                     Text(
-                        text =
-                            stringResource(
-                                if (failed) R.string.transcript_load_failed
-                                else R.string.transcript_empty,
-                            ),
+                        text = stringResource(emptyLabel),
                         color = TetherTheme.colors.text2,
                         modifier = Modifier.padding(TetherSpace.space4),
                     )
@@ -165,7 +167,7 @@ fun TranscriptContent(
                 }
             }
             composer?.invoke()
-            }
+        }
     }
 }
 

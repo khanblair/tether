@@ -104,7 +104,8 @@ fun TetherNavHost(module: AppModule) {
                     var connection by remember(id) { mutableStateOf<SessionConnection?>(null) }
                     LaunchedEffect(id) {
                         if (id != null) {
-                            connection = withContext(Dispatchers.IO) {
+                            connection =
+                                withContext(Dispatchers.IO) {
                                 SessionConnection(module.databasePath, module.vault, id)
                             }
                         }

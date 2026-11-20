@@ -92,6 +92,7 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 | P11-11 | Vault note model and index | Codex | In review | #173 | File parser and rebuildable map; SQLite tables remain |
 | P4-02 | Personal access token alternative | Codex | In review | #179 | Core validation and scope parsing; UI and live account check remain |
 | P4-01 | GitHub OAuth device flow | Codex | In review | #178 | Core start and poll; FFI, UI, client ID, and live login remain |
+| P5-05 | Sandbox limits | Codex | In review | #182 | Output cap and epoch config; store wiring and memory budget decision remain |
 | P5-04 | WASI context | Codex | In review | #181 | Fixed env and streaming contract; runtime mount remains |
 | P5-01 | Wasmtime engine and module cache | Codex | In review | #180 | Process engine and in-memory cache; device timing and lockfile remain |
 | P1-11 | Session actor and plain chat turn (no tools) | Blair with Codex, Haiku, and Claude | Done | #153 | Merged; issue #15 closed. Session rows, transcript persistence, plain chat actor, and UniFFI entry points. Codex's first review found issues that were fixed with tests; its second review could not run (Codex usage limit), so the fixes were reviewed by Claude only |
@@ -192,6 +193,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 | 2026-11-20 | Codex | Added P11-11 Markdown note parser and rebuildable wikilink map | Add SQLite vault tables and index persistence |
 | 2026-11-20 | Codex | Added P4-02 PAT validation and scope fixtures | Wire GitHub settings UI and validate a real token |
 | 2026-11-20 | Codex | Added P4-01 GitHub device flow core and response fixtures | Wire FFI, UI, configured client ID, and live sign-in |
+| 2026-11-20 | Codex | Added P5-05 run limit values, output cap, and epoch config | Wire store limiter; resolve 512 MB versus 300 MB budget |
 | 2026-11-20 | Codex | Added P5-04 fixed WASI environment and output channel contract | Wire Wasmtime WASI mount and run fixture |
 | 2026-11-20 | Codex | Added P5-01 Wasmtime process engine and module cache | Regenerate lockfile and measure on device |
 | 2026-11-20 | Blair with Claude | Merged #153 (P1-11), #154 (file length), and #156 (P1-21). None changed the version, so `release.yml` ran and skipped the release job (`v0.0.3` already tagged). Blair chose to keep bumping by hand (D33). Added `tools/bump-version.sh` with a self test (3 of 3 arithmetic mutations caught), `just bump`, and a CI step; set the version to 0.0.4 | Merge this PR to publish `v0.0.4` with the Home dashboard and the session actor; then check the assets, the signature, and `versionCode` 400 |
@@ -307,6 +309,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 | 2026-11-20 | architecture, project-structure, progress-tracker | P11-11 file index and remaining SQLite work |
 | 2026-11-20 | architecture, project-structure, progress-tracker | P4-02 token validation and UI gap |
 | 2026-11-20 | architecture, project-structure, progress-tracker | P4-01 device flow scope and remaining UI wiring |
+| 2026-11-20 | architecture, project-structure, progress-tracker | P5-05 limits and budget question |
 | 2026-11-20 | architecture, library-docs, project-structure, progress-tracker | P5-01 Wasmtime version and cache scope |
 | 2026-11-20 | development, project-structure, progress-tracker | Release steps use `just bump`; D33 records that versions are bumped by hand; P1-11 and P1-21 marked Done |
 | 2026-11-19 | ui-rules, ui-registry, ui-tokens, project-structure, architecture, mobile, build-plan, progress-tracker | P1-21: the Home dashboard, the drawer, the theme toggle, snackbars and toasts, arrow back buttons, Needs attention, new component rows, `size.chart-height`; a newer app version shows on the bell and in Needs attention instead of a home banner (D32) |

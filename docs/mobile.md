@@ -91,8 +91,9 @@ Status: planned. The P0 manifest declares none of these; `INTERNET` arrives with
 | `FOREGROUND_SERVICE` plus the type-specific permission | Long runs | Install time |
 | `WAKE_LOCK` | Partial wake lock during turns | Install time |
 | `USE_BIOMETRIC` | Key reveal, Bypass, app lock | Install time |
-| `RECORD_AUDIO` | Voice input | First tap on the microphone |
 | `REQUEST_INSTALL_PACKAGES` (`full` only) | Install a downloaded update through `PackageInstaller` (P1-20); `play` never declares it | First tap on Install update, through the system settings screen |
+
+Voice input launches the device speech recognizer. That app handles microphone permission; Tether does not request `RECORD_AUDIO`.
 
 No location, contacts, or broad storage permissions.
 

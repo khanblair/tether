@@ -26,6 +26,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.buildAnnotatedString
+import kotlinx.coroutines.CancellationException
 import app.tether.R
 import app.tether.core.generated.MessagePartView
 import app.tether.core.generated.MessageView
@@ -47,15 +48,19 @@ fun TranscriptScreen(
     var failed by remember(sessionId) { mutableStateOf(false) }
     LaunchedEffect(sessionId) {
         if (sessionId != null) {
-            runCatching { load(sessionId) }
-                .onSuccess { messages = it.filterNot(MessageView::rewound).sortedBy(MessageView::seq) }
-                .onFailure { failed = true }
+            try {
+                messages = load(sessionId).filterNot(MessageView::rewound).sortedBy(MessageView::seq)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                failed = true
+            }
         }
     }
     TranscriptContent(messages, failed, onBack)
 }
 
-/** Lazy items use persisted message IDs so existing rows keep their identity while new text arrives. */
+/** Lazy items use persisted IDs so rows keep their identity as text arrives. */
 @Composable
 fun TranscriptContent(messages: List<MessageView>, failed: Boolean, onBack: () -> Unit) {
     val listState = rememberLazyListState()
@@ -70,7 +75,9 @@ fun TranscriptContent(messages: List<MessageView>, failed: Boolean, onBack: () -
     ) { padding ->
         if (messages.isEmpty()) {
             Text(
-                text = stringResource(if (failed) R.string.transcript_load_failed else R.string.transcript_empty),
+                text = stringResource(
+                    if (failed) R.string.transcript_load_failed else R.string.transcript_empty,
+                ),
                 color = TetherTheme.colors.text2,
                 modifier = Modifier.padding(padding).padding(TetherSpace.space4),
             )
@@ -82,7 +89,10 @@ fun TranscriptContent(messages: List<MessageView>, failed: Boolean, onBack: () -
                 modifier = Modifier.fillMaxSize().padding(padding),
             ) {
                 items(messages, key = MessageView::id) { message ->
-                    TranscriptMessage(message, Modifier.widthIn(max = TetherSize.transcriptMax).fillMaxWidth())
+                    TranscriptMessage(
+                        message,
+                        Modifier.widthIn(max = TetherSize.transcriptMax).fillMaxWidth(),
+                    )
                 }
             }
         }
@@ -101,13 +111,22 @@ private fun TranscriptMessage(message: MessageView, modifier: Modifier = Modifie
         verticalArrangement = Arrangement.spacedBy(TetherSpace.space2),
         modifier = modifier.padding(horizontal = TetherSpace.space4),
     ) {
-        Text(stringResource(label), style = MaterialTheme.typography.labelMedium, color = TetherTheme.colors.text2)
+        Text(
+            stringResource(label),
+            style = MaterialTheme.typography.labelMedium,
+            color = TetherTheme.colors.text2,
+        )
         message.parts.forEach { part ->
             when (part) {
                 is MessagePartView.Text -> MarkdownBlocks(part.text)
                 is MessagePartView.Thinking -> Text(part.text, color = TetherTheme.colors.text2)
-                is MessagePartView.CompactionSummary -> Text(part.text, color = TetherTheme.colors.text2)
-                else -> Text(stringResource(R.string.transcript_attachment), color = TetherTheme.colors.text2)
+                is MessagePartView.CompactionSummary ->
+                    Text(part.text, color = TetherTheme.colors.text2)
+                else ->
+                    Text(
+                        stringResource(R.string.transcript_attachment),
+                        color = TetherTheme.colors.text2,
+                    )
             }
         }
     }
@@ -121,7 +140,10 @@ private fun MarkdownBlocks(source: String) {
                 text = block.text,
                 style = TetherTheme.mono,
                 color = TetherTheme.colors.text,
-                modifier = Modifier.fillMaxWidth().background(TetherTheme.colors.surfaceSunken).padding(TetherSpace.space3),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(TetherTheme.colors.surfaceSunken)
+                    .padding(TetherSpace.space3),
             )
         } else {
             Text(
@@ -158,11 +180,7 @@ internal fun inlineMarkdown(source: String): AnnotatedString = buildAnnotatedStr
     var cursor = 0
     while (cursor < source.length) {
         val start = source.indexOf("**", cursor)
-        if (start < 0) {
-            append(source.substring(cursor))
-            break
-        }
-        val end = source.indexOf("**", start + 2)
+        val end = if (start >= 0) source.indexOf("**", start + 2) else -1
         if (end < 0) {
             append(source.substring(cursor))
             break

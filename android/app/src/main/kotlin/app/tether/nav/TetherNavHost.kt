@@ -104,9 +104,13 @@ fun TetherNavHost(module: AppModule) {
                         sessionId = entry.arguments?.getString("sessionId"),
                         load = { id ->
                             withContext(Dispatchers.IO) {
-                                SessionRuntime(module.databasePath, module.vault, object : EventSink {
-                                    override fun onEvent(event: app.tether.core.generated.CoreEventView) = Unit
-                                }).use { it.transcript(id) }
+                                val sink = object : EventSink {
+                                    override fun onEvent(
+                                        event: app.tether.core.generated.CoreEventView,
+                                    ) = Unit
+                                }
+                                SessionRuntime(module.databasePath, module.vault, sink)
+                                    .use { it.transcript(id) }
                             }
                         },
                         onBack = nav::back,

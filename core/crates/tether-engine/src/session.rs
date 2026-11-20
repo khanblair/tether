@@ -242,6 +242,9 @@ impl SessionActor {
         } else {
             return Err(SessionActorError::NoWorkspace);
         }
+        self.store
+            .set_session_status(&self.session.id, SessionStatus::Idle, now_ms())?;
+        self.emit_status(SessionStatus::Idle);
         self.sink.on_event(CoreEvent::SessionRewound {
             session_id: self.session.id.clone(),
         });

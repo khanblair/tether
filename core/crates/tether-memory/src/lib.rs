@@ -1,1 +1,5 @@
-//! Memory: capped agent and user notes, session search, Obsidian-compatible vault.
+//! Capped, file-backed agent and user memory.
+
+mod files;
+
+pub use files::{MemoryAction, MemoryError, MemoryResult, MemoryStore, MemoryTarget};

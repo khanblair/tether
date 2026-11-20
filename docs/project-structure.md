@@ -51,7 +51,8 @@ tether/
 │       ├── tether-workspace/   PathGuard and FileIndex: path checks, scan, glob, grep
 │       ├── tether-tools/       src/{lib,edit,edit/tests}.rs; guarded atomic text edits
 │       ├── tether-skills/      SKILL.md scalar frontmatter parser and validator
-│       └── tether-{vcs,sandbox,linux,ci,connectors,mcp,memory}/
+│       ├── tether-memory/     src/{lib,files,files/tests}.rs; capped MEMORY.md and USER.md writes
+│       └── tether-{vcs,sandbox,linux,ci,connectors,mcp}/
 │                              Empty libraries
 ├── android/
 │   ├── settings.gradle.kts  build.gradle.kts  gradle.properties  gradlew  gradlew.bat

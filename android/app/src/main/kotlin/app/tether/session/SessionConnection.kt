@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.SharedFlow
 
 /** Keeps the actor alive for the screen, so queued sends and interrupts reach the same turn. */
 class SessionConnection(
-    databasePath: String,
+    private val databasePath: String,
     vault: SecretVault,
     private val sessionId: String,
 ) : AutoCloseable {
@@ -28,6 +28,8 @@ class SessionConnection(
     val modelId: String = runtime.loadSession(sessionId).modelId
 
     fun transcript(): List<MessageView> = runtime.transcript(sessionId)
+
+    fun status(): SessionStatus = readSessionStatus(databasePath, sessionId)
 
     fun send(text: String) {
         runner.sendMessage(text)

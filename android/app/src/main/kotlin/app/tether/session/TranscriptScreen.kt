@@ -52,6 +52,7 @@ fun TranscriptScreen(
     var messages by remember(connection) { mutableStateOf<List<MessageView>>(emptyList()) }
     var failed by remember(connection) { mutableStateOf(false) }
     var running by remember(connection) { mutableStateOf(false) }
+    var status by remember(connection) { mutableStateOf<SessionStatus?>(null) }
     LaunchedEffect(connection) {
         if (connection != null) {
             try {
@@ -59,6 +60,7 @@ fun TranscriptScreen(
                     withContext(Dispatchers.IO) { connection.transcript() }
                         .filterNot(MessageView::rewound)
                         .sortedBy(MessageView::seq)
+                status = withContext(Dispatchers.IO) { connection.status() }
                 connection.changes.collect { event ->
                     when (event) {
                         is CoreEventView.TurnFinished,
@@ -70,6 +72,7 @@ fun TranscriptScreen(
                         withContext(Dispatchers.IO) { connection.transcript() }
                             .filterNot(MessageView::rewound)
                             .sortedBy(MessageView::seq)
+                    status = withContext(Dispatchers.IO) { connection.status() }
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
@@ -81,6 +84,7 @@ fun TranscriptScreen(
     TranscriptContent(
         messages = messages,
         failed = failed,
+        status = status,
         onBack = onBack,
         composer =
             connection?.let { active ->
@@ -127,6 +131,7 @@ private fun ComposerControls(
 fun TranscriptContent(
     messages: List<MessageView>,
     failed: Boolean,
+    status: SessionStatus? = null,
     onBack: () -> Unit,
     composer: (@Composable () -> Unit)? = null,
 ) {
@@ -166,6 +171,7 @@ fun TranscriptContent(
                     }
                 }
             }
+            StatusLine(status)
             composer?.invoke()
         }
     }

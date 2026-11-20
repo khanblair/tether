@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
@@ -21,6 +22,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -62,12 +64,7 @@ fun TranscriptScreen(
                         .sortedBy(MessageView::seq)
                 status = withContext(Dispatchers.IO) { connection.status() }
                 connection.changes.collect { event ->
-                    when (event) {
-                        is CoreEventView.TurnFinished,
-                        is CoreEventView.TurnFailed,
-                        -> running = false
-                        else -> Unit
-                    }
+                    if (event.endsTurn()) running = false
                     messages =
                         withContext(Dispatchers.IO) { connection.transcript() }
                             .filterNot(MessageView::rewound)
@@ -136,6 +133,7 @@ fun TranscriptContent(
     composer: (@Composable () -> Unit)? = null,
 ) {
     val listState = rememberLazyListState()
+    FollowTail(listState, messages)
     Scaffold(
         containerColor = TetherTheme.colors.bg,
         topBar = {
@@ -176,6 +174,54 @@ fun TranscriptContent(
         }
     }
 }
+
+/**
+ * Keeps the newest message in view while the reader is at the bottom. The flag changes only when
+ * the scroll position changes, so a streamed reply that grows below the viewport does not count as
+ * the reader leaving the bottom.
+ */
+@Composable
+private fun FollowTail(
+    listState: LazyListState,
+    messages: List<MessageView>,
+) {
+    var followTail by remember { mutableStateOf(true) }
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
+            .collect { followTail = listState.isAtBottom() }
+    }
+    LaunchedEffect(messages) {
+        val last = messages.lastIndex
+        if (last >= 0 && shouldFollow(followTail, hasNewContent = true)) {
+            // A large offset clamps to the list end, so a growing reply stays in view.
+            listState.scrollToItem(last, Int.MAX_VALUE)
+        }
+    }
+}
+
+/** True when the last item is fully inside the viewport. */
+internal fun LazyListState.isAtBottom(): Boolean {
+    val info = layoutInfo
+    val last = info.visibleItemsInfo.lastOrNull() ?: return true
+    return last.index == info.totalItemsCount - 1 &&
+        last.offset + last.size <= info.viewportEndOffset
+}
+
+/** Scroll to the newest content only when the reader was already at the bottom. */
+internal fun shouldFollow(
+    wasAtBottom: Boolean,
+    hasNewContent: Boolean,
+): Boolean = wasAtBottom && hasNewContent
+
+/** Events that end a turn, including a stopped one. Each one clears the running state. */
+internal fun CoreEventView.endsTurn(): Boolean =
+    when (this) {
+        is CoreEventView.TurnFinished,
+        is CoreEventView.TurnFailed,
+        is CoreEventView.TurnInterrupted,
+        -> true
+        else -> false
+    }
 
 @Composable
 private fun TranscriptMessage(

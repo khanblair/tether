@@ -23,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -56,7 +57,12 @@ fun Composer(
             maxLines = Int.MAX_VALUE,
         )
         if (image != null) {
-            Text(stringResource(R.string.composer_image_staged))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.composer_image_staged))
+                TextButton(onClick = { image = null }) {
+                    Text(stringResource(R.string.composer_image_remove))
+                }
+            }
         }
         if (speechUnavailable) Text(stringResource(R.string.composer_voice_unavailable))
         ComposerActions(

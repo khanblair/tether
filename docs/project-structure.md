@@ -48,7 +48,8 @@ tether/
 │       │   ├── uniffi.toml
 │       │   └── src/{lib.rs, callbacks.rs, provider_settings.rs, sessions.rs, updater.rs, secrets.rs, views/{mod,event,types,error}.rs, bin/uniffi-bindgen.rs}
 │       ├── tether-quality/    data/slop_words.txt and slop_patterns.toml (shared with slop-lint)
-│       └── tether-{tools,workspace,vcs,sandbox,linux,ci,connectors,mcp,skills,memory}/
+│       ├── tether-memory/     src/{lib,files,files/tests}.rs; capped MEMORY.md and USER.md writes
+│       └── tether-{tools,workspace,vcs,sandbox,linux,ci,connectors,mcp,skills}/
 │                              Empty libraries
 ├── android/
 │   ├── settings.gradle.kts  build.gradle.kts  gradle.properties  gradlew  gradlew.bat

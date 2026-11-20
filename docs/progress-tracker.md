@@ -52,7 +52,7 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 
 | ID | Task | Owner | Status | PR | Notes |
 |---|---|---|---|---|---|
-| P2-07 | Edit batches and checkpoints | Codex | In progress | pending | Schema 0003 and raw SHA-256 snapshot store; automatic tool capture, BLAKE3, compression, cleanup, and runtime checks remain |
+| P2-07 | Edit batches and checkpoints | Codex | In review | #186 | Draft stacked on #185; schema 0003 and raw SHA-256 snapshot store; automatic tool capture, BLAKE3, compression, cleanup, and runtime checks remain |
 | P2-06 | Tool loop in the turn | Codex | In review | #185 | Draft stacked on #184; standalone in-memory loop and five-call fixture; actor persistence, events, full schema validation, and runtime checks remain |
 | P2-04 | Read tools | Codex | In review | #184 | Draft with guarded file read, directory list, glob, and literal grep; regex and engine wiring remain; checks not run here |
 | P0-01 | Repo layout | Blair with Claude | Done | n/a | Every top-level folder exists; root README links the docs |
@@ -239,7 +239,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Files | Change | PR |
 |---|---|---|---|
-| 2026-11-20 | `core/crates/tether-store/{Cargo.toml,migrations/0003_checkpoints.sql,src/{lib,error,migrations,checkpoints,checkpoints/tests}.rs}`, `core/crates/tether-engine/src/{lib,checkpoint_capture}.rs` | P2-07 checkpoint schema, blob store, and guarded capture | pending |
+| 2026-11-20 | `core/crates/tether-store/{Cargo.toml,migrations/0003_checkpoints.sql,src/{lib,error,migrations,checkpoints,checkpoints/tests}.rs}`, `core/crates/tether-engine/src/{lib,checkpoint_capture}.rs` | P2-07 checkpoint schema, blob store, and guarded capture | #186 |
 | 2026-11-20 | `core/crates/tether-engine/{Cargo.toml,src/{lib,tool_loop,tool_loop/*}.rs}` | P2-06 tool loop and fixture | #185 |
 | 2026-11-20 | `core/crates/tether-tools/src/{lib,fs,fs/tests}.rs` | P2-04 read tools and fixtures | #184 |
 | 2026-11-20 | `android/app/src/main/kotlin/app/tether/session/`, `strings.xml`, session tests | P1-14 status snapshot and line | #160 |

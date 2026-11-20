@@ -345,7 +345,7 @@ Backups: `secrets/`, `linux/`, `runtimes/`, `blobs/`, `logs/`, and `cache/` are 
 |---|---|
 | Key theft from storage | Keys encrypted with an AES-GCM key held in Android Keystore (StrongBox when available); never written in plaintext; excluded from backup |
 | A wrapped secret file copied over another reference (for example the GitHub token over a provider key, to send it to a third party) | The reference is passed to the platform as authenticated data when wrapping and unwrapping, so a file moved to another reference fails to unwrap |
-| Keys leaking into logs, transcripts, exports | Redaction layer in the logger and exporter matches known key formats and every stored secret; S7 test |
+| Keys leaking into logs, transcripts, exports | `tether-secrets::Redactor` masks known key formats and registered values. Logger and exporter integration remains in P1-18; S7 is not met yet |
 | Agent-run code reading keys | Secrets never enter executor environments; sandbox sees only `/workspace`; Linux mode binds only the project folder and a temp folder |
 | Path escape | Path guard canonicalizes every path, rejects `..` outside the root, rejects symlinks pointing outside, rejects writes inside `.git/` |
 | Prompt injection via repo files or web content | Network tools, pushes, and non-sandbox runs need approval below Bypass; tool results are marked as data in the prompt; no tool can change permission settings |

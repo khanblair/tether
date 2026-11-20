@@ -14,6 +14,22 @@
     <string name="route_new_project_title">New empty project</string>
     <string name="route_import_title">Import a zip</string>
     <string name="route_project_home_title">Project home</string>
+    <string name="project_home_missing">Project not found.</string>
+    <string name="project_home_branch">Branch</string>
+    <string name="project_home_no_branch">No branch</string>
+    <string name="project_home_changes">Changes</string>
+    <plurals name="project_home_change_count">
+        <item quantity="one">%d change</item>
+        <item quantity="other">%d changes</item>
+    </plurals>
+    <string name="project_home_last_session">Last session</string>
+    <string name="project_home_no_session">No sessions yet</string>
+    <string name="project_home_executor">Executor</string>
+    <string name="project_home_sandbox">Sandbox</string>
+    <string name="project_home_ci">CI</string>
+    <string name="project_home_linux">Linux mode</string>
+    <string name="project_home_no_executor">Not configured</string>
+    <string name="project_home_new_session">New session</string>
     <string name="route_session_title">Session</string>
     <string name="route_diff_title">Diff</string>
     <string name="route_files_title">Files</string>

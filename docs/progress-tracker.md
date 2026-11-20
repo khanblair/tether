@@ -169,6 +169,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 | 2026-11-20 | Codex | Added P2-03 basic file index, glob, and grep with root ignore test | Add full ignore semantics and benchmark |
 | 2026-11-20 | Codex | Added P2-05 guarded edit operations and exact-match rollback fixtures | Register tools in engine after P2-06 |
 | 2026-11-20 | Codex | Added P2-02 Rust PathGuard and escape tests | Wire file tools to guard |
+| 2026-11-20 | Codex | Added P2-13 project detail route and branch, changes, session, executor fields | Wire persisted project data and composer |
 | 2026-11-20 | Codex | Added P2-01 project folder and ZIP round-trip layer with tests | Wire Android project screens and database rows |
 | 2026-11-20 | Blair with Claude | Merged #153 (P1-11), #154 (file length), and #156 (P1-21). None changed the version, so `release.yml` ran and skipped the release job (`v0.0.3` already tagged). Blair chose to keep bumping by hand (D33). Added `tools/bump-version.sh` with a self test (3 of 3 arithmetic mutations caught), `just bump`, and a CI step; set the version to 0.0.4 | Merge this PR to publish `v0.0.4` with the Home dashboard and the session actor; then check the assets, the signature, and `versionCode` 400 |
 | 2026-11-19 | Blair with Haiku and Claude | Started P1-21 (issue #155) after Blair saw the P0 shell. First pick: a Projects home with a menu and a bell. After the first build Blair asked for a dashboard home, a fuller drawer, a theme toggle, themed toasts, arrow back buttons, and no extra "Tether" bar (the system action bar, now off). Decided with Blair (D32): Home dashboard with five cards, drawer links for Home, Projects, Needs attention, Usage and cost, and Runs. Haiku agents built the prototype, the design system components, and the app screens; Claude reviewed them, fixed three review items (an uncaught core failure on Home, a stale theme note, a duplicate refresh), and added tests for the mutants that survived. `just check` and `assembleFullDebug` pass | Blair checks Home, the drawer, the theme toggle, and the toast in the emulator; Codex review; then merge on Blair's go |
@@ -217,6 +218,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 | 2026-11-20 | `core/crates/tether-workspace/src/{file_index,file_index_tests,lib}.rs` | P2-03 basic file search | #167 |
 | 2026-11-20 | `core/crates/tether-tools/` | P2-05 guarded edit tools and tests | #176 |
 | 2026-11-20 | `core/crates/tether-workspace/` | P2-02 PathGuard and tests | #166 |
+| 2026-11-20 | `android/app/src/{main,debug,test}/` | P2-13 project detail route, screen, data fields and fixture | #177 |
 | 2026-11-20 | `android/app/src/{main,test}/kotlin/app/tether/workspace/` | P2-01 project archive layer and round-trip tests | #165 |
 | 2026-11-20 | `core/Cargo.toml`, `core/Cargo.lock`, `tools/bump-version.sh`, `justfile`, `.github/workflows/ci.yml` | Version 0.0.4; a bump script with a self test and `just bump` | - |
 | 2026-11-19 | `android/app/src/{main,debug,release}/`, `android/designsystem/`, `tokens/tokens.json`, `tools/prototype/` | P1-21: Home dashboard, drawer, Needs attention, usage and sample sources (`debug`) and empty sources (`release`), a saved theme choice, a snackbar host, 22 design system component files and 21 icons, `size.chart-height`, arrow back buttons, the action bar off, the Rust core card moved into About, prototype Home and drawer (106 screens) | #156 |
@@ -259,6 +261,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 | 2026-11-20 | progress-tracker, project-structure, architecture | P2-03 index location and limits |
 | 2026-11-20 | architecture, project-structure, progress-tracker | P2-05 edit contract and pending engine registration |
 | 2026-11-20 | progress-tracker, project-structure, architecture | P2-02 path guard location and status |
+| 2026-11-20 | architecture, project-structure, progress-tracker | P2-13 screen and pending data wiring |
 | 2026-11-20 | progress-tracker, project-structure | P2-01 started and archive file listed |
 | 2026-11-20 | development, project-structure, progress-tracker | Release steps use `just bump`; D33 records that versions are bumped by hand; P1-11 and P1-21 marked Done |
 | 2026-11-19 | ui-rules, ui-registry, ui-tokens, project-structure, architecture, mobile, build-plan, progress-tracker | P1-21: the Home dashboard, the drawer, the theme toggle, snackbars and toasts, arrow back buttons, Needs attention, new component rows, `size.chart-height`; a newer app version shows on the bell and in Needs attention instead of a home banner (D32) |

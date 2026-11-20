@@ -106,7 +106,7 @@ The OpenAI-compatible adapter (P1-08, `tether-providers/src/openai_compat/`) spe
 | `core-bridge` | Generated UniFFI Kotlin, the `CoreClient` wrapper that turns callbacks into `Flow`s, platform callback implementations |
 | `designsystem` | Theme, tokens (generated from `tokens/tokens.json`), bundled fonts, shared components |
 | `feature-onboarding` | First-run screens |
-| `feature-projects` | Project list, create, clone, import, project home |
+| `feature-projects` | Project list, create, clone, import, project home (P2-13 adds a detail screen over the current home sources; persisted project data remains) |
 | `feature-session` | Transcript, composer, approvals, status line, pickers |
 | `feature-diff` | Diff view, hunk actions, checkpoints list |
 | `feature-files` | File tree, file viewer |

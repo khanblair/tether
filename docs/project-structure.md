@@ -61,7 +61,7 @@ tether/
 │   ├── config/{detekt.yml, lint.xml}
 │   ├── smell-fixtures/        Module with a function over the line limit; detekt must fail on it (built only with -Ptether.smellFixtures)
 │   ├── app/                   build.gradle.kts (flavors play and full; app version read from core/Cargo.toml), proguard-rules.pro
-│   │   └── src/{main, debug, release, full, play, androidTest}   TetherApp, MainActivity, di/AppModule, nav/, home/ (Projects home, drawer, Needs attention; sample sources in debug, empty sources in release), share/ (text intake and project picker), shell/ (settings and placeholder screens)
+│   │   └── src/{main, debug, release, full, play, androidTest}   TetherApp, MainActivity, di/AppModule, nav/, home/ (Projects home, project detail, drawer, Needs attention; sample sources in debug, empty sources in release), share/ (text intake and project picker), shell/ (settings and placeholder screens)
 │   ├── core-bridge/           CoreClient, EventBus, KeystoreSecretsPlatform, consumer-rules.pro, (gen) generated/tether_core.kt
 │   │   └── src/main/kotlin/app/tether/workspace/ProjectArchive.kt  ZIP project folders
 │   └── designsystem/          TetherTheme, TetherIcons, PrimaryButton, TetherTopBar, ListRow, ProviderRow, SecretField, InlineBanner, TestConnectionButton, TetherTextButton, TetherIconButton, NotificationBell, StatusBadge, StatusMark, ProjectRow, SessionRow, SectionTitle, ListGroup, TetherSearchField, TetherSheet, FONTS-LICENSE.txt, (gen) tokens/Tokens.kt and token colors, Plex fonts

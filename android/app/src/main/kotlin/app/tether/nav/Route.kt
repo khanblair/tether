@@ -33,7 +33,11 @@ enum class Route(
 /** Routes whose path has arguments. They are not entries of [Route]. */
 object Routes {
     const val PROVIDER_DETAIL = "providers/{provider}"
+    const val PROJECT_HOME = "project-home/{projectId}"
 }
+
+/** Detail path for one saved project. */
+fun projectHomePath(projectId: String) = "project-home/${android.net.Uri.encode(projectId)}"
 
 /** The detail path for [provider], such as "providers/ANTHROPIC". */
 fun providerDetailPath(provider: ProviderView) = "providers/${provider.name}"

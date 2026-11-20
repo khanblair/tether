@@ -50,7 +50,8 @@ tether/
 │       ├── tether-quality/    data/slop_words.txt and slop_patterns.toml (shared with slop-lint)
 │       ├── tether-workspace/   PathGuard and FileIndex: path checks, scan, glob, grep
 │       ├── tether-tools/       src/{lib,edit,edit/tests}.rs; guarded atomic text edits
-│       └── tether-{vcs,sandbox,linux,ci,connectors,mcp,skills,memory}/
+│       ├── tether-skills/      SKILL.md scalar frontmatter parser and validator
+│       └── tether-{vcs,sandbox,linux,ci,connectors,mcp,memory}/
 │                              Empty libraries
 ├── android/
 │   ├── settings.gradle.kts  build.gradle.kts  gradle.properties  gradlew  gradlew.bat

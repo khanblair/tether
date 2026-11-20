@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="share_project_title">Choose a project</string>
+    <string name="share_no_projects">No projects yet. Create a project before starting a shared session.</string>
+    <string name="share_selected_project">Selected: %1$s</string>
     <!-- Routes -->
     <string name="route_onboarding_title">Welcome</string>
     <string name="route_home_title">Home</string>

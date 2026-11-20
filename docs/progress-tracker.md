@@ -80,6 +80,7 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 | P1-17 | Voice input | Codex | In progress | #163 | Speech recognizer fills editable draft; device check pending |
 | P1-13 | Composer | Codex | In review | #159 | Stacked on #158; ground-level send and stop code, device checks and model selection remain |
 | P1-12 | Transcript UI | Codex | In review | #158 | CI passed; 500-message frame measurement on the reference device remains unverified |
+| P9-10 | Share sheet intake | Codex | In review | #169 | Text intake and project selection only; session creation and file shares remain |
 | P1-11 | Session actor and plain chat turn (no tools) | Blair with Codex, Haiku, and Claude | Done | #153 | Merged; issue #15 closed. Session rows, transcript persistence, plain chat actor, and UniFFI entry points. Codex's first review found issues that were fixed with tests; its second review could not run (Codex usage limit), so the fixes were reviewed by Claude only |
 | P1-20 | In-app updates for the `full` build | Blair with Codex, Haiku, and Claude | Done | #151 | Merged; issue #135 closed. Rust: check, download, and SHA-256 verify with a GitHub-only redirect policy. Android: `PackageInstaller` installer for `full` and a Google Play link for `play`, an update state holder, the About screen with an updates card, a Settings row, and a home banner. `v0.0.3` published as the latest release (signed with the pinned key, `versionCode` 300); it has to be installed by hand once, and later releases arrive in the app |
 | P1-08 | OpenAI-compatible adapter; DeepSeek and OpenRouter configs | Blair with Codex and Claude | Done | #147 | Merged; issue #12 closed. Written by a Codex CLI session (GPT-5.6 Luna), reviewed and mutation-tested by Claude; 168 provider tests. Four Codex findings fixed (DeepSeek reasoning replay, OpenRouter cache writes, refusal deltas, `null` token details failing a whole chunk) |
@@ -154,6 +155,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 | 2026-11-20 | Codex | Added P1-14 read-only status snapshot and status line on #159; device checks remain | Review P1-14 |
 | 2026-11-20 | Codex | Added P1-16 local image intake and a blocked send state | Wire image blobs through actor and providers |
 | 2026-11-20 | Codex | Added P1-17 speech recognizer intake to the composer | Check on a device |
+| 2026-11-20 | Codex | Added P9-10 text share intake, a project picker, and input cap test in a draft | Connect selected project and text to real session creation |
 | 2026-11-20 | Codex | Started P1-13 composer on #158 with native actor wiring; unverified draft | Run CI and finish #17 |
 | 2026-11-20 | Codex | Built P1-12 transcript UI and a session route. CI passed, including Android builds; device scroll measurement remains unverified | Review #158 and measure 500-message scroll |
 | 2026-11-20 | Blair with Claude | Merged #153 (P1-11), #154 (file length), and #156 (P1-21). None changed the version, so `release.yml` ran and skipped the release job (`v0.0.3` already tagged). Blair chose to keep bumping by hand (D33). Added `tools/bump-version.sh` with a self test (3 of 3 arithmetic mutations caught), `just bump`, and a CI step; set the version to 0.0.4 | Merge this PR to publish `v0.0.4` with the Home dashboard and the session actor; then check the assets, the signature, and `versionCode` 400 |
@@ -195,6 +197,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 | 2026-11-20 | `android/app/src/main/kotlin/app/tether/session/`, `strings.xml`, session tests | P1-14 status snapshot and line | #160 |
 | 2026-11-20 | `android/app/src/main/kotlin/app/tether/session/`, `strings.xml`, image draft tests | P1-16 picker and intake gate | #162 |
 | 2026-11-20 | `Composer.kt`, `VoiceDraftTest.kt`, `strings.xml` | P1-17 speech recognizer intake | #163 |
+| 2026-11-20 | `android/app/src/main/{AndroidManifest.xml,kotlin/app/tether/share/}`, activity, module, navigation, strings and share test | P9-10 text share intake and picker | #169 |
 | 2026-11-20 | `android/app/src/main/kotlin/app/tether/{session,nav}/`, `strings.xml` | P1-13 composer and actor connection | #159 |
 | 2026-11-20 | `android/app/src/main/kotlin/app/tether/{session,nav,di}/`, `android/app/src/main/res/values/strings.xml`, transcript tests | P1-12 lazy transcript, persisted session routing, code blocks, strings, tests | #158 |
 | 2026-11-20 | `core/Cargo.toml`, `core/Cargo.lock`, `tools/bump-version.sh`, `justfile`, `.github/workflows/ci.yml` | Version 0.0.4; a bump script with a self test and `just bump` | - |
@@ -230,6 +233,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 | 2026-11-20 | progress-tracker | P1-14 status and verification notes |
 | 2026-11-20 | progress-tracker | P1-16 draft and remaining image path |
 | 2026-11-20 | progress-tracker, mobile | P1-17 draft and delegated microphone permission |
+| 2026-11-20 | mobile, project-structure, progress-tracker | P9-10 text-only intake and remaining session integration |
 | 2026-11-20 | progress-tracker | P1-13 draft and remaining verification |
 | 2026-11-20 | progress-tracker, ui-registry | P1-12 draft status, transcript registry, and unverified checks |
 | 2026-11-20 | development, project-structure, progress-tracker | Release steps use `just bump`; D33 records that versions are bumped by hand; P1-11 and P1-21 marked Done |

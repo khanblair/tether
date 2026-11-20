@@ -37,6 +37,7 @@ import app.tether.home.AttentionViewModel
 import app.tether.home.HomeDrawer
 import app.tether.session.SessionConnection
 import app.tether.session.TranscriptScreen
+import app.tether.share.ShareProjectScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -64,6 +65,10 @@ fun TetherNavHost(module: AppModule) {
             ?.destination
             ?.route
     val snackbars = remember { SnackbarHostState() }
+    val shared by module.shareInbox.pending.collectAsStateWithLifecycle()
+    LaunchedEffect(shared?.value) {
+        if (shared != null && currentRoute != "share-project") nav.open("share-project")
+    }
     BackHandler(enabled = drawerState.isOpen) { scope.launch { drawerState.close() } }
     LaunchedEffect(module) {
         module.messages.flow.collect { message ->
@@ -99,6 +104,17 @@ fun TetherNavHost(module: AppModule) {
                 homeRoutes(module = module, nav = nav, attentionItems = attention)
                 settingsRoutes(module = module, nav = nav)
                 placeholderRoutes(nav = nav)
+                composable("share-project") {
+                    ShareProjectScreen(
+                        shared = shared,
+                        projects = module.home.projects.projects(),
+                        onChoose = module.shareInbox::chooseProject,
+                        onBack = {
+                            module.shareInbox.clear()
+                            nav.back()
+                        },
+                    )
+                }
                 composable("session/{sessionId}") { entry ->
                     val id = entry.arguments?.getString("sessionId")
                     var connection by remember(id) { mutableStateOf<SessionConnection?>(null) }

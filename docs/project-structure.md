@@ -48,7 +48,7 @@ tether/
 │       │   ├── uniffi.toml
 │       │   └── src/{lib.rs, callbacks.rs, provider_settings.rs, sessions.rs, updater.rs, secrets.rs, views/{mod,event,types,error}.rs, bin/uniffi-bindgen.rs}
 │       ├── tether-quality/    data/slop_words.txt and slop_patterns.toml (shared with slop-lint)
-│       ├── tether-sandbox/     src/{lib,module_cache,wasi_context}.rs; process engine, module cache, WASI input contract
+│       ├── tether-sandbox/     src/{lib,module_cache,wasi_context,limits}.rs; engine, WASI contract, run limits
 │       └── tether-{tools,workspace,vcs,linux,ci,connectors,mcp,skills,memory}/
 │                              Empty libraries
 ├── android/

@@ -70,6 +70,7 @@ fn process_engine() -> Result<Arc<Engine>, SandboxError> {
     ENGINE.get_or_init(|| {
         let mut config = Config::new();
         config.wasm_multi_memory(false);
+        config.epoch_interruption(true);
         config.cranelift_opt_level(OptLevel::SpeedAndSize);
         Engine::new(&config).map(Arc::new).map_err(|error| error.to_string())
     }).clone().map_err(SandboxError::Engine)

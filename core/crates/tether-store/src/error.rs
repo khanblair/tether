@@ -84,6 +84,23 @@ pub enum StoreError {
     /// The input list is too long to assign SQLite positions.
     #[error("model list is too long to store")]
     PositionOverflow,
+    /// A session or message id did not name an existing row.
+    #[error("session or message not found")]
+    MissingSessionRow,
+    /// A session row has an enum value this version does not know.
+    #[error("session row has invalid {field} value: {value}")]
+    InvalidSessionEnum {
+        /// The column.
+        field: &'static str,
+        /// The saved value.
+        value: String,
+    },
+    /// A message part could not be decoded.
+    #[error("message part JSON is invalid: {0}")]
+    MessagePartJson(serde_json::Error),
+    /// A stored sequence or usage counter does not fit the public type.
+    #[error("session counter is out of range")]
+    SessionCounterOverflow,
     /// A transient screen state was offered for storage. Only a finished test result is saved.
     #[error("provider status {status} is screen state and is not stored")]
     TransientStatus {

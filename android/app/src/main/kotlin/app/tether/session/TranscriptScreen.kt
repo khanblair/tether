@@ -55,6 +55,7 @@ fun TranscriptScreen(
     var failed by remember(connection) { mutableStateOf(false) }
     var running by remember(connection) { mutableStateOf(false) }
     var status by remember(connection) { mutableStateOf<SessionStatus?>(null) }
+    var proposedTool by remember(connection) { mutableStateOf<Pair<String, String>?>(null) }
     LaunchedEffect(connection) {
         if (connection != null) {
             try {
@@ -65,6 +66,7 @@ fun TranscriptScreen(
                 status = withContext(Dispatchers.IO) { connection.status() }
                 connection.changes.collect { event ->
                     if (event.endsTurn()) running = false
+                    proposedTool = event.proposedToolOr(proposedTool)
                     messages =
                         withContext(Dispatchers.IO) { connection.transcript() }
                             .filterNot(MessageView::rewound)
@@ -82,6 +84,7 @@ fun TranscriptScreen(
         messages = messages,
         failed = failed,
         status = status,
+        proposedTool = proposedTool,
         onBack = onBack,
         composer =
             connection?.let { active ->
@@ -89,7 +92,10 @@ fun TranscriptScreen(
                     ComposerControls(
                         connection = active,
                         running = running,
-                        onRunningChange = { running = it },
+                        onRunningChange = {
+                            running = it
+                            proposedTool = null
+                        },
                         onFailure = { failed = true },
                     )
                 }
@@ -129,6 +135,7 @@ fun TranscriptContent(
     messages: List<MessageView>,
     failed: Boolean,
     status: SessionStatus? = null,
+    proposedTool: Pair<String, String>? = null,
     onBack: () -> Unit,
     composer: (@Composable () -> Unit)? = null,
 ) {
@@ -168,6 +175,18 @@ fun TranscriptContent(
                         }
                     }
                 }
+            }
+            proposedTool?.let { (tool, target) ->
+                Text(
+                    text = "${stringResource(R.string.transcript_tool)} · $tool: $target",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = TetherTheme.colors.text2,
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .background(TetherTheme.colors.surfaceSunken)
+                            .padding(TetherSpace.space3),
+                )
             }
             StatusLine(status)
             composer?.invoke()
@@ -222,6 +241,9 @@ internal fun CoreEventView.endsTurn(): Boolean =
         -> true
         else -> false
     }
+
+private fun CoreEventView.proposedToolOr(current: Pair<String, String>?): Pair<String, String>? =
+    if (this is CoreEventView.ToolProposed) tool to target else current
 
 @Composable
 private fun TranscriptMessage(

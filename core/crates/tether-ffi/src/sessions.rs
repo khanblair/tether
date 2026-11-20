@@ -246,14 +246,10 @@ fn session_tool_runtime(
         .ok_or(SessionRuntimeError::Unavailable)?
         .join("blobs");
     let blobs = BlobStore::open(blob_root).map_err(|_| SessionRuntimeError::Unavailable)?;
-    let may_edit = matches!(
-        session.mode,
-        PermissionMode::AcceptEdits | PermissionMode::Auto | PermissionMode::Bypass
-    );
     Ok(ToolRuntime {
         guard,
         blobs,
-        approve: Arc::new(move |_, _| may_edit),
+        approve: Arc::new(|_, _| false),
     })
 }
 
@@ -434,6 +430,17 @@ mod tests {
             Err(SessionRuntimeError::Unavailable)
         ));
         std::fs::create_dir(root.join("test")).unwrap();
+        rusqlite::Connection::open(&db)
+            .unwrap()
+            .execute(
+                "UPDATE sessions SET mode = 'accept_edits' WHERE id = ?1",
+                [session_id.as_str()],
+            )
+            .unwrap();
+        let store = Store::open(&db).unwrap();
+        let saved = store.load_session(&session_id).unwrap().unwrap();
+        let tools = session_tool_runtime(&store, &saved, &root).unwrap();
+        assert!(!(tools.approve)("write_file", "test/note.txt"));
         assert!(
             runtime
                 .open_session_with_workspace(session_id.as_str(), root.to_str().unwrap())

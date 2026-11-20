@@ -95,6 +95,20 @@ fn grep_matches_regex_and_rejects_invalid_patterns() {
     );
 }
 
+#[test]
+fn grep_bounds_many_long_matching_lines() {
+    let root = tempfile::tempdir().unwrap();
+    let line = format!("{}needle{}\n", "a".repeat(2048), "b".repeat(2048));
+    fs::write(root.path().join("long.txt"), line.repeat(100)).unwrap();
+    let tools = ReadTools::new(PathGuard::new(root.path()).unwrap());
+    let hits = tools.grep("needle", 1000).unwrap();
+    assert_ne!(hits.len(), 0);
+    assert!(hits.len() < 100);
+    assert!(hits.iter().all(|hit| hit.text.len() <= 1030));
+    assert!(hits.iter().all(|hit| hit.text.contains("needle")));
+    assert!(hits.iter().map(|hit| hit.text.len()).sum::<usize>() <= 16 * 1024);
+}
+
 #[cfg(unix)]
 #[test]
 fn read_tools_do_not_follow_symlinks() {

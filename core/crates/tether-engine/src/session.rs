@@ -181,7 +181,6 @@ impl SessionActor {
 
     #[expect(
         clippy::too_many_lines,
-        clippy::excessive_nesting,
         reason = "one serialized turn owns persistence, tool execution, usage, and status"
     )]
     async fn turn(&mut self, text: String) -> Result<(), CoreError> {
@@ -212,30 +211,12 @@ impl SessionActor {
                 blobs: &tools.blobs,
                 cancel: cancel.clone(),
                 approve: tools.approve.as_ref(),
+                sink: Some(self.sink.as_ref()),
             };
             let completed = loop_runner.run(provider, request, &mut context).await;
             drop(context);
             match completed {
-                Ok(completed) => {
-                    if !completed.final_text.is_empty() {
-                        let message_id = completed
-                            .messages
-                            .last()
-                            .expect("final reply exists")
-                            .id
-                            .clone();
-                        self.store
-                            .set_session_status(&id, SessionStatus::Streaming, now_ms())
-                            .map_err(store_error)?;
-                        self.emit_status(SessionStatus::Streaming);
-                        self.sink.on_event(CoreEvent::TextDelta {
-                            session_id: id.clone(),
-                            message_id,
-                            text: completed.final_text,
-                        });
-                    }
-                    (completed.usage, Ok(()))
-                }
+                Ok(_) => (UsageSnapshot::default(), Ok(())),
                 Err(error) => (UsageSnapshot::default(), Err(error)),
             }
         } else {

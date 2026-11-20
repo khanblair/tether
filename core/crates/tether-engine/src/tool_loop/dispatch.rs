@@ -104,6 +104,25 @@ fn schema(fields: &Value, required: &[&str]) -> Value {
     json!({"type": "object", "properties": properties, "required": required, "additionalProperties": false})
 }
 
+pub(super) fn target(name: &str, args: &str) -> String {
+    let Ok(value) = serde_json::from_str::<Value>(args) else {
+        return String::new();
+    };
+    if name == "move_file" {
+        return format!(
+            "{} -> {}",
+            value.get("from").and_then(Value::as_str).unwrap_or(""),
+            value.get("to").and_then(Value::as_str).unwrap_or("")
+        );
+    }
+    for key in ["path", "pattern"] {
+        if let Some(target) = value.get(key).and_then(Value::as_str) {
+            return target.to_owned();
+        }
+    }
+    String::new()
+}
+
 #[expect(
     clippy::too_many_lines,
     clippy::excessive_nesting,

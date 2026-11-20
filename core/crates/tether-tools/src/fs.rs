@@ -9,6 +9,8 @@ use tether_workspace::{FileIndex, IndexedFile, PathGuard, SearchHit};
 
 const MAX_READ_BYTES: u64 = 1024 * 1024;
 const MAX_RESULTS: usize = 1_000;
+const MAX_GREP_RESULT_BYTES: usize = 16 * 1024;
+const MAX_GREP_LINE_BYTES: usize = 1024;
 
 /// A file read with the first returned line number.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -120,6 +122,7 @@ impl ReadTools {
     /// Returns an error if the workspace cannot be scanned or a file cannot be read.
     #[expect(
         clippy::excessive_nesting,
+        clippy::too_many_lines,
         reason = "file and line bounds are checked inside the workspace scan"
     )]
     pub fn grep(&self, pattern: &str, limit: usize) -> io::Result<Vec<SearchHit>> {
@@ -131,6 +134,7 @@ impl ReadTools {
             .build()
             .map_err(|_| invalid_input("invalid grep regex"))?;
         let mut hits = Vec::new();
+        let mut result_bytes: usize = 0;
         if limit == 0 {
             return Ok(hits);
         }
@@ -154,11 +158,17 @@ impl ReadTools {
                 continue;
             };
             for (line, text) in text.lines().enumerate() {
-                if regex.is_match(text) {
+                if let Some(found) = regex.find(text) {
+                    let excerpt = match_excerpt(text, found.start());
+                    let bytes = file.path.as_os_str().len() + excerpt.len() + 32;
+                    if result_bytes.saturating_add(bytes) > MAX_GREP_RESULT_BYTES {
+                        return Ok(hits);
+                    }
+                    result_bytes += bytes;
                     hits.push(SearchHit {
                         path: file.path.clone(),
                         line: line + 1,
-                        text: text.to_owned(),
+                        text: excerpt,
                     });
                     if hits.len() >= limit.min(MAX_RESULTS) {
                         break;
@@ -168,6 +178,23 @@ impl ReadTools {
         }
         Ok(hits)
     }
+}
+
+fn match_excerpt(line: &str, match_start: usize) -> String {
+    if line.len() <= MAX_GREP_LINE_BYTES {
+        return line.to_owned();
+    }
+    let mut start = match_start.saturating_sub(MAX_GREP_LINE_BYTES / 4);
+    while !line.is_char_boundary(start) {
+        start -= 1;
+    }
+    let mut end = (start + MAX_GREP_LINE_BYTES - 6).min(line.len());
+    while !line.is_char_boundary(end) {
+        end -= 1;
+    }
+    let prefix = if start > 0 { "…" } else { "" };
+    let suffix = if end < line.len() { "…" } else { "" };
+    format!("{prefix}{}{suffix}", &line[start..end])
 }
 
 fn list_entries(root: &Path, path: &Path) -> io::Result<Vec<DirectoryEntry>> {

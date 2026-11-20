@@ -240,32 +240,38 @@ impl Store {
         text: &str,
         thinking: &str,
     ) -> Result<(), StoreError> {
+        let mut parts = Vec::new();
+        if !thinking.is_empty() {
+            parts.push(MessagePart::Thinking {
+                text: thinking.to_owned(),
+            });
+        }
+        if !text.is_empty() {
+            parts.push(MessagePart::Text {
+                text: text.to_owned(),
+            });
+        }
+        self.replace_message_parts(id, &parts)
+    }
+
+    /// Replaces the parts of one saved message in a transaction.
+    ///
+    /// # Errors
+    /// Returns an error when SQLite or JSON encoding fails.
+    pub fn replace_message_parts(
+        &mut self,
+        id: &MessageId,
+        parts: &[MessagePart],
+    ) -> Result<(), StoreError> {
         let tx = self.conn.transaction()?;
         tx.execute(
             "DELETE FROM message_parts WHERE message_id = ?1",
             [id.as_str()],
         )?;
-        let mut seq = 0;
-        if !thinking.is_empty() {
-            insert_part(
-                &tx,
-                id,
-                seq,
-                &MessagePart::Thinking {
-                    text: thinking.to_owned(),
-                },
-            )?;
-            seq += 1;
-        }
-        if !text.is_empty() {
-            insert_part(
-                &tx,
-                id,
-                seq,
-                &MessagePart::Text {
-                    text: text.to_owned(),
-                },
-            )?;
+        for (position, part) in parts.iter().enumerate() {
+            let position =
+                i64::try_from(position).map_err(|_| StoreError::SessionCounterOverflow)?;
+            insert_part(&tx, id, position, part)?;
         }
         tx.commit()?;
         Ok(())

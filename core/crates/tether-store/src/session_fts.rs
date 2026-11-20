@@ -23,9 +23,15 @@ impl Store {
     ///
     /// # Errors
     /// Returns SQLite failures.
-    pub fn session_search(&self, phrase: &str, limit: usize) -> Result<Vec<SessionSearchHit>, StoreError> {
+    pub fn session_search(
+        &self,
+        phrase: &str,
+        limit: usize,
+    ) -> Result<Vec<SessionSearchHit>, StoreError> {
         let phrase = phrase.trim();
-        if phrase.is_empty() || limit == 0 { return Ok(Vec::new()); }
+        if phrase.is_empty() || limit == 0 {
+            return Ok(Vec::new());
+        }
         let literal = format!("\"{}\"", phrase.replace('"', "\"\""));
         let mut statement = self.conn.prepare(
             "SELECT m.id, m.session_id, s.title, message_fts.body \
@@ -34,7 +40,8 @@ impl Store {
              WHERE message_fts MATCH ?1 AND m.rewound = 0 \
              ORDER BY bm25(message_fts) LIMIT ?2",
         )?;
-        let rows = statement.query_map(params![literal, limit.min(100) as i64], |row| {
+        let limit = i64::try_from(limit).unwrap_or(i64::MAX).min(100);
+        let rows = statement.query_map(params![literal, limit], |row| {
             Ok(SessionSearchHit {
                 message_id: MessageId::new(row.get::<_, String>(0)?),
                 session_id: SessionId::new(row.get::<_, String>(1)?),
@@ -42,7 +49,8 @@ impl Store {
                 text: row.get(3)?,
             })
         })?;
-        rows.collect::<Result<Vec<_>, _>>().map_err(StoreError::from)
+        rows.collect::<Result<Vec<_>, _>>()
+            .map_err(StoreError::from)
     }
 }
 

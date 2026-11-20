@@ -6,21 +6,47 @@ use tether_types::{ModelRef, PermissionMode, Provider};
 fn finds_text_and_tracks_replacements_and_rewinds() {
     let mut store = Store::open_in_memory().unwrap();
     let project = seed_project(&store);
-    let session = store.create_session(&project, &ModelRef {
-        provider: Provider::Anthropic, model_id: "test".into(),
-    }, PermissionMode::Ask, 1).unwrap();
-    store.begin_turn(&session.id, "Find the blue lantern", 2).unwrap();
+    let session = store
+        .create_session(
+            &project,
+            &ModelRef {
+                provider: Provider::Anthropic,
+                model_id: "test".into(),
+            },
+            PermissionMode::Ask,
+            1,
+        )
+        .unwrap();
+    store
+        .begin_turn(&session.id, "Find the blue lantern", 2)
+        .unwrap();
     let hits = store.session_search("blue lantern", 10).unwrap();
     assert_eq!(hits.len(), 1);
     assert_eq!(hits[0].session_id, session.id);
     let answer = store.create_assistant_message(&session.id, 3).unwrap();
-    store.save_assistant_parts(&answer, "A red lantern", "").unwrap();
+    store
+        .save_assistant_parts(&answer, "A red lantern", "")
+        .unwrap();
     assert_eq!(store.session_search("red lantern", 10).unwrap().len(), 1);
-    store.save_assistant_parts(&answer, "A green lantern", "").unwrap();
-    assert!(store.session_search("red lantern", 10).unwrap().is_empty());
+    store
+        .save_assistant_parts(&answer, "A green lantern", "")
+        .unwrap();
+    assert_eq!(
+        store.session_search("red lantern", 10).unwrap(),
+        Vec::<SessionSearchHit>::new()
+    );
     assert_eq!(store.session_search("green lantern", 10).unwrap().len(), 1);
-    store.conn.execute("UPDATE messages SET rewound = 1 WHERE id = ?1", [answer.as_str()]).unwrap();
-    assert!(store.session_search("green lantern", 10).unwrap().is_empty());
+    store
+        .conn
+        .execute(
+            "UPDATE messages SET rewound = 1 WHERE id = ?1",
+            [answer.as_str()],
+        )
+        .unwrap();
+    assert_eq!(
+        store.session_search("green lantern", 10).unwrap(),
+        Vec::<SessionSearchHit>::new()
+    );
 }
 
 #[test]
@@ -36,6 +62,12 @@ fn migration_indexes_existing_messages() {
         INSERT INTO message_parts (id, message_id, seq, kind, body_json)
             VALUES ('part', 'm', 0, 'text', '{\"kind\":\"text\",\"text\":\"old phrase\"}');").unwrap();
     migrations::apply(&mut conn, MIGRATIONS).unwrap();
-    let count: i64 = conn.query_row("SELECT count(*) FROM message_fts WHERE message_fts MATCH 'old phrase'", [], |row| row.get(0)).unwrap();
+    let count: i64 = conn
+        .query_row(
+            "SELECT count(*) FROM message_fts WHERE message_fts MATCH 'old phrase'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
     assert_eq!(count, 1);
 }

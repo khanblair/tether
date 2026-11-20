@@ -3,6 +3,7 @@
 use std::fs::{self, OpenOptions};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use tether_workspace::PathGuard;
@@ -38,16 +39,23 @@ pub enum EditError {
 }
 
 impl From<io::Error> for EditError {
-    fn from(error: io::Error) -> Self { Self::Io(error) }
+    fn from(error: io::Error) -> Self {
+        Self::Io(error)
+    }
 }
 
 /// Text file tools scoped to a validated project root.
 #[derive(Debug, Clone)]
-pub struct EditTools { guard: PathGuard }
+pub struct EditTools {
+    guard: PathGuard,
+}
 
 impl EditTools {
     /// Uses the given path guard for every operation.
-    pub fn new(guard: PathGuard) -> Self { Self { guard } }
+    #[must_use]
+    pub fn new(guard: PathGuard) -> Self {
+        Self { guard }
+    }
 
     /// Writes one text file through a temporary file and rename.
     ///
@@ -55,8 +63,12 @@ impl EditTools {
     /// Returns path, size, or file errors.
     pub fn write(&self, path: &str, text: &str) -> Result<(), EditError> {
         let target = self.guard.resolve(path)?;
-        if text.len() > MAX_TEXT_BYTES { return Err(EditError::TooLarge); }
-        if target.exists() && !target.is_file() { return Err(EditError::NotFile); }
+        if text.len() > MAX_TEXT_BYTES {
+            return Err(EditError::TooLarge);
+        }
+        if target.exists() && !target.is_file() {
+            return Err(EditError::NotFile);
+        }
         fs::create_dir_all(target.parent().ok_or(EditError::NotFile)?)?;
         atomic_write(&target, text.as_bytes())?;
         Ok(())
@@ -76,14 +88,19 @@ impl EditTools {
     /// Returns a clear match error or file failure without changing the file.
     pub fn multi_edit(&self, path: &str, specs: &[EditSpec]) -> Result<(), EditError> {
         let target = self.guard.resolve(path)?;
-        if !target.is_file() { return Err(EditError::NotFile); }
+        if !target.is_file() {
+            return Err(EditError::NotFile);
+        }
         let mut text = fs::read_to_string(&target)?;
-        if text.len() > MAX_TEXT_BYTES { return Err(EditError::TooLarge); }
+        if text.len() > MAX_TEXT_BYTES {
+            return Err(EditError::TooLarge);
+        }
         for spec in specs {
             text = replace_once(text, spec)?;
-            if text.len() > MAX_TEXT_BYTES { return Err(EditError::TooLarge); }
         }
-        if !specs.is_empty() { atomic_write(&target, text.as_bytes())?; }
+        if !specs.is_empty() {
+            atomic_write(&target, text.as_bytes())?;
+        }
         Ok(())
     }
 
@@ -94,8 +111,12 @@ impl EditTools {
     pub fn move_file(&self, from: &str, to: &str) -> Result<(), EditError> {
         let source = self.guard.resolve(from)?;
         let target = self.guard.resolve(to)?;
-        if !source.is_file() { return Err(EditError::NotFile); }
-        if target.exists() { return Err(EditError::DestinationExists); }
+        if !source.is_file() {
+            return Err(EditError::NotFile);
+        }
+        if target.exists() {
+            return Err(EditError::DestinationExists);
+        }
         fs::create_dir_all(target.parent().ok_or(EditError::NotFile)?)?;
         fs::rename(source, target)?;
         Ok(())
@@ -107,27 +128,50 @@ impl EditTools {
     /// Returns path or file errors.
     pub fn delete(&self, path: &str) -> Result<(), EditError> {
         let target = self.guard.resolve(path)?;
-        if !target.is_file() { return Err(EditError::NotFile); }
+        if !target.is_file() {
+            return Err(EditError::NotFile);
+        }
         fs::remove_file(target)?;
         Ok(())
     }
 }
 
 fn replace_once(mut text: String, spec: &EditSpec) -> Result<String, EditError> {
-    if spec.old.is_empty() { return Err(EditError::EmptyPattern); }
+    if spec.old.is_empty() {
+        return Err(EditError::EmptyPattern);
+    }
     let mut matches = text.match_indices(&spec.old);
     let first = matches.next().ok_or(EditError::MissingMatch)?.0;
-    if matches.next().is_some() { return Err(EditError::AmbiguousMatch); }
+    if matches.next().is_some() {
+        return Err(EditError::AmbiguousMatch);
+    }
     text.replace_range(first..first + spec.old.len(), &spec.new);
+    if text.len() > MAX_TEXT_BYTES {
+        return Err(EditError::TooLarge);
+    }
     Ok(text)
 }
 
+fn remove_temporary_file(path: &Path) -> io::Result<()> {
+    match fs::remove_file(path) {
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
+        result => result,
+    }
+}
+
 fn atomic_write(path: &Path, bytes: &[u8]) -> io::Result<()> {
-    let stamp = SystemTime::now().duration_since(UNIX_EPOCH).map_err(io::Error::other)?.as_nanos();
-    let temporary: PathBuf = path.with_extension(format!("tmp-{}-{stamp}", std::process::id()));
+    static NEXT: AtomicU64 = AtomicU64::new(0);
+    let stamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(io::Error::other)?
+        .as_nanos();
+    let counter = NEXT.fetch_add(1, Ordering::Relaxed);
+    let temporary: PathBuf =
+        path.with_extension(format!("tmp-{}-{stamp}-{counter}", std::process::id()));
     let mut options = OpenOptions::new();
     options.write(true).create_new(true);
-    #[cfg(unix)] {
+    #[cfg(unix)]
+    {
         use std::os::unix::fs::OpenOptionsExt;
         options.mode(0o600);
     }
@@ -137,7 +181,9 @@ fn atomic_write(path: &Path, bytes: &[u8]) -> io::Result<()> {
         file.sync_all()?;
         fs::rename(&temporary, path)
     })();
-    if result.is_err() { let _ = fs::remove_file(&temporary); }
+    if result.is_err() {
+        remove_temporary_file(&temporary)?;
+    }
     result
 }
 

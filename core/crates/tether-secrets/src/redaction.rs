@@ -3,7 +3,15 @@
 use crate::Secret;
 
 const MASK: &str = "[REDACTED]";
-const PREFIXES: &[&str] = &["sk-ant-", "sk-proj-", "sk-", "AIza", "ghp_", "github_pat_", "gsk_"];
+const PREFIXES: &[&str] = &[
+    "sk-ant-",
+    "sk-proj-",
+    "sk-",
+    "AIza",
+    "ghp_",
+    "github_pat_",
+    "gsk_",
+];
 const MIN_KEY_CHARS: usize = 8;
 
 /// Holds copies of active secret values; copies are zeroized on drop.
@@ -24,10 +32,12 @@ impl Redactor {
     #[must_use]
     pub fn redact(&self, input: &str) -> String {
         let mut output = input.to_owned();
-        for value in &self.values {
-            if let Ok(text) = value.expose_text() {
-                output = output.replace(text, MASK);
-            }
+        for text in self
+            .values
+            .iter()
+            .filter_map(|value| value.expose_text().ok())
+        {
+            output = output.replace(text, MASK);
         }
         redact_shapes(&output)
     }
@@ -38,24 +48,26 @@ fn redact_shapes(input: &str) -> String {
     let mut index = 0;
     while index < input.len() {
         let tail = &input[index..];
-        let prefix = PREFIXES.iter().find(|prefix| tail.starts_with(**prefix));
-        if let Some(prefix) = prefix {
-            let end = tail
-                .char_indices()
-                .take_while(|(_, character)| is_key_char(*character))
-                .last()
-                .map_or(0, |(offset, character)| offset + character.len_utf8());
-            if end >= prefix.len() + MIN_KEY_CHARS {
-                output.push_str(MASK);
-                index += end;
-                continue;
-            }
+        if let Some(end) = key_shape_length(tail) {
+            output.push_str(MASK);
+            index += end;
+            continue;
         }
         let character = tail.chars().next().expect("index is inside input");
         output.push(character);
         index += character.len_utf8();
     }
     output
+}
+
+fn key_shape_length(tail: &str) -> Option<usize> {
+    let prefix = PREFIXES.iter().find(|prefix| tail.starts_with(**prefix))?;
+    let end = tail
+        .char_indices()
+        .take_while(|(_, character)| is_key_char(*character))
+        .last()
+        .map_or(0, |(offset, character)| offset + character.len_utf8());
+    (end >= prefix.len() + MIN_KEY_CHARS).then_some(end)
 }
 
 fn is_key_char(character: char) -> bool {

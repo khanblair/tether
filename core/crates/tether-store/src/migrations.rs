@@ -13,8 +13,14 @@ pub(crate) struct Migration {
 
 /// Every migration, in order. Versions start at 1 and have no gaps.
 pub(crate) const MIGRATIONS: &[Migration] = &[
-    Migration { version: 1, sql: include_str!("../migrations/0001_init.sql") },
-    Migration { version: 2, sql: include_str!("../migrations/0002_message_fts.sql") },
+    Migration {
+        version: 1,
+        sql: include_str!("../migrations/0001_init.sql"),
+    },
+    Migration {
+        version: 2,
+        sql: include_str!("../migrations/0002_message_fts.sql"),
+    },
 ];
 
 /// The schema version kept in `PRAGMA user_version`. A new database reports 0.

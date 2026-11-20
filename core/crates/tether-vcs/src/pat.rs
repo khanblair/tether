@@ -56,7 +56,8 @@ impl GithubPatAuth {
         let client = reqwest::Client::builder()
             .redirect(reqwest::redirect::Policy::none())
             .timeout(Duration::from_secs(15))
-            .build().map_err(|_| PatError::Network)?;
+            .build()
+            .map_err(|_| PatError::Network)?;
         Ok(Self { client, secrets })
     }
 
@@ -66,36 +67,61 @@ impl GithubPatAuth {
     /// Returns invalid input, rejection, network, protocol, or storage errors.
     pub async fn validate_and_store(&self, token: Secret) -> Result<PatInfo, PatError> {
         let value = token.expose_text().map_err(|_| PatError::InvalidInput)?;
-        if value.trim().is_empty() { return Err(PatError::InvalidInput); }
-        let response = self.client.get(USER_URL)
+        if value.trim().is_empty() {
+            return Err(PatError::InvalidInput);
+        }
+        let response = self
+            .client
+            .get(USER_URL)
             .header(ACCEPT, "application/vnd.github+json")
             .header(USER_AGENT, "Tether")
             .bearer_auth(value)
-            .send().await.map_err(|_| PatError::Network)?;
+            .send()
+            .await
+            .map_err(|_| PatError::Network)?;
         if response.status() == reqwest::StatusCode::UNAUTHORIZED {
             return Err(PatError::Rejected);
         }
-        if !response.status().is_success() { return Err(PatError::Network); }
+        if !response.status().is_success() {
+            return Err(PatError::Network);
+        }
         let scopes = scopes_from_headers(response.headers());
         let body = response.bytes().await.map_err(|_| PatError::Network)?;
-        if body.len() > RESPONSE_LIMIT { return Err(PatError::InvalidResponse); }
+        if body.len() > RESPONSE_LIMIT {
+            return Err(PatError::InvalidResponse);
+        }
         let info = parse_account(&body, scopes)?;
-        self.secrets.put(&token_ref(), &token).map_err(|_| PatError::Storage)?;
+        self.secrets
+            .put(&token_ref(), &token)
+            .map_err(|_| PatError::Storage)?;
         Ok(info)
     }
 }
 
 fn scopes_from_headers(headers: &HeaderMap) -> Option<Vec<String>> {
-    headers.get("x-oauth-scopes").and_then(|value| value.to_str().ok()).map(|text|
-        text.split(',').map(str::trim).filter(|part| !part.is_empty())
-            .map(str::to_owned).collect())
+    headers
+        .get("x-oauth-scopes")
+        .and_then(|value| value.to_str().ok())
+        .map(|text| {
+            text.split(',')
+                .map(str::trim)
+                .filter(|part| !part.is_empty())
+                .map(str::to_owned)
+                .collect()
+        })
 }
 
 fn parse_account(bytes: &[u8], scopes: Option<Vec<String>>) -> Result<PatInfo, PatError> {
     let value: Value = serde_json::from_slice(bytes).map_err(|_| PatError::InvalidResponse)?;
-    let login = value.get("login").and_then(Value::as_str)
-        .filter(|name| !name.is_empty()).ok_or(PatError::InvalidResponse)?;
-    Ok(PatInfo { login: login.to_owned(), scopes })
+    let login = value
+        .get("login")
+        .and_then(Value::as_str)
+        .filter(|name| !name.is_empty())
+        .ok_or(PatError::InvalidResponse)?;
+    Ok(PatInfo {
+        login: login.to_owned(),
+        scopes,
+    })
 }
 
 #[cfg(test)]

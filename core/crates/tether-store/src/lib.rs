@@ -12,9 +12,9 @@ mod models_tests;
 mod provider_configs;
 #[cfg(test)]
 mod schema_tests;
-mod sessions;
 mod session_fts;
 mod session_search;
+mod sessions;
 #[cfg(test)]
 mod sessions_rules_tests;
 #[cfg(test)]
@@ -23,5 +23,5 @@ mod sessions_tests;
 pub use db::Store;
 pub use error::StoreError;
 pub use models::{CATALOG_TTL_MS, catalog_is_fresh};
-pub use sessions::SessionRecord;
 pub use session_fts::SessionSearchHit;
+pub use sessions::SessionRecord;

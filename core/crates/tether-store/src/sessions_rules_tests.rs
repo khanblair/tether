@@ -225,9 +225,7 @@ fn search_finds_old_message_text() {
         .begin_turn(&first.id, "needle from an old turn", 3)
         .unwrap();
     store.begin_turn(&first.id, "latest turn", 4).unwrap();
-    store
-        .begin_turn(&second.id, "another session", 5)
-        .unwrap();
+    store.begin_turn(&second.id, "another session", 5).unwrap();
 
     let found = store.search_sessions(&project, "NEEDLE").unwrap();
     assert_eq!(
@@ -235,11 +233,9 @@ fn search_finds_old_message_text() {
         vec![&first.id]
     );
     assert_eq!(store.list_sessions(&project).unwrap()[0].id, second.id);
-    assert!(
-        store
-            .search_sessions(&project, "not here")
-            .unwrap()
-            .is_empty()
+    assert_eq!(
+        store.search_sessions(&project, "not here").unwrap(),
+        Vec::<crate::SessionRecord>::new()
     );
 }
 

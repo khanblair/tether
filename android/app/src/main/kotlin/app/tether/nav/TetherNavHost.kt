@@ -1,5 +1,6 @@
 package app.tether.nav
 
+import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
@@ -26,13 +27,19 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import app.tether.core.generated.EventSink
+import app.tether.core.generated.SessionRuntime
 import app.tether.design.components.TetherSnackbarHost
 import app.tether.di.AppModule
 import app.tether.home.AttentionViewModel
 import app.tether.home.HomeDrawer
+import app.tether.session.TranscriptScreen
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * The app's navigation graph and its chrome: the drawer that opens from the top bars, and the
@@ -92,6 +99,24 @@ fun TetherNavHost(module: AppModule) {
                 homeRoutes(module = module, nav = nav, attentionItems = attention)
                 settingsRoutes(module = module, nav = nav)
                 placeholderRoutes(nav = nav)
+                composable("session/{sessionId}") { entry ->
+                    TranscriptScreen(
+                        sessionId = entry.arguments?.getString("sessionId"),
+                        load = { id ->
+                            withContext(Dispatchers.IO) {
+                                val sink =
+                                    object : EventSink {
+                                        override fun onEvent(
+                                            event: app.tether.core.generated.CoreEventView,
+                                        ) = Unit
+                                    }
+                                SessionRuntime(module.databasePath, module.vault, sink)
+                                    .use { it.transcript(id) }
+                            }
+                        },
+                        onBack = nav::back,
+                    )
+                }
             }
             TetherSnackbarHost(
                 hostState = snackbars,
@@ -126,7 +151,7 @@ private fun DrawerHost(
         themeMode = themeMode,
         onToggleTheme = { module.theme.cycle() },
         onDestination = { route -> nav.closeThen { nav.goTopLevel(route) } },
-        onOpenSession = { nav.closeThen { nav.go(Route.Session) } },
+        onOpenSession = { nav.closeThen { nav.open("session/${Uri.encode(it)}") } },
         onNewSession = { nav.closeThen { nav.go(Route.NewSession) } },
         onOpenSettings = { nav.closeThen { nav.go(Route.Settings) } },
         onOpenSkills = { nav.closeThen { nav.go(Route.Skills) } },

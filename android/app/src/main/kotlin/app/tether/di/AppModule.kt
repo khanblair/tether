@@ -27,6 +27,7 @@ class AppModule(
     context: Context,
 ) {
     val core: CoreClient = CoreClient()
+    val databasePath: String = context.getDatabasePath("tether.db").absolutePath
     val vault = keystoreSecretVault(context.filesDir.resolve("secrets"))
 
     /** The provider database opens on the first call, which runs off the main thread. */

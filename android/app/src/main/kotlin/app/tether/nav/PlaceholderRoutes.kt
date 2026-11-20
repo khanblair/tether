@@ -15,7 +15,7 @@ internal fun NavGraphBuilder.placeholderRoutes(nav: TetherNav) {
             Route.Providers,
             Route.About,
         )
-    Route.entries.filter { it !in real }.forEach { route ->
+    Route.entries.filter { it !in real && it != Route.Session }.forEach { route ->
         composable(route.path) { PlaceholderScreen(route = route, onBack = nav::back) }
     }
 }

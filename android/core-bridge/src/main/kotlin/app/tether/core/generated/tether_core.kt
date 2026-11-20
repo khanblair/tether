@@ -789,6 +789,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_tether_core_checksum_method_sessionruntime_open_session(
     ): Int
+    external fun uniffi_tether_core_checksum_method_sessionruntime_open_session_with_workspace(
+    ): Int
     external fun uniffi_tether_core_checksum_method_sessionruntime_transcript(
     ): Int
     external fun uniffi_tether_core_checksum_method_downloadprogress_on_progress(
@@ -911,6 +913,8 @@ internal object UniffiLib {
     external fun uniffi_tether_core_fn_method_sessionruntime_load_session(`ptr`: Long,`sessionId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_tether_core_fn_method_sessionruntime_open_session(`ptr`: Long,`sessionId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_tether_core_fn_method_sessionruntime_open_session_with_workspace(`ptr`: Long,`sessionId`: RustBuffer.ByValue,`workspacesRoot`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
     external fun uniffi_tether_core_fn_method_sessionruntime_transcript(`ptr`: Long,`sessionId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -1116,6 +1120,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_method_sessionruntime_open_session() and 0xFFFF) != 64633) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_sessionruntime_open_session_with_workspace() and 0xFFFF) != 33299) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_method_sessionruntime_transcript() and 0xFFFF) != 42069) {
@@ -3814,6 +3821,14 @@ public interface SessionRuntimeInterface {
     fun `openSession`(`sessionId`: kotlin.String): SessionRunner
     
     /**
+     * Opens a session with guarded tools rooted in its saved project workspace.
+     *
+     * # Errors
+     * Returns an error when the project folder, session, or provider key is unavailable.
+     */
+    fun `openSessionWithWorkspace`(`sessionId`: kotlin.String, `workspacesRoot`: kotlin.String): SessionRunner
+    
+    /**
      * Reads the saved transcript in message order.
      *
      * # Errors
@@ -4004,6 +4019,28 @@ open class SessionRuntime: Disposable, AutoCloseable, SessionRuntimeInterface
         it,
         
         FfiConverterString.lower(`sessionId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Opens a session with guarded tools rooted in its saved project workspace.
+     *
+     * # Errors
+     * Returns an error when the project folder, session, or provider key is unavailable.
+     */
+    @Throws(SessionRuntimeException::class)override fun `openSessionWithWorkspace`(`sessionId`: kotlin.String, `workspacesRoot`: kotlin.String): SessionRunner {
+            return FfiConverterTypeSessionRunner.lift(
+    callWithHandle {
+    uniffiRustCallWithError(SessionRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_sessionruntime_open_session_with_workspace(
+        it,
+        
+        FfiConverterString.lower(`sessionId`),
+        FfiConverterString.lower(`workspacesRoot`),_status)
 }
     }
     )

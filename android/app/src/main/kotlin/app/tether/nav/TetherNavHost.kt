@@ -159,7 +159,12 @@ private fun SessionRoute(
             try {
                 connection =
                     withContext(Dispatchers.IO) {
-                        SessionConnection(module.databasePath, module.vault, sessionId)
+                        SessionConnection(
+                            module.databasePath,
+                            module.workspacesRoot,
+                            module.vault,
+                            sessionId,
+                        )
                     }
             } catch (_: SessionRuntimeException) {
                 unavailable = true

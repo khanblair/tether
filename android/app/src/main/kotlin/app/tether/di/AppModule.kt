@@ -29,6 +29,11 @@ class AppModule(
 ) {
     val core: CoreClient = CoreClient()
     val databasePath: String = context.getDatabasePath("tether.db").absolutePath
+    val workspacesRoot: String =
+        context.filesDir
+            .resolve("workspaces")
+            .apply { mkdirs() }
+            .absolutePath
     val vault = keystoreSecretVault(context.filesDir.resolve("secrets"))
     val shareInbox = ShareInbox()
 

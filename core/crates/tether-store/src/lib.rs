@@ -3,8 +3,8 @@
 //! P1-02 holds the connection and schema 0001. Queries and the blob store arrive with the
 //! tasks that need them.
 
-mod db;
 mod checkpoints;
+mod db;
 mod error;
 mod migrations;
 mod models;
@@ -21,8 +21,8 @@ mod sessions_rules_tests;
 #[cfg(test)]
 mod sessions_tests;
 
-pub use db::Store;
 pub use checkpoints::{BlobStore, Checkpoint, CheckpointFile, SnapshotInput};
+pub use db::Store;
 pub use error::StoreError;
 pub use models::{CATALOG_TTL_MS, catalog_is_fresh};
 pub use session_fts::SessionSearchHit;

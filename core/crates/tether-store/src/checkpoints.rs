@@ -6,15 +6,15 @@ use std::io::{self, Read, Write};
 use std::path::{Component, Path, PathBuf};
 
 use rusqlite::params;
-use sha2::{Digest, Sha256};
 use tether_types::{MessageId, SessionId};
 use ulid::Ulid;
 
 use crate::{Store, StoreError};
 
 const MAX_BLOB_BYTES: u64 = 16 * 1024 * 1024;
+const MAX_COMPRESSED_BYTES: u64 = MAX_BLOB_BYTES + 128 * 1024;
 
-/// A private folder containing raw SHA-256-addressed snapshots.
+/// A private folder containing zstd-compressed, BLAKE3-addressed snapshots.
 #[derive(Debug, Clone)]
 pub struct BlobStore {
     root: PathBuf,
@@ -29,58 +29,119 @@ impl BlobStore {
         let path = path.as_ref();
         fs::create_dir_all(path)?;
         if fs::symlink_metadata(path)?.file_type().is_symlink() {
-            return Err(io::Error::new(io::ErrorKind::PermissionDenied, "blob folder is a symlink"));
+            return Err(io::Error::new(
+                io::ErrorKind::PermissionDenied,
+                "blob folder is a symlink",
+            ));
         }
-        Ok(Self { root: fs::canonicalize(path)? })
+        Ok(Self {
+            root: fs::canonicalize(path)?,
+        })
     }
 
-    /// Stores bytes once per hash and returns their lowercase SHA-256 name.
+    /// Compresses bytes and stores them once per BLAKE3 hash.
     ///
     /// # Errors
     /// Returns an error for oversized content or a filesystem failure.
     pub fn put(&self, bytes: &[u8]) -> io::Result<String> {
         if bytes.len() as u64 > MAX_BLOB_BYTES {
-            return Err(io::Error::new(io::ErrorKind::InvalidInput, "checkpoint blob is too large"));
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "checkpoint blob is too large",
+            ));
         }
-        let hash = format!("{:x}", Sha256::digest(bytes));
+        let hash = blake3::hash(bytes).to_hex().to_string();
         let path = self.path_for(&hash)?;
-        if path.exists() {
+        if path.try_exists()? {
+            self.get(&hash)?;
             return Ok(hash);
         }
-        fs::create_dir_all(path.parent().expect("blob has a parent"))?;
+        let parent = path.parent().ok_or_else(|| {
+            io::Error::new(io::ErrorKind::InvalidInput, "blob path has no parent")
+        })?;
+        fs::create_dir_all(parent)?;
+        if fs::symlink_metadata(parent)?.file_type().is_symlink() {
+            return Err(io::Error::new(
+                io::ErrorKind::PermissionDenied,
+                "blob folder is a symlink",
+            ));
+        }
+        let compressed = zstd::stream::encode_all(bytes, 3)?;
+        if compressed.len() as u64 > MAX_COMPRESSED_BYTES {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "compressed blob is too large",
+            ));
+        }
         let temporary = path.with_extension(format!("tmp-{}", Ulid::new()));
         let result = (|| {
-            let mut file = OpenOptions::new().write(true).create_new(true).open(&temporary)?;
-            file.write_all(bytes)?;
+            let mut file = OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&temporary)?;
+            file.write_all(&compressed)?;
             file.sync_all()?;
-            fs::rename(&temporary, &path)
+            fs::rename(&temporary, &path)?;
+            File::open(parent)?.sync_all()
         })();
         if result.is_err() {
-            let _ = fs::remove_file(temporary);
+            remove_temporary(&temporary)?;
         }
         result?;
         Ok(hash)
     }
 
-    /// Reads a saved blob and verifies its name against its bytes.
+    /// Decompresses a saved blob and verifies its name against its bytes.
     ///
     /// # Errors
     /// Returns an error for malformed names, corrupt content, or a read failure.
     pub fn get(&self, hash: &str) -> io::Result<Vec<u8>> {
         let path = self.path_for(hash)?;
+        if !fs::symlink_metadata(&path)?.file_type().is_file() {
+            return Err(io::Error::new(
+                io::ErrorKind::PermissionDenied,
+                "blob is not a regular file",
+            ));
+        }
+        if fs::metadata(&path)?.len() > MAX_COMPRESSED_BYTES {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "checkpoint blob is too large",
+            ));
+        }
         let mut bytes = Vec::new();
-        File::open(path)?.take(MAX_BLOB_BYTES + 1).read_to_end(&mut bytes)?;
-        if bytes.len() as u64 > MAX_BLOB_BYTES || format!("{:x}", Sha256::digest(&bytes)) != hash {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "checkpoint blob is corrupt"));
+        zstd::stream::read::Decoder::new(File::open(path)?)?
+            .take(MAX_BLOB_BYTES + 1)
+            .read_to_end(&mut bytes)?;
+        if bytes.len() as u64 > MAX_BLOB_BYTES || blake3::hash(&bytes).to_hex().as_str() != hash {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "checkpoint blob is corrupt",
+            ));
         }
         Ok(bytes)
     }
 
     fn path_for(&self, hash: &str) -> io::Result<PathBuf> {
-        if hash.len() != 64 || !hash.bytes().all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase()) {
-            return Err(io::Error::new(io::ErrorKind::InvalidInput, "invalid blob hash"));
+        if hash.len() != 64
+            || !hash
+                .bytes()
+                .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
+        {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "invalid blob hash",
+            ));
         }
         Ok(self.root.join(&hash[..2]).join(hash))
+    }
+}
+
+fn remove_temporary(path: &Path) -> io::Result<()> {
+    match fs::remove_file(path) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(error),
     }
 }
 
@@ -127,6 +188,10 @@ impl Store {
     ///
     /// # Errors
     /// Returns an error for invalid paths, unreadable files, or database failure.
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "checkpoint metadata and blob input are kept explicit at the store boundary"
+    )]
     pub fn save_checkpoint(
         &mut self,
         session_id: &SessionId,
@@ -138,18 +203,7 @@ impl Store {
         if snapshots.is_empty() {
             return Err(StoreError::InvalidCheckpointPath);
         }
-        let mut seen = HashSet::new();
-        let mut files = Vec::with_capacity(snapshots.len());
-        for snapshot in snapshots {
-            if !valid_path(&snapshot.path) || !seen.insert(&snapshot.path) {
-                return Err(StoreError::InvalidCheckpointPath);
-            }
-            let blob_hash = snapshot.content.as_deref().map(|content| blobs.put(content)).transpose()?;
-            files.push(CheckpointFile {
-                path: snapshot.path.clone(), existed: blob_hash.is_some(), blob_hash,
-            });
-        }
-        files.sort_by(|left, right| left.path.cmp(&right.path));
+        let files = checkpoint_files(blobs, snapshots)?;
         let id = Ulid::new().to_string();
         let tx = self.conn.transaction()?;
         tx.execute(
@@ -177,11 +231,15 @@ impl Store {
     /// # Errors
     /// Returns an error when SQLite cannot read the checkpoint.
     pub fn load_checkpoint(&self, id: &str) -> Result<Option<Checkpoint>, StoreError> {
-        let mut statement = self.conn.prepare(
-            "SELECT session_id, message_id, created_at FROM checkpoints WHERE id = ?1",
-        )?;
+        let mut statement = self
+            .conn
+            .prepare("SELECT session_id, message_id, created_at FROM checkpoints WHERE id = ?1")?;
         let row = statement.query_row([id], |row| {
-            Ok((row.get::<_, String>(0)?, row.get::<_, Option<String>>(1)?, row.get::<_, i64>(2)?))
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, Option<String>>(1)?,
+                row.get::<_, i64>(2)?,
+            ))
         });
         let (session_id, message_id, created_at_ms) = match row {
             Ok(row) => row,
@@ -191,24 +249,55 @@ impl Store {
         let mut statement = self.conn.prepare(
             "SELECT path, blob_hash, existed FROM checkpoint_files WHERE checkpoint_id = ?1 ORDER BY path",
         )?;
-        let files = statement.query_map([id], |row| {
-            Ok(CheckpointFile {
-                path: PathBuf::from(row.get::<_, String>(0)?),
-                blob_hash: row.get(1)?,
-                existed: row.get(2)?,
-            })
-        })?.collect::<Result<Vec<_>, _>>()?;
+        let files = statement
+            .query_map([id], |row| {
+                Ok(CheckpointFile {
+                    path: PathBuf::from(row.get::<_, String>(0)?),
+                    blob_hash: row.get(1)?,
+                    existed: row.get(2)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
         Ok(Some(Checkpoint {
-            id: id.to_owned(), session_id: SessionId::new(session_id),
-            message_id: message_id.map(MessageId::new), created_at_ms, files,
+            id: id.to_owned(),
+            session_id: SessionId::new(session_id),
+            message_id: message_id.map(MessageId::new),
+            created_at_ms,
+            files,
         }))
     }
 }
 
+fn checkpoint_files(
+    blobs: &BlobStore,
+    snapshots: &[SnapshotInput],
+) -> Result<Vec<CheckpointFile>, StoreError> {
+    let mut seen = HashSet::new();
+    let mut files = Vec::with_capacity(snapshots.len());
+    for snapshot in snapshots {
+        if !valid_path(&snapshot.path) || !seen.insert(&snapshot.path) {
+            return Err(StoreError::InvalidCheckpointPath);
+        }
+        let blob_hash = snapshot
+            .content
+            .as_deref()
+            .map(|content| blobs.put(content))
+            .transpose()?;
+        files.push(CheckpointFile {
+            path: snapshot.path.clone(),
+            existed: blob_hash.is_some(),
+            blob_hash,
+        });
+    }
+    files.sort_by(|left, right| left.path.cmp(&right.path));
+    Ok(files)
+}
+
 fn valid_path(path: &Path) -> bool {
-    !path.as_os_str().is_empty() && path.components().all(|part| {
-        matches!(part, Component::Normal(name) if name != ".git")
-    })
+    !path.as_os_str().is_empty()
+        && path
+            .components()
+            .all(|part| matches!(part, Component::Normal(name) if name != ".git"))
 }
 
 #[cfg(test)]

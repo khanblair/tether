@@ -6,5 +6,8 @@ rust-version.workspace = true
 publish.workspace = true
 description = "Project workspace: path guard, file index, search, watcher."
 
+[dev-dependencies]
+ulid.workspace = true
+
 [lints]
 workspace = true

@@ -11,6 +11,7 @@ import app.tether.home.createHomeSources
 import app.tether.messages.AppMessages
 import app.tether.providers.CoreProviderGateway
 import app.tether.providers.ProviderGateway
+import app.tether.share.ShareInbox
 import app.tether.theme.PrefsThemeStore
 import app.tether.theme.ThemeController
 import app.tether.updates.CoreUpdateGateway
@@ -27,7 +28,9 @@ class AppModule(
     context: Context,
 ) {
     val core: CoreClient = CoreClient()
+    val databasePath: String = context.getDatabasePath("tether.db").absolutePath
     val vault = keystoreSecretVault(context.filesDir.resolve("secrets"))
+    val shareInbox = ShareInbox()
 
     /** The provider database opens on the first call, which runs off the main thread. */
     val providerGateway: ProviderGateway =

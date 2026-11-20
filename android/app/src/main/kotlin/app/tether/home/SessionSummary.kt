@@ -12,4 +12,5 @@ data class SessionSummary(
     val state: SessionState,
     val updatedAt: Long,
     val pullRequest: Int? = null,
+    val projectId: String? = null,
 )

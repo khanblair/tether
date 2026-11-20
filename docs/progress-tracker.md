@@ -35,7 +35,7 @@ Phases run in numeric order except P11, which runs before P10 (see build-plan.md
 |---|---|---|---|---|
 | P0 | Foundations | In progress | 2026-11-18 | |
 | P1 | Providers and sessions | In progress | 2026-11-18 | |
-| P2 | Workspace, tools, diffs | Not started | | |
+| P2 | Workspace, tools, diffs | In progress | 2026-11-20 | |
 | P3 | Control | Not started | | |
 | P4 | Git and GitHub | Not started | | |
 | P5 | Sandbox | Not started | | |
@@ -75,6 +75,26 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 | P1-21 | App shell: Home dashboard, drawer, and Needs attention | Blair with Haiku and Claude | Done | #156 | Issue #155. The app opens on a Home dashboard: summary line, Needs you now, Today, Usage for 7 days (bar chart, by model, Show data), Recent projects, and Providers. The drawer has Home, Projects, Needs attention, Usage and cost, Runs, sessions, New session, Settings, Skills and memory, and a System, Light, Dark theme toggle that is saved. The bell opens Needs attention. Back buttons are arrows, the system action bar is off, and snackbars and toasts use the inverse surface of the app theme (D32). Debug builds show sample data from the `debug` source set; release builds show real data and empty states. Usage is tokens only until prices are wired (P1-14). Not run on a device: Blair checks it in the emulator |
 | P1-09 | Model catalog fetch, cache, capability flags, pricing | Blair with Codex and Claude | Done | #149 | Issue #13 closed when PR #149 merged. Provider lists, prices, capabilities, and the 24-hour cache pass checks |
 | P1-10 | Provider settings screen: key field, test connection, status | Blair with Codex, Haiku, and Claude | Done | #150 | Merged; issue #14 closed. Providers list and detail screens, a key field with paste and a reveal behind a biometric or screen lock check, a key test that calls the provider's model list (and caches it), and the four states (ok, bad key, network, blocked). Not built: the Base URL field of the prototype (no proxy support yet) |
+| P1-14 | Status line | Codex | In review | #160 | Draft stacked on #159; device check and accurate per-turn context source pending |
+| P1-16 | Image attachments | Codex | In progress | #162 | Image picker and MIME gate; actor and provider image path remain |
+| P1-17 | Voice input | Codex | In progress | #163 | Speech recognizer fills editable draft; device check pending |
+| P1-13 | Composer | Codex | In review | #159 | Stacked on #158; ground-level send and stop code, device checks and model selection remain |
+| P1-12 | Transcript UI | Codex | In review | #158 | CI passed; 500-message frame measurement on the reference device remains unverified |
+| P9-10 | Share sheet intake | Codex | In review | #169 | Text intake and project selection only; session creation and file shares remain |
+| P1-15 | Sessions list, rename, search | Codex | In progress | #161 | Store methods and tests; FFI and UI remain |
+| P1-18 | Log redaction layer and S7 test | Codex | In progress | #164 | Redactor and planted key-shape tests; logger/export wiring remains |
+| P11-01 | SKILL.md parser and validator | Codex | In review | #168 | Scalar frontmatter and name rules; full YAML compatibility remains |
+| P11-09 | Frozen memory snapshot | Codex | In review | #171 | Snapshot and prompt block; session actor wiring remains |
+| P11-08 | MEMORY.md and USER.md with caps | Codex | In review | #170 | File store, caps, and pattern checks; engine tool wiring remains |
+| P11-10 | FTS5 session search | Codex | In review | #172 | Schema and store query; tool routing and device timing remain |
+| P11-12 | Vault tools | Codex | In review | #174 | File operations and budgeted map; agent tool dispatch remains |
+| P11-15 | Vault export, import, sync | Codex | In review | #175 | Copy sync contract and conflict tests; Android adapter and zip remain |
+| P11-11 | Vault note model and index | Codex | In review | #173 | File parser and rebuildable map; SQLite tables remain |
+| P4-02 | Personal access token alternative | Codex | In review | #179 | Core validation and scope parsing; UI and live account check remain |
+| P4-01 | GitHub OAuth device flow | Codex | In review | #178 | Core start and poll; FFI, UI, client ID, and live login remain |
+| P5-05 | Sandbox limits | Codex | In review | #182 | Output cap and epoch config; store wiring and memory budget decision remain |
+| P5-04 | WASI context | Codex | In review | #181 | Fixed env and streaming contract; runtime mount remains |
+| P5-01 | Wasmtime engine and module cache | Codex | In review | #180 | Process engine and in-memory cache; device timing and lockfile remain |
 | P1-11 | Session actor and plain chat turn (no tools) | Blair with Codex, Haiku, and Claude | Done | #153 | Merged; issue #15 closed. Session rows, transcript persistence, plain chat actor, and UniFFI entry points. Codex's first review found issues that were fixed with tests; its second review could not run (Codex usage limit), so the fixes were reviewed by Claude only |
 | P1-20 | In-app updates for the `full` build | Blair with Codex, Haiku, and Claude | Done | #151 | Merged; issue #135 closed. Rust: check, download, and SHA-256 verify with a GitHub-only redirect policy. Android: `PackageInstaller` installer for `full` and a Google Play link for `play`, an update state holder, the About screen with an updates card, a Settings row, and a home banner. `v0.0.3` published as the latest release (signed with the pinned key, `versionCode` 300); it has to be installed by hand once, and later releases arrive in the app |
 | P1-08 | OpenAI-compatible adapter; DeepSeek and OpenRouter configs | Blair with Codex and Claude | Done | #147 | Merged; issue #12 closed. Written by a Codex CLI session (GPT-5.6 Luna), reviewed and mutation-tested by Claude; 168 provider tests. Four Codex findings fixed (DeepSeek reasoning replay, OpenRouter cache writes, refusal deltas, `null` token details failing a whole chunk) |
@@ -85,6 +105,10 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 | P1-02 | `tether-store` schema 0001 and migrations runner | Blair with Claude | Done | #140 | Merged; issue #6 closed. Schema 0001 for 7 tables, runner, and 28 tests; the CI Android check now uses `cargo ndk`. Codex found no issues; a Sonnet review found a table-rebuild data loss, a concurrent-open failure, and weak tests, all fixed |
 | P1-04 | SSE parser and provider trait | Blair with Claude | Done | #141 | Merged; issue #8 closed. `ChatProvider` trait and types, `SseParser` with 29 tests including every split position |
 | P1-01 | `tether-types` message, part, event, usage, error types | Blair with Claude | Done | #138 | Merged; issue #5 closed. Types, 15 new events, and FFI views; bindings regenerated. Sonnet and Codex reviews done |
+| P2-03 | File index, glob, grep | Codex | In progress | #167 | Basic scan, glob, grep; full ignore semantics and benchmark remain |
+| P2-05 | Edit tools | Codex | In review | #176 | Guarded file edits and rollback tests; engine tool registration remains |
+| P2-02 | Path guard | Codex | In progress | #166 | Canonical root, traversal and symlink checks; tool integration remains |
+| P2-01 | Projects: create empty, import zip, export zip | Codex | In progress | #165 | Archive layer and tests; project UI and database wiring remain |
 
 ## Decisions log
 
@@ -146,6 +170,33 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Who | What happened | Next |
 |---|---|---|---|
+| 2026-11-20 | Codex | Added P1-14 read-only status snapshot and status line on #159; device checks remain | Review P1-14 |
+| 2026-11-20 | Codex | Added P1-16 local image intake and a blocked send state | Wire image blobs through actor and providers |
+| 2026-11-20 | Codex | Added P1-17 speech recognizer intake to the composer | Check on a device |
+| 2026-11-20 | Codex | Added P9-10 text share intake, a project picker, and input cap test in a draft | Connect selected project and text to real session creation |
+| 2026-11-20 | Codex | Started P1-13 composer on #158 with native actor wiring; unverified draft | Run CI and finish #17 |
+| 2026-11-20 | Codex | Built P1-12 transcript UI and a session route. CI passed, including Android builds; device scroll measurement remains unverified | Review #158 and measure 500-message scroll |
+| 2026-11-20 | Codex | Added P1-15 store list, rename, and message search with tests | Expose through FFI and build the sessions UI |
+| 2026-11-20 | Codex | Added P1-18 redaction utility with planted key-shape tests | Wire it to logs and exports |
+| 2026-11-20 | Codex | Added P2-03 basic file index, glob, and grep with root ignore test | Add full ignore semantics and benchmark |
+| 2026-11-20 | Codex | Added P2-05 guarded edit operations and exact-match rollback fixtures | Register tools in engine after P2-06 |
+| 2026-11-20 | Codex | Added P2-02 Rust PathGuard and escape tests | Wire file tools to guard |
+| 2026-11-20 | Codex | Added P2-13 project detail route and branch, changes, session, executor fields | Wire persisted project data and composer |
+| 2026-11-20 | Codex | Added P2-01 project folder and ZIP round-trip layer with tests | Wire Android project screens and database rows |
+|---|---|---|
+| 2026-11-20 | Codex | Added P11-01 SKILL.md scalar parser and validation fixtures | Add full YAML syntax and discovery |
+| 2026-11-20 | Codex | Added P11-09 frozen memory snapshot with a mid-session write fixture | Pass the snapshot to the session actor prompt |
+| 2026-11-20 | Codex | Added P11-08 capped memory file operations and rejection fixtures | Wire memory tool into the engine |
+| 2026-11-20 | Codex | Added P11-10 FTS5 migration, triggers, and phrase query fixtures | Wire session_search tool and time on device |
+| 2026-11-20 | Codex | Added P11-12 core vault operations with path guards and map budget fixture | Wire agent tools and write scanner |
+| 2026-11-20 | Codex | Added P11-15 vault sync contract and fake-folder conflict tests | Build Android shared-folder adapter and zip transfer |
+| 2026-11-20 | Codex | Added P11-11 Markdown note parser and rebuildable wikilink map | Add SQLite vault tables and index persistence |
+| 2026-11-20 | Codex | Added P4-02 PAT validation and scope fixtures | Wire GitHub settings UI and validate a real token |
+| 2026-11-20 | Codex | Added P4-01 GitHub device flow core and response fixtures | Wire FFI, UI, configured client ID, and live sign-in |
+| 2026-11-20 | Codex | Added P5-05 run limit values, output cap, and epoch config | Wire store limiter; resolve 512 MB versus 300 MB budget |
+| 2026-11-20 | Codex | Added P5-04 fixed WASI environment and output channel contract | Wire Wasmtime WASI mount and run fixture |
+| 2026-11-20 | Codex | Added P5-01 Wasmtime process engine and module cache | Regenerate lockfile and measure on device |
+| 2026-11-20 | Blair with Claude, Codex, and Haiku | Built `integration/draft-prs`: all 25 draft PRs (#158 to #182, written by a Codex cloud run) merged in dependency order into one branch. Conflicts were the tracker and structure docs, `strings.xml`, the composer (image and voice), `tether-memory` modules, and two session search files (kept both: `session_search.rs` for the list, `session_fts.rs` for full text). The cloud code had never run fmt, clippy, ktlint, or detekt, so Codex (`gpt-6-sol`) and Haiku fixed those without behavior change. One real bug: `tether-memory` tests failed 10 of 25 runs because temp names used a clock tick that two threads can share; names now include a counter. `just check` passes: 439 Rust tests, 180 Android tests per flavor. CI then failed `cargo deny`: wasmtime 37.0.3 had 25 RustSec advisories, so it moved to 50.0.3 (the sandbox crate needed no code change). Codex's review of the PR found 2 P1 and 6 P2 issues, all reproduced with local probes (writes into `.git`, an ignore-file symlink out of the workspace, overlapping edit matches, lost file permissions, binary files aborting search, list frontmatter, interrupted turns, a staged image that blocked Send, transcript pinning); all fixed with tests. Open: one malformed vault note still blocks reading valid sibling notes | Decide whether to push the branch and open one PR, or merge the drafts one by one; the drafts are still open as separate PRs |
 | 2026-11-20 | Blair with Claude | Merged #153 (P1-11), #154 (file length), and #156 (P1-21). None changed the version, so `release.yml` ran and skipped the release job (`v0.0.3` already tagged). Blair chose to keep bumping by hand (D33). Added `tools/bump-version.sh` with a self test (3 of 3 arithmetic mutations caught), `just bump`, and a CI step; set the version to 0.0.4 | Merge this PR to publish `v0.0.4` with the Home dashboard and the session actor; then check the assets, the signature, and `versionCode` 400 |
 | 2026-11-19 | Blair with Haiku and Claude | Started P1-21 (issue #155) after Blair saw the P0 shell. First pick: a Projects home with a menu and a bell. After the first build Blair asked for a dashboard home, a fuller drawer, a theme toggle, themed toasts, arrow back buttons, and no extra "Tether" bar (the system action bar, now off). Decided with Blair (D32): Home dashboard with five cards, drawer links for Home, Projects, Needs attention, Usage and cost, and Runs. Haiku agents built the prototype, the design system components, and the app screens; Claude reviewed them, fixed three review items (an uncaught core failure on Home, a stale theme note, a duplicate refresh), and added tests for the mutants that survived. `just check` and `assembleFullDebug` pass | Blair checks Home, the drawer, the theme toggle, and the toast in the emulator; Codex review; then merge on Blair's go |
 | 2026-11-19 | Blair with Claude | Codex's P1-11 tests sat in `src/session_tests.rs`, which the file length check counted in full (431 lines against 400), because the check skips only `tests/` folders and inline `#[cfg(test)]` code. Blair asked why 400 and not 900; the answer is that 400 was set in the first docs and is the right limit for code. Test files now get 800 (`*_tests.rs`, `*_test.rs`, `*Test.kt`, `*Tests.kt`), with self test cases for both sides of the line and for names that only look like test files | Review and merge |
@@ -182,6 +233,31 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Files | Change | PR |
 |---|---|---|---|
+| 2026-11-20 | `android/app/src/main/kotlin/app/tether/session/`, `strings.xml`, session tests | P1-14 status snapshot and line | #160 |
+| 2026-11-20 | `android/app/src/main/kotlin/app/tether/session/`, `strings.xml`, image draft tests | P1-16 picker and intake gate | #162 |
+| 2026-11-20 | `Composer.kt`, `VoiceDraftTest.kt`, `strings.xml` | P1-17 speech recognizer intake | #163 |
+| 2026-11-20 | `android/app/src/main/{AndroidManifest.xml,kotlin/app/tether/share/}`, activity, module, navigation, strings and share test | P9-10 text share intake and picker | #169 |
+| 2026-11-20 | `android/app/src/main/kotlin/app/tether/{session,nav}/`, `strings.xml` | P1-13 composer and actor connection | #159 |
+| 2026-11-20 | `android/app/src/main/kotlin/app/tether/{session,nav,di}/`, `android/app/src/main/res/values/strings.xml`, transcript tests | P1-12 lazy transcript, persisted session routing, code blocks, strings, tests | #158 |
+| 2026-11-20 | `core/crates/tether-store/src/{sessions,error,sessions_rules_tests}.rs` | P1-15 store list, rename, and search | #161 |
+| 2026-11-20 | `core/crates/tether-secrets/src/` | P1-18 redaction utility and fixtures | #164 |
+| 2026-11-20 | `core/crates/tether-workspace/src/{file_index,file_index_tests,lib}.rs` | P2-03 basic file search | #167 |
+| 2026-11-20 | `core/crates/tether-tools/` | P2-05 guarded edit tools and tests | #176 |
+| 2026-11-20 | `core/crates/tether-workspace/` | P2-02 PathGuard and tests | #166 |
+| 2026-11-20 | `android/app/src/{main,debug,test}/` | P2-13 project detail route, screen, data fields and fixture | #177 |
+| 2026-11-20 | `android/app/src/{main,test}/kotlin/app/tether/workspace/` | P2-01 project archive layer and round-trip tests | #165 |
+| 2026-11-20 | `core/crates/tether-skills/src/` | P11-01 parser and tests | #168 |
+| 2026-11-20 | `core/crates/tether-memory/src/{lib,snapshot}.rs` | P11-09 frozen snapshot and tests | #171 |
+| 2026-11-20 | `core/crates/tether-memory/src/` | P11-08 capped memory store and tests | #170 |
+| 2026-11-20 | `core/crates/tether-store/migrations/0002_message_fts.sql`, `src/session_search*`, migrations and lib | P11-10 FTS5 index and query | #172 |
+| 2026-11-20 | `core/crates/tether-memory/src/vault/{mod,tools}.rs` | P11-12 vault operation contracts | #174 |
+| 2026-11-20 | `core/crates/tether-memory/src/vault/{mod,sync,sync/tests}.rs` | P11-15 copy sync contract | #175 |
+| 2026-11-20 | `core/crates/tether-memory/src/vault/`, `src/lib.rs` | P11-11 vault parser and link map | #173 |
+|---|---|---|
+| 2026-11-20 | `core/crates/tether-vcs/src/{lib,oauth,pat,pat/tests}.rs` | P4-02 PAT validation | #179 |
+| 2026-11-20 | `core/crates/tether-vcs/` | P4-01 OAuth device flow core and tests | #178 |
+|---|---|---|
+| 2026-11-20 | `core/Cargo.toml`, `core/crates/tether-sandbox/` | P5-01 Wasmtime engine and tests | #180 |
 | 2026-11-20 | `core/Cargo.toml`, `core/Cargo.lock`, `tools/bump-version.sh`, `justfile`, `.github/workflows/ci.yml` | Version 0.0.4; a bump script with a self test and `just bump` | - |
 | 2026-11-19 | `android/app/src/{main,debug,release}/`, `android/designsystem/`, `tokens/tokens.json`, `tools/prototype/` | P1-21: Home dashboard, drawer, Needs attention, usage and sample sources (`debug`) and empty sources (`release`), a saved theme choice, a snackbar host, 22 design system component files and 21 icons, `size.chart-height`, arrow back buttons, the action bar off, the Rust core card moved into About, prototype Home and drawer (106 screens) | #156 |
 | 2026-11-19 | `tools/check-file-length.sh`, `docs/code-standards.md`, `docs/progress-tracker.md` | 800 line limit for test files in the file length check and its self test | |
@@ -212,6 +288,30 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Doc | Change |
 |---|---|---|
+| 2026-11-20 | progress-tracker | P1-14 status and verification notes |
+| 2026-11-20 | progress-tracker | P1-16 draft and remaining image path |
+| 2026-11-20 | progress-tracker, mobile | P1-17 draft and delegated microphone permission |
+| 2026-11-20 | mobile, project-structure, progress-tracker | P9-10 text-only intake and remaining session integration |
+| 2026-11-20 | progress-tracker | P1-13 draft and remaining verification |
+| 2026-11-20 | progress-tracker, ui-registry | P1-12 draft status, transcript registry, and unverified checks |
+| 2026-11-20 | progress-tracker, architecture | P1-15 store status and search semantics |
+| 2026-11-20 | progress-tracker, architecture | P1-18 redactor boundary and remaining wiring |
+| 2026-11-20 | progress-tracker, project-structure, architecture | P2-03 index location and limits |
+| 2026-11-20 | architecture, project-structure, progress-tracker | P2-05 edit contract and pending engine registration |
+| 2026-11-20 | progress-tracker, project-structure, architecture | P2-02 path guard location and status |
+| 2026-11-20 | architecture, project-structure, progress-tracker | P2-13 screen and pending data wiring |
+| 2026-11-20 | progress-tracker, project-structure | P2-01 started and archive file listed |
+| 2026-11-20 | progress-tracker, project-structure, architecture | P11-01 parser limits and status |
+| 2026-11-20 | architecture, project-structure, progress-tracker | P11-09 snapshot and pending actor wiring |
+| 2026-11-20 | architecture, project-structure, progress-tracker | P11-08 file store and remaining tool wiring |
+| 2026-11-20 | architecture, project-structure, progress-tracker | P11-10 FTS5 scope and pending device timing |
+| 2026-11-20 | architecture, project-structure, progress-tracker | P11-12 operations and remaining tool dispatch |
+| 2026-11-20 | architecture, project-structure, progress-tracker | P11-15 sync contract and remaining platform work |
+| 2026-11-20 | architecture, project-structure, progress-tracker | P11-11 file index and remaining SQLite work |
+| 2026-11-20 | architecture, project-structure, progress-tracker | P4-02 token validation and UI gap |
+| 2026-11-20 | architecture, project-structure, progress-tracker | P4-01 device flow scope and remaining UI wiring |
+| 2026-11-20 | architecture, project-structure, progress-tracker | P5-05 limits and budget question |
+| 2026-11-20 | architecture, library-docs, project-structure, progress-tracker | P5-01 Wasmtime version and cache scope |
 | 2026-11-20 | development, project-structure, progress-tracker | Release steps use `just bump`; D33 records that versions are bumped by hand; P1-11 and P1-21 marked Done |
 | 2026-11-19 | ui-rules, ui-registry, ui-tokens, project-structure, architecture, mobile, build-plan, progress-tracker | P1-21: the Home dashboard, the drawer, the theme toggle, snackbars and toasts, arrow back buttons, Needs attention, new component rows, `size.chart-height`; a newer app version shows on the bell and in Needs attention instead of a home banner (D32) |
 | 2026-11-19 | code-standards, progress-tracker | File length: 800 lines for a file that holds only tests, 400 for everything else |

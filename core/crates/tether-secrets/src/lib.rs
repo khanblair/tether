@@ -6,15 +6,19 @@
 
 mod error;
 mod platform;
+mod redaction;
 mod reference;
 mod secret;
 mod store;
 
 pub use error::SecretsError;
 pub use platform::{PlatformError, SecretsPlatform};
+pub use redaction::Redactor;
 pub use reference::SecretRef;
 pub use secret::Secret;
 pub use store::SecretStore;
 
+#[cfg(test)]
+mod redaction_tests;
 #[cfg(test)]
 mod store_tests;

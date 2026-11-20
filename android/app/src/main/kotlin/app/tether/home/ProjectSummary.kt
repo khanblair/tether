@@ -11,4 +11,8 @@ data class ProjectSummary(
     val uncommitted: Int,
     val lastActivityAt: Long,
     val running: Boolean,
+    val executor: ProjectExecutor? = null,
 )
+
+/** The executor selected for work in a project. */
+enum class ProjectExecutor { Sandbox, Ci, Linux }

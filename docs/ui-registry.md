@@ -71,7 +71,7 @@ All components start as **Planned**. Screenshot tests start with the first featu
 
 | Name | Purpose | Props | States | Phase | Status |
 |---|---|---|---|---|---|
-| `Transcript` | Lazy list of transcript blocks | `blocks`, `onAction`, `listState` | empty, streaming, scrolled up with new items | P1 | Planned |
+| `Transcript` | Lazy persisted message list with prose and fenced code | `messages`, `listState` | empty, load failure, long history | P1 | Built; frame timing unverified |
 | `UserMessage` | User's message, inset | `text`, `attachments`, `onLongPress` | default, with images, rewound (dimmed) | P1 | Planned |
 | `AgentText` | Streamed Markdown text from the agent | `blocks` (parsed in core), `streaming` | complete, streaming with caret | P1 | Planned |
 | `CodeBlock` | Highlighted code with copy | `code`, `language`, `spans` | default, long (scrolls), copied | P1 | Planned |

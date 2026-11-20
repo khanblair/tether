@@ -6,5 +6,12 @@ rust-version.workspace = true
 publish.workspace = true
 description = "WASM sandbox executor on Wasmtime."
 
+[dependencies]
+sha2.workspace = true
+wasmtime.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
 [lints]
 workspace = true

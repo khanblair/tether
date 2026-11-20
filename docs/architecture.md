@@ -63,9 +63,9 @@ Why one process: the core holds session state in memory and SQLite; splitting it
 | `tether-engine` | Sessions, the turn loop, permission checks, executor router, compaction, checkpoints | most crates below |
 | `tether-providers` | One adapter per provider, streaming parsers, model catalog, usage and price math | `tether-types` |
 | `tether-tools` | Tool definitions, JSON schemas, argument validation, result formatting | `tether-workspace`, `tether-vcs` |
-| `tether-workspace` | Path guard, file ops, file index, search (glob and grep), file watcher | `tether-types` |
-| `tether-vcs` | Git through gitoxide: clone, status, diff, commit, branch, push | `tether-types` |
-| `tether-sandbox` | Wasmtime engine, runtime packs, WASI setup, limits | `tether-types` |
+| `tether-workspace` | PathGuard and a basic file index, glob, and text search; full ignore semantics, file ops, and watcher follow | none |
+| `tether-vcs` | Git through gitoxide: clone, status, diff, commit, branch, push; P4-01 adds the GitHub device-flow core; P4-02 validates personal access tokens through `/user` and reports available scopes | `tether-types`, `tether-secrets` |
+| `tether-sandbox` | Wasmtime engine, runtime packs, WASI setup, limits; P5-01 adds a process engine and in-memory module cache; P5-04 adds a fixed guest environment and output stream contract, with the actual WASI mount still pending; P5-05 adds the output cap and epoch setting, with store wiring pending | `tether-types` |
 | `tether-linux` | Root filesystem manager, PRoot command builder, process I/O | `tether-types` |
 | `tether-ci` | GitHub Actions: workflow file, dispatch, polling, log fetch, failure parsing | `tether-connectors` |
 | `tether-quality` | Tree-sitter parsing, smell rules, slop rules, report building | `tether-types` |
@@ -78,7 +78,9 @@ Why one process: the core holds session state in memory and SQLite; splitting it
 
 Rule: only `tether-engine` coordinates other crates. Leaf crates never call each other except where the table lists the dependency.
 
-Status: `tether-types`, `tether-engine`, `tether-ffi`, `tether-store`, `tether-secrets`, and `tether-providers` contain code. The other crates are empty libraries that hold their place in the workspace (see project-structure.md, Present now). P1-11 adds a plain text session actor. Each actor owns one store connection and serializes its turns on a Tokio channel. It saves the user message before the request and saves each reply batch before emitting it. A process restart marks an active session `Interrupted`; the transcript, including any saved partial reply, remains readable. `SessionRuntime` exposes create, load, transcript, open, send, and interrupt through UniFFI. The transcript and composer screens follow in P1-12 and P1-13.
+Status: `tether-types`, `tether-engine`, `tether-ffi`, `tether-store`, `tether-secrets`, and `tether-providers` contain code. The other crates are empty libraries that hold their place in the workspace (see project-structure.md, Present now). P1-11 adds a plain text session actor. P1-15 adds store queries for sessions by project, title, and saved non-rewound text, plus rename. The UI and UniFFI entry points still follow. Each actor owns one store connection and serializes its turns on a Tokio channel. It saves the user message before the request and saves each reply batch before emitting it. A process restart marks an active session `Interrupted`; the transcript, including any saved partial reply, remains readable. `SessionRuntime` exposes create, load, transcript, open, send, and interrupt through UniFFI. The transcript and composer screens follow in P1-12 and P1-13.
+
+`tether-tools` (P2-05): `EditTools` uses the workspace path guard for write, exact edit, multi-edit, move, and delete. Multi-edit stages replacements in memory and writes once after every exact match succeeds. Temporary files keep text replacement atomic. Engine registration and checkpoints arrive with later tasks.
 
 `tether-secrets` (P1-03): `SecretStore` keeps one file per secret and asks the platform to wrap and unwrap through the `SecretsPlatform` callback, which takes the secret's reference as a second argument and must bind it as authenticated data. The core never holds an encryption key. `Secret` wipes its bytes when dropped and never prints. Writes go to a temporary file with mode 0600 that only that call uses, and are renamed over the target, so a crash leaves the old file or the new one, and two writers to one reference never share a file (the last rename wins). `SecretVault` is the UniFFI face: Kotlin calls `put`, `reveal` (after a biometric check), `has`, and `delete`. Providers will read keys inside the core, not through the vault. The vault is its own object until the engine owns the store; the `init` call in section 8 takes it over then. On Android, `KeystoreSecretsPlatform` in `core-bridge` uses an AES-256-GCM key in the Keystore (StrongBox when available) that needs no user authentication. A process-wide lock guards creating that key, so two platform instances cannot each create one and make the first unreadable.
 
@@ -104,7 +106,7 @@ The OpenAI-compatible adapter (P1-08, `tether-providers/src/openai_compat/`) spe
 | `core-bridge` | Generated UniFFI Kotlin, the `CoreClient` wrapper that turns callbacks into `Flow`s, platform callback implementations |
 | `designsystem` | Theme, tokens (generated from `tokens/tokens.json`), bundled fonts, shared components |
 | `feature-onboarding` | First-run screens |
-| `feature-projects` | Project list, create, clone, import, project home |
+| `feature-projects` | Project list, create, clone, import, project home (P2-13 adds a detail screen over the current home sources; persisted project data remains) |
 | `feature-session` | Transcript, composer, approvals, status line, pickers |
 | `feature-diff` | Diff view, hunk actions, checkpoints list |
 | `feature-files` | File tree, file viewer |
@@ -258,7 +260,7 @@ SQLite database at `files/db/tether.db`, WAL mode, foreign keys on. IDs are ULID
 | `models_fetch` | provider, fetched_at | last successful catalog fetch, including an empty list; Unix milliseconds |
 | `mcp_servers` | id, name, url, transport, secret_ref, enabled | |
 | `usage_daily` | day, provider, model_id, project_id, tokens_in, tokens_out, cost_micros | for charts and budgets; `day` is a UTC date, `YYYY-MM-DD`; no foreign key on `project_id`, so cost history outlives a deleted project |
-| `message_fts` | FTS5 virtual table over message text: session_id, message_id, body | session search (F22); bundled SQLite with FTS5, never the Android framework SQLite |
+| `message_fts` | FTS5 virtual table over text parts: part_id, session_id, message_id, body | migration 0002 backfills rows and triggers track edits and rewinds; bundled SQLite with FTS5 |
 | `vault_notes` | path, title, description, type, tags_json, updated_at, hash | rebuildable index of the vault folder |
 | `vault_links` | src_path, dst_path, heading, kind, resolved | wikilinks and backlinks; `resolved = 0` means the target note does not exist yet |
 | `skill_index` | name, scope, path, description, last_used_at, state | state: active, stale, archived; rebuildable from the skill folders |
@@ -345,7 +347,7 @@ Backups: `secrets/`, `linux/`, `runtimes/`, `blobs/`, `logs/`, and `cache/` are 
 |---|---|
 | Key theft from storage | Keys encrypted with an AES-GCM key held in Android Keystore (StrongBox when available); never written in plaintext; excluded from backup |
 | A wrapped secret file copied over another reference (for example the GitHub token over a provider key, to send it to a third party) | The reference is passed to the platform as authenticated data when wrapping and unwrapping, so a file moved to another reference fails to unwrap |
-| Keys leaking into logs, transcripts, exports | Redaction layer in the logger and exporter matches known key formats and every stored secret; S7 test |
+| Keys leaking into logs, transcripts, exports | `tether-secrets::Redactor` masks known key formats and registered values. Logger and exporter integration remains in P1-18; S7 is not met yet |
 | Agent-run code reading keys | Secrets never enter executor environments; sandbox sees only `/workspace`; Linux mode binds only the project folder and a temp folder |
 | Path escape | Path guard canonicalizes every path, rejects `..` outside the root, rejects symlinks pointing outside, rejects writes inside `.git/` |
 | Prompt injection via repo files or web content | Network tools, pushes, and non-sandbox runs need approval below Bypass; tool results are marked as data in the prompt; no tool can change permission settings |
@@ -422,7 +424,7 @@ Three features that let the agent keep what it learns. They borrow designs from 
 
 ### Skills (F21, `tether-skills`)
 
-A skill is a folder with a `SKILL.md`: YAML frontmatter, then Markdown instructions. The format follows the open Agent Skills standard (agentskills.io), so skills written for other agents load unchanged.
+A skill is a folder with a `SKILL.md`: YAML frontmatter, then Markdown instructions. P11-01 starts with a scalar frontmatter parser and validator; block scalars and full YAML syntax remain to be added. The format follows the open Agent Skills standard (agentskills.io), so skills written for other agents load unchanged.
 
 | Frontmatter field | Rule |
 |---|---|
@@ -453,8 +455,8 @@ A skill added mid-session is announced in the next user message instead of rewri
 Two small files plus search.
 
 - **`MEMORY.md`** holds the agent's notes: environment facts, conventions, lessons. Capped at 2,200 characters. **`USER.md`** holds the user profile and preferences. Capped at 1,375 characters. Entries are separated by a section sign.
-- **The `memory` tool** has `add`, `patch`, and `remove`, each with a target of `memory` or `user`. There is no read action, because the content is already in the prompt. A write over the cap returns an error, and the agent must trim entries in the same turn. Exact duplicates are skipped. Every write is scanned for prompt-injection phrases, credential patterns, and invisible Unicode, and rejected on a hit.
-- **Frozen snapshot.** The files are read once at session start and placed in the system prompt. Writes reach disk at once but enter the prompt only at the next session. This keeps the cached prompt prefix stable, which lowers cost on every provider that caches.
+- **The `memory` tool** has `add`, `patch`, and `remove`, each with a target of `memory` or `user`. P11-08 adds the file store and validation; engine tool dispatch remains to be wired. There is no read action, because the content is already in the prompt. A write over the cap returns an error, and the agent must trim entries in the same turn. Exact duplicates are skipped. Every write is scanned for prompt-injection phrases, credential patterns, and invisible Unicode, and rejected on a hit.
+- **Frozen snapshot.** P11-09 adds an immutable snapshot and labeled system block; the session actor does not yet use it. The target flow reads files once at session start and places them in the system prompt. Writes reach disk at once but enter the prompt only at the next session. This keeps the cached prompt prefix stable, which lowers cost on every provider that caches.
 - **Session search.** Every message is indexed in SQLite FTS5 (`message_fts`). `session_search` returns the matching messages, not model summaries, and the agent can read around a hit. No model call is involved.
 
 There is no external user-modeling service. Tether keeps no server, and extra model passes would cost the user tokens.
@@ -472,13 +474,13 @@ Long-term notes that outgrow two capped files go into a vault: a folder of plain
 | Map notes | A note with `type: moc` that only groups links for one area, such as a project. It gives the agent a bounded entry point instead of a vault-wide scan |
 | `.obsidian/` | Never written by Tether |
 
-**The map.** Tether parses every note into `vault_notes` and `vault_links`. Both tables can be rebuilt from the files at any time, so the folder is the source of truth. The vault tools are `vault_search` (full text, tags, and links), `vault_read`, `vault_write` and `vault_append`, `vault_links` (outlinks and backlinks of a note), `vault_orphans`, and `vault_map`, which returns the neighborhood of a note out to a given depth within a token budget. The app shows the same data as a list view of map notes and neighbors. A force-directed graph view is not planned.
+**The map.** P11-11 first adds a file-based, rebuildable note and link view. P11-12 adds core file operations and bounded map output; agent tool dispatch and write scanning remain. The SQLite `vault_notes` and `vault_links` tables are still pending. The target design parses every note into `vault_notes` and `vault_links`. Both tables can be rebuilt from the files at any time, so the folder is the source of truth. The vault tools are `vault_search` (full text, tags, and links), `vault_read`, `vault_write` and `vault_append`, `vault_links` (outlinks and backlinks of a note), `vault_orphans`, and `vault_map`, which returns the neighborhood of a note out to a given depth within a token budget. The app shows the same data as a list view of map notes and neighbors. A force-directed graph view is not planned.
 
 **Start of session.** A small injector adds a slice to the prompt: the head of `index.md`, the map note of the active project, and the last entries of `log.md`, within a fixed budget. The agent fetches full notes on demand.
 
 **Checks on every write.** The note must have a `description`. Links that point nowhere are recorded as unresolved, not rejected. Size is capped. A note that nothing links to is reported by `/vault lint`.
 
-**Where the vault lives.** The vault is in app-private storage (`files/memory/vault/`), because the Rust core cannot open Android content URIs and so cannot read a shared folder directly. Two ways in and out:
+**Where the vault lives.** P11-15 adds a copy-based sync contract and fake-folder tests. Android document-tree access, manifest persistence, and zip import/export remain. The vault is in app-private storage (`files/memory/vault/`), because the Rust core cannot open Android content URIs and so cannot read a shared folder directly. Two ways in and out:
 1. Export and import as a zip through the system file picker.
 2. Folder sync: the user picks a shared folder (Storage Access Framework). The Kotlin platform layer copies changed files both ways, comparing hashes and modification times, when the user asks and after each turn that wrote to the vault. This lets Obsidian for Android open the same notes. The vault tools only ever see the private copy.
 

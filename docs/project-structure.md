@@ -40,7 +40,7 @@ tether/
 │   ├── fixtures/model-lists/ Provider list responses for catalog tests
 │   └── crates/
 │       ├── tether-types/      ids, message, model catalog, session, text, usage, error, event (CoreEvent); no UniFFI code
-│       ├── tether-store/      migrations/0001_init.sql; src/{lib,db,error,migrations,models,models_tests,provider_configs,schema_tests,sessions,sessions_tests}.rs
+│       ├── tether-store/      migrations/{0001_init,0002_message_fts}.sql; src/{lib,db,error,migrations,models,models_tests,provider_configs,schema_tests,sessions,sessions_tests,session_search}.rs
 │       ├── tether-engine/     VERSION, EventSink, Core, provider_connection.rs (key check), session.rs (plain chat actor), session_provider.rs (provider factory), session_tests.rs, updates/ (app updates)
 │       ├── tether-secrets/    SecretStore, SecretRef, Secret, SecretsPlatform trait, errors (src/{lib,error,platform,reference,secret,store,store_tests}.rs)
 │       ├── tether-providers/  lib.rs (ChatProvider, ModelCatalog), catalog.rs, pricing/ and data/prices/, request.rs, event.rs, error.rs, sse.rs (SseParser), client.rs (shared HTTP client), anthropic/ (adapter), openai/ (adapter), gemini/ (adapter), openai_compat/ (adapter), deepseek.rs, openrouter.rs, transport.rs (shared request and stream code)
@@ -48,7 +48,13 @@ tether/
 │       │   ├── uniffi.toml
 │       │   └── src/{lib.rs, callbacks.rs, provider_settings.rs, sessions.rs, updater.rs, secrets.rs, views/{mod,event,types,error}.rs, bin/uniffi-bindgen.rs}
 │       ├── tether-quality/    data/slop_words.txt and slop_patterns.toml (shared with slop-lint)
-│       └── tether-{tools,workspace,vcs,sandbox,linux,ci,connectors,mcp,skills,memory}/
+│       ├── tether-workspace/   PathGuard and FileIndex: path checks, scan, glob, grep
+│       ├── tether-tools/       src/{lib,edit,edit/tests}.rs; guarded atomic text edits
+│       ├── tether-skills/      SKILL.md scalar frontmatter parser and validator
+│       ├── tether-memory/     src/{lib,files,files/tests,snapshot}.rs, vault/{mod,tests,tools,sync,sync/tests}.rs; capped files, frozen snapshot, Markdown rebuild view, vault file tool operations, and the sync contract
+│       ├── tether-vcs/         src/{lib,oauth,oauth/tests,pat,pat/tests}.rs; GitHub auth core
+│       ├── tether-sandbox/     src/{lib,module_cache,wasi_context,limits}.rs; engine, WASI contract, run limits
+│       └── tether-{linux,ci,connectors,mcp}/
 │                              Empty libraries
 ├── android/
 │   ├── settings.gradle.kts  build.gradle.kts  gradle.properties  gradlew  gradlew.bat
@@ -59,8 +65,9 @@ tether/
 │   ├── config/{detekt.yml, lint.xml}
 │   ├── smell-fixtures/        Module with a function over the line limit; detekt must fail on it (built only with -Ptether.smellFixtures)
 │   ├── app/                   build.gradle.kts (flavors play and full; app version read from core/Cargo.toml), proguard-rules.pro
-│   │   └── src/{main, debug, release, full, play, androidTest}   TetherApp, MainActivity, di/AppModule, nav/, home/ (Projects home, drawer, Needs attention; sample sources in debug, empty sources in release), shell/ (settings and placeholder screens)
+│   │   └── src/{main, debug, release, full, play, androidTest}   TetherApp, MainActivity, di/AppModule, nav/, home/ (Projects home, project detail, drawer, Needs attention; sample sources in debug, empty sources in release), share/ (text intake and project picker), shell/ (settings and placeholder screens)
 │   ├── core-bridge/           CoreClient, EventBus, KeystoreSecretsPlatform, consumer-rules.pro, (gen) generated/tether_core.kt
+│   │   └── src/main/kotlin/app/tether/workspace/ProjectArchive.kt  ZIP project folders
 │   └── designsystem/          TetherTheme, TetherIcons, PrimaryButton, TetherTopBar, ListRow, ProviderRow, SecretField, InlineBanner, TestConnectionButton, TetherTextButton, TetherIconButton, NotificationBell, StatusBadge, StatusMark, ProjectRow, SessionRow, SectionTitle, ListGroup, TetherSearchField, TetherSheet, FONTS-LICENSE.txt, (gen) tokens/Tokens.kt and token colors, Plex fonts
 ├── ios/README.md              Plan for v2
 ├── runtimes/README.md  linux/README.md  bench/README.md   Planned folders, one README each

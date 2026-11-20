@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="share_project_title">Choose a project</string>
+    <string name="share_no_projects">No projects yet. Create a project before starting a shared session.</string>
+    <string name="share_selected_project">Selected: %1$s</string>
     <!-- Routes -->
     <string name="route_onboarding_title">Welcome</string>
     <string name="route_home_title">Home</string>
@@ -11,6 +14,22 @@
     <string name="route_new_project_title">New empty project</string>
     <string name="route_import_title">Import a zip</string>
     <string name="route_project_home_title">Project home</string>
+    <string name="project_home_missing">Project not found.</string>
+    <string name="project_home_branch">Branch</string>
+    <string name="project_home_no_branch">No branch</string>
+    <string name="project_home_changes">Changes</string>
+    <plurals name="project_home_change_count">
+        <item quantity="one">%d change</item>
+        <item quantity="other">%d changes</item>
+    </plurals>
+    <string name="project_home_last_session">Last session</string>
+    <string name="project_home_no_session">No sessions yet</string>
+    <string name="project_home_executor">Executor</string>
+    <string name="project_home_sandbox">Sandbox</string>
+    <string name="project_home_ci">CI</string>
+    <string name="project_home_linux">Linux mode</string>
+    <string name="project_home_no_executor">Not configured</string>
+    <string name="project_home_new_session">New session</string>
     <string name="route_session_title">Session</string>
     <string name="route_diff_title">Diff</string>
     <string name="route_files_title">Files</string>
@@ -21,6 +40,8 @@
 
     <!-- Shared -->
     <string name="nav_back_label">Back</string>
+    <string name="session_unavailable_title">Session</string>
+    <string name="session_unavailable_body">This session is not available. It may have been deleted, or it is sample data.</string>
     <string name="placeholder_body">This screen arrives in a later phase. See the build plan.</string>
 
     <!-- Rust core card (About, debug builds only) -->
@@ -279,4 +300,28 @@
     <string name="updates_problem_install_storage">Android has no space to install the update.</string>
     <string name="updates_problem_install_failed">The install did not finish.</string>
     <string name="updates_problem_download_missing">The downloaded update is no longer there. Download it again.</string>
+    <string name="transcript_empty">No messages in this session yet.</string>
+    <string name="transcript_load_failed">Could not load this session.</string>
+    <string name="transcript_you">You</string>
+    <string name="transcript_agent">Agent</string>
+    <string name="transcript_tool">Tool</string>
+    <string name="transcript_system">System</string>
+    <string name="transcript_attachment">Attachment</string>
+    <string name="composer_hint">Message</string>
+    <string name="composer_attachments">Attachments</string>
+    <string name="composer_send">Send</string>
+    <string name="composer_stop">Stop</string>
+    <string name="status_mode_plan">Plan</string>
+    <string name="status_mode_ask">Ask</string>
+    <string name="status_mode_accept_edits">Accept edits</string>
+    <string name="status_mode_auto">Auto</string>
+    <string name="status_mode_bypass">Bypass</string>
+    <string name="status_unknown">Unknown</string>
+    <string name="status_percent">%1$d%%</string>
+    <string name="status_cost">$%1$s</string>
+    <string name="status_line">%1$s · %2$s · %3$s · %4$s</string>
+    <string name="composer_image_staged">Image selected. Sending images is not available yet.</string>
+    <string name="composer_image_remove">Remove image</string>
+    <string name="composer_voice">Speak</string>
+    <string name="composer_voice_unavailable">Speech input is not available on this device.</string>
 </resources>

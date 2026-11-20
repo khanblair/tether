@@ -174,6 +174,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Who | What happened | Next |
 |---|---|---|---|
+| 2026-11-20 | Codex | Fixed #188 CI's file-length gate by moving the actor rewind handler into `session/rewind.rs`; focused tests and Clippy pass | Rerun CI on the updated branch |
 | 2026-11-20 | Codex | Merged #187 after green CI, closed superseded drafts #184 to #186, and started P2-08 with all three restore modes, guarded files, actor ordering, and FFI calls | Run full checks and open the P2-08 pull request |
 | 2026-11-20 | Codex | Addressed six findings from the #187 Codex review: thinking replay, malformed tool JSON, persisted streaming, per-response usage, bounded grep output, and visible tool targets | Rerun gates and request follow-up review |
 | 2026-11-20 | Codex | Consolidated P2-04, P2-06, and P2-07 drafts on one branch; added regex grep, actor persistence, automatic checkpoint capture, compressed deduplicated blobs, and Android entry point | Run full gates, review unified PR, then close stacked drafts |
@@ -305,6 +306,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Doc | Change |
 |---|---|---|
+| 2026-11-20 | project-structure, progress-tracker | Recorded the actor rewind module split after #188 CI found a file-length failure |
 | 2026-11-20 | architecture, project-structure, library-docs, progress-tracker | Described the built rewind path and marked P2-04, P2-06, and P2-07 Done after #187 merged |
 | 2026-11-20 | progress-tracker | Recorded cancellation and nested Git fixes for #187 |
 | 2026-11-20 | architecture, progress-tracker | Recorded #187 review fixes and the Android approval limitation |

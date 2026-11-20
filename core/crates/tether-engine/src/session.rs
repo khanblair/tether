@@ -11,11 +11,9 @@ use thiserror::Error;
 use tokio::sync::{mpsc, oneshot};
 use tokio_util::sync::CancellationToken;
 
-use crate::{
-    EventSink, RewindError, RewindScope, ToolLoop, rewind_checkpoint, rewind_conversation_only,
-    tool_loop::ToolLoopContext,
-};
+use crate::{EventSink, RewindError, RewindScope, ToolLoop, tool_loop::ToolLoopContext};
 
+mod rewind;
 mod stream;
 
 const TEXT_BATCH_MS: u64 = 32;
@@ -225,30 +223,6 @@ impl SessionActor {
                 }
             }
         }
-    }
-
-    fn rewind(&mut self, checkpoint_id: &str, scope: RewindScope) -> Result<(), SessionActorError> {
-        if let Some(tools) = self.tools.as_ref() {
-            rewind_checkpoint(
-                &mut self.store,
-                &self.session.id,
-                checkpoint_id,
-                scope,
-                &tools.guard,
-                &tools.blobs,
-            )?;
-        } else if scope == RewindScope::Conversation {
-            rewind_conversation_only(&mut self.store, &self.session.id, checkpoint_id)?;
-        } else {
-            return Err(SessionActorError::NoWorkspace);
-        }
-        self.store
-            .set_session_status(&self.session.id, SessionStatus::Idle, now_ms())?;
-        self.emit_status(SessionStatus::Idle);
-        self.sink.on_event(CoreEvent::SessionRewound {
-            session_id: self.session.id.clone(),
-        });
-        Ok(())
     }
 
     #[expect(

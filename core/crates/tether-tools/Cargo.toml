@@ -6,5 +6,11 @@ rust-version.workspace = true
 publish.workspace = true
 description = "Agent tool registry and tool implementations."
 
+[dependencies]
+tether-workspace = { path = "../tether-workspace" }
+
+[dev-dependencies]
+tempfile.workspace = true
+
 [lints]
 workspace = true

@@ -49,7 +49,8 @@ tether/
 │       │   └── src/{lib.rs, callbacks.rs, provider_settings.rs, sessions.rs, updater.rs, secrets.rs, views/{mod,event,types,error}.rs, bin/uniffi-bindgen.rs}
 │       ├── tether-quality/    data/slop_words.txt and slop_patterns.toml (shared with slop-lint)
 │       ├── tether-workspace/   PathGuard and FileIndex: path checks, scan, glob, grep
-│       └── tether-{tools,vcs,sandbox,linux,ci,connectors,mcp,skills,memory}/
+│       ├── tether-tools/       src/{lib,edit,edit/tests}.rs; guarded atomic text edits
+│       └── tether-{vcs,sandbox,linux,ci,connectors,mcp,skills,memory}/
 │                              Empty libraries
 ├── android/
 │   ├── settings.gradle.kts  build.gradle.kts  gradle.properties  gradlew  gradlew.bat

@@ -13,6 +13,7 @@ mod provider_configs;
 #[cfg(test)]
 mod schema_tests;
 mod sessions;
+mod session_search;
 #[cfg(test)]
 mod sessions_rules_tests;
 #[cfg(test)]

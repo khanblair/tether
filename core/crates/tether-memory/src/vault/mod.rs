@@ -64,7 +64,10 @@ pub enum VaultError {
     /// Filesystem access failed.
     Io(io::Error),
     /// A note lacks valid frontmatter or a description.
-    InvalidNote { path: String },
+    InvalidNote {
+        /// Relative path of the invalid note.
+        path: String,
+    },
     /// A requested note does not exist.
     MissingNote,
     /// A path could escape the private vault or touch a symlink.
@@ -74,7 +77,9 @@ pub enum VaultError {
 }
 
 impl From<io::Error> for VaultError {
-    fn from(error: io::Error) -> Self { Self::Io(error) }
+    fn from(error: io::Error) -> Self {
+        Self::Io(error)
+    }
 }
 
 impl VaultIndex {
@@ -84,43 +89,68 @@ impl VaultIndex {
     /// Returns a read error or a note with missing required metadata.
     pub fn rebuild(root: &Path) -> Result<Self, VaultError> {
         let mut paths = Vec::new();
-        if root.exists() { collect_markdown(root, root, &mut paths)?; }
+        if root.exists() {
+            collect_markdown(root, root, &mut paths)?;
+        }
         paths.sort();
         let mut notes = BTreeMap::new();
         for (relative, absolute) in paths {
             let source = fs::read_to_string(absolute)?;
-            let note = parse_note(&relative, source)
-                .ok_or(VaultError::InvalidNote { path: relative.clone() })?;
+            let note = parse_note(&relative, source).ok_or(VaultError::InvalidNote {
+                path: relative.clone(),
+            })?;
             notes.insert(relative, note);
         }
-        let mut links = Vec::new();
-        for note in notes.values() {
-            for mut link in parse_links(&note.path, &note.source) {
-                link.resolved = resolve_target(&notes, &note.path, &link.target).is_some();
-                links.push(link);
-            }
-        }
+        let links = resolve_links(&notes);
         Ok(Self { notes, links })
     }
 
     /// Returns links pointing to an existing note.
+    #[must_use]
     pub fn backlinks(&self, path: &str) -> Vec<&VaultLink> {
-        self.links.iter().filter(|link| link.resolved &&
-            resolve_target(&self.notes, &link.source_path, &link.target) == Some(path.to_owned()))
+        self.links
+            .iter()
+            .filter(|link| {
+                link.resolved
+                    && resolve_target(&self.notes, &link.source_path, &link.target)
+                        == Some(path.to_owned())
+            })
             .collect()
     }
 }
 
-fn collect_markdown(root: &Path, folder: &Path, paths: &mut Vec<(String, PathBuf)>) -> io::Result<()> {
+/// Parses the links in every note and marks which ones point to an existing note.
+fn resolve_links(notes: &BTreeMap<String, VaultNote>) -> Vec<VaultLink> {
+    let mut links = Vec::new();
+    for note in notes.values() {
+        for mut link in parse_links(&note.path, &note.source) {
+            link.resolved = resolve_target(notes, &note.path, &link.target).is_some();
+            links.push(link);
+        }
+    }
+    links
+}
+
+fn collect_markdown(
+    root: &Path,
+    folder: &Path,
+    paths: &mut Vec<(String, PathBuf)>,
+) -> io::Result<()> {
     for item in fs::read_dir(folder)? {
         let item = item?;
         let kind = item.file_type()?;
         let path = item.path();
-        if kind.is_symlink() || item.file_name() == ".obsidian" { continue; }
-        if kind.is_dir() { collect_markdown(root, &path, paths)?; }
-        else if kind.is_file() && path.extension().is_some_and(|ext| ext == "md") {
-            let relative = path.strip_prefix(root).map_err(io::Error::other)?
-                .to_string_lossy().replace('\\', "/");
+        if kind.is_symlink() || item.file_name() == ".obsidian" {
+            continue;
+        }
+        if kind.is_dir() {
+            collect_markdown(root, &path, paths)?;
+        } else if kind.is_file() && path.extension().is_some_and(|ext| ext == "md") {
+            let relative = path
+                .strip_prefix(root)
+                .map_err(io::Error::other)?
+                .to_string_lossy()
+                .replace('\\', "/");
             paths.push((relative, path));
         }
     }
@@ -129,45 +159,84 @@ fn collect_markdown(root: &Path, folder: &Path, paths: &mut Vec<(String, PathBuf
 
 fn parse_note(path: &str, source: String) -> Option<VaultNote> {
     let mut lines = source.lines();
-    if lines.next()?.trim() != "---" { return None; }
-    let mut fields = BTreeMap::new();
-    let mut closed = false;
-    for line in lines.by_ref() {
-        if line.trim() == "---" { closed = true; break; }
-        if line.trim().is_empty() { continue; }
-        let (key, value) = line.split_once(':')?;
-        if key.trim().is_empty() || line.starts_with(' ') { return None; }
-        fields.insert(key.trim().to_owned(), scalar(value.trim()));
+    if lines.next()?.trim() != "---" {
+        return None;
     }
-    if !closed { return None; }
+    let mut fields = parse_fields(&mut lines)?;
     let description = fields.remove("description")?;
-    if description.trim().is_empty() { return None; }
-    let title = fields.remove("title").unwrap_or_else(||
-        Path::new(path).file_stem().and_then(|stem| stem.to_str()).unwrap_or(path).to_owned());
-    let headings = lines.filter_map(|line| {
-        let level = line.bytes().take_while(|byte| *byte == b'#').count();
-        if (1..=6).contains(&level) { line.get(level..).map(|text| text.trim().to_owned()) }
-        else { None }
-    }).collect();
+    if description.trim().is_empty() {
+        return None;
+    }
+    let title = fields.remove("title").unwrap_or_else(|| {
+        Path::new(path)
+            .file_stem()
+            .and_then(|stem| stem.to_str())
+            .unwrap_or(path)
+            .to_owned()
+    });
+    let headings = lines
+        .filter_map(|line| {
+            let level = line.bytes().take_while(|byte| *byte == b'#').count();
+            if (1..=6).contains(&level) {
+                line.get(level..).map(|text| text.trim().to_owned())
+            } else {
+                None
+            }
+        })
+        .collect();
     Some(VaultNote {
-        path: path.to_owned(), title, description,
+        path: path.to_owned(),
+        title,
+        description,
         note_type: fields.remove("type"),
         tags: list(fields.remove("tags")),
         aliases: list(fields.remove("aliases")),
-        created: fields.remove("created"), updated: fields.remove("updated"),
-        headings, source,
+        created: fields.remove("created"),
+        updated: fields.remove("updated"),
+        headings,
+        source,
     })
 }
 
+/// Reads `key: value` lines up to the closing `---`. Returns `None` when the block is malformed
+/// or never closes.
+fn parse_fields(lines: &mut std::str::Lines<'_>) -> Option<BTreeMap<String, String>> {
+    let mut fields = BTreeMap::new();
+    for line in lines {
+        if line.trim() == "---" {
+            return Some(fields);
+        }
+        if line.trim().is_empty() {
+            continue;
+        }
+        let (key, value) = line.split_once(':')?;
+        if key.trim().is_empty() || line.starts_with(' ') {
+            return None;
+        }
+        fields.insert(key.trim().to_owned(), scalar(value.trim()));
+    }
+    None
+}
+
 fn scalar(value: &str) -> String {
-    value.strip_prefix('"').and_then(|v| v.strip_suffix('"'))
+    value
+        .strip_prefix('"')
+        .and_then(|v| v.strip_suffix('"'))
         .or_else(|| value.strip_prefix('\'').and_then(|v| v.strip_suffix('\'')))
-        .unwrap_or(value).to_owned()
+        .unwrap_or(value)
+        .to_owned()
 }
 
 fn list(value: Option<String>) -> Vec<String> {
-    value.map(|v| v.trim_start_matches('[').trim_end_matches(']').split(',')
-        .map(|item| scalar(item.trim())).filter(|item| !item.is_empty()).collect())
+    value
+        .map(|v| {
+            v.trim_start_matches('[')
+                .trim_end_matches(']')
+                .split(',')
+                .map(|item| scalar(item.trim()))
+                .filter(|item| !item.is_empty())
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -176,31 +245,62 @@ fn parse_links(source_path: &str, source: &str) -> Vec<VaultLink> {
     let mut rest = source;
     while let Some(start) = rest.find("[[") {
         rest = &rest[start + 2..];
-        let Some(end) = rest.find("]]") else { break; };
+        let Some(end) = rest.find("]]") else {
+            break;
+        };
         let inner = &rest[..end];
-        let (destination, alias) = inner.split_once('|').map_or((inner, None),
-            |(left, right)| (left, Some(right.to_owned())));
-        let (target, heading) = destination.split_once('#').map_or((destination, None),
-            |(left, right)| (left, Some(right.to_owned())));
+        let (destination, alias) = inner
+            .split_once('|')
+            .map_or((inner, None), |(left, right)| {
+                (left, Some(right.to_owned()))
+            });
+        let (target, heading) = destination
+            .split_once('#')
+            .map_or((destination, None), |(left, right)| {
+                (left, Some(right.to_owned()))
+            });
         if !target.trim().is_empty() {
-            links.push(VaultLink { source_path: source_path.to_owned(), target: target.trim().to_owned(),
-                heading, alias, resolved: false });
+            links.push(VaultLink {
+                source_path: source_path.to_owned(),
+                target: target.trim().to_owned(),
+                heading,
+                alias,
+                resolved: false,
+            });
         }
         rest = &rest[end + 2..];
     }
     links
 }
 
-fn resolve_target(notes: &BTreeMap<String, VaultNote>, source: &str, target: &str) -> Option<String> {
+fn resolve_target(
+    notes: &BTreeMap<String, VaultNote>,
+    source: &str,
+    target: &str,
+) -> Option<String> {
     let target = target.trim_end_matches(".md");
     let exact = format!("{target}.md");
-    if notes.contains_key(&exact) { return Some(exact); }
-    let sibling = Path::new(source).parent().unwrap_or(Path::new(""))
-        .join(&exact).to_string_lossy().replace('\\', "/");
-    if notes.contains_key(&sibling) { return Some(sibling); }
-    let matches: Vec<_> = notes.keys().filter(|path|
-        Path::new(path).file_stem().and_then(|stem| stem.to_str()) == Some(target)).collect();
-    if matches.len() == 1 { matches.into_iter().next().cloned() } else { None }
+    if notes.contains_key(&exact) {
+        return Some(exact);
+    }
+    let sibling = Path::new(source)
+        .parent()
+        .unwrap_or(Path::new(""))
+        .join(&exact)
+        .to_string_lossy()
+        .replace('\\', "/");
+    if notes.contains_key(&sibling) {
+        return Some(sibling);
+    }
+    let matches: Vec<_> = notes
+        .keys()
+        .filter(|path| Path::new(path).file_stem().and_then(|stem| stem.to_str()) == Some(target))
+        .collect();
+    if matches.len() == 1 {
+        matches.into_iter().next().cloned()
+    } else {
+        None
+    }
 }
 
 #[cfg(test)]

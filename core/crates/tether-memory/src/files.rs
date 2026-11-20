@@ -4,7 +4,6 @@ use std::fs::{self, OpenOptions};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 const SEPARATOR: &str = "\n§\n";
 
@@ -39,7 +38,12 @@ pub enum MemoryAction {
     /// Append a distinct entry.
     Add(String),
     /// Replace one exact entry.
-    Patch { old: String, new: String },
+    Patch {
+        /// The entry to find, byte for byte.
+        old: String,
+        /// The entry that replaces it.
+        new: String,
+    },
     /// Remove one exact entry.
     Remove(String),
 }
@@ -61,7 +65,10 @@ pub enum MemoryError {
     /// The replacement target was not found.
     MissingEntry,
     /// The file would exceed its character cap.
-    OverCap { cap: usize },
+    OverCap {
+        /// The cap in characters for the target file.
+        cap: usize,
+    },
     /// The entry contains an injection, credential, or invisible character pattern.
     UnsafeContent,
     /// An entry has invalid separators or is empty.
@@ -69,7 +76,9 @@ pub enum MemoryError {
 }
 
 impl From<io::Error> for MemoryError {
-    fn from(error: io::Error) -> Self { Self::Io(error) }
+    fn from(error: io::Error) -> Self {
+        Self::Io(error)
+    }
 }
 
 /// Disk-backed memory scoped to a fixed directory.
@@ -82,7 +91,10 @@ pub struct MemoryStore {
 impl MemoryStore {
     /// Creates a store; files are created on the first write.
     pub fn new(root: impl Into<PathBuf>) -> Self {
-        Self { root: root.into(), lock: Mutex::new(()) }
+        Self {
+            root: root.into(),
+            lock: Mutex::new(()),
+        }
     }
 
     /// Reads one memory file without modifying it.
@@ -97,44 +109,77 @@ impl MemoryStore {
     ///
     /// # Errors
     /// Rejects over-cap, duplicate-format, unsafe, or missing-entry operations.
-    pub fn apply(&self, target: MemoryTarget, action: MemoryAction) -> Result<MemoryResult, MemoryError> {
-        let _guard = self.lock.lock().map_err(|_| io::Error::other("memory lock poisoned"))?;
+    pub fn apply(
+        &self,
+        target: MemoryTarget,
+        action: MemoryAction,
+    ) -> Result<MemoryResult, MemoryError> {
+        let _guard = self
+            .lock
+            .lock()
+            .map_err(|_| io::Error::other("memory lock poisoned"))?;
         let path = self.root.join(target.name());
         let original = read_file(&path)?;
-        let mut entries: Vec<String> = original.split(SEPARATOR)
-            .filter(|part| !part.trim().is_empty()).map(str::to_owned).collect();
-        match action {
-            MemoryAction::Add(entry) => {
-                validate_entry(&entry)?;
-                if entries.contains(&entry) {
-                    return Ok(MemoryResult { changed: false, content: original });
-                }
-                entries.push(entry);
-            }
-            MemoryAction::Patch { old, new } => {
-                validate_entry(&new)?;
-                let slot = entries.iter().position(|entry| entry == &old)
-                    .ok_or(MemoryError::MissingEntry)?;
-                entries[slot] = new;
-            }
-            MemoryAction::Remove(entry) => {
-                let slot = entries.iter().position(|item| item == &entry)
-                    .ok_or(MemoryError::MissingEntry)?;
-                entries.remove(slot);
-            }
+        let mut entries: Vec<String> = original
+            .split(SEPARATOR)
+            .filter(|part| !part.trim().is_empty())
+            .map(str::to_owned)
+            .collect();
+        if !apply_action(&mut entries, action)? {
+            return Ok(MemoryResult {
+                changed: false,
+                content: original,
+            });
         }
-        for entry in &entries { validate_entry(entry)?; }
+        for entry in &entries {
+            validate_entry(entry)?;
+        }
         let updated = entries.join(SEPARATOR);
         if updated.chars().count() > target.cap() {
             return Err(MemoryError::OverCap { cap: target.cap() });
         }
         if updated == original {
-            return Ok(MemoryResult { changed: false, content: original });
+            return Ok(MemoryResult {
+                changed: false,
+                content: original,
+            });
         }
         fs::create_dir_all(&self.root)?;
         write_atomic(&path, updated.as_bytes())?;
-        Ok(MemoryResult { changed: true, content: updated })
+        Ok(MemoryResult {
+            changed: true,
+            content: updated,
+        })
     }
+}
+
+/// Applies the action to the entry list. Returns `false` when nothing needs to change.
+fn apply_action(entries: &mut Vec<String>, action: MemoryAction) -> Result<bool, MemoryError> {
+    match action {
+        MemoryAction::Add(entry) => {
+            validate_entry(&entry)?;
+            if entries.contains(&entry) {
+                return Ok(false);
+            }
+            entries.push(entry);
+        }
+        MemoryAction::Patch { old, new } => {
+            validate_entry(&new)?;
+            let slot = entries
+                .iter()
+                .position(|entry| entry == &old)
+                .ok_or(MemoryError::MissingEntry)?;
+            entries[slot] = new;
+        }
+        MemoryAction::Remove(entry) => {
+            let slot = entries
+                .iter()
+                .position(|item| item == &entry)
+                .ok_or(MemoryError::MissingEntry)?;
+            entries.remove(slot);
+        }
+    }
+    Ok(true)
 }
 
 fn read_file(path: &Path) -> Result<String, MemoryError> {
@@ -161,16 +206,32 @@ fn is_invisible(character: char) -> bool {
 
 fn has_unsafe_pattern(entry: &str) -> bool {
     let lower = entry.to_ascii_lowercase();
-    ["ignore previous instructions", "ignore all previous instructions", "override instructions",
-     "reveal the system prompt", "send secrets", "you are now", "act as the system",
-     "sk-", "ghp_", "github_pat_", "aiza", "akia", "-----begin private key-----",
-     "api_key=", "api_key:", "password=", "password:"].iter().any(|pattern| lower.contains(pattern))
+    [
+        "ignore previous instructions",
+        "ignore all previous instructions",
+        "override instructions",
+        "reveal the system prompt",
+        "send secrets",
+        "you are now",
+        "act as the system",
+        "sk-",
+        "ghp_",
+        "github_pat_",
+        "aiza",
+        "akia",
+        "-----begin private key-----",
+        "api_key=",
+        "api_key:",
+        "password=",
+        "password:",
+    ]
+    .iter()
+    .any(|pattern| lower.contains(pattern))
 }
 
 fn write_atomic(path: &Path, bytes: &[u8]) -> io::Result<()> {
-    let stamp = SystemTime::now().duration_since(UNIX_EPOCH)
-        .map_err(io::Error::other)?.as_nanos();
-    let temporary = path.with_extension(format!("tmp-{}-{stamp}", std::process::id()));
+    let stamp = crate::unique_id();
+    let temporary = path.with_extension(format!("tmp-{stamp}"));
     let mut options = OpenOptions::new();
     options.write(true).create_new(true);
     #[cfg(unix)]
@@ -184,7 +245,10 @@ fn write_atomic(path: &Path, bytes: &[u8]) -> io::Result<()> {
         file.sync_all()?;
         fs::rename(&temporary, path)
     })();
-    if result.is_err() { let _ = fs::remove_file(&temporary); }
+    if result.is_err() {
+        // The write error is returned below. A failed cleanup must not replace it.
+        fs::remove_file(&temporary).ok();
+    }
     result
 }
 

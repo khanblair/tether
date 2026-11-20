@@ -1,14 +1,15 @@
 use super::{VaultError, VaultIndex};
 use std::fs;
 use std::path::PathBuf;
-use std::time::{SystemTime, UNIX_EPOCH};
 
-struct VaultFixture { path: PathBuf }
+struct VaultFixture {
+    path: PathBuf,
+}
 
 impl VaultFixture {
     fn new() -> Self {
-        let stamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
-        let path = std::env::temp_dir().join(format!("tether-vault-{}-{stamp}", std::process::id()));
+        let stamp = crate::unique_id();
+        let path = std::env::temp_dir().join(format!("tether-vault-{stamp}"));
         fs::create_dir_all(&path).unwrap();
         Self { path }
     }
@@ -21,14 +22,20 @@ impl VaultFixture {
 }
 
 impl Drop for VaultFixture {
-    fn drop(&mut self) { let _ = fs::remove_dir_all(&self.path); }
+    fn drop(&mut self) {
+        // Best-effort cleanup. A panic in Drop would hide the test result.
+        fs::remove_dir_all(&self.path).ok();
+    }
 }
 
 #[test]
 fn rebuild_is_deterministic_and_marks_missing_links() {
     let fixture = VaultFixture::new();
     fixture.write("Work.md", "---\ndescription: Work map\ntype: moc\ntags: [work, active]\n---\n# Tasks\n[[Plan#Next|next step]] and [[Missing]]");
-    fixture.write("Plan.md", "---\ndescription: Current plan\n---\n## Next\nDetails");
+    fixture.write(
+        "Plan.md",
+        "---\ndescription: Current plan\n---\n## Next\nDetails",
+    );
     let first = VaultIndex::rebuild(&fixture.path).unwrap();
     assert_eq!(first, VaultIndex::rebuild(&fixture.path).unwrap());
     assert_eq!(first.notes["Work.md"].tags, vec!["work", "active"]);
@@ -48,5 +55,8 @@ fn rebuild_is_deterministic_and_marks_missing_links() {
 fn note_without_description_is_rejected() {
     let fixture = VaultFixture::new();
     fixture.write("NoDescription.md", "---\ntype: moc\n---\n# Note");
-    assert!(matches!(VaultIndex::rebuild(&fixture.path), Err(VaultError::InvalidNote { .. })));
+    assert!(matches!(
+        VaultIndex::rebuild(&fixture.path),
+        Err(VaultError::InvalidNote { .. })
+    ));
 }

@@ -480,7 +480,7 @@ Long-term notes that outgrow two capped files go into a vault: a folder of plain
 
 **Checks on every write.** The note must have a `description`. Links that point nowhere are recorded as unresolved, not rejected. Size is capped. A note that nothing links to is reported by `/vault lint`.
 
-**Where the vault lives.** The vault is in app-private storage (`files/memory/vault/`), because the Rust core cannot open Android content URIs and so cannot read a shared folder directly. Two ways in and out:
+**Where the vault lives.** P11-15 adds a copy-based sync contract and fake-folder tests. Android document-tree access, manifest persistence, and zip import/export remain. The vault is in app-private storage (`files/memory/vault/`), because the Rust core cannot open Android content URIs and so cannot read a shared folder directly. Two ways in and out:
 1. Export and import as a zip through the system file picker.
 2. Folder sync: the user picks a shared folder (Storage Access Framework). The Kotlin platform layer copies changed files both ways, comparing hashes and modification times, when the user asks and after each turn that wrote to the vault. This lets Obsidian for Android open the same notes. The vault tools only ever see the private copy.
 

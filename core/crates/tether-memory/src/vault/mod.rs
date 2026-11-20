@@ -5,6 +5,7 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
+pub mod sync;
 mod tools;
 pub use tools::{NoteLinks, VaultStore};
 

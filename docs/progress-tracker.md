@@ -84,6 +84,7 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 | P1-15 | Sessions list, rename, search | Codex | In progress | #161 | Store methods and tests; FFI and UI remain |
 | P1-18 | Log redaction layer and S7 test | Codex | In progress | #164 | Redactor and planted key-shape tests; logger/export wiring remains |
 | P11-01 | SKILL.md parser and validator | Codex | In review | #168 | Scalar frontmatter and name rules; full YAML compatibility remains |
+| P11-09 | Frozen memory snapshot | Codex | In review | #171 | Snapshot and prompt block; session actor wiring remains |
 | P11-08 | MEMORY.md and USER.md with caps | Codex | In review | #170 | File store, caps, and pattern checks; engine tool wiring remains |
 | P1-11 | Session actor and plain chat turn (no tools) | Blair with Codex, Haiku, and Claude | Done | #153 | Merged; issue #15 closed. Session rows, transcript persistence, plain chat actor, and UniFFI entry points. Codex's first review found issues that were fixed with tests; its second review could not run (Codex usage limit), so the fixes were reviewed by Claude only |
 | P1-20 | In-app updates for the `full` build | Blair with Codex, Haiku, and Claude | Done | #151 | Merged; issue #135 closed. Rust: check, download, and SHA-256 verify with a GitHub-only redirect policy. Android: `PackageInstaller` installer for `full` and a Google Play link for `play`, an update state holder, the About screen with an updates card, a Settings row, and a home banner. `v0.0.3` published as the latest release (signed with the pinned key, `versionCode` 300); it has to be installed by hand once, and later releases arrive in the app |
@@ -175,6 +176,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 | 2026-11-20 | Codex | Added P2-01 project folder and ZIP round-trip layer with tests | Wire Android project screens and database rows |
 |---|---|---|
 | 2026-11-20 | Codex | Added P11-01 SKILL.md scalar parser and validation fixtures | Add full YAML syntax and discovery |
+| 2026-11-20 | Codex | Added P11-09 frozen memory snapshot with a mid-session write fixture | Pass the snapshot to the session actor prompt |
 | 2026-11-20 | Codex | Added P11-08 capped memory file operations and rejection fixtures | Wire memory tool into the engine |
 | 2026-11-20 | Blair with Claude | Merged #153 (P1-11), #154 (file length), and #156 (P1-21). None changed the version, so `release.yml` ran and skipped the release job (`v0.0.3` already tagged). Blair chose to keep bumping by hand (D33). Added `tools/bump-version.sh` with a self test (3 of 3 arithmetic mutations caught), `just bump`, and a CI step; set the version to 0.0.4 | Merge this PR to publish `v0.0.4` with the Home dashboard and the session actor; then check the assets, the signature, and `versionCode` 400 |
 | 2026-11-19 | Blair with Haiku and Claude | Started P1-21 (issue #155) after Blair saw the P0 shell. First pick: a Projects home with a menu and a bell. After the first build Blair asked for a dashboard home, a fuller drawer, a theme toggle, themed toasts, arrow back buttons, and no extra "Tether" bar (the system action bar, now off). Decided with Blair (D32): Home dashboard with five cards, drawer links for Home, Projects, Needs attention, Usage and cost, and Runs. Haiku agents built the prototype, the design system components, and the app screens; Claude reviewed them, fixed three review items (an uncaught core failure on Home, a stale theme note, a duplicate refresh), and added tests for the mutants that survived. `just check` and `assembleFullDebug` pass | Blair checks Home, the drawer, the theme toggle, and the toast in the emulator; Codex review; then merge on Blair's go |
@@ -226,6 +228,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 | 2026-11-20 | `android/app/src/{main,debug,test}/` | P2-13 project detail route, screen, data fields and fixture | #177 |
 | 2026-11-20 | `android/app/src/{main,test}/kotlin/app/tether/workspace/` | P2-01 project archive layer and round-trip tests | #165 |
 | 2026-11-20 | `core/crates/tether-skills/src/` | P11-01 parser and tests | #168 |
+| 2026-11-20 | `core/crates/tether-memory/src/{lib,snapshot}.rs` | P11-09 frozen snapshot and tests | #171 |
 | 2026-11-20 | `core/crates/tether-memory/src/` | P11-08 capped memory store and tests | #170 |
 | 2026-11-20 | `core/Cargo.toml`, `core/Cargo.lock`, `tools/bump-version.sh`, `justfile`, `.github/workflows/ci.yml` | Version 0.0.4; a bump script with a self test and `just bump` | - |
 | 2026-11-19 | `android/app/src/{main,debug,release}/`, `android/designsystem/`, `tokens/tokens.json`, `tools/prototype/` | P1-21: Home dashboard, drawer, Needs attention, usage and sample sources (`debug`) and empty sources (`release`), a saved theme choice, a snackbar host, 22 design system component files and 21 icons, `size.chart-height`, arrow back buttons, the action bar off, the Rust core card moved into About, prototype Home and drawer (106 screens) | #156 |
@@ -271,6 +274,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 | 2026-11-20 | architecture, project-structure, progress-tracker | P2-13 screen and pending data wiring |
 | 2026-11-20 | progress-tracker, project-structure | P2-01 started and archive file listed |
 | 2026-11-20 | progress-tracker, project-structure, architecture | P11-01 parser limits and status |
+| 2026-11-20 | architecture, project-structure, progress-tracker | P11-09 snapshot and pending actor wiring |
 | 2026-11-20 | architecture, project-structure, progress-tracker | P11-08 file store and remaining tool wiring |
 | 2026-11-20 | development, project-structure, progress-tracker | Release steps use `just bump`; D33 records that versions are bumped by hand; P1-11 and P1-21 marked Done |
 | 2026-11-19 | ui-rules, ui-registry, ui-tokens, project-structure, architecture, mobile, build-plan, progress-tracker | P1-21: the Home dashboard, the drawer, the theme toggle, snackbars and toasts, arrow back buttons, Needs attention, new component rows, `size.chart-height`; a newer app version shows on the bell and in Needs attention instead of a home banner (D32) |

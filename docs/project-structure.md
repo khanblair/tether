@@ -51,7 +51,7 @@ tether/
 │       ├── tether-workspace/   PathGuard and FileIndex: path checks, scan, glob, grep
 │       ├── tether-tools/       src/{lib,edit,edit/tests}.rs; guarded atomic text edits
 │       ├── tether-skills/      SKILL.md scalar frontmatter parser and validator
-│       ├── tether-memory/     src/{lib,files,files/tests}.rs; capped MEMORY.md and USER.md writes
+│       ├── tether-memory/     src/{lib,files,files/tests,snapshot}.rs; capped files and frozen snapshot
 │       └── tether-{vcs,sandbox,linux,ci,connectors,mcp}/
 │                              Empty libraries
 ├── android/

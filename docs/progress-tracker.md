@@ -52,9 +52,10 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 
 | ID | Task | Owner | Status | PR | Notes |
 |---|---|---|---|---|---|
-| P2-07 | Edit batches and checkpoints | Codex | In review | #187 | Stacked draft #186 consolidated; automatic capture and BLAKE3/zstd deduplication verified; cleanup remains |
-| P2-06 | Tool loop in the turn | Codex | In review | #187 | Stacked draft #185 consolidated; actor persistence, streamed text, five-call fixture, and Android entry point wired; Android mutations wait for approval UI |
-| P2-04 | Read tools | Codex | In review | #187 | Stacked draft #184 consolidated; guarded read tools, regex grep, and engine registration verified |
+| P2-08 | Rewind: files, conversation, or both | Codex | In progress | | All three restore modes and serialized actor rewind pass tests; CI and pull request remain |
+| P2-07 | Edit batches and checkpoints | Codex | Done | #187 | Merged with automatic capture and BLAKE3/zstd deduplication; cleanup remains |
+| P2-06 | Tool loop in the turn | Codex | Done | #187 | Merged with actor persistence, streamed text, five-call fixture, and Android entry point; Android mutations wait for approval UI |
+| P2-04 | Read tools | Codex | Done | #187 | Merged with guarded read tools, regex grep, and engine registration |
 | P0-01 | Repo layout | Blair with Claude | Done | n/a | Every top-level folder exists; root README links the docs |
 | P0-02 | Rust workspace with all crates | Blair with Claude | Done | n/a | 17 crates: `tether-types`, `tether-engine`, and `tether-ffi` have code; the other 14 are empty libs. Host build, `cargo ndk` for both ABIs, clippy, and tests pass locally |
 | P0-03 | UniFFI with `version()` | Blair with Claude | Done | n/a | Pixel 9 arm64 emulator shows "Version 0.0.1" from the Rust core |
@@ -173,6 +174,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Who | What happened | Next |
 |---|---|---|---|
+| 2026-11-20 | Codex | Merged #187 after green CI, closed superseded drafts #184 to #186, and started P2-08 with all three restore modes, guarded files, actor ordering, and FFI calls | Run full checks and open the P2-08 pull request |
 | 2026-11-20 | Codex | Addressed six findings from the #187 Codex review: thinking replay, malformed tool JSON, persisted streaming, per-response usage, bounded grep output, and visible tool targets | Rerun gates and request follow-up review |
 | 2026-11-20 | Codex | Consolidated P2-04, P2-06, and P2-07 drafts on one branch; added regex grep, actor persistence, automatic checkpoint capture, compressed deduplicated blobs, and Android entry point | Run full gates, review unified PR, then close stacked drafts |
 | 2026-11-20 | Codex | Added P2-07 checkpoint schema, snapshot store, and deduplication fixture | Open stacked draft; wire capture to the tool loop |
@@ -241,6 +243,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Files | Change | PR |
 |---|---|---|---|
+| 2026-11-20 | `core/crates/tether-{store,engine,types,ffi}/`, architecture, project-structure, progress-tracker | Added checkpoint listing and three rewind modes with guarded file restore, hidden conversation history, actor command, and FFI views | Pending |
 | 2026-11-20 | `core/crates/tether-engine/src/tool_loop*`, `core/crates/tether-workspace/src/file_index*`, progress-tracker | Saved error results for calls left pending on cancellation and excluded nested `.git` directories from the file index | #187 |
 | 2026-11-20 | `core/crates/tether-{engine,store,tools,ffi}/`, `android/app/src/main/kotlin/app/tether/session/TranscriptScreen.kt`, architecture, progress-tracker | Addressed #187 review findings with streamed persistence, reasoning replay, usage accounting, bounded grep, and safe target display | #187 |
 | 2026-11-20 | `core/Cargo.*`, `core/crates/tether-{tools,engine,store,ffi}/`, Android session wiring and bindings, architecture, progress-tracker | Consolidated P2-04/P2-06/P2-07 drafts with runtime integration and verification | #187 |
@@ -302,6 +305,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Doc | Change |
 |---|---|---|
+| 2026-11-20 | architecture, project-structure, library-docs, progress-tracker | Described the built rewind path and marked P2-04, P2-06, and P2-07 Done after #187 merged |
 | 2026-11-20 | progress-tracker | Recorded cancellation and nested Git fixes for #187 |
 | 2026-11-20 | architecture, progress-tracker | Recorded #187 review fixes and the Android approval limitation |
 | 2026-11-20 | architecture, progress-tracker | Consolidated P2-04/P2-06/P2-07 behavior and remaining integration limits |

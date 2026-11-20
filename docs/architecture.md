@@ -176,6 +176,8 @@ Status: at P0 the app shell is an exception to the rule that composables never c
 4. Conversation: mark later messages as rewound (kept in the database, hidden from context).
 5. Emit `SessionRewound`; UI reloads the transcript.
 
+P2-08 lists checkpoints newest first. The session actor cancels an active turn before it handles a rewind command. File restore reads every checkpoint from the selected batch onward in reverse edit order, verifies all blobs and guarded paths before writing, restores prior bytes through temporary files, and removes files that did not exist before an edit. Conversation restore marks the checkpoint's assistant call and all later messages as rewound. New provider requests omit those messages. The UniFFI session runtime lists checkpoints, and its session runner accepts all three restore options. A conversation-only rewind works without a workspace runtime.
+
 ### 5.6 Linux mode setup
 
 1. User enables Linux mode in Settings (`full` flavor only).

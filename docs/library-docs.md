@@ -47,6 +47,7 @@ AI agents do not add libraries. They propose them in the PR description and stop
 | `zeroize` | 1.x | Wipe secret bytes when they are dropped | The standard way to clear memory so the compiler cannot optimize it away. Added by P1-03; the owner approves it when merging that pull request (code-standards 13.4) |
 | `blake3` | 1.x | Blob hashing | Fast content addressing |
 | `zstd` | Latest | Blob compression | Good ratio and speed on phones |
+| `tempfile` | Latest | Atomic checkpoint file restore and temporary test workspaces | Creates a private temporary file beside each restore target before replacement |
 | `ignore` | Latest | Walk files with `.gitignore` rules | From ripgrep; fast and correct |
 | `globset` | Latest | Glob tool | Same family as `ignore` |
 | `grep-searcher`, `grep-regex` | Latest | Grep tool | ripgrep's engine as a library |
@@ -101,7 +102,6 @@ GitHub REST and GraphQL calls use `reqwest` directly with typed request and resp
 | `proptest` | Property tests for the path guard and edit tools |
 | `insta` | Snapshot tests for prompt assembly and diff output |
 | `wiremock` | HTTP mocks for GitHub and MCP tests |
-| `tempfile` | Temporary workspaces in tests |
 
 ## 3. Android
 

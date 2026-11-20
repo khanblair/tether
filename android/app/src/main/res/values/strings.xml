@@ -290,4 +290,6 @@
     <string name="composer_attachments">Attachments</string>
     <string name="composer_send">Send</string>
     <string name="composer_stop">Stop</string>
+    <string name="composer_voice">Speak</string>
+    <string name="composer_voice_unavailable">Speech input is not available on this device.</string>
 </resources>

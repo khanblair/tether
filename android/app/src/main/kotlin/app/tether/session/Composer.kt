@@ -1,5 +1,11 @@
 package app.tether.session
 
+import android.app.Activity
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.speech.RecognizerIntent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,6 +37,15 @@ fun Composer(
     onStop: () -> Unit,
 ) {
     var input by rememberSaveable { mutableStateOf("") }
+    var speechUnavailable by rememberSaveable { mutableStateOf(false) }
+    val speech =
+        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val words =
+                result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
+            if (words != null) input = mergeVoiceDraft(input, words)
+        }
+    }
     val windowHeight = LocalWindowInfo.current.containerSize.height
     val maximum = with(LocalDensity.current) { windowHeight.toDp() * TetherRatio.composerMax }
     Column(modifier = Modifier.fillMaxWidth().padding(TetherSpace.space4)) {
@@ -41,9 +56,20 @@ fun Composer(
             modifier = Modifier.fillMaxWidth().heightIn(max = maximum),
             maxLines = Int.MAX_VALUE,
         )
+        if (speechUnavailable) Text(stringResource(R.string.composer_voice_unavailable))
         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.composer_attachments))
             Text(modelId)
+            Button(onClick = {
+                val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                }
+                try {
+                    speech.launch(intent)
+                } catch (_: ActivityNotFoundException) {
+                    speechUnavailable = true
+                }
+            }) { Text(stringResource(R.string.composer_voice)) }
             if (running) {
                 Button(onClick = onStop) { Text(stringResource(R.string.composer_stop)) }
             } else {
@@ -64,3 +90,7 @@ fun Composer(
 
 /** Blank input never starts a turn. Preserve line breaks inside a message. */
 internal fun outgoingText(input: String): String? = input.trim().takeIf(String::isNotEmpty)
+
+/** Adds recognized speech to the draft without erasing text already typed. */
+internal fun mergeVoiceDraft(draft: String, speech: String): String =
+    listOf(draft.trimEnd(), speech.trim()).filter(String::isNotEmpty).joinToString(" ")

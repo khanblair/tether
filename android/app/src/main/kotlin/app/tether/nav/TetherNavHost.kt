@@ -32,6 +32,13 @@ import app.tether.design.components.TetherSnackbarHost
 import app.tether.di.AppModule
 import app.tether.home.AttentionViewModel
 import app.tether.home.HomeDrawer
+import app.tether.session.TranscriptScreen
+import androidx.navigation.compose.composable
+import app.tether.core.generated.SessionRuntime
+import app.tether.core.generated.EventSink
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import android.net.Uri
 import kotlinx.coroutines.launch
 
 /**
@@ -92,6 +99,19 @@ fun TetherNavHost(module: AppModule) {
                 homeRoutes(module = module, nav = nav, attentionItems = attention)
                 settingsRoutes(module = module, nav = nav)
                 placeholderRoutes(nav = nav)
+                composable("session/{sessionId}") { entry ->
+                    TranscriptScreen(
+                        sessionId = entry.arguments?.getString("sessionId"),
+                        load = { id ->
+                            withContext(Dispatchers.IO) {
+                                SessionRuntime(module.databasePath, module.vault, object : EventSink {
+                                    override fun onEvent(event: app.tether.core.generated.CoreEventView) = Unit
+                                }).use { it.transcript(id) }
+                            }
+                        },
+                        onBack = nav::back,
+                    )
+                }
             }
             TetherSnackbarHost(
                 hostState = snackbars,
@@ -126,7 +146,7 @@ private fun DrawerHost(
         themeMode = themeMode,
         onToggleTheme = { module.theme.cycle() },
         onDestination = { route -> nav.closeThen { nav.goTopLevel(route) } },
-        onOpenSession = { nav.closeThen { nav.go(Route.Session) } },
+        onOpenSession = { nav.closeThen { nav.open("session/${Uri.encode(it)}") } },
         onNewSession = { nav.closeThen { nav.go(Route.NewSession) } },
         onOpenSettings = { nav.closeThen { nav.go(Route.Settings) } },
         onOpenSkills = { nav.closeThen { nav.go(Route.Skills) } },

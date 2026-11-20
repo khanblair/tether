@@ -279,4 +279,11 @@
     <string name="updates_problem_install_storage">Android has no space to install the update.</string>
     <string name="updates_problem_install_failed">The install did not finish.</string>
     <string name="updates_problem_download_missing">The downloaded update is no longer there. Download it again.</string>
+    <string name="transcript_empty">No messages in this session yet.</string>
+    <string name="transcript_load_failed">Could not load this session.</string>
+    <string name="transcript_you">You</string>
+    <string name="transcript_agent">Agent</string>
+    <string name="transcript_tool">Tool</string>
+    <string name="transcript_system">System</string>
+    <string name="transcript_attachment">Attachment</string>
 </resources>

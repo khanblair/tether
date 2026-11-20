@@ -1,6 +1,7 @@
 package app.tether.nav
 
 import androidx.lifecycle.viewmodel.compose.viewModel
+import android.net.Uri
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import app.tether.di.AppModule
@@ -33,7 +34,7 @@ internal fun NavGraphBuilder.homeRoutes(
             attentionCount = attentionItems.size,
             onOpenMenu = nav::openDrawer,
             onOpenAttention = { nav.go(Route.Attention) },
-            onOpenSession = { nav.go(Route.Session) },
+            onOpenSession = { nav.open("session/${Uri.encode(it)}") },
             onOpenAbout = { nav.go(Route.About) },
             onOpenProject = { nav.go(Route.ProjectHome) },
             onOpenProjects = { nav.goTopLevel(Route.Projects) },
@@ -54,7 +55,7 @@ internal fun NavGraphBuilder.homeRoutes(
     composable(Route.Attention.path) {
         AttentionScreen(
             items = attentionItems,
-            onOpenSession = { nav.go(Route.Session) },
+            onOpenSession = { nav.open("session/${Uri.encode(it)}") },
             onOpenAbout = { nav.go(Route.About) },
             onBack = nav::back,
         )

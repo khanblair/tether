@@ -210,3 +210,40 @@ fn usage_adds_up_across_turns() {
         }
     );
 }
+
+#[test]
+fn search_finds_old_message_text() {
+    let mut store = Store::open_in_memory().unwrap();
+    let project = seed_project(&store);
+    let first = store
+        .create_session(&project, &anthropic(), PermissionMode::Ask, 1)
+        .unwrap();
+    let second = store
+        .create_session(&project, &anthropic(), PermissionMode::Ask, 2)
+        .unwrap();
+    store.begin_turn(&first.id, "needle from an old turn", 3).unwrap();
+    store.begin_turn(&first.id, "latest turn", 4).unwrap();
+    store.begin_turn(&second.id, "another session", 5).unwrap();
+
+    let found = store.search_sessions(&project, "NEEDLE").unwrap();
+    assert_eq!(found.iter().map(|row| &row.id).collect::<Vec<_>>(), vec![&first.id]);
+    assert_eq!(store.list_sessions(&project).unwrap()[0].id, second.id);
+    assert!(store.search_sessions(&project, "not here").unwrap().is_empty());
+}
+
+#[test]
+fn rename_changes_the_title_without_losing_searchable_messages() {
+    let mut store = Store::open_in_memory().unwrap();
+    let project = seed_project(&store);
+    let session = store
+        .create_session(&project, &anthropic(), PermissionMode::Ask, 1)
+        .unwrap();
+    store.begin_turn(&session.id, "original message", 2).unwrap();
+    store.rename_session(&session.id, "  New title  ").unwrap();
+    assert_eq!(store.load_session(&session.id).unwrap().unwrap().title, "New title");
+    assert_eq!(store.search_sessions(&project, "original").unwrap().len(), 1);
+    assert!(matches!(
+        store.rename_session(&session.id, "  "),
+        Err(crate::StoreError::EmptySessionTitle)
+    ));
+}

@@ -48,7 +48,7 @@ tether/
 │       │   ├── uniffi.toml
 │       │   └── src/{lib.rs, callbacks.rs, provider_settings.rs, sessions.rs, updater.rs, secrets.rs, views/{mod,event,types,error}.rs, bin/uniffi-bindgen.rs}
 │       ├── tether-quality/    data/slop_words.txt and slop_patterns.toml (shared with slop-lint)
-│       ├── tether-memory/     vault/{mod,tests}.rs; Markdown note and wikilink rebuild view
+│       ├── tether-memory/     vault/{mod,tests,tools}.rs; Markdown rebuild view and file tool operations
 │       └── tether-{tools,workspace,vcs,sandbox,linux,ci,connectors,mcp,skills}/
 │                              Empty libraries
 ├── android/

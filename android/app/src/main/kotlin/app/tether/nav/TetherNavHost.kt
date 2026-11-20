@@ -106,8 +106,8 @@ fun TetherNavHost(module: AppModule) {
                         if (id != null) {
                             connection =
                                 withContext(Dispatchers.IO) {
-                                SessionConnection(module.databasePath, module.vault, id)
-                            }
+                                    SessionConnection(module.databasePath, module.vault, id)
+                                }
                         }
                     }
                     DisposableEffect(connection) {

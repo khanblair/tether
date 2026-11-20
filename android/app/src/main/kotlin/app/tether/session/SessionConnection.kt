@@ -19,10 +19,10 @@ class SessionConnection(
     val changes: SharedFlow<CoreEventView> = events
     private val sink =
         object : EventSink {
-        override fun onEvent(event: CoreEventView) {
-            events.tryEmit(event)
+            override fun onEvent(event: CoreEventView) {
+                events.tryEmit(event)
+            }
         }
-    }
     private val runtime = SessionRuntime(databasePath, vault, sink)
     private val runner: SessionRunner = runtime.openSession(sessionId)
     val modelId: String = runtime.loadSession(sessionId).modelId

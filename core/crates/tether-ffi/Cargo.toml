@@ -24,6 +24,7 @@ tether-engine.workspace = true
 tether-secrets.workspace = true
 tether-store.workspace = true
 tether-types.workspace = true
+tether-workspace = { path = "../tether-workspace" }
 thiserror.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread"] }
 tokio-util.workspace = true

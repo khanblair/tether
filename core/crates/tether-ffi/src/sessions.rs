@@ -5,10 +5,11 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use tether_engine::{ProviderFactory, SessionActor, SessionHandle, provider_for};
+use tether_engine::{ProviderFactory, SessionActor, SessionHandle, ToolRuntime, provider_for};
 use tether_secrets::SecretRef;
-use tether_store::{SessionRecord, Store};
+use tether_store::{BlobStore, SessionRecord, Store};
 use tether_types::{CoreError, ModelRef, PermissionMode, ProjectId, Provider, SessionId};
+use tether_workspace::PathGuard;
 
 use crate::{EventSink, MessageView, ProviderView, SecretVault, SessionStatusView};
 
@@ -167,6 +168,28 @@ impl SessionRuntime {
         &self,
         session_id: &str,
     ) -> Result<Arc<SessionRunner>, SessionRuntimeError> {
+        self.open(session_id, None)
+    }
+
+    /// Opens a session with guarded tools rooted in its saved project workspace.
+    ///
+    /// # Errors
+    /// Returns an error when the project folder, session, or provider key is unavailable.
+    pub fn open_session_with_workspace(
+        &self,
+        session_id: &str,
+        workspaces_root: &str,
+    ) -> Result<Arc<SessionRunner>, SessionRuntimeError> {
+        self.open(session_id, Some(Path::new(workspaces_root)))
+    }
+}
+
+impl SessionRuntime {
+    fn open(
+        &self,
+        session_id: &str,
+        workspaces_root: Option<&Path>,
+    ) -> Result<Arc<SessionRunner>, SessionRuntimeError> {
         let id = SessionId::new(session_id);
         let mut runners = self
             .runners
@@ -184,9 +207,13 @@ impl SessionRuntime {
         let provider_factory = session_provider_factory(Arc::clone(&self.vault), session.provider);
         let sink: Arc<dyn tether_engine::EventSink> =
             Arc::new(crate::callbacks::SinkAdapter(Arc::clone(&self.sink)));
-        let (actor, handle) =
+        let (actor, handle) = if let Some(root) = workspaces_root {
+            let tools = session_tool_runtime(&store, &session, root)?;
+            SessionActor::new_with_tool_runtime(store, &id, provider_factory, sink, tools)
+        } else {
             SessionActor::new_with_provider_factory(store, &id, provider_factory, sink)
-                .map_err(|_| SessionRuntimeError::Unavailable)?;
+        }
+        .map_err(|_| SessionRuntimeError::Unavailable)?;
         self.runtime.spawn(actor.run());
         let runner = Arc::new(SessionRunner {
             handle,
@@ -195,12 +222,39 @@ impl SessionRuntime {
         runners.insert(id, Arc::clone(&runner));
         Ok(runner)
     }
-}
-
-impl SessionRuntime {
     fn store(&self) -> Result<Store, SessionRuntimeError> {
         Store::open(Path::new(&self.database_path)).map_err(|_| SessionRuntimeError::Unavailable)
     }
+}
+
+fn session_tool_runtime(
+    store: &Store,
+    session: &SessionRecord,
+    root: &Path,
+) -> Result<ToolRuntime, SessionRuntimeError> {
+    let root_guard = PathGuard::new(root).map_err(|_| SessionRuntimeError::Unavailable)?;
+    let project_path = store
+        .project_path(&session.project_id)
+        .map_err(|_| SessionRuntimeError::Unavailable)?
+        .ok_or(SessionRuntimeError::Unavailable)?;
+    let project_root = root_guard
+        .resolve(&project_path)
+        .map_err(|_| SessionRuntimeError::Unavailable)?;
+    let guard = PathGuard::new(project_root).map_err(|_| SessionRuntimeError::Unavailable)?;
+    let blob_root = root
+        .parent()
+        .ok_or(SessionRuntimeError::Unavailable)?
+        .join("blobs");
+    let blobs = BlobStore::open(blob_root).map_err(|_| SessionRuntimeError::Unavailable)?;
+    let may_edit = matches!(
+        session.mode,
+        PermissionMode::AcceptEdits | PermissionMode::Auto | PermissionMode::Bypass
+    );
+    Ok(ToolRuntime {
+        guard,
+        blobs,
+        approve: Arc::new(move |_, _| may_edit),
+    })
 }
 
 fn provider_key(
@@ -359,6 +413,31 @@ mod tests {
                 .unwrap()
                 .status,
             SessionStatus::Interrupted
+        );
+    }
+
+    #[test]
+    fn workspace_session_requires_a_saved_project_folder() {
+        let dir = tempfile::tempdir().unwrap();
+        let db = dir.path().join("tether.db");
+        let session_id = seeded_session(&db);
+        let vault = SecretVault::new(
+            dir.path().join("secrets").to_string_lossy().into_owned(),
+            Arc::new(PlainPlatform),
+        );
+        vault.put("provider-anthropic", "test-key").unwrap();
+        let runtime = SessionRuntime::new(db.to_str().unwrap(), vault, Arc::new(NoopSink)).unwrap();
+        let root = dir.path().join("workspaces");
+        std::fs::create_dir(&root).unwrap();
+        assert!(matches!(
+            runtime.open_session_with_workspace(session_id.as_str(), root.to_str().unwrap()),
+            Err(SessionRuntimeError::Unavailable)
+        ));
+        std::fs::create_dir(root.join("test")).unwrap();
+        assert!(
+            runtime
+                .open_session_with_workspace(session_id.as_str(), root.to_str().unwrap())
+                .is_ok()
         );
     }
 

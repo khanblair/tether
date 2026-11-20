@@ -52,9 +52,9 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 
 | ID | Task | Owner | Status | PR | Notes |
 |---|---|---|---|---|---|
-| P2-07 | Edit batches and checkpoints | Codex | In review | #186 | Draft stacked on #185; schema 0003 and raw SHA-256 snapshot store; automatic tool capture, BLAKE3, compression, cleanup, and runtime checks remain |
-| P2-06 | Tool loop in the turn | Codex | In review | #185 | Draft stacked on #184; standalone in-memory loop and five-call fixture; actor persistence, events, full schema validation, and runtime checks remain |
-| P2-04 | Read tools | Codex | In review | #184 | Draft with guarded file read, directory list, glob, and literal grep; regex and engine wiring remain; checks not run here |
+| P2-07 | Edit batches and checkpoints | Codex | In review | unified PR pending | Stacked draft #186 consolidated; automatic capture and BLAKE3/zstd deduplication verified; cleanup remains |
+| P2-06 | Tool loop in the turn | Codex | In review | unified PR pending | Stacked draft #185 consolidated; actor persistence, five-call fixture, and Android entry point wired; tool cards and approval UI remain |
+| P2-04 | Read tools | Codex | In review | unified PR pending | Stacked draft #184 consolidated; guarded read tools, regex grep, and engine registration verified |
 | P0-01 | Repo layout | Blair with Claude | Done | n/a | Every top-level folder exists; root README links the docs |
 | P0-02 | Rust workspace with all crates | Blair with Claude | Done | n/a | 17 crates: `tether-types`, `tether-engine`, and `tether-ffi` have code; the other 14 are empty libs. Host build, `cargo ndk` for both ABIs, clippy, and tests pass locally |
 | P0-03 | UniFFI with `version()` | Blair with Claude | Done | n/a | Pixel 9 arm64 emulator shows "Version 0.0.1" from the Rust core |
@@ -173,6 +173,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Who | What happened | Next |
 |---|---|---|---|
+| 2026-11-20 | Codex | Consolidated P2-04, P2-06, and P2-07 drafts on one branch; added regex grep, actor persistence, automatic checkpoint capture, compressed deduplicated blobs, and Android entry point | Run full gates, review unified PR, then close stacked drafts |
 | 2026-11-20 | Codex | Added P2-07 checkpoint schema, snapshot store, and deduplication fixture | Open stacked draft; wire capture to the tool loop |
 | 2026-11-20 | Codex | Added P2-06 bounded provider tool loop and five-call fixture | Open stacked draft; actor persistence and full validation remain |
 | 2026-11-20 | Codex | Added P2-04 bounded read tools and fixtures on merged foundation | Open draft; regex search and engine wiring remain |
@@ -297,6 +298,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Doc | Change |
 |---|---|---|
+| 2026-11-20 | architecture, progress-tracker | Consolidated P2-04/P2-06/P2-07 behavior and remaining integration limits |
 | 2026-11-20 | architecture, project-structure, library-docs, progress-tracker | P2-07 snapshot limits and verified Wasmtime version |
 | 2026-11-20 | architecture, project-structure, progress-tracker | P2-06 in-memory loop and integration limits |
 | 2026-11-20 | architecture, project-structure, progress-tracker | P2-04 read contract and unverified status |

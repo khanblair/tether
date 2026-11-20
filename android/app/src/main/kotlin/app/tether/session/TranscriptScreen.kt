@@ -49,7 +49,9 @@ fun TranscriptScreen(
     LaunchedEffect(sessionId) {
         if (sessionId != null) {
             try {
-                messages = load(sessionId).filterNot(MessageView::rewound).sortedBy(MessageView::seq)
+                messages = load(sessionId)
+                    .filterNot(MessageView::rewound)
+                    .sortedBy(MessageView::seq)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {

@@ -85,7 +85,7 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 | P1-02 | `tether-store` schema 0001 and migrations runner | Blair with Claude | Done | #140 | Merged; issue #6 closed. Schema 0001 for 7 tables, runner, and 28 tests; the CI Android check now uses `cargo ndk`. Codex found no issues; a Sonnet review found a table-rebuild data loss, a concurrent-open failure, and weak tests, all fixed |
 | P1-04 | SSE parser and provider trait | Blair with Claude | Done | #141 | Merged; issue #8 closed. `ChatProvider` trait and types, `SseParser` with 29 tests including every split position |
 | P1-01 | `tether-types` message, part, event, usage, error types | Blair with Claude | Done | #138 | Merged; issue #5 closed. Types, 15 new events, and FFI views; bindings regenerated. Sonnet and Codex reviews done |
-| P2-03 | File index, glob, grep | Codex | In progress | pending | Basic scan, glob, grep; full ignore semantics and benchmark remain |
+| P2-03 | File index, glob, grep | Codex | In progress | #167 | Basic scan, glob, grep; full ignore semantics and benchmark remain |
 | P2-02 | Path guard | Codex | In progress | #166 | Canonical root, traversal and symlink checks; tool integration remains |
 | P2-01 | Projects: create empty, import zip, export zip | Codex | In progress | #165 | Archive layer and tests; project UI and database wiring remain |
 
@@ -188,7 +188,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Files | Change | PR |
 |---|---|---|---|
-| 2026-11-20 | `core/crates/tether-workspace/src/{file_index,file_index_tests,lib}.rs` | P2-03 basic file search | pending |
+| 2026-11-20 | `core/crates/tether-workspace/src/{file_index,file_index_tests,lib}.rs` | P2-03 basic file search | #167 |
 | 2026-11-20 | `core/crates/tether-workspace/` | P2-02 PathGuard and tests | #166 |
 | 2026-11-20 | `android/app/src/{main,test}/kotlin/app/tether/workspace/` | P2-01 project archive layer and round-trip tests | #165 |
 | 2026-11-20 | `core/Cargo.toml`, `core/Cargo.lock`, `tools/bump-version.sh`, `justfile`, `.github/workflows/ci.yml` | Version 0.0.4; a bump script with a self test and `just bump` | - |

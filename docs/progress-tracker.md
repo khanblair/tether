@@ -185,7 +185,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Files | Change | PR |
 |---|---|---|---|
-| 2026-11-20 | `android/app/src/{main,debug,test}/` | P2-13 project detail route, screen, data fields and fixture | pending |
+| 2026-11-20 | `android/app/src/{main,debug,test}/` | P2-13 project detail route, screen, data fields and fixture | #177 |
 | 2026-11-20 | `android/app/src/{main,test}/kotlin/app/tether/workspace/` | P2-01 project archive layer and round-trip tests | #165 |
 | 2026-11-20 | `core/Cargo.toml`, `core/Cargo.lock`, `tools/bump-version.sh`, `justfile`, `.github/workflows/ci.yml` | Version 0.0.4; a bump script with a self test and `just bump` | - |
 | 2026-11-19 | `android/app/src/{main,debug,release}/`, `android/designsystem/`, `tokens/tokens.json`, `tools/prototype/` | P1-21: Home dashboard, drawer, Needs attention, usage and sample sources (`debug`) and empty sources (`release`), a saved theme choice, a snackbar host, 22 design system component files and 21 icons, `size.chart-height`, arrow back buttons, the action bar off, the Rust core card moved into About, prototype Home and drawer (106 screens) | #156 |

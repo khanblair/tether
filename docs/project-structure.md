@@ -52,7 +52,8 @@ tether/
 │       ├── tether-tools/       src/{lib,edit,edit/tests}.rs; guarded atomic text edits
 │       ├── tether-skills/      SKILL.md scalar frontmatter parser and validator
 │       ├── tether-memory/     src/{lib,files,files/tests,snapshot}.rs, vault/{mod,tests,tools,sync,sync/tests}.rs; capped files, frozen snapshot, Markdown rebuild view, vault file tool operations, and the sync contract
-│       └── tether-{vcs,sandbox,linux,ci,connectors,mcp}/
+│       ├── tether-vcs/         src/{lib,oauth,oauth/tests}.rs; GitHub device flow core
+│       └── tether-{sandbox,linux,ci,connectors,mcp}/
 │                              Empty libraries
 ├── android/
 │   ├── settings.gradle.kts  build.gradle.kts  gradle.properties  gradlew  gradlew.bat

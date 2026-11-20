@@ -2,6 +2,7 @@ package app.tether.session
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,6 +19,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,6 +29,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import app.tether.R
+import app.tether.core.generated.CoreEventView
 import app.tether.core.generated.MessagePartView
 import app.tether.core.generated.MessageView
 import app.tether.core.generated.RoleView
@@ -36,23 +39,38 @@ import app.tether.design.tokens.TetherSize
 import app.tether.design.tokens.TetherSpace
 import app.tether.shell.BackButton
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** Persisted messages are read off the main thread when the session route opens. */
 @Composable
 fun TranscriptScreen(
-    sessionId: String?,
-    load: suspend (String) -> List<MessageView>,
+    connection: SessionConnection?,
     onBack: () -> Unit,
 ) {
-    var messages by remember(sessionId) { mutableStateOf<List<MessageView>>(emptyList()) }
-    var failed by remember(sessionId) { mutableStateOf(false) }
-    LaunchedEffect(sessionId) {
-        if (sessionId != null) {
+    var messages by remember(connection) { mutableStateOf<List<MessageView>>(emptyList()) }
+    var failed by remember(connection) { mutableStateOf(false) }
+    var running by remember(connection) { mutableStateOf(false) }
+    LaunchedEffect(connection) {
+        if (connection != null) {
             try {
                 messages =
-                    load(sessionId)
+                    withContext(Dispatchers.IO) { connection.transcript() }
                         .filterNot(MessageView::rewound)
                         .sortedBy(MessageView::seq)
+                connection.changes.collect { event ->
+                    when (event) {
+                        is CoreEventView.TurnFinished,
+                        is CoreEventView.TurnFailed,
+                        -> running = false
+                        else -> Unit
+                    }
+                    messages =
+                        withContext(Dispatchers.IO) { connection.transcript() }
+                            .filterNot(MessageView::rewound)
+                            .sortedBy(MessageView::seq)
+                }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {
@@ -60,7 +78,48 @@ fun TranscriptScreen(
             }
         }
     }
-    TranscriptContent(messages, failed, onBack)
+    TranscriptContent(
+        messages = messages,
+        failed = failed,
+        onBack = onBack,
+        composer =
+            connection?.let { active ->
+                {
+                    ComposerControls(
+                        connection = active,
+                        running = running,
+                        onRunningChange = { running = it },
+                        onFailure = { failed = true },
+                    )
+                }
+            },
+    )
+}
+
+@Composable
+private fun ComposerControls(
+    connection: SessionConnection,
+    running: Boolean,
+    onRunningChange: (Boolean) -> Unit,
+    onFailure: () -> Unit,
+) {
+    val scope = rememberCoroutineScope()
+    Composer(
+        modelId = connection.modelId,
+        running = running,
+        onSend = { text ->
+            onRunningChange(true)
+            scope.launch(Dispatchers.IO) {
+                try {
+                    connection.send(text)
+                } catch (_: Exception) {
+                    onRunningChange(false)
+                    onFailure()
+                }
+            }
+        },
+        onStop = { scope.launch(Dispatchers.IO) { connection.stop() } },
+    )
 }
 
 /** Lazy items use persisted IDs so rows keep their identity as text arrives. */
@@ -69,6 +128,7 @@ fun TranscriptContent(
     messages: List<MessageView>,
     failed: Boolean,
     onBack: () -> Unit,
+    composer: (@Composable () -> Unit)? = null,
 ) {
     val listState = rememberLazyListState()
     Scaffold(
@@ -80,29 +140,33 @@ fun TranscriptContent(
             )
         },
     ) { padding ->
-        if (messages.isEmpty()) {
-            Text(
-                text =
-                    stringResource(
-                        if (failed) R.string.transcript_load_failed else R.string.transcript_empty,
-                    ),
-                color = TetherTheme.colors.text2,
-                modifier = Modifier.padding(padding).padding(TetherSpace.space4),
-            )
-        } else {
-            LazyColumn(
-                state = listState,
-                verticalArrangement = Arrangement.spacedBy(TetherSpace.space4),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxSize().padding(padding),
-            ) {
-                items(messages, key = MessageView::id) { message ->
-                    TranscriptMessage(
-                        message,
-                        Modifier.widthIn(max = TetherSize.transcriptMax).fillMaxWidth(),
+        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            Box(modifier = Modifier.weight(1f)) {
+                if (messages.isEmpty()) {
+                    val emptyLabel =
+                        if (failed) R.string.transcript_load_failed else R.string.transcript_empty
+                    Text(
+                        text = stringResource(emptyLabel),
+                        color = TetherTheme.colors.text2,
+                        modifier = Modifier.padding(TetherSpace.space4),
                     )
+                } else {
+                    LazyColumn(
+                        state = listState,
+                        verticalArrangement = Arrangement.spacedBy(TetherSpace.space4),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        items(messages, key = MessageView::id) { message ->
+                            TranscriptMessage(
+                                message,
+                                Modifier.widthIn(max = TetherSize.transcriptMax).fillMaxWidth(),
+                            )
+                        }
+                    }
                 }
             }
+            composer?.invoke()
         }
     }
 }

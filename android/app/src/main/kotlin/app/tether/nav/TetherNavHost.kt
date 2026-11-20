@@ -15,6 +15,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,12 +31,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import app.tether.core.generated.EventSink
-import app.tether.core.generated.SessionRuntime
 import app.tether.design.components.TetherSnackbarHost
 import app.tether.di.AppModule
 import app.tether.home.AttentionViewModel
 import app.tether.home.HomeDrawer
+import app.tether.session.SessionConnection
 import app.tether.session.TranscriptScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -100,22 +100,20 @@ fun TetherNavHost(module: AppModule) {
                 settingsRoutes(module = module, nav = nav)
                 placeholderRoutes(nav = nav)
                 composable("session/{sessionId}") { entry ->
-                    TranscriptScreen(
-                        sessionId = entry.arguments?.getString("sessionId"),
-                        load = { id ->
-                            withContext(Dispatchers.IO) {
-                                val sink =
-                                    object : EventSink {
-                                        override fun onEvent(
-                                            event: app.tether.core.generated.CoreEventView,
-                                        ) = Unit
-                                    }
-                                SessionRuntime(module.databasePath, module.vault, sink)
-                                    .use { it.transcript(id) }
-                            }
-                        },
-                        onBack = nav::back,
-                    )
+                    val id = entry.arguments?.getString("sessionId")
+                    var connection by remember(id) { mutableStateOf<SessionConnection?>(null) }
+                    LaunchedEffect(id) {
+                        if (id != null) {
+                            connection =
+                                withContext(Dispatchers.IO) {
+                                    SessionConnection(module.databasePath, module.vault, id)
+                                }
+                        }
+                    }
+                    DisposableEffect(connection) {
+                        onDispose { connection?.close() }
+                    }
+                    TranscriptScreen(connection = connection, onBack = nav::back)
                 }
             }
             TetherSnackbarHost(

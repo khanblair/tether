@@ -143,6 +143,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Who | What happened | Next |
 |---|---|---|---|
+| 2026-11-19 | Blair with Claude | Codex's P1-11 tests sat in `src/session_tests.rs`, which the file length check counted in full (431 lines against 400), because the check skips only `tests/` folders and inline `#[cfg(test)]` code. Blair asked why 400 and not 900; the answer is that 400 was set in the first docs and is the right limit for code. Test files now get 800 (`*_tests.rs`, `*_test.rs`, `*Test.kt`, `*Tests.kt`), with self test cases for both sides of the line and for names that only look like test files | Review and merge |
 | 2026-11-19 | Codex | Opened PR #153 for P1-11 and requested Codex review. `just check`, `just commits`, `cargo deny check`, and `assembleFullDebug` passed. Tests show streamed text, interruption, and recovery of an active turn after reopening SQLite | Address PR feedback and merge when checks pass |
 | 2026-11-19 | Blair with Codex, Haiku, and Claude | Merged PR #151 (P1-20) after eight Codex review rounds, each finding fixed with a test that fails without the fix. Release `v0.0.3` published as the latest: APK and bundle match `SHA256SUMS`, signed with the same key as `v0.0.2`, `versionCode` 300, and `REQUEST_INSTALL_PACKAGES` only in the full APK. Not run on a device: the `PackageInstaller` flow | Blair installs `v0.0.3` by hand once; the next release shows up in the app. Then P1-11 (#15), the session actor |
 | 2026-11-19 | Blair with Codex, Haiku, and Claude | Codex's review of PR #151 found four races in the update state holder, all fixed with tests (10 of 10 mutations killed): a background and a manual check could overlap and a late result could overwrite a download (one check at a time; a late result changes nothing while a download runs), a failed check did not count for the 12 hour throttle (every try is recorded), a cleared cache left a retry loop (the file is checked before install and the screen offers a new download), and a Cancel tapped while the download was starting could be lost (it is asked again until that download's call returns and never against a newer download, and a late cancel discards the result) | Codex re-review of #151, then merge, which publishes `v0.0.3` |
@@ -176,6 +177,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Files | Change | PR |
 |---|---|---|---|
+| 2026-11-19 | `tools/check-file-length.sh`, `docs/code-standards.md`, `docs/progress-tracker.md` | 800 line limit for test files in the file length check and its self test | |
 | 2026-11-19 | `core/crates/tether-{store,engine,ffi}/`, `core/Cargo.*`, generated UniFFI bindings | P1-11 session rows, streaming actor, restart recovery, and platform API | #153 |
 | 2026-11-19 | `core/crates/tether-engine/src/updates/`, `core/crates/tether-ffi/src/updater.rs`, `core/Cargo.toml`, `android/app/src/{main,full,play}/`, `android/gradle/libs.versions.toml`, generated UniFFI bindings, `android/gradlew.bat` | P1-20: update check, verified download, installer for both flavors, update state holder, About screen, Settings row, home banner; `gradlew.bat` stored with Unix line endings | #151 |
 | 2026-11-19 | `core/crates/tether-{providers,engine,store,ffi}/`, `core/Cargo.toml`, `android/designsystem/`, `android/app/`, `android/gradle/libs.versions.toml`, generated UniFFI bindings | P1-10: region-block detection and `list_url` on the catalog, the key check in the engine, `provider_configs` and cache helpers in the store, `ProviderSettings` in the FFI, design system components and icons, provider screens, ViewModels, and the ViewModel dependency #150 |
@@ -203,6 +205,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Doc | Change |
 |---|---|---|
+| 2026-11-19 | code-standards, progress-tracker | File length: 800 lines for a file that holds only tests, 400 for everything else |
 | 2026-11-19 | architecture, project-structure, progress-tracker | Documented the P1-11 session actor and its saved transcript |
 | 2026-11-19 | architecture, mobile, project-structure, build-plan, progress-tracker | The App update flow and its security rules (GitHub-only redirects, SHA-256 against `SHA256SUMS`, system signature check); the first updater release is a manual install; P1-20 also checks at start |
 | 2026-11-19 | architecture, project-structure, ui-registry, mobile, library-docs, progress-tracker | P1-10 provider connection states and the status mapping as built; the biometric prompt is the platform one (not AndroidX Biometric); eight design system components marked Built; P0-20 marked Done |

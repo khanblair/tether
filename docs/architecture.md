@@ -258,7 +258,7 @@ SQLite database at `files/db/tether.db`, WAL mode, foreign keys on. IDs are ULID
 | `models_fetch` | provider, fetched_at | last successful catalog fetch, including an empty list; Unix milliseconds |
 | `mcp_servers` | id, name, url, transport, secret_ref, enabled | |
 | `usage_daily` | day, provider, model_id, project_id, tokens_in, tokens_out, cost_micros | for charts and budgets; `day` is a UTC date, `YYYY-MM-DD`; no foreign key on `project_id`, so cost history outlives a deleted project |
-| `message_fts` | FTS5 virtual table over message text: session_id, message_id, body | session search (F22); bundled SQLite with FTS5, never the Android framework SQLite |
+| `message_fts` | FTS5 virtual table over text parts: part_id, session_id, message_id, body | migration 0002 backfills rows and triggers track edits and rewinds; bundled SQLite with FTS5 |
 | `vault_notes` | path, title, description, type, tags_json, updated_at, hash | rebuildable index of the vault folder |
 | `vault_links` | src_path, dst_path, heading, kind, resolved | wikilinks and backlinks; `resolved = 0` means the target note does not exist yet |
 | `skill_index` | name, scope, path, description, last_used_at, state | state: active, stale, archived; rebuildable from the skill folders |

@@ -2,8 +2,8 @@ package app.tether.session
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -52,7 +52,6 @@ fun TranscriptScreen(
     var messages by remember(connection) { mutableStateOf<List<MessageView>>(emptyList()) }
     var failed by remember(connection) { mutableStateOf(false) }
     var running by remember(connection) { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
     LaunchedEffect(connection) {
         if (connection != null) {
             try {
@@ -61,7 +60,8 @@ fun TranscriptScreen(
                     .sortedBy(MessageView::seq)
                 connection.changes.collect { event ->
                     when (event) {
-                        is CoreEventView.TurnFinished, is CoreEventView.TurnFailed -> running = false
+                        is CoreEventView.TurnFinished,
+                        is CoreEventView.TurnFailed -> running = false
                         else -> Unit
                     }
                     messages = withContext(Dispatchers.IO) { connection.transcript() }
@@ -79,26 +79,42 @@ fun TranscriptScreen(
         messages = messages,
         failed = failed,
         onBack = onBack,
-        composer = if (connection == null) null else {
+        composer = connection?.let { active ->
             {
-                Composer(
-                    modelId = connection.modelId,
+                ComposerControls(
+                    connection = active,
                     running = running,
-                    onSend = { text ->
-                        running = true
-                        scope.launch(Dispatchers.IO) {
-                            try {
-                                connection.send(text)
-                            } catch (_: Exception) {
-                                running = false
-                                failed = true
-                            }
-                        }
-                    },
-                    onStop = { scope.launch(Dispatchers.IO) { connection.stop() } },
+                    onRunningChange = { running = it },
+                    onFailure = { failed = true },
                 )
             }
         },
+    )
+}
+
+@Composable
+private fun ComposerControls(
+    connection: SessionConnection,
+    running: Boolean,
+    onRunningChange: (Boolean) -> Unit,
+    onFailure: () -> Unit,
+) {
+    val scope = rememberCoroutineScope()
+    Composer(
+        modelId = connection.modelId,
+        running = running,
+        onSend = { text ->
+            onRunningChange(true)
+            scope.launch(Dispatchers.IO) {
+                try {
+                    connection.send(text)
+                } catch (_: Exception) {
+                    onRunningChange(false)
+                    onFailure()
+                }
+            }
+        },
+        onStop = { scope.launch(Dispatchers.IO) { connection.stop() } },
     )
 }
 
@@ -121,34 +137,35 @@ fun TranscriptContent(
         },
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-        Box(modifier = Modifier.weight(1f)) {
-            if (messages.isEmpty()) {
-                Text(
-                    text =
-                        stringResource(
-                            if (failed) R.string.transcript_load_failed else R.string.transcript_empty,
-                        ),
-                    color = TetherTheme.colors.text2,
-                    modifier = Modifier.padding(TetherSpace.space4),
-                )
-            } else {
-                LazyColumn(
-                    state = listState,
-                    verticalArrangement = Arrangement.spacedBy(TetherSpace.space4),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.fillMaxSize(),
-                ) {
-                    items(messages, key = MessageView::id) { message ->
-                        TranscriptMessage(
-                            message,
-                            Modifier.widthIn(max = TetherSize.transcriptMax).fillMaxWidth(),
-                        )
+            Box(modifier = Modifier.weight(1f)) {
+                if (messages.isEmpty()) {
+                    Text(
+                        text =
+                            stringResource(
+                                if (failed) R.string.transcript_load_failed
+                                else R.string.transcript_empty,
+                            ),
+                        color = TetherTheme.colors.text2,
+                        modifier = Modifier.padding(TetherSpace.space4),
+                    )
+                } else {
+                    LazyColumn(
+                        state = listState,
+                        verticalArrangement = Arrangement.spacedBy(TetherSpace.space4),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        items(messages, key = MessageView::id) { message ->
+                            TranscriptMessage(
+                                message,
+                                Modifier.widthIn(max = TetherSize.transcriptMax).fillMaxWidth(),
+                            )
+                        }
                     }
                 }
             }
-        }
-        composer?.invoke()
-        }
+            composer?.invoke()
+            }
     }
 }
 

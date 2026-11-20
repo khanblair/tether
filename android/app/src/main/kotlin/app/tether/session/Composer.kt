@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.tether.R
+import app.tether.design.tokens.TetherRatio
 import app.tether.design.tokens.TetherSpace
 
 /** The session input. The field grows with text, capped at 40% of the display height. */
@@ -30,7 +31,7 @@ fun Composer(
     onStop: () -> Unit,
 ) {
     var input by rememberSaveable { mutableStateOf("") }
-    val maximum = LocalConfiguration.current.screenHeightDp.dp * 0.4f
+    val maximum = LocalConfiguration.current.screenHeightDp.dp * TetherRatio.composerMax
     Column(modifier = Modifier.fillMaxWidth().padding(TetherSpace.space4)) {
         OutlinedTextField(
             value = input,

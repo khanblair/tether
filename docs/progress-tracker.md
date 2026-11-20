@@ -75,6 +75,7 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 | P1-21 | App shell: Home dashboard, drawer, and Needs attention | Blair with Haiku and Claude | Done | #156 | Issue #155. The app opens on a Home dashboard: summary line, Needs you now, Today, Usage for 7 days (bar chart, by model, Show data), Recent projects, and Providers. The drawer has Home, Projects, Needs attention, Usage and cost, Runs, sessions, New session, Settings, Skills and memory, and a System, Light, Dark theme toggle that is saved. The bell opens Needs attention. Back buttons are arrows, the system action bar is off, and snackbars and toasts use the inverse surface of the app theme (D32). Debug builds show sample data from the `debug` source set; release builds show real data and empty states. Usage is tokens only until prices are wired (P1-14). Not run on a device: Blair checks it in the emulator |
 | P1-09 | Model catalog fetch, cache, capability flags, pricing | Blair with Codex and Claude | Done | #149 | Issue #13 closed when PR #149 merged. Provider lists, prices, capabilities, and the 24-hour cache pass checks |
 | P1-10 | Provider settings screen: key field, test connection, status | Blair with Codex, Haiku, and Claude | Done | #150 | Merged; issue #14 closed. Providers list and detail screens, a key field with paste and a reveal behind a biometric or screen lock check, a key test that calls the provider's model list (and caches it), and the four states (ok, bad key, network, blocked). Not built: the Base URL field of the prototype (no proxy support yet) |
+| P1-16 | Image attachments | Codex | In progress | pending | Image picker and MIME gate; actor and provider image path remain |
 | P1-13 | Composer | Codex | In review | #159 | Stacked on #158; ground-level send and stop code, device checks and model selection remain |
 | P1-12 | Transcript UI | Codex | In review | #158 | CI passed; 500-message frame measurement on the reference device remains unverified |
 | P1-11 | Session actor and plain chat turn (no tools) | Blair with Codex, Haiku, and Claude | Done | #153 | Merged; issue #15 closed. Session rows, transcript persistence, plain chat actor, and UniFFI entry points. Codex's first review found issues that were fixed with tests; its second review could not run (Codex usage limit), so the fixes were reviewed by Claude only |
@@ -148,6 +149,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Who | What happened | Next |
 |---|---|---|---|
+| 2026-11-20 | Codex | Added P1-16 local image intake and a blocked send state | Wire image blobs through actor and providers |
 | 2026-11-20 | Codex | Started P1-13 composer on #158 with native actor wiring; unverified draft | Run CI and finish #17 |
 | 2026-11-20 | Codex | Built P1-12 transcript UI and a session route. CI passed, including Android builds; device scroll measurement remains unverified | Review #158 and measure 500-message scroll |
 | 2026-11-20 | Blair with Claude | Merged #153 (P1-11), #154 (file length), and #156 (P1-21). None changed the version, so `release.yml` ran and skipped the release job (`v0.0.3` already tagged). Blair chose to keep bumping by hand (D33). Added `tools/bump-version.sh` with a self test (3 of 3 arithmetic mutations caught), `just bump`, and a CI step; set the version to 0.0.4 | Merge this PR to publish `v0.0.4` with the Home dashboard and the session actor; then check the assets, the signature, and `versionCode` 400 |
@@ -186,6 +188,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Files | Change | PR |
 |---|---|---|---|
+| 2026-11-20 | `android/app/src/main/kotlin/app/tether/session/`, `strings.xml`, image draft tests | P1-16 picker and intake gate | pending |
 | 2026-11-20 | `android/app/src/main/kotlin/app/tether/{session,nav}/`, `strings.xml` | P1-13 composer and actor connection | #159 |
 | 2026-11-20 | `android/app/src/main/kotlin/app/tether/{session,nav,di}/`, `android/app/src/main/res/values/strings.xml`, transcript tests | P1-12 lazy transcript, persisted session routing, code blocks, strings, tests | #158 |
 | 2026-11-20 | `core/Cargo.toml`, `core/Cargo.lock`, `tools/bump-version.sh`, `justfile`, `.github/workflows/ci.yml` | Version 0.0.4; a bump script with a self test and `just bump` | - |
@@ -218,6 +221,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Doc | Change |
 |---|---|---|
+| 2026-11-20 | progress-tracker | P1-16 draft and remaining image path |
 | 2026-11-20 | progress-tracker | P1-13 draft and remaining verification |
 | 2026-11-20 | progress-tracker, ui-registry | P1-12 draft status, transcript registry, and unverified checks |
 | 2026-11-20 | development, project-structure, progress-tracker | Release steps use `just bump`; D33 records that versions are bumped by hand; P1-11 and P1-21 marked Done |

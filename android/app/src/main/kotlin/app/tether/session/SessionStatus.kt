@@ -5,6 +5,12 @@ import java.util.Locale
 
 private const val PERCENT = 100L
 private const val MICROS_PER_DOLLAR = 1_000_000.0
+private const val MODEL_COLUMN = 0
+private const val MODE_COLUMN = 1
+private const val INPUT_COLUMN = 2
+private const val OUTPUT_COLUMN = 3
+private const val COST_COLUMN = 4
+private const val CONTEXT_COLUMN = 5
 
 /** Saved usage and the selected model. A missing catalog context stays unknown. */
 data class SessionStatus(
@@ -33,12 +39,12 @@ internal fun readSessionStatus(databasePath: String, sessionId: String): Session
         database.rawQuery(sql, arrayOf(sessionId)).use { cursor ->
             check(cursor.moveToFirst()) { "session not found" }
             return SessionStatus(
-                modelId = cursor.getString(0),
-                mode = cursor.getString(1),
-                tokensIn = cursor.getLong(2),
-                tokensOut = cursor.getLong(3),
-                costMicros = cursor.getLong(4),
-                contextWindow = if (cursor.isNull(5)) null else cursor.getLong(5),
+                modelId = cursor.getString(MODEL_COLUMN),
+                mode = cursor.getString(MODE_COLUMN),
+                tokensIn = cursor.getLong(INPUT_COLUMN),
+                tokensOut = cursor.getLong(OUTPUT_COLUMN),
+                costMicros = cursor.getLong(COST_COLUMN),
+                contextWindow = if (cursor.isNull(CONTEXT_COLUMN)) null else cursor.getLong(CONTEXT_COLUMN),
             )
         }
     }

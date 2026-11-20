@@ -68,6 +68,7 @@ impl ChatProvider for ReadThenFinish {
                     })
                     .await
                     .unwrap();
+                tokio::time::sleep(std::time::Duration::from_millis(200)).await;
                 events
                     .send(StreamEvent::Finished {
                         stop_reason: StopReason::EndTurn,
@@ -135,17 +136,30 @@ async fn session_actor_runs_read_tool_and_reopens_saved_exchange() {
     .unwrap();
     let task = tokio::spawn(actor.run());
     handle.send_message("Read the note".into()).await.unwrap();
+    let mut saw_saved_delta = false;
     loop {
         let event = tokio::time::timeout(std::time::Duration::from_secs(2), rx.recv())
             .await
             .unwrap()
             .unwrap();
+        if let CoreEvent::TextDelta {
+            message_id, text, ..
+        } = &event
+        {
+            let saved = Store::open(&database).unwrap().messages(&id).unwrap();
+            assert!(saved.iter().any(|message| {
+                message.id == *message_id
+                    && message.parts.iter().any(|part| matches!(part, MessagePart::Text { text: body } if body.contains(text)))
+            }));
+            saw_saved_delta = true;
+        }
         if matches!(event, CoreEvent::TurnFinished { .. }) {
             break;
         }
     }
     drop(handle);
     task.await.unwrap();
+    assert!(saw_saved_delta);
     let messages = Store::open(&database).unwrap().messages(&id).unwrap();
     assert_eq!(messages.len(), 4);
     assert_eq!(messages[1].role, Role::Assistant);

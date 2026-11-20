@@ -5,12 +5,23 @@ use tether_providers::{
     BoxFuture, ChatProvider, ChatRequest, ProviderError, StopReason, StreamEvent,
 };
 use tether_store::{BlobStore, Store};
-use tether_types::{MessagePart, Role, SessionId, ToolCallId};
+use tether_types::{CoreEvent, MessagePart, Role, SessionId, ToolCallId};
 use tether_workspace::PathGuard;
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 
 use super::{ToolLoop, ToolLoopContext};
+
+struct ProposalSink(Arc<Mutex<Vec<&'static str>>>);
+
+impl crate::EventSink for ProposalSink {
+    fn on_event(&self, event: CoreEvent) {
+        if matches!(event, CoreEvent::ToolProposed { tool, target, .. } if tool == "edit_file" && target == "note.txt")
+        {
+            self.0.lock().unwrap().push("proposed");
+        }
+    }
+}
 
 #[derive(Default)]
 struct Script(Mutex<usize>);
@@ -36,6 +47,12 @@ impl ChatProvider for Script {
             };
             assert_eq!(request.messages.len(), step * 2);
             assert_eq!(request.tools.len(), 9);
+            if step > 0 {
+                assert!(matches!(
+                    &request.messages[0].parts[0],
+                    MessagePart::Thinking { text } if text == "reasoning"
+                ));
+            }
             let calls = [
                 ("list_dir", "{}"),
                 ("read_file", r#"{"path":"note.txt"}"#),
@@ -47,6 +64,15 @@ impl ChatProvider for Script {
                 ("read_file", r#"{"path":"note.txt"}"#),
             ];
             if let Some((name, args)) = calls.get(step) {
+                if step == 0 {
+                    send(
+                        &events,
+                        StreamEvent::ThinkingDelta {
+                            text: "reasoning".into(),
+                        },
+                    )
+                    .await?;
+                }
                 let id = ToolCallId::new(format!("call-{step}"));
                 send(
                     &events,
@@ -128,8 +154,12 @@ async fn five_step_read_and_edit_fixture_completes() {
     let id = SessionId::new("fixture");
     let loop_runner = ToolLoop::new(PathGuard::new(&workspace).unwrap());
     let approvals = Arc::new(Mutex::new(Vec::new()));
+    let order = Arc::new(Mutex::new(Vec::new()));
+    let sink = ProposalSink(Arc::clone(&order));
     let approved = Arc::clone(&approvals);
+    let approved_order = Arc::clone(&order);
     let approve = move |name: &str, target: &str| {
+        approved_order.lock().unwrap().push("approved");
         approved
             .lock()
             .unwrap()
@@ -142,6 +172,7 @@ async fn five_step_read_and_edit_fixture_completes() {
         blobs: &blobs,
         cancel: CancellationToken::new(),
         approve: &approve,
+        sink: Some(&sink),
     };
     let result = loop_runner
         .run(
@@ -169,6 +200,7 @@ async fn five_step_read_and_edit_fixture_completes() {
         approvals.lock().unwrap().as_slice(),
         &[("edit_file".into(), "note.txt".into())]
     );
+    assert_eq!(order.lock().unwrap().as_slice(), &["proposed", "approved"]);
     assert_eq!(result.messages.len(), 11);
     assert_eq!(result.messages[1].role, Role::Tool);
     assert_eq!(store.messages(&id).unwrap(), result.messages);

@@ -9,8 +9,10 @@ import app.tether.home.AttentionScreen
 import app.tether.home.DashboardScreen
 import app.tether.home.DashboardViewModel
 import app.tether.home.NewProjectChoice
+import app.tether.home.ProjectHomeScreen
 import app.tether.home.ProjectsScreen
 import app.tether.home.ProjectsViewModel
+import app.tether.home.latestSessionForProject
 
 /** The start screens: Home, Projects, and Needs attention. */
 internal fun NavGraphBuilder.homeRoutes(
@@ -35,7 +37,7 @@ internal fun NavGraphBuilder.homeRoutes(
             onOpenAttention = { nav.go(Route.Attention) },
             onOpenSession = { nav.go(Route.Session) },
             onOpenAbout = { nav.go(Route.About) },
-            onOpenProject = { nav.go(Route.ProjectHome) },
+            onOpenProject = { nav.open(projectHomePath(it)) },
             onOpenProjects = { nav.goTopLevel(Route.Projects) },
             onOpenProviders = { nav.go(Route.Providers) },
             onNewProject = { choice -> nav.go(choice.route()) },
@@ -47,7 +49,7 @@ internal fun NavGraphBuilder.homeRoutes(
         ProjectsScreen(
             viewModel = projects,
             onOpenMenu = nav::openDrawer,
-            onOpenProject = { nav.go(Route.ProjectHome) },
+            onOpenProject = { nav.open(projectHomePath(it)) },
             onNewProject = { choice -> nav.go(choice.route()) },
         )
     }
@@ -57,6 +59,16 @@ internal fun NavGraphBuilder.homeRoutes(
             onOpenSession = { nav.go(Route.Session) },
             onOpenAbout = { nav.go(Route.About) },
             onBack = nav::back,
+        )
+    }
+    composable(Routes.PROJECT_HOME) { entry ->
+        val id = entry.arguments?.getString("projectId")
+        val project = module.home.projects.projects().firstOrNull { it.id == id }
+        ProjectHomeScreen(
+            project = project,
+            lastSession = project?.let { latestSessionForProject(it, module.home.sessions.sessions()) },
+            onBack = nav::back,
+            onNewSession = { nav.go(Route.NewSession) },
         )
     }
 }

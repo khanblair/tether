@@ -12,8 +12,14 @@ fun createHomeSources(): HomeSources {
     fun ago(duration: kotlin.time.Duration): Long = now - duration.inWholeMilliseconds
     val projects =
         listOf(
-            ProjectSummary("acme-api", "acme-api", "main", 3, ago(12.minutes), running = true),
-            ProjectSummary("tether", "tether", "main", 0, ago(2.hours), running = false),
+            ProjectSummary(
+                "acme-api", "acme-api", "main", 3, ago(12.minutes), running = true,
+                executor = ProjectExecutor.Sandbox,
+            ),
+            ProjectSummary(
+                "tether", "tether", "main", 0, ago(2.hours), running = false,
+                executor = ProjectExecutor.Ci,
+            ),
             ProjectSummary("dotfiles", "dotfiles", "feat/zsh", 1, ago(30.hours), running = false),
             ProjectSummary("blog", "blog", "main", 0, ago(3.days), running = false),
         )
@@ -25,6 +31,7 @@ fun createHomeSources(): HomeSources {
                 "acme-api",
                 SessionState.Running,
                 ago(1.minutes),
+                projectId = "acme-api",
             ),
             SessionSummary(
                 "s2",
@@ -32,6 +39,7 @@ fun createHomeSources(): HomeSources {
                 "acme-api",
                 SessionState.Waiting,
                 ago(5.minutes),
+                projectId = "acme-api",
             ),
             SessionSummary(
                 "s3",
@@ -40,6 +48,7 @@ fun createHomeSources(): HomeSources {
                 SessionState.Done,
                 ago(8.minutes),
                 pullRequest = 42,
+                projectId = "acme-api",
             ),
             SessionSummary(
                 "s4",
@@ -47,6 +56,7 @@ fun createHomeSources(): HomeSources {
                 "tether",
                 SessionState.Done,
                 ago(2.hours),
+                projectId = "tether",
             ),
             SessionSummary(
                 "s5",
@@ -54,6 +64,7 @@ fun createHomeSources(): HomeSources {
                 "blog",
                 SessionState.Failed,
                 ago(12.minutes),
+                projectId = "blog",
             ),
         )
     return HomeSources(

@@ -24,18 +24,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.buildAnnotatedString
-import kotlinx.coroutines.CancellationException
+import androidx.compose.ui.text.font.FontWeight
 import app.tether.R
 import app.tether.core.generated.MessagePartView
 import app.tether.core.generated.MessageView
 import app.tether.core.generated.RoleView
 import app.tether.design.TetherTheme
 import app.tether.design.components.TetherTopBar
-import app.tether.design.tokens.TetherSpace
 import app.tether.design.tokens.TetherSize
+import app.tether.design.tokens.TetherSpace
 import app.tether.shell.BackButton
+import kotlinx.coroutines.CancellationException
 
 /** Persisted messages are read off the main thread when the session route opens. */
 @Composable
@@ -49,9 +49,10 @@ fun TranscriptScreen(
     LaunchedEffect(sessionId) {
         if (sessionId != null) {
             try {
-                messages = load(sessionId)
-                    .filterNot(MessageView::rewound)
-                    .sortedBy(MessageView::seq)
+                messages =
+                    load(sessionId)
+                        .filterNot(MessageView::rewound)
+                        .sortedBy(MessageView::seq)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {
@@ -64,7 +65,11 @@ fun TranscriptScreen(
 
 /** Lazy items use persisted IDs so rows keep their identity as text arrives. */
 @Composable
-fun TranscriptContent(messages: List<MessageView>, failed: Boolean, onBack: () -> Unit) {
+fun TranscriptContent(
+    messages: List<MessageView>,
+    failed: Boolean,
+    onBack: () -> Unit,
+) {
     val listState = rememberLazyListState()
     Scaffold(
         containerColor = TetherTheme.colors.bg,
@@ -77,9 +82,10 @@ fun TranscriptContent(messages: List<MessageView>, failed: Boolean, onBack: () -
     ) { padding ->
         if (messages.isEmpty()) {
             Text(
-                text = stringResource(
-                    if (failed) R.string.transcript_load_failed else R.string.transcript_empty,
-                ),
+                text =
+                    stringResource(
+                        if (failed) R.string.transcript_load_failed else R.string.transcript_empty,
+                    ),
                 color = TetherTheme.colors.text2,
                 modifier = Modifier.padding(padding).padding(TetherSpace.space4),
             )
@@ -102,8 +108,12 @@ fun TranscriptContent(messages: List<MessageView>, failed: Boolean, onBack: () -
 }
 
 @Composable
-private fun TranscriptMessage(message: MessageView, modifier: Modifier = Modifier) {
-    val label = when (message.role) {
+private fun TranscriptMessage(
+    message: MessageView,
+    modifier: Modifier = Modifier,
+) {
+    val label =
+        when (message.role) {
         RoleView.USER -> R.string.transcript_you
         RoleView.ASSISTANT -> R.string.transcript_agent
         RoleView.TOOL -> R.string.transcript_tool
@@ -142,10 +152,11 @@ private fun MarkdownBlocks(source: String) {
                 text = block.text,
                 style = TetherTheme.mono,
                 color = TetherTheme.colors.text,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(TetherTheme.colors.surfaceSunken)
-                    .padding(TetherSpace.space3),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .background(TetherTheme.colors.surfaceSunken)
+                        .padding(TetherSpace.space3),
             )
         } else {
             Text(
@@ -157,7 +168,10 @@ private fun MarkdownBlocks(source: String) {
     }
 }
 
-internal data class MarkdownBlock(val text: String, val code: Boolean)
+internal data class MarkdownBlock(
+    val text: String,
+    val code: Boolean,
+)
 
 /** Keeps fenced code separate from prose; incomplete fences stay visible while streaming. */
 internal fun splitMarkdown(source: String): List<MarkdownBlock> {
@@ -178,7 +192,8 @@ internal fun splitMarkdown(source: String): List<MarkdownBlock> {
 }
 
 /** Styles bold spans while leaving malformed delimiters as plain text. */
-internal fun inlineMarkdown(source: String): AnnotatedString = buildAnnotatedString {
+internal fun inlineMarkdown(source: String): AnnotatedString =
+    buildAnnotatedString {
     var cursor = 0
     while (cursor < source.length) {
         val start = source.indexOf("**", cursor)

@@ -1,5 +1,7 @@
 package app.tether.session
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,12 +11,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
@@ -31,6 +35,14 @@ fun Composer(
     onStop: () -> Unit,
 ) {
     var input by rememberSaveable { mutableStateOf("") }
+    var image by rememberSaveable { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
+            val type = context.contentResolver.getType(uri).orEmpty()
+            if (isImageType(type)) image = uri.toString()
+        }
+    }
     val windowHeight = LocalWindowInfo.current.containerSize.height
     val maximum = with(LocalDensity.current) { windowHeight.toDp() * TetherRatio.composerMax }
     Column(modifier = Modifier.fillMaxWidth().padding(TetherSpace.space4)) {
@@ -41,8 +53,13 @@ fun Composer(
             modifier = Modifier.fillMaxWidth().heightIn(max = maximum),
             maxLines = Int.MAX_VALUE,
         )
+        if (image != null) {
+            Text(stringResource(R.string.composer_image_staged))
+        }
         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.composer_attachments))
+            TextButton(onClick = { picker.launch("image/*") }) {
+                Text(stringResource(R.string.composer_attachments))
+            }
             Text(modelId)
             if (running) {
                 Button(onClick = onStop) { Text(stringResource(R.string.composer_stop)) }
@@ -55,7 +72,7 @@ fun Composer(
                             input = ""
                         }
                     },
-                    enabled = input.isNotBlank(),
+                    enabled = input.isNotBlank() && image == null,
                 ) { Text(stringResource(R.string.composer_send)) }
             }
         }

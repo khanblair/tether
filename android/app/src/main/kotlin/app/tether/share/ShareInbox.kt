@@ -6,7 +6,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /** One pending share from Android's text share sheet. */
-data class SharedText(val value: String, val projectId: String? = null)
+data class SharedText(
+    val value: String,
+    val projectId: String? = null,
+)
 
 /** Keeps the share until the user picks a project or dismisses it. */
 class ShareInbox {

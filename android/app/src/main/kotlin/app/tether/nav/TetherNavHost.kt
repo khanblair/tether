@@ -70,22 +70,7 @@ fun TetherNavHost(module: AppModule) {
         if (shared != null && currentRoute != "share-project") nav.open("share-project")
     }
     BackHandler(enabled = drawerState.isOpen) { scope.launch { drawerState.close() } }
-    LaunchedEffect(module) {
-        module.messages.flow.collect { message ->
-            val result =
-                snackbars.showSnackbar(
-                    message = message.text,
-                    actionLabel = message.actionLabel,
-                    duration =
-                        if (message.actionLabel == null) {
-                            SnackbarDuration.Short
-                        } else {
-                            SnackbarDuration.Long
-                        },
-                )
-            if (result == SnackbarResult.ActionPerformed) message.onAction?.invoke()
-        }
-    }
+    SnackbarMessages(module = module, snackbars = snackbars)
     ModalNavigationDrawer(
         drawerState = drawerState,
         gesturesEnabled = currentRoute == Route.Home.path || currentRoute == Route.Projects.path,
@@ -116,20 +101,11 @@ fun TetherNavHost(module: AppModule) {
                     )
                 }
                 composable("session/{sessionId}") { entry ->
-                    val id = entry.arguments?.getString("sessionId")
-                    var connection by remember(id) { mutableStateOf<SessionConnection?>(null) }
-                    LaunchedEffect(id) {
-                        if (id != null) {
-                            connection =
-                                withContext(Dispatchers.IO) {
-                                    SessionConnection(module.databasePath, module.vault, id)
-                                }
-                        }
-                    }
-                    DisposableEffect(connection) {
-                        onDispose { connection?.close() }
-                    }
-                    TranscriptScreen(connection = connection, onBack = nav::back)
+                    SessionRoute(
+                        module = module,
+                        sessionId = entry.arguments?.getString("sessionId"),
+                        onBack = nav::back,
+                    )
                 }
             }
             TetherSnackbarHost(
@@ -141,6 +117,52 @@ fun TetherNavHost(module: AppModule) {
             )
         }
     }
+}
+
+/** Shows each message from [AppModule.messages] in the snackbar host, and runs its action. */
+@Composable
+private fun SnackbarMessages(
+    module: AppModule,
+    snackbars: SnackbarHostState,
+) {
+    LaunchedEffect(module) {
+        module.messages.flow.collect { message ->
+            val result =
+                snackbars.showSnackbar(
+                    message = message.text,
+                    actionLabel = message.actionLabel,
+                    duration =
+                        if (message.actionLabel == null) {
+                            SnackbarDuration.Short
+                        } else {
+                            SnackbarDuration.Long
+                        },
+                )
+            if (result == SnackbarResult.ActionPerformed) message.onAction?.invoke()
+        }
+    }
+}
+
+/** A session's transcript. The connection opens off the main thread and closes when left. */
+@Composable
+private fun SessionRoute(
+    module: AppModule,
+    sessionId: String?,
+    onBack: () -> Unit,
+) {
+    var connection by remember(sessionId) { mutableStateOf<SessionConnection?>(null) }
+    LaunchedEffect(sessionId) {
+        if (sessionId != null) {
+            connection =
+                withContext(Dispatchers.IO) {
+                    SessionConnection(module.databasePath, module.vault, sessionId)
+                }
+        }
+    }
+    DisposableEffect(connection) {
+        onDispose { connection?.close() }
+    }
+    TranscriptScreen(connection = connection, onBack = onBack)
 }
 
 /** The drawer's content. Its query and session list live here, and every item closes the drawer. */

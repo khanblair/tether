@@ -50,19 +50,28 @@ fun ProjectHomeScreen(
             modifier = Modifier.fillMaxSize().padding(padding).padding(TetherSpace.space4),
         ) {
             if (project == null) {
-                Text(stringResource(R.string.project_home_missing), color = TetherTheme.colors.text2)
+                Text(
+                    stringResource(R.string.project_home_missing),
+                    color = TetherTheme.colors.text2,
+                )
             } else {
                 ProjectFact(
                     label = stringResource(R.string.project_home_branch),
-                    value = project.branch.ifBlank { stringResource(R.string.project_home_no_branch) },
+                    value =
+                        project.branch.ifBlank {
+                            stringResource(
+                                R.string.project_home_no_branch,
+                            )
+                        },
                 )
                 ProjectFact(
                     label = stringResource(R.string.project_home_changes),
-                    value = pluralStringResource(
-                        R.plurals.project_home_change_count,
-                        project.uncommitted,
-                        project.uncommitted,
-                    ),
+                    value =
+                        pluralStringResource(
+                            R.plurals.project_home_change_count,
+                            project.uncommitted,
+                            project.uncommitted,
+                        ),
                 )
                 ProjectFact(
                     label = stringResource(R.string.project_home_last_session),
@@ -78,7 +87,10 @@ fun ProjectHomeScreen(
 }
 
 @Composable
-private fun ProjectFact(label: String, value: String) {
+private fun ProjectFact(
+    label: String,
+    value: String,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(TetherSpace.space1)) {
         Text(label, style = MaterialTheme.typography.labelMedium, color = TetherTheme.colors.text2)
         Text(value, style = MaterialTheme.typography.bodyLarge, color = TetherTheme.colors.text)
@@ -101,7 +113,7 @@ fun latestSessionForProject(
     project: ProjectSummary,
     sessions: List<SessionSummary>,
 ): SessionSummary? =
-    sessions.filter {
-        it.projectId == project.id || (it.projectId == null && it.projectName == project.name)
-    }
-        .maxByOrNull(SessionSummary::updatedAt)
+    sessions
+        .filter {
+            it.projectId == project.id || (it.projectId == null && it.projectName == project.name)
+        }.maxByOrNull(SessionSummary::updatedAt)

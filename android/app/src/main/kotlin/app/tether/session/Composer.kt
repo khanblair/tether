@@ -3,7 +3,9 @@ package app.tether.session
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.net.Uri
 import android.speech.RecognizerIntent
+import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -40,22 +42,9 @@ fun Composer(
 ) {
     var input by rememberSaveable { mutableStateOf("") }
     var image by rememberSaveable { mutableStateOf<String?>(null) }
-    val context = LocalContext.current
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        if (uri != null) {
-            val type = context.contentResolver.getType(uri).orEmpty()
-            if (isImageType(type)) image = uri.toString()
-        }
-    }
     var speechUnavailable by rememberSaveable { mutableStateOf(false) }
-    val speech =
-        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (result.resultCode == Activity.RESULT_OK) {
-                val words =
-                    result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
-                if (words != null) input = mergeVoiceDraft(input, words)
-        }
-    }
+    val picker = rememberImagePicker { image = it }
+    val startVoice = rememberVoiceInput { words -> input = mergeVoiceDraft(input, words) }
     val windowHeight = LocalWindowInfo.current.containerSize.height
     val maximum = with(LocalDensity.current) { windowHeight.toDp() * TetherRatio.composerMax }
     Column(modifier = Modifier.fillMaxWidth().padding(TetherSpace.space4)) {
@@ -70,42 +59,105 @@ fun Composer(
             Text(stringResource(R.string.composer_image_staged))
         }
         if (speechUnavailable) Text(stringResource(R.string.composer_voice_unavailable))
-        Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-            TextButton(onClick = { picker.launch("image/*") }) {
-                Text(stringResource(R.string.composer_attachments))
-            }
-            Text(modelId)
-            Button(onClick = {
-                val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+        ComposerActions(
+            modelId = modelId,
+            running = running,
+            canSend = input.isNotBlank() && image == null,
+            onAttach = { picker.launch("image/*") },
+            onVoice = { if (!startVoice()) speechUnavailable = true },
+            onStop = onStop,
+            onSend = {
+                val text = outgoingText(input)
+                if (text != null) {
+                    onSend(text)
+                    input = ""
                 }
-                try {
-                    speech.launch(intent)
-                } catch (_: ActivityNotFoundException) {
-                    speechUnavailable = true
-                }
-            }) { Text(stringResource(R.string.composer_voice)) }
-            if (running) {
-                Button(onClick = onStop) { Text(stringResource(R.string.composer_stop)) }
-            } else {
-                Button(
-                    onClick = {
-                        val text = outgoingText(input)
-                        if (text != null) {
-                            onSend(text)
-                            input = ""
-                        }
-                    },
-                    enabled = input.isNotBlank() && image == null,
-                ) { Text(stringResource(R.string.composer_send)) }
+            },
+        )
+    }
+}
+
+/** The row under the field: attach, model name, voice, and send or stop. */
+@Composable
+private fun ComposerActions(
+    modelId: String,
+    running: Boolean,
+    canSend: Boolean,
+    onAttach: () -> Unit,
+    onVoice: () -> Unit,
+    onStop: () -> Unit,
+    onSend: () -> Unit,
+) {
+    Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+        TextButton(onClick = onAttach) {
+            Text(stringResource(R.string.composer_attachments))
+        }
+        Text(modelId)
+        Button(onClick = onVoice) { Text(stringResource(R.string.composer_voice)) }
+        if (running) {
+            Button(onClick = onStop) { Text(stringResource(R.string.composer_stop)) }
+        } else {
+            Button(onClick = onSend, enabled = canSend) {
+                Text(stringResource(R.string.composer_send))
             }
         }
     }
 }
 
+/** Opens the system picker for one image. [onPicked] gets only image URIs. */
+@Composable
+private fun rememberImagePicker(
+    onPicked: (String) -> Unit,
+): ManagedActivityResultLauncher<String, Uri?> {
+    val context = LocalContext.current
+    return rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
+            val type = context.contentResolver.getType(uri).orEmpty()
+            if (isImageType(type)) onPicked(uri.toString())
+        }
+    }
+}
+
+/**
+ * Starts the speech recognizer and adds its first result through [onWords]. The returned function
+ * gives false when the device has no recognizer, so the caller can say voice input is unavailable.
+ */
+@Composable
+private fun rememberVoiceInput(onWords: (String) -> Unit): () -> Boolean {
+    val speech =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.StartActivityForResult(),
+        ) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                result.data
+                    ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+                    ?.firstOrNull()
+                    ?.let(onWords)
+            }
+        }
+    return {
+        try {
+            speech.launch(speechIntent())
+            true
+        } catch (_: ActivityNotFoundException) {
+            false
+        }
+    }
+}
+
+private fun speechIntent(): Intent =
+    Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+        putExtra(
+            RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+            RecognizerIntent.LANGUAGE_MODEL_FREE_FORM,
+        )
+    }
+
 /** Blank input never starts a turn. Preserve line breaks inside a message. */
 internal fun outgoingText(input: String): String? = input.trim().takeIf(String::isNotEmpty)
 
 /** Adds recognized speech to the draft without erasing text already typed. */
-internal fun mergeVoiceDraft(draft: String, speech: String): String =
-    listOf(draft.trimEnd(), speech.trim()).filter(String::isNotEmpty).joinToString(" ")
+internal fun mergeVoiceDraft(
+    draft: String,
+    speech: String,
+): String = listOf(draft.trimEnd(), speech.trim()).filter(String::isNotEmpty).joinToString(" ")

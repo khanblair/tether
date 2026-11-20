@@ -22,15 +22,19 @@ data class SessionStatus(
     val contextWindow: Long?,
 ) {
     val contextPercent: Int?
-        get() = contextWindow?.takeIf { it > 0 }?.let { window ->
-            ((tokensIn * PERCENT) / window).coerceIn(0, PERCENT).toInt()
-        }
+        get() =
+            contextWindow?.takeIf { it > 0 }?.let { window ->
+                ((tokensIn * PERCENT) / window).coerceIn(0, PERCENT).toInt()
+            }
 
     fun costText(): String = String.format(Locale.US, "%.2f", costMicros / MICROS_PER_DOLLAR)
 }
 
 /** Reads a snapshot without writing to the database owned by the Rust actor. */
-internal fun readSessionStatus(databasePath: String, sessionId: String): SessionStatus {
+internal fun readSessionStatus(
+    databasePath: String,
+    sessionId: String,
+): SessionStatus {
     val db = SQLiteDatabase.openDatabase(databasePath, null, SQLiteDatabase.OPEN_READONLY)
     db.use { database ->
         val sql = """SELECT s.model_id, s.mode, s.tokens_in, s.tokens_out, s.cost_micros,
@@ -44,7 +48,15 @@ internal fun readSessionStatus(databasePath: String, sessionId: String): Session
                 tokensIn = cursor.getLong(INPUT_COLUMN),
                 tokensOut = cursor.getLong(OUTPUT_COLUMN),
                 costMicros = cursor.getLong(COST_COLUMN),
-                contextWindow = if (cursor.isNull(CONTEXT_COLUMN)) null else cursor.getLong(CONTEXT_COLUMN),
+                contextWindow =
+                    if (cursor.isNull(
+                            CONTEXT_COLUMN,
+                        )
+                    ) {
+                        null
+                    } else {
+                        cursor.getLong(CONTEXT_COLUMN)
+                    },
             )
         }
     }

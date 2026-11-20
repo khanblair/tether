@@ -13,11 +13,21 @@ fun createHomeSources(): HomeSources {
     val projects =
         listOf(
             ProjectSummary(
-                "acme-api", "acme-api", "main", 3, ago(12.minutes), running = true,
+                "acme-api",
+                "acme-api",
+                "main",
+                3,
+                ago(12.minutes),
+                running = true,
                 executor = ProjectExecutor.Sandbox,
             ),
             ProjectSummary(
-                "tether", "tether", "main", 0, ago(2.hours), running = false,
+                "tether",
+                "tether",
+                "main",
+                0,
+                ago(2.hours),
+                running = false,
                 executor = ProjectExecutor.Ci,
             ),
             ProjectSummary("dotfiles", "dotfiles", "feat/zsh", 1, ago(30.hours), running = false),

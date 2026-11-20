@@ -1,14 +1,14 @@
 package app.tether.workspace
 
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
-import java.nio.file.Files
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.nio.file.Files
 
 class ProjectArchiveTest {
     @get:Rule val temporary = TemporaryFolder()
@@ -36,9 +36,10 @@ class ProjectArchiveTest {
             zip.closeEntry()
         }
         val root = temporary.root.toPath()
-        val failed = runCatching {
-            importProjectZip(ByteArrayInputStream(bytes.toByteArray()), root, "project")
-        }.isFailure
+        val failed =
+            runCatching {
+                importProjectZip(ByteArrayInputStream(bytes.toByteArray()), root, "project")
+            }.isFailure
         assertTrue(failed)
         assertFalse(Files.exists(root.resolve("outside.txt")))
     }

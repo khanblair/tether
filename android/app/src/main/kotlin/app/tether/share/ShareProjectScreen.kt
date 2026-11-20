@@ -54,11 +54,15 @@ fun ShareProjectScreen(
                     items(projects, key = ProjectSummary::id) { project ->
                         TextButton(onClick = { onChoose(project.id) }) {
                             Text(
-                                text = if (selected == project.id) {
-                                    stringResource(R.string.share_selected_project, project.name)
-                                } else {
-                                    project.name
-                                },
+                                text =
+                                    if (selected == project.id) {
+                                        stringResource(
+                                            R.string.share_selected_project,
+                                            project.name,
+                                        )
+                                    } else {
+                                        project.name
+                                    },
                             )
                         }
                     }

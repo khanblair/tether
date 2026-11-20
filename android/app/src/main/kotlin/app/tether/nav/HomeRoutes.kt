@@ -21,6 +21,17 @@ internal fun NavGraphBuilder.homeRoutes(
     nav: TetherNav,
     attentionItems: List<AttentionItem>,
 ) {
+    dashboardRoute(module, nav, attentionItems)
+    projectRoutes(module, nav)
+    attentionRoute(nav, attentionItems)
+}
+
+/** Home, the start screen. */
+private fun NavGraphBuilder.dashboardRoute(
+    module: AppModule,
+    nav: TetherNav,
+    attentionItems: List<AttentionItem>,
+) {
     composable(Route.Home.path) {
         val dashboard: DashboardViewModel =
             viewModel(
@@ -44,6 +55,13 @@ internal fun NavGraphBuilder.homeRoutes(
             onNewProject = { choice -> nav.go(choice.route()) },
         )
     }
+}
+
+/** The project list and a single project's home. */
+private fun NavGraphBuilder.projectRoutes(
+    module: AppModule,
+    nav: TetherNav,
+) {
     composable(Route.Projects.path) {
         val projects: ProjectsViewModel =
             viewModel(factory = ProjectsViewModel.factory(module.home.projects))
@@ -54,22 +72,38 @@ internal fun NavGraphBuilder.homeRoutes(
             onNewProject = { choice -> nav.go(choice.route()) },
         )
     }
+    composable(Routes.PROJECT_HOME) { entry ->
+        val id = entry.arguments?.getString("projectId")
+        val project =
+            module.home.projects
+                .projects()
+                .firstOrNull { it.id == id }
+        ProjectHomeScreen(
+            project = project,
+            lastSession =
+                project?.let {
+                    latestSessionForProject(
+                        it,
+                        module.home.sessions.sessions(),
+                    )
+                },
+            onBack = nav::back,
+            onNewSession = { nav.go(Route.NewSession) },
+        )
+    }
+}
+
+/** Needs attention, the list of sessions that wait on the user. */
+private fun NavGraphBuilder.attentionRoute(
+    nav: TetherNav,
+    attentionItems: List<AttentionItem>,
+) {
     composable(Route.Attention.path) {
         AttentionScreen(
             items = attentionItems,
             onOpenSession = { nav.open("session/${Uri.encode(it)}") },
             onOpenAbout = { nav.go(Route.About) },
             onBack = nav::back,
-        )
-    }
-    composable(Routes.PROJECT_HOME) { entry ->
-        val id = entry.arguments?.getString("projectId")
-        val project = module.home.projects.projects().firstOrNull { it.id == id }
-        ProjectHomeScreen(
-            project = project,
-            lastSession = project?.let { latestSessionForProject(it, module.home.sessions.sessions()) },
-            onBack = nav::back,
-            onNewSession = { nav.go(Route.NewSession) },
         )
     }
 }

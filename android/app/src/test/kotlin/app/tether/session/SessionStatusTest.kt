@@ -18,6 +18,9 @@ class SessionStatusTest {
         assertEquals("0.21", status(0, null, 210_000).costText())
     }
 
-    private fun status(tokens: Long, window: Long?, cost: Long = 0) =
-        SessionStatus("model", "ask", tokens, 0, cost, window)
+    private fun status(
+        tokens: Long,
+        window: Long?,
+        cost: Long = 0,
+    ) = SessionStatus("model", "ask", tokens, 0, cost, window)
 }

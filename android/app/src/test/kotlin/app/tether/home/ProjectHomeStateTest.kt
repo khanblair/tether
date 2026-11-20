@@ -11,13 +11,28 @@ class ProjectHomeStateTest {
         val sessions =
             listOf(
                 SessionSummary(
-                    "old", "Old", "Same name", SessionState.Done, 2, projectId = "correct",
+                    "old",
+                    "Old",
+                    "Same name",
+                    SessionState.Done,
+                    2,
+                    projectId = "correct",
                 ),
                 SessionSummary(
-                    "new", "New", "Same name", SessionState.Done, 3, projectId = "correct",
+                    "new",
+                    "New",
+                    "Same name",
+                    SessionState.Done,
+                    3,
+                    projectId = "correct",
                 ),
                 SessionSummary(
-                    "other", "Other", "Same name", SessionState.Done, 4, projectId = "other",
+                    "other",
+                    "Other",
+                    "Same name",
+                    SessionState.Done,
+                    4,
+                    projectId = "other",
                 ),
             )
         assertEquals("new", latestSessionForProject(project, sessions)?.id)

@@ -185,7 +185,7 @@ Release builds enable R8 and resource shrinking. JNA and UniFFI classes are kept
 
 1. Confirm every P10 task for the release is done in progress-tracker.md.
 2. Update `CHANGELOG.md` from merged PR titles; run `just slop CHANGELOG.md` on it.
-3. Bump the version in `core/Cargo.toml`. Gradle and the core both read it.
+3. Bump the version with `just bump patch` (or `minor`, `major`, or an exact `X.Y.Z`). It edits `core/Cargo.toml` and `core/Cargo.lock`, and refuses a version that already has a tag. Gradle and the core both read the version.
 4. Run `just check` and `just test-device` on the reference device.
 5. Merge the pull request that bumps the version into `main`. There is no manual tag.
 6. `release.yml` runs on every push to `main`. When the version in `core/Cargo.toml` has no tag yet, it builds both flavors, signs them with the keystore secrets, checks the signature against the pinned fingerprint, writes `SHA256SUMS`, and publishes the GitHub Release with the `full` APK and the `play` bundle. A push whose version already has a tag releases nothing. A failed release leaves no tag, so the next push to `main` retries it, and you can also run the workflow by hand. Signing of runtime pack and root filesystem manifests is added with P5 and P7.

@@ -68,7 +68,7 @@ tether/
 │   ├── slop-lint/             Rust CLI with its own workspace and tests
 │   ├── site/{build.ts, site.css}   Builds the Pages site from docs/
 │   ├── prototype/             Clickable mobile UI prototype (HTML, CSS, JavaScript; no build step)
-│   └── gen-bindings.sh  gen-icons.ts  check-file-length.sh  check-commit-size.sh  check-smell-fixtures.sh  setup.sh  setup-release-signing.sh
+│   └── gen-bindings.sh  gen-icons.ts  check-file-length.sh  check-commit-size.sh  check-smell-fixtures.sh  bump-version.sh  setup.sh  setup-release-signing.sh
 └── .github/
     ├── workflows/{ci.yml, pr.yml, release.yml, pages.yml}
     └── pull_request_template.md  CODEOWNERS  dependabot.yml

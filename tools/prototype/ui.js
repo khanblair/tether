@@ -30,7 +30,7 @@ window.appbar = (o) => {
     ? `<button class="ibtn" aria-label="Open projects and sessions"${nav({ go: o.menu })}>${I("menu", "l")}</button>`
     : "";
   const acts = (o.actions || [])
-    .map((a) => `<button class="ibtn ${a.accent ? "accent" : ""}" aria-label="${a.label}"${nav(a)}>${I(a.icon, "l")}</button>`)
+    .map((a) => `<button class="ibtn ${a.accent ? "accent" : ""}" aria-label="${a.label}"${nav(a)}>${I(a.icon, "l")}${a.dot ? '<span class="dot" aria-hidden="true"></span>' : ""}</button>`)
     .join("");
   return `<div class="appbar">${lead}<div class="ttl"><b>${o.title}</b>${o.sub ? `<span>${o.sub}</span>` : ""}</div>${acts}</div>`;
 };

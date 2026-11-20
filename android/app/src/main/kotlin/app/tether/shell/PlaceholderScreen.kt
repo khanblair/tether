@@ -6,12 +6,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import app.tether.R
+import app.tether.design.TetherIcons
 import app.tether.design.TetherTheme
+import app.tether.design.components.TetherIconButton
 import app.tether.design.components.TetherTopBar
 import app.tether.design.tokens.TetherSpace
 import app.tether.nav.Route
@@ -41,13 +42,12 @@ fun PlaceholderScreen(
     }
 }
 
-/** Text back button until the Lucide icon set lands. */
+/** The back arrow in a top bar. The label is the content description for TalkBack. */
 @Composable
 fun BackButton(onBack: () -> Unit) {
-    TextButton(onClick = onBack) {
-        Text(
-            text = stringResource(R.string.nav_back_label),
-            color = TetherTheme.colors.accentInk,
-        )
-    }
+    TetherIconButton(
+        icon = TetherIcons.ArrowLeft,
+        contentDescription = stringResource(R.string.nav_back_label),
+        onClick = onBack,
+    )
 }

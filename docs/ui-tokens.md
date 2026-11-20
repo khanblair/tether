@@ -258,6 +258,7 @@ Rules: no motion longer than 300 ms. No bouncing or spring overshoot. With the s
 | `size.approval-bar-min` | 72 | Approval bar height |
 | `size.tool-card-header` | 44 | Tool card collapsed height |
 | `size.notes-max` | 240 | Maximum height of the release notes box on the About screen |
+| `size.chart-height` | 144 | Height of the bars in a usage chart on Home |
 | `ratio.sheet-max` | 0.9 of window height | Bottom sheet maximum |
 | `layout.transcript-max` | 720 | Max transcript width on wide screens |
 | `layout.pane-list` | 320 | List pane width on expanded layouts |

@@ -19,6 +19,7 @@
 
   const CFG = { view: "gallery", theme: "system", device: "phone-l", land: false, fs: 100, ds: 100, offline: false, reduce: false, area: "all", cur: "welcome", flow: null };
   try { Object.assign(CFG, JSON.parse(localStorage.getItem("tether-proto") || "{}")); } catch (e) { /* storage unavailable */ }
+  window.CFG = CFG;
   let hist = [];
   const save = () => { try { localStorage.setItem("tether-proto", JSON.stringify(CFG)); } catch (e) { /* ignore */ } };
   const $ = (s, r = document) => r.querySelector(s);
@@ -221,6 +222,7 @@
     const cfg = t.closest("[data-cfg]"); if (cfg) { const [k, v] = cfg.dataset.cfg.split(":"); setCfg(k, v); return; }
     if (t.closest("[data-snack-action]")) { showSnack({ toast: true, text: "Undone" }); return; }
     const el = t.closest("[data-go],[data-back],[data-act],[data-snack]"); if (!el) return;
+    if (el.dataset.act === "theme") { const next = { system: "light", light: "dark", dark: "system" }; setCfg("theme", next[CFG.theme] || "system"); return; }
     if (el.dataset.snack) showSnack(parseSnack(el.dataset.snack));
     const act = el.dataset.act, goId = el.dataset.go;
     if (act && CFG.cur === "session-live" && window.LIVEACT[act]) { LIVEACT[act](); if (!goId) { livePatch(); return; } }

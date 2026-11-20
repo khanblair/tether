@@ -88,9 +88,10 @@ svg.i.l { width: 24px; height: 24px; }
 .appbar .ttl { flex: 1; min-width: 0; padding: 0 4px; }
 .appbar .ttl b { display: block; font: 600 18px/24px var(--tt-font-sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .appbar .ttl span { display: block; font: 400 12px/16px var(--tt-font-sans); color: var(--tt-color-text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ibtn { width: 48px; height: 48px; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; color: var(--tt-color-text-2); flex: none; }
+.ibtn { width: 48px; height: 48px; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; color: var(--tt-color-text-2); flex: none; position: relative; }
 .ibtn:hover { background: var(--tt-color-accent-soft); }
 .ibtn.accent { color: var(--tt-color-accent-ink); }
+.ibtn .dot { position: absolute; top: 10px; right: 10px; width: 8px; height: 8px; border-radius: 50%; background: var(--tt-color-accent); box-shadow: 0 0 0 2px var(--tt-color-bg); }
 
 .btn { min-height: 48px; padding: 0 18px; border-radius: var(--tt-radius-sm); display: inline-flex; align-items: center; justify-content: center; gap: 8px; font: 500 14px/20px var(--tt-font-sans); letter-spacing: 0.1px; white-space: nowrap; }
 .btn.primary { background: var(--tt-color-accent); color: var(--tt-color-on-accent); }

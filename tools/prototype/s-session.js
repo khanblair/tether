@@ -118,15 +118,25 @@ stateFrame("state-compaction", "Context compacted", "At 80% context the older me
 // ----- sheets -----
 const over = (id, title, why, base, html, has, config) => frame({ id, area: "sheets", title, why, overlay: base, overlayHtml: html, has, config });
 
-over("sessions", "Projects and sessions drawer", "The drawer is the only navigation. There is no bottom bar; the composer owns the bottom edge.", "session-running",
-  () => `<div class="scrim"></div><div class="drawer"><div style="height:32px"></div><div class="row" style="padding:8px 16px"><img src="logo.svg" width="24" height="24" alt=""><b class="t-title-m">Tether</b></div>
+// Drawer: header with the theme toggle, the destinations, then sessions. The toggle shows the current theme and names the next one.
+const drawerTheme = { system: ["monitor", "System", "Light"], light: ["sun", "Light", "Dark"], dark: ["moon", "Dark", "System"] };
+const drawerHead = () => {
+  const [icon, now, next] = drawerTheme[(window.CFG && CFG.theme) || "system"] || drawerTheme.system;
+  return `<div class="row" style="padding:8px 8px 8px 16px"><img src="logo.svg" width="24" height="24" alt=""><b class="t-title-m grow">Tether</b><button class="ibtn" data-act="theme" aria-label="Theme: ${now}. Switch to ${next}.">${I(icon, "l")}</button></div>`;
+};
+const drawerDest = (icon, title, go, o = {}) => `<button class="lrow" style="min-height:48px;padding:8px 12px;margin:0 8px;width:calc(100% - 16px);border-radius:var(--tt-radius-sm);${o.on ? "background:var(--tt-color-tonal);color:var(--tt-color-on-tonal);" : ""}"${o.on ? ' aria-current="page"' : ""}${nav({ go })}><span class="ico" style="${o.on ? "color:var(--tt-color-on-tonal);" : ""}">${I(icon)}</span><span class="tx"><b>${title}</b></span>${o.count ? `<span class="t-body-s c2">${o.count}</span>` : ""}</button>`;
+
+over("sessions", "Projects and sessions drawer", "The drawer is the only navigation. There is no bottom bar; the composer owns the bottom edge.", "home",
+  () => `<div class="scrim"></div><div class="drawer"><div style="height:32px"></div>${drawerHead()}
+  <div class="body"><div style="padding:4px 0 8px">${drawerDest("house", "Home", "home", { on: true })}${drawerDest("folder", "Projects", "projects")}${drawerDest("bell", "Needs attention", "attention", { count: "2" })}${drawerDest("chart-column", "Usage and cost", "cost")}${drawerDest("activity", "Runs", "runs")}</div>
+  <div style="height:1px;background:var(--tt-color-line);margin:0 16px 8px"></div>
   <div class="pad" style="margin:4px 0 8px">${field("", "", { icon: "search", ph: "Search sessions" })}</div>
-  <div class="body"><div class="sec-title" style="margin-top:4px">acme-api</div>
+  <div class="sec-title" style="margin-top:4px">acme-api</div>
   ${[["Fix login timeout", "run", "Running"], ["Add rate limit to /v1/search", "ok", "PR #42"], ["Migrate to Pydantic v2", "wait", "Needs approval"]].map(([t, s, sub]) => `<button class="lrow" style="min-height:52px"${nav({ go: "session-running" })}><span class="ico">${statusDot(s)}</span><span class="tx"><b>${t}</b><span>${sub}</span></span></button>`).join("")}
   <div class="sec-title">tether</div><button class="lrow" style="min-height:52px"><span class="ico c3">${I("circle-check", "s")}</span><span class="tx"><b>Add UniFFI event path</b><span>Merged · 2 h ago</span></span></button>
-  <div class="sec-title">Projects</div>${row({ icon: "folder", title: "All projects", go: "projects" })}</div>
+  </div>
   <div class="pad col gap12" style="padding-bottom:8px">${btn("New session", { icon: "plus", full: true, go: "session-idle" })}<div class="row">${btn("Settings", { kind: "plain", icon: "settings", go: "settings" })}${btn("Skills and memory", { kind: "plain", icon: "brain", go: "skills" })}</div></div></div>`,
-  ["Sessions grouped by project with status icons", "Search across session titles and text", "New session and Settings at the thumb"], ["Archive a session by swipe, with an Undo snackbar, or from the row menu"]);
+  ["Destinations: Home, Projects, Needs attention with its count, Usage and cost, Runs", "Theme toggle in the header: System, Light, Dark", "Sessions grouped by project with status icons", "Search across session titles and text", "New session and Settings at the thumb"], ["Archive a session by swipe, with an Undo snackbar, or from the row menu"]);
 
 over("sheet-model", "Model picker", "Models differ in price, context, and tools. Show all three before the user picks.", "session-running",
   () => sheet("Model", `<div class="col gap12">${field("", "", { icon: "search", ph: "Search models" })}

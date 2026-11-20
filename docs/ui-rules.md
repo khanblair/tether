@@ -30,7 +30,9 @@ Compact (phone portrait), from top to bottom:
 └──────────────────────────────┘
 ```
 
-- The navigation drawer (≡) holds projects and sessions. There is no bottom navigation bar; the composer owns the bottom edge.
+- The navigation drawer (≡) is the only navigation: Home, Projects, Needs attention, Usage and cost, Runs, then sessions. There is no bottom navigation bar; the composer owns the bottom edge.
+- Back is an arrow icon (`arrow-left`) whose content description is "Back". Never the word "Back" as a text button.
+- The system action bar is off. Every screen draws its own top bar.
 - Screen padding is `space.4` horizontally. The transcript caps at `layout.transcript-max` wide.
 - The keyboard pushes the composer and approval bar up; the transcript stays scrolled to the newest item if it was already at the bottom.
 
@@ -40,10 +42,43 @@ Compact (phone portrait), from top to bottom:
 - Three screens maximum before the user reaches a project. Each has one primary button and a Skip text button.
 - Never ask for permissions (notifications, battery) during onboarding; ask in context when first needed.
 
-### Project list (drawer and full screen)
+### Home
+- The app opens here. Top bar: menu button (opens the drawer), the title "Home", and the bell. One scrolling column of cards, `space.4` apart. A card is `surface`, `radius.md`, a hairline `line` border, and no shadow.
+- The cards, top to bottom:
+  1. **Summary line.** One sentence about now: "2 things need you. 1 session is running." or "Nothing needs you right now."
+  2. **Needs you now.** Up to three Needs attention items, then the sessions running now. **See all** opens Needs attention. The card is hidden when both lists are empty.
+  3. **Today.** One card with three stats side by side: sessions, tokens, and files changed. Each has a plain secondary line that compares with yesterday. Hidden until there is any usage.
+  4. **Usage, last 7 days.** A sentence first ("212k tokens this week, 18% more than last week."), then a bar chart of tokens per day, then **By model**: each model with its share in numbers and a thin bar. A **Show data** button opens the table behind the chart. Cost is not shown until prices are wired (P1-14).
+  5. **Recent projects.** The three most recently active projects, and **All projects**.
+  6. **Providers.** "2 of 5 providers have a key" with one row per provider ("Key saved" or "No key yet"). It counts saved keys and says nothing about whether a key works. With no key at all, the card says sessions need a key and shows one primary button, **Add a key**.
+- Charts are bars with `chart` colors, a text summary, and a data table. No pie or donut charts. Each chart has a content description with the same sentence.
+- Debug builds show sample numbers. Release builds show only real data: with no usage the Usage card says "No usage yet. It appears here after your first session."
+- The cards are not a grid of equal tiles: each has its own shape and one clear action.
+
+### Drawer
+- Header: the logo, "Tether", and the theme toggle on the right.
+- Destinations, current one highlighted with `tonal`: **Home**, **Projects**, **Needs attention** (with the count when it is not zero), **Usage and cost**, **Runs**.
+- Then a session search and the sessions grouped by project. This part scrolls together with the destinations.
+- Pinned at the bottom: **New session**, **Settings**, **Skills and memory**.
+- Choosing a destination clears the screens above Home, so Back from any of them goes Home. The drawer opens by swipe only on Home and Projects.
+
+### Theme toggle
+- One icon button in the drawer header. It cycles System, Light, Dark, and System again. The icon shows the current choice (monitor, sun, moon). The content description names it: "Theme: System. Switch to Light."
+- The choice is saved and applies at once. Settings > Appearance shows the same choice.
+
+### Project list
+- Reached from the drawer. Its top bar has a menu button, the title, and Search.
 - Rows show project name, branch, uncommitted change count, last activity. Sort by last activity.
 - The primary action is **New project**, which opens a sheet: Clone from GitHub, New empty, Import zip.
 - Empty state explains what a project is in one sentence and offers the same three actions.
+- Search filters the list by project name in place; it does not open another screen.
+
+### Needs attention
+- The bell in the Home top bar opens it, and so does the drawer link. A dot on the bell shows when anything needs the user, and the dot clears when the list is empty.
+- It lists, newest first, in three groups: **Waiting for you** (a session needs approval, with the session and project named), **Failed** (a run or session stopped with an error, with the reason in one line), and **Updates** (a newer app version is out).
+- Each row opens what it names: the session, or About for an update. There is no "mark as read": an item leaves the list when its cause is gone.
+- Empty state: "Nothing needs you right now." One sentence, no illustration.
+- It is not a notification history. System notifications (approvals in the background, run results) are separate and stay in the Android shade.
 
 ### Project home
 - Shows repo and branch, uncommitted changes (tap opens the diff), default executor, and recent sessions.
@@ -176,6 +211,9 @@ Critical flows that must have UI tests (code-standards.md section 7): send and s
 | Budget reached | Inline block: "Session budget of $2.00 reached." with **Continue** and **Raise budget** |
 | Interrupted by system | Block: "Stopped while running `npm test`." with **Resume** and **Discard** |
 | Success after action | Snackbar for undoable actions only; otherwise the state change is the feedback |
+| Short confirmation | Toast, such as "Copied". No action, gone after 2 s |
+
+Snackbars and toasts use the inverse surface: `text` as the background, `bg` as the text, `tonal` for the action. They follow the app theme (System, Light, Dark), not the device's. The app never calls the platform `Toast`, because it ignores the app theme. Both sit above the bottom edge on `layer.snackbar` and are announced politely to TalkBack.
 
 ## 7. Writing rules
 

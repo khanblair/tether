@@ -21,7 +21,10 @@ fn read_tools_use_workspace_fixture() {
     assert_eq!(slice.start_line, 2);
     assert_eq!(slice.text, "needle\nlast\n");
     assert_eq!(tools.list_dir("").unwrap().len(), 2);
-    assert_eq!(tools.list_dir("src").unwrap()[0].path.to_string_lossy(), "src/main.rs");
+    assert_eq!(
+        tools.list_dir("src").unwrap()[0].path.to_string_lossy(),
+        "src/main.rs"
+    );
     assert_eq!(tools.glob("*.rs").unwrap().len(), 1);
     let hits = tools.grep("needle", 10).unwrap();
     assert_eq!(hits.len(), 1);
@@ -36,11 +39,32 @@ fn read_tools_reject_escapes_and_binary_input() {
     fs::write(root.path().join("text.txt"), "ok\n").unwrap();
     let tools = ReadTools::new(PathGuard::new(root.path()).unwrap());
 
-    assert_eq!(tools.read_file("../outside", None).unwrap_err().kind(), ErrorKind::PermissionDenied);
-    assert_eq!(tools.read_file("binary.bin", None).unwrap_err().kind(), ErrorKind::InvalidInput);
-    assert_eq!(tools.read_file("text.txt", Some((0, 1))).unwrap_err().kind(), ErrorKind::InvalidInput);
-    assert_eq!(tools.read_file("text.txt", Some((2, 1))).unwrap_err().kind(), ErrorKind::InvalidInput);
-    assert_eq!(tools.list_dir(".git").unwrap_err().kind(), ErrorKind::InvalidInput);
+    assert_eq!(
+        tools.read_file("../outside", None).unwrap_err().kind(),
+        ErrorKind::PermissionDenied
+    );
+    assert_eq!(
+        tools.read_file("binary.bin", None).unwrap_err().kind(),
+        ErrorKind::InvalidInput
+    );
+    assert_eq!(
+        tools
+            .read_file("text.txt", Some((0, 1)))
+            .unwrap_err()
+            .kind(),
+        ErrorKind::InvalidInput
+    );
+    assert_eq!(
+        tools
+            .read_file("text.txt", Some((2, 1)))
+            .unwrap_err()
+            .kind(),
+        ErrorKind::InvalidInput
+    );
+    assert_eq!(
+        tools.list_dir(".git").unwrap_err().kind(),
+        ErrorKind::InvalidInput
+    );
 }
 
 #[test]
@@ -48,7 +72,27 @@ fn read_file_rejects_oversized_text() {
     let root = tempfile::tempdir().unwrap();
     fs::write(root.path().join("large.txt"), vec![b'x'; 1024 * 1024 + 1]).unwrap();
     let tools = ReadTools::new(PathGuard::new(root.path()).unwrap());
-    assert_eq!(tools.read_file("large.txt", None).unwrap_err().kind(), ErrorKind::InvalidInput);
+    assert_eq!(
+        tools.read_file("large.txt", None).unwrap_err().kind(),
+        ErrorKind::InvalidInput
+    );
+}
+
+#[test]
+fn grep_matches_regex_and_rejects_invalid_patterns() {
+    let root = tempfile::tempdir().unwrap();
+    fs::write(root.path().join("sample.txt"), "first\nneedle\nneed7e\n").unwrap();
+    let tools = ReadTools::new(PathGuard::new(root.path()).unwrap());
+    let hits = tools.grep(r"need.e", 10).unwrap();
+    assert_eq!(
+        hits.iter().map(|hit| hit.line).collect::<Vec<_>>(),
+        vec![2, 3]
+    );
+    assert_eq!(tools.grep(r"need.e", 1).unwrap().len(), 1);
+    assert_eq!(
+        tools.grep("[", 10).unwrap_err().kind(),
+        ErrorKind::InvalidInput
+    );
 }
 
 #[cfg(unix)]
@@ -59,9 +103,16 @@ fn read_tools_do_not_follow_symlinks() {
     let root = tempfile::tempdir().unwrap();
     let outside = tempfile::tempdir().unwrap();
     fs::write(outside.path().join("private.txt"), "private").unwrap();
-    symlink(outside.path().join("private.txt"), root.path().join("link.txt")).unwrap();
+    symlink(
+        outside.path().join("private.txt"),
+        root.path().join("link.txt"),
+    )
+    .unwrap();
     let tools = ReadTools::new(PathGuard::new(root.path()).unwrap());
-    assert_eq!(tools.read_file("link.txt", None).unwrap_err().kind(), ErrorKind::PermissionDenied);
-    assert!(tools.list_dir("").unwrap().is_empty());
-    assert!(tools.glob("*.txt").unwrap().is_empty());
+    assert_eq!(
+        tools.read_file("link.txt", None).unwrap_err().kind(),
+        ErrorKind::PermissionDenied
+    );
+    assert_eq!(tools.list_dir("").unwrap().len(), 0);
+    assert_eq!(tools.glob("*.txt").unwrap().len(), 0);
 }

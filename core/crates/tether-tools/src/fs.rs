@@ -4,6 +4,7 @@ use std::fs::{self, File};
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 
+use regex::RegexBuilder;
 use tether_workspace::{FileIndex, IndexedFile, PathGuard, SearchHit};
 
 const MAX_READ_BYTES: u64 = 1024 * 1024;
@@ -55,13 +56,18 @@ impl ReadTools {
             return Err(invalid_input("file exceeds the read limit"));
         }
         let mut bytes = Vec::new();
-        File::open(path)?.take(MAX_READ_BYTES + 1).read_to_end(&mut bytes)?;
+        File::open(path)?
+            .take(MAX_READ_BYTES + 1)
+            .read_to_end(&mut bytes)?;
         if bytes.len() as u64 > MAX_READ_BYTES || bytes.contains(&0) {
             return Err(invalid_input("file is binary or exceeds the read limit"));
         }
         let text = String::from_utf8(bytes).map_err(|_| invalid_input("file is not UTF-8"))?;
         let Some((start, end)) = lines else {
-            return Ok(ReadFile { start_line: 1, text });
+            return Ok(ReadFile {
+                start_line: 1,
+                text,
+            });
         };
         if start == 0 || end < start {
             return Err(invalid_input("invalid line range"));
@@ -91,27 +97,7 @@ impl ReadTools {
         if is_git_path(self.guard.root(), &path) {
             return Err(invalid_input("Git metadata is not readable"));
         }
-        let mut entries = Vec::new();
-        for entry in fs::read_dir(path)? {
-            let entry = entry?;
-            let kind = entry.file_type()?;
-            if kind.is_symlink() || !(kind.is_dir() || kind.is_file()) {
-                continue;
-            }
-            let path = entry.path();
-            if is_git_path(self.guard.root(), &path) {
-                continue;
-            }
-            entries.push(DirectoryEntry {
-                path: path.strip_prefix(self.guard.root()).map_err(io::Error::other)?.to_path_buf(),
-                is_dir: kind.is_dir(),
-            });
-            if entries.len() > MAX_RESULTS {
-                return Err(invalid_input("directory exceeds the result limit"));
-            }
-        }
-        entries.sort_by(|left, right| left.path.cmp(&right.path));
-        Ok(entries)
+        list_entries(self.guard.root(), &path)
     }
 
     /// Finds indexed files whose relative paths match the index's glob syntax.
@@ -120,17 +106,95 @@ impl ReadTools {
     /// Returns an error if the workspace cannot be indexed.
     pub fn glob(&self, pattern: &str) -> io::Result<Vec<IndexedFile>> {
         let index = FileIndex::scan(self.guard.clone())?;
-        Ok(index.glob(pattern).into_iter().take(MAX_RESULTS).cloned().collect())
+        Ok(index
+            .glob(pattern)
+            .into_iter()
+            .take(MAX_RESULTS)
+            .cloned()
+            .collect())
     }
 
-    /// Finds literal text in indexed files, up to the requested result cap.
-    /// Regex search remains a later index implementation task.
+    /// Finds lines matching a regex in indexed files, up to the requested result cap.
     ///
     /// # Errors
     /// Returns an error if the workspace cannot be scanned or a file cannot be read.
-    pub fn grep(&self, needle: &str, limit: usize) -> io::Result<Vec<SearchHit>> {
-        FileIndex::scan(self.guard.clone())?.grep(needle, limit.min(MAX_RESULTS))
+    #[expect(
+        clippy::excessive_nesting,
+        reason = "file and line bounds are checked inside the workspace scan"
+    )]
+    pub fn grep(&self, pattern: &str, limit: usize) -> io::Result<Vec<SearchHit>> {
+        if pattern.is_empty() || pattern.len() > 4096 {
+            return Err(invalid_input("grep pattern must contain 1 to 4096 bytes"));
+        }
+        let regex = RegexBuilder::new(pattern)
+            .size_limit(1024 * 1024)
+            .build()
+            .map_err(|_| invalid_input("invalid grep regex"))?;
+        let mut hits = Vec::new();
+        if limit == 0 {
+            return Ok(hits);
+        }
+        let index = FileIndex::scan(self.guard.clone())?;
+        for file in index.files() {
+            if hits.len() >= limit.min(MAX_RESULTS) {
+                break;
+            }
+            if file.bytes > MAX_READ_BYTES {
+                continue;
+            }
+            let path = self.guard.resolve(&file.path)?;
+            let mut bytes = Vec::new();
+            File::open(path)?
+                .take(MAX_READ_BYTES + 1)
+                .read_to_end(&mut bytes)?;
+            if bytes.len() as u64 > MAX_READ_BYTES || bytes.contains(&0) {
+                continue;
+            }
+            let Ok(text) = String::from_utf8(bytes) else {
+                continue;
+            };
+            for (line, text) in text.lines().enumerate() {
+                if regex.is_match(text) {
+                    hits.push(SearchHit {
+                        path: file.path.clone(),
+                        line: line + 1,
+                        text: text.to_owned(),
+                    });
+                    if hits.len() >= limit.min(MAX_RESULTS) {
+                        break;
+                    }
+                }
+            }
+        }
+        Ok(hits)
     }
+}
+
+fn list_entries(root: &Path, path: &Path) -> io::Result<Vec<DirectoryEntry>> {
+    let mut entries = Vec::new();
+    for entry in fs::read_dir(path)? {
+        let entry = entry?;
+        let kind = entry.file_type()?;
+        if kind.is_symlink() || !(kind.is_dir() || kind.is_file()) {
+            continue;
+        }
+        let path = entry.path();
+        if is_git_path(root, &path) {
+            continue;
+        }
+        entries.push(DirectoryEntry {
+            path: path
+                .strip_prefix(root)
+                .map_err(io::Error::other)?
+                .to_path_buf(),
+            is_dir: kind.is_dir(),
+        });
+        if entries.len() > MAX_RESULTS {
+            return Err(invalid_input("directory exceeds the result limit"));
+        }
+    }
+    entries.sort_by(|left, right| left.path.cmp(&right.path));
+    Ok(entries)
 }
 
 fn is_git_path(root: &Path, path: &Path) -> bool {

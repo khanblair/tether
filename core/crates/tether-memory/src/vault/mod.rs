@@ -5,6 +5,9 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
+mod tools;
+pub use tools::{NoteLinks, VaultStore};
+
 /// One parsed Markdown note.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct VaultNote {
@@ -61,6 +64,12 @@ pub enum VaultError {
     Io(io::Error),
     /// A note lacks valid frontmatter or a description.
     InvalidNote { path: String },
+    /// A requested note does not exist.
+    MissingNote,
+    /// A path could escape the private vault or touch a symlink.
+    InvalidPath,
+    /// A note would exceed the file size cap.
+    OverCap,
 }
 
 impl From<io::Error> for VaultError {

@@ -286,4 +286,8 @@
     <string name="transcript_tool">Tool</string>
     <string name="transcript_system">System</string>
     <string name="transcript_attachment">Attachment</string>
+    <string name="composer_hint">Message</string>
+    <string name="composer_attachments">Attachments</string>
+    <string name="composer_send">Send</string>
+    <string name="composer_stop">Stop</string>
 </resources>

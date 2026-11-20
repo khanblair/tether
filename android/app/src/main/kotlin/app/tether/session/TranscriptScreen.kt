@@ -114,11 +114,11 @@ private fun TranscriptMessage(
 ) {
     val label =
         when (message.role) {
-        RoleView.USER -> R.string.transcript_you
-        RoleView.ASSISTANT -> R.string.transcript_agent
-        RoleView.TOOL -> R.string.transcript_tool
-        RoleView.SYSTEM_NOTE -> R.string.transcript_system
-    }
+            RoleView.USER -> R.string.transcript_you
+            RoleView.ASSISTANT -> R.string.transcript_agent
+            RoleView.TOOL -> R.string.transcript_tool
+            RoleView.SYSTEM_NOTE -> R.string.transcript_system
+        }
     Column(
         verticalArrangement = Arrangement.spacedBy(TetherSpace.space2),
         modifier = modifier.padding(horizontal = TetherSpace.space4),
@@ -194,18 +194,18 @@ internal fun splitMarkdown(source: String): List<MarkdownBlock> {
 /** Styles bold spans while leaving malformed delimiters as plain text. */
 internal fun inlineMarkdown(source: String): AnnotatedString =
     buildAnnotatedString {
-    var cursor = 0
-    while (cursor < source.length) {
-        val start = source.indexOf("**", cursor)
-        val end = if (start >= 0) source.indexOf("**", start + 2) else -1
-        if (end < 0) {
-            append(source.substring(cursor))
-            break
+        var cursor = 0
+        while (cursor < source.length) {
+            val start = source.indexOf("**", cursor)
+            val end = if (start >= 0) source.indexOf("**", start + 2) else -1
+            if (end < 0) {
+                append(source.substring(cursor))
+                break
+            }
+            append(source.substring(cursor, start))
+            pushStyle(SpanStyle(fontWeight = FontWeight.Bold))
+            append(source.substring(start + 2, end))
+            pop()
+            cursor = end + 2
         }
-        append(source.substring(cursor, start))
-        pushStyle(SpanStyle(fontWeight = FontWeight.Bold))
-        append(source.substring(start + 2, end))
-        pop()
-        cursor = end + 2
     }
-}

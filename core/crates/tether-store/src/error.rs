@@ -7,6 +7,12 @@ use thiserror::Error;
 /// A failure while opening, migrating, or using the database.
 #[derive(Debug, Error)]
 pub enum StoreError {
+    /// A checkpoint blob could not be read or written.
+    #[error("checkpoint file error: {0}")]
+    CheckpointIo(#[from] std::io::Error),
+    /// A requested snapshot path is invalid or duplicated.
+    #[error("invalid checkpoint path")]
+    InvalidCheckpointPath,
     /// SQLite reported an error.
     #[error("database error: {0}")]
     Sqlite(#[from] rusqlite::Error),

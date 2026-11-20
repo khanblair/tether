@@ -48,7 +48,7 @@ tether/
 │       │   ├── uniffi.toml
 │       │   └── src/{lib.rs, callbacks.rs, provider_settings.rs, sessions.rs, updater.rs, secrets.rs, views/{mod,event,types,error}.rs, bin/uniffi-bindgen.rs}
 │       ├── tether-quality/    data/slop_words.txt and slop_patterns.toml (shared with slop-lint)
-│       ├── tether-workspace/   PathGuard: canonical paths and symlink checks
+│       ├── tether-workspace/   PathGuard and FileIndex: path checks, scan, glob, grep
 │       └── tether-{tools,vcs,sandbox,linux,ci,connectors,mcp,skills,memory}/
 │                              Empty libraries
 ├── android/

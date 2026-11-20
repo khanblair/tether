@@ -77,7 +77,7 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 | P1-10 | Provider settings screen: key field, test connection, status | Blair with Codex, Haiku, and Claude | Done | #150 | Merged; issue #14 closed. Providers list and detail screens, a key field with paste and a reveal behind a biometric or screen lock check, a key test that calls the provider's model list (and caches it), and the four states (ok, bad key, network, blocked). Not built: the Base URL field of the prototype (no proxy support yet) |
 | P1-13 | Composer | Codex | In review | #159 | Stacked on #158; ground-level send and stop code, device checks and model selection remain |
 | P1-12 | Transcript UI | Codex | In review | #158 | CI passed; 500-message frame measurement on the reference device remains unverified |
-| P9-10 | Share sheet intake | Codex | In progress | pending | Text intake and project selection only; session creation and file shares remain |
+| P9-10 | Share sheet intake | Codex | In review | #169 | Text intake and project selection only; session creation and file shares remain |
 | P1-11 | Session actor and plain chat turn (no tools) | Blair with Codex, Haiku, and Claude | Done | #153 | Merged; issue #15 closed. Session rows, transcript persistence, plain chat actor, and UniFFI entry points. Codex's first review found issues that were fixed with tests; its second review could not run (Codex usage limit), so the fixes were reviewed by Claude only |
 | P1-20 | In-app updates for the `full` build | Blair with Codex, Haiku, and Claude | Done | #151 | Merged; issue #135 closed. Rust: check, download, and SHA-256 verify with a GitHub-only redirect policy. Android: `PackageInstaller` installer for `full` and a Google Play link for `play`, an update state holder, the About screen with an updates card, a Settings row, and a home banner. `v0.0.3` published as the latest release (signed with the pinned key, `versionCode` 300); it has to be installed by hand once, and later releases arrive in the app |
 | P1-08 | OpenAI-compatible adapter; DeepSeek and OpenRouter configs | Blair with Codex and Claude | Done | #147 | Merged; issue #12 closed. Written by a Codex CLI session (GPT-5.6 Luna), reviewed and mutation-tested by Claude; 168 provider tests. Four Codex findings fixed (DeepSeek reasoning replay, OpenRouter cache writes, refusal deltas, `null` token details failing a whole chunk) |
@@ -188,7 +188,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Files | Change | PR |
 |---|---|---|---|
-| 2026-11-20 | `android/app/src/main/{AndroidManifest.xml,kotlin/app/tether/share/}`, activity, module, navigation, strings and share test | P9-10 text share intake and picker | pending |
+| 2026-11-20 | `android/app/src/main/{AndroidManifest.xml,kotlin/app/tether/share/}`, activity, module, navigation, strings and share test | P9-10 text share intake and picker | #169 |
 | 2026-11-20 | `android/app/src/main/kotlin/app/tether/{session,nav}/`, `strings.xml` | P1-13 composer and actor connection | #159 |
 | 2026-11-20 | `android/app/src/main/kotlin/app/tether/{session,nav,di}/`, `android/app/src/main/res/values/strings.xml`, transcript tests | P1-12 lazy transcript, persisted session routing, code blocks, strings, tests | #158 |
 | 2026-11-20 | `core/Cargo.toml`, `core/Cargo.lock`, `tools/bump-version.sh`, `justfile`, `.github/workflows/ci.yml` | Version 0.0.4; a bump script with a self test and `just bump` | - |

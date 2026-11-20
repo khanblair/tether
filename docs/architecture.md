@@ -454,7 +454,7 @@ Two small files plus search.
 
 - **`MEMORY.md`** holds the agent's notes: environment facts, conventions, lessons. Capped at 2,200 characters. **`USER.md`** holds the user profile and preferences. Capped at 1,375 characters. Entries are separated by a section sign.
 - **The `memory` tool** has `add`, `patch`, and `remove`, each with a target of `memory` or `user`. P11-08 adds the file store and validation; engine tool dispatch remains to be wired. There is no read action, because the content is already in the prompt. A write over the cap returns an error, and the agent must trim entries in the same turn. Exact duplicates are skipped. Every write is scanned for prompt-injection phrases, credential patterns, and invisible Unicode, and rejected on a hit.
-- **Frozen snapshot.** The files are read once at session start and placed in the system prompt. Writes reach disk at once but enter the prompt only at the next session. This keeps the cached prompt prefix stable, which lowers cost on every provider that caches.
+- **Frozen snapshot.** P11-09 adds an immutable snapshot and labeled system block; the session actor does not yet use it. The target flow reads files once at session start and places them in the system prompt. Writes reach disk at once but enter the prompt only at the next session. This keeps the cached prompt prefix stable, which lowers cost on every provider that caches.
 - **Session search.** Every message is indexed in SQLite FTS5 (`message_fts`). `session_search` returns the matching messages, not model summaries, and the agent can read around a hit. No model call is involved.
 
 There is no external user-modeling service. Tether keeps no server, and extra model passes would cost the user tokens.

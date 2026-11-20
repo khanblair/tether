@@ -48,7 +48,7 @@ tether/
 │       │   ├── uniffi.toml
 │       │   └── src/{lib.rs, callbacks.rs, provider_settings.rs, sessions.rs, updater.rs, secrets.rs, views/{mod,event,types,error}.rs, bin/uniffi-bindgen.rs}
 │       ├── tether-quality/    data/slop_words.txt and slop_patterns.toml (shared with slop-lint)
-│       ├── tether-memory/     src/{lib,files,files/tests}.rs; capped MEMORY.md and USER.md writes
+│       ├── tether-memory/     src/{lib,files,files/tests,snapshot}.rs; capped files and frozen snapshot
 │       └── tether-{tools,workspace,vcs,sandbox,linux,ci,connectors,mcp,skills}/
 │                              Empty libraries
 ├── android/

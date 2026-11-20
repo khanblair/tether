@@ -15,9 +15,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import app.tether.R
 import app.tether.design.tokens.TetherRatio
 import app.tether.design.tokens.TetherSpace
@@ -31,7 +31,8 @@ fun Composer(
     onStop: () -> Unit,
 ) {
     var input by rememberSaveable { mutableStateOf("") }
-    val maximum = LocalConfiguration.current.screenHeightDp.dp * TetherRatio.composerMax
+    val windowHeight = LocalWindowInfo.current.containerSize.height
+    val maximum = with(LocalDensity.current) { windowHeight.toDp() * TetherRatio.composerMax }
     Column(modifier = Modifier.fillMaxWidth().padding(TetherSpace.space4)) {
         OutlinedTextField(
             value = input,

@@ -60,3 +60,33 @@ fn note_without_description_is_rejected() {
         Err(VaultError::InvalidNote { .. })
     ));
 }
+
+#[test]
+fn block_lists_match_inline_tags_and_aliases() {
+    let fixture = VaultFixture::new();
+    fixture.write("Block.md", "---\ndescription: Block form\ntags:\n  - work\n  - 'active'\naliases:\n  - \"Project\"\n  - plan\nextra:\n  - ignored\n---\n# Block");
+    fixture.write("Inline.md", "---\ndescription: Inline form\ntags: [work, active]\naliases: [Project, plan]\n---\n# Inline");
+    let index = VaultIndex::rebuild(&fixture.path).unwrap();
+    assert_eq!(index.notes["Block.md"].tags, vec!["work", "active"]);
+    assert_eq!(index.notes["Block.md"].tags, index.notes["Inline.md"].tags);
+    assert_eq!(index.notes["Block.md"].aliases, vec!["Project", "plan"]);
+    assert_eq!(
+        index.notes["Block.md"].aliases,
+        index.notes["Inline.md"].aliases
+    );
+}
+
+#[test]
+fn malformed_note_reports_its_path_with_valid_sibling_present() {
+    let fixture = VaultFixture::new();
+    fixture.write("Bad.md", "---\nmalformed line\n---\nText");
+    fixture.write("Good.md", "---\ndescription: Good note\n---\nText");
+    assert!(
+        matches!(VaultIndex::rebuild(&fixture.path), Err(VaultError::InvalidNote { path }) if path == "Bad.md")
+    );
+    let source = fs::read_to_string(fixture.path.join("Good.md")).unwrap();
+    assert_eq!(
+        super::parse_note("Good.md", source).unwrap().description,
+        "Good note"
+    );
+}

@@ -2,7 +2,7 @@
 
 use std::fs::{self, OpenOptions};
 use std::io::{self, Write};
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -62,7 +62,7 @@ impl EditTools {
     /// # Errors
     /// Returns path, size, or file errors.
     pub fn write(&self, path: &str, text: &str) -> Result<(), EditError> {
-        let target = self.guard.resolve(path)?;
+        let target = self.resolve_mutation_path(path)?;
         if text.len() > MAX_TEXT_BYTES {
             return Err(EditError::TooLarge);
         }
@@ -87,7 +87,7 @@ impl EditTools {
     /// # Errors
     /// Returns a clear match error or file failure without changing the file.
     pub fn multi_edit(&self, path: &str, specs: &[EditSpec]) -> Result<(), EditError> {
-        let target = self.guard.resolve(path)?;
+        let target = self.resolve_mutation_path(path)?;
         if !target.is_file() {
             return Err(EditError::NotFile);
         }
@@ -109,8 +109,8 @@ impl EditTools {
     /// # Errors
     /// Returns path or file errors; an existing destination is never replaced.
     pub fn move_file(&self, from: &str, to: &str) -> Result<(), EditError> {
-        let source = self.guard.resolve(from)?;
-        let target = self.guard.resolve(to)?;
+        let source = self.resolve_mutation_path(from)?;
+        let target = self.resolve_mutation_path(to)?;
         if !source.is_file() {
             return Err(EditError::NotFile);
         }
@@ -127,12 +127,26 @@ impl EditTools {
     /// # Errors
     /// Returns path or file errors.
     pub fn delete(&self, path: &str) -> Result<(), EditError> {
-        let target = self.guard.resolve(path)?;
+        let target = self.resolve_mutation_path(path)?;
         if !target.is_file() {
             return Err(EditError::NotFile);
         }
         fs::remove_file(target)?;
         Ok(())
+    }
+
+    fn resolve_mutation_path(&self, path: &str) -> Result<PathBuf, EditError> {
+        if Path::new(path)
+            .components()
+            .any(|part| matches!(part, Component::Normal(name) if name == ".git"))
+        {
+            return Err(io::Error::new(
+                io::ErrorKind::PermissionDenied,
+                "path leaves the workspace",
+            )
+            .into());
+        }
+        Ok(self.guard.resolve(path)?)
     }
 }
 
@@ -140,9 +154,9 @@ fn replace_once(mut text: String, spec: &EditSpec) -> Result<String, EditError> 
     if spec.old.is_empty() {
         return Err(EditError::EmptyPattern);
     }
-    let mut matches = text.match_indices(&spec.old);
-    let first = matches.next().ok_or(EditError::MissingMatch)?.0;
-    if matches.next().is_some() {
+    let first = text.find(&spec.old).ok_or(EditError::MissingMatch)?;
+    let next_char = spec.old.chars().next().ok_or(EditError::EmptyPattern)?;
+    if text[first + next_char.len_utf8()..].contains(&spec.old) {
         return Err(EditError::AmbiguousMatch);
     }
     text.replace_range(first..first + spec.old.len(), &spec.new);
@@ -175,9 +189,17 @@ fn atomic_write(path: &Path, bytes: &[u8]) -> io::Result<()> {
         use std::os::unix::fs::OpenOptionsExt;
         options.mode(0o600);
     }
+    let permissions = match fs::metadata(path) {
+        Ok(metadata) => Some(metadata.permissions()),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => None,
+        Err(error) => return Err(error),
+    };
     let result = (|| {
         let mut file = options.open(&temporary)?;
         file.write_all(bytes)?;
+        if let Some(permissions) = permissions {
+            file.set_permissions(permissions)?;
+        }
         file.sync_all()?;
         fs::rename(&temporary, path)
     })();

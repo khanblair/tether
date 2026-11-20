@@ -202,6 +202,7 @@ fn parse_note(path: &str, source: String) -> Option<VaultNote> {
 /// or never closes.
 fn parse_fields(lines: &mut std::str::Lines<'_>) -> Option<BTreeMap<String, String>> {
     let mut fields = BTreeMap::new();
+    let mut block_key: Option<String> = None;
     for line in lines {
         if line.trim() == "---" {
             return Some(fields);
@@ -209,13 +210,34 @@ fn parse_fields(lines: &mut std::str::Lines<'_>) -> Option<BTreeMap<String, Stri
         if line.trim().is_empty() {
             continue;
         }
+        if line.starts_with(' ') {
+            append_block_item(line, block_key.as_deref()?, &mut fields)?;
+            continue;
+        }
         let (key, value) = line.split_once(':')?;
-        if key.trim().is_empty() || line.starts_with(' ') {
+        if key.trim().is_empty() {
             return None;
         }
-        fields.insert(key.trim().to_owned(), scalar(value.trim()));
+        let key = key.trim().to_owned();
+        block_key = value.trim().is_empty().then(|| key.clone());
+        fields.insert(key, scalar(value.trim()));
     }
     None
+}
+
+fn append_block_item(line: &str, key: &str, fields: &mut BTreeMap<String, String>) -> Option<()> {
+    let item = line.trim_start().strip_prefix("- ")?.trim();
+    if item.is_empty() {
+        return None;
+    }
+    if matches!(key, "tags" | "aliases") {
+        let value = fields.get_mut(key)?;
+        if !value.is_empty() {
+            value.push(',');
+        }
+        value.push_str(&scalar(item));
+    }
+    Some(())
 }
 
 fn scalar(value: &str) -> String {

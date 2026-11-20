@@ -39,7 +39,7 @@ impl FileIndex {
     /// # Errors
     /// Returns an error when a directory cannot be read.
     pub fn scan(guard: PathGuard) -> io::Result<Self> {
-        let ignores = read_ignores(guard.root())?;
+        let ignores = read_ignores(&guard)?;
         let mut files = Vec::new();
         walk(guard.root(), guard.root(), &ignores, &mut files)?;
         files.sort_by(|left, right| left.path.cmp(&right.path));
@@ -88,25 +88,31 @@ fn grep_file(
     hits: &mut Vec<SearchHit>,
 ) -> io::Result<()> {
     let reader = BufReader::new(File::open(path)?);
-    let matches = reader
-        .lines()
-        .enumerate()
-        .map(|(number, line)| line.map(|text| (number + 1, text)))
-        .filter(|item| item.is_err() || item.as_ref().is_ok_and(|(_, text)| text.contains(needle)))
-        .take(limit - hits.len());
-    for item in matches {
-        let (line, text) = item?;
-        hits.push(SearchHit {
-            path: relative.to_path_buf(),
-            line,
-            text,
-        });
+    let mut file_hits = Vec::new();
+    for (number, line) in reader.lines().enumerate() {
+        let text = match line {
+            Ok(text) => text,
+            Err(error) if error.kind() == io::ErrorKind::InvalidData => return Ok(()),
+            Err(error) => return Err(error),
+        };
+        if text.contains(needle) && hits.len() + file_hits.len() < limit {
+            file_hits.push(SearchHit {
+                path: relative.to_path_buf(),
+                line: number + 1,
+                text,
+            });
+        }
     }
+    hits.extend(file_hits);
     Ok(())
 }
 
-fn read_ignores(root: &Path) -> io::Result<Vec<String>> {
-    let path = root.join(".gitignore");
+fn read_ignores(guard: &PathGuard) -> io::Result<Vec<String>> {
+    let path = match guard.resolve(".gitignore") {
+        Ok(path) => path,
+        Err(error) if error.kind() == io::ErrorKind::PermissionDenied => return Ok(Vec::new()),
+        Err(error) => return Err(error),
+    };
     let text = match fs::read_to_string(path) {
         Ok(text) => text,
         Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),

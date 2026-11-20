@@ -1376,15 +1376,15 @@ dependencies = [
 
 [[package]]
 name = "tether-ci"
-version = "0.0.3"
+version = "0.0.4"
 
 [[package]]
 name = "tether-connectors"
-version = "0.0.3"
+version = "0.0.4"
 
 [[package]]
 name = "tether-engine"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "reqwest",
  "rusqlite",
@@ -1402,7 +1402,7 @@ dependencies = [
 
 [[package]]
 name = "tether-ffi"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "rusqlite",
  "tempfile",
@@ -1418,19 +1418,19 @@ dependencies = [
 
 [[package]]
 name = "tether-linux"
-version = "0.0.3"
+version = "0.0.4"
 
 [[package]]
 name = "tether-mcp"
-version = "0.0.3"
+version = "0.0.4"
 
 [[package]]
 name = "tether-memory"
-version = "0.0.3"
+version = "0.0.4"
 
 [[package]]
 name = "tether-providers"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "reqwest",
  "serde",
@@ -1443,15 +1443,15 @@ dependencies = [
 
 [[package]]
 name = "tether-quality"
-version = "0.0.3"
+version = "0.0.4"
 
 [[package]]
 name = "tether-sandbox"
-version = "0.0.3"
+version = "0.0.4"
 
 [[package]]
 name = "tether-secrets"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "tempfile",
  "tether-types",
@@ -1461,11 +1461,11 @@ dependencies = [
 
 [[package]]
 name = "tether-skills"
-version = "0.0.3"
+version = "0.0.4"
 
 [[package]]
 name = "tether-store"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "rusqlite",
  "serde_json",
@@ -1477,11 +1477,11 @@ dependencies = [
 
 [[package]]
 name = "tether-tools"
-version = "0.0.3"
+version = "0.0.4"
 
 [[package]]
 name = "tether-types"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "serde",
  "serde_json",
@@ -1490,11 +1490,11 @@ dependencies = [
 
 [[package]]
 name = "tether-vcs"
-version = "0.0.3"
+version = "0.0.4"
 
 [[package]]
 name = "tether-workspace"
-version = "0.0.3"
+version = "0.0.4"
 
 [[package]]
 name = "textwrap"

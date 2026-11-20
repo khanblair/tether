@@ -40,9 +40,10 @@ test-core:
 test-android:
     cd android && ./gradlew testFullDebugUnitTest testPlayDebugUnitTest :core-bridge:testDebugUnitTest :designsystem:testDebugUnitTest
 
-# Tests for slop-lint.
+# Tests for slop-lint and the version bump script.
 test-tools:
     cd tools/slop-lint && cargo test
+    tools/bump-version.sh --self-test
 
 # Instrumented tests on the connected device or emulator.
 test-device:
@@ -103,6 +104,10 @@ check: lint slop smells smell-fixtures test
 # One-time: create the release keystore and store it, with its password, as GitHub secrets. Run in your own terminal.
 release-signing:
     tools/setup-release-signing.sh
+
+# Raise the core version: `just bump patch` (or minor, major, or an exact X.Y.Z). Merging the bump publishes the release.
+bump level="patch":
+    tools/bump-version.sh {{level}}
 
 # Build the signed release artifacts. Needs the signing variables from docs/development.md section 5.
 release:

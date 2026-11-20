@@ -1,6 +1,6 @@
 # Progress tracker
 
-Last updated: 19 Nov 2026.
+Last updated: 20 Nov 2026.
 
 ## How to update this file
 
@@ -241,6 +241,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Files | Change | PR |
 |---|---|---|---|
+| 2026-11-20 | `core/crates/tether-engine/src/tool_loop*`, `core/crates/tether-workspace/src/file_index*`, progress-tracker | Saved error results for calls left pending on cancellation and excluded nested `.git` directories from the file index | #187 |
 | 2026-11-20 | `core/crates/tether-{engine,store,tools,ffi}/`, `android/app/src/main/kotlin/app/tether/session/TranscriptScreen.kt`, architecture, progress-tracker | Addressed #187 review findings with streamed persistence, reasoning replay, usage accounting, bounded grep, and safe target display | #187 |
 | 2026-11-20 | `core/Cargo.*`, `core/crates/tether-{tools,engine,store,ffi}/`, Android session wiring and bindings, architecture, progress-tracker | Consolidated P2-04/P2-06/P2-07 drafts with runtime integration and verification | #187 |
 | 2026-11-20 | `core/crates/tether-store/{Cargo.toml,migrations/0003_checkpoints.sql,src/{lib,error,migrations,checkpoints,checkpoints/tests}.rs}`, `core/crates/tether-engine/src/{lib,checkpoint_capture}.rs` | P2-07 checkpoint schema, blob store, and guarded capture | #186 |
@@ -301,6 +302,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Doc | Change |
 |---|---|---|
+| 2026-11-20 | progress-tracker | Recorded cancellation and nested Git fixes for #187 |
 | 2026-11-20 | architecture, progress-tracker | Recorded #187 review fixes and the Android approval limitation |
 | 2026-11-20 | architecture, progress-tracker | Consolidated P2-04/P2-06/P2-07 behavior and remaining integration limits |
 | 2026-11-20 | architecture, project-structure, library-docs, progress-tracker | P2-07 snapshot limits and verified Wasmtime version |

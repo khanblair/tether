@@ -154,8 +154,9 @@ impl ToolLoop {
             if response.calls.is_empty() {
                 return Err(invalid("provider requested tools without a call"));
             }
-            for call in response.calls {
+            for (index, call) in response.calls.iter().enumerate() {
                 if context.cancel.is_cancelled() {
+                    save_cancelled_calls(context, &response.calls[index..])?;
                     return Err(cancelled());
                 }
                 if let Some(sink) = context.sink {
@@ -165,6 +166,10 @@ impl ToolLoop {
                         tool: call.name.clone(),
                         target: dispatch::target(&call.name, &call.args),
                     });
+                }
+                if context.cancel.is_cancelled() {
+                    save_cancelled_calls(context, &response.calls[index..])?;
+                    return Err(cancelled());
                 }
                 let mut before_edit = |paths: &[PathBuf]| {
                     crate::capture_checkpoint(
@@ -196,7 +201,7 @@ impl ToolLoop {
                         context.session_id,
                         Role::Tool,
                         &[MessagePart::ToolResult {
-                            tool_call_id: call.id,
+                            tool_call_id: call.id.clone(),
                             is_error,
                             text,
                             result_ref: None,
@@ -209,6 +214,29 @@ impl ToolLoop {
         }
         Err(invalid("tool exchange limit reached"))
     }
+}
+
+fn save_cancelled_calls(
+    context: &mut ToolLoopContext<'_>,
+    pending: &[stream::Call],
+) -> Result<(), CoreError> {
+    for call in pending {
+        context
+            .store
+            .append_message(
+                context.session_id,
+                Role::Tool,
+                &[MessagePart::ToolResult {
+                    tool_call_id: call.id.clone(),
+                    is_error: true,
+                    text: "tool cancelled before execution".into(),
+                    result_ref: None,
+                }],
+                now_ms(),
+            )
+            .map_err(|_| storage_error())?;
+    }
+    Ok(())
 }
 
 fn storage_error() -> CoreError {

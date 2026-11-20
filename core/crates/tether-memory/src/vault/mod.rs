@@ -5,6 +5,8 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
+pub mod sync;
+
 /// One parsed Markdown note.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct VaultNote {

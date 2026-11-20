@@ -40,7 +40,7 @@ tether/
 │   ├── fixtures/model-lists/ Provider list responses for catalog tests
 │   └── crates/
 │       ├── tether-types/      ids, message, model catalog, session, text, usage, error, event (CoreEvent); no UniFFI code
-│       ├── tether-store/      migrations/0001_init.sql; src/{lib,db,error,migrations,models,models_tests,provider_configs,schema_tests,sessions,sessions_tests}.rs
+│       ├── tether-store/      migrations/{0001_init,0002_message_fts}.sql; src/{lib,db,error,migrations,models,models_tests,provider_configs,schema_tests,sessions,sessions_tests,session_search}.rs
 │       ├── tether-engine/     VERSION, EventSink, Core, provider_connection.rs (key check), session.rs (plain chat actor), session_provider.rs (provider factory), session_tests.rs, updates/ (app updates)
 │       ├── tether-secrets/    SecretStore, SecretRef, Secret, SecretsPlatform trait, errors (src/{lib,error,platform,reference,secret,store,store_tests}.rs)
 │       ├── tether-providers/  lib.rs (ChatProvider, ModelCatalog), catalog.rs, pricing/ and data/prices/, request.rs, event.rs, error.rs, sse.rs (SseParser), client.rs (shared HTTP client), anthropic/ (adapter), openai/ (adapter), gemini/ (adapter), openai_compat/ (adapter), deepseek.rs, openrouter.rs, transport.rs (shared request and stream code)

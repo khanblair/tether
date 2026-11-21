@@ -148,13 +148,6 @@ private fun NavGraphBuilder.notAvailableRoutes(nav: TetherNav) {
     composable(SETTINGS_MCP_ROUTE) {
         NotAvailable(nav, R.string.settings_area_mcp_title, R.string.settings_area_mcp_na_body)
     }
-    composable(SKILLS_MEMORY_ROUTE) {
-        NotAvailable(
-            nav,
-            R.string.settings_area_skills_title,
-            R.string.settings_area_skills_na_body,
-        )
-    }
     composable(SETTINGS_QUALITY_ROUTE) {
         NotAvailable(
             nav,

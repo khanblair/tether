@@ -122,7 +122,6 @@
     <string name="settings_area_mcp_title">MCP servers</string>
     <string name="settings_area_mcp_na_body">Not available yet. Needs MCP servers, which ship in phase P9.</string>
     <string name="settings_area_skills_title">Skills and memory</string>
-    <string name="settings_area_skills_na_body">Not available yet. Needs skills and memory, which ship in phase P11.</string>
     <string name="settings_area_quality_title">Quality gate</string>
     <string name="settings_area_quality_na_body">Not available yet. Needs the quality gate, which ships in phase P8.</string>
     <string name="settings_area_budgets_title">Budgets</string>

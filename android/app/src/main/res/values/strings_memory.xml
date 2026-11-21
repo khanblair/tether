@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Shared problem text for memory, skills, and vault. -->
+    <string name="area_problem_unavailable">Could not read or write the files on this phone. Try again.</string>
+
+    <!-- Skills and memory hub. -->
+    <string name="hub_memory_title">Memory</string>
+    <string name="hub_memory_body">Two small files the agent reads at the start of each session.</string>
+    <string name="hub_skills_title">Skills</string>
+    <string name="hub_skills_body">Instructions the agent loads only when a task needs them.</string>
+    <string name="hub_vault_title">Vault</string>
+    <string name="hub_vault_body">Linked Markdown notes for knowledge that outgrows memory.</string>
+
+    <!-- Memory. -->
+    <string name="memory_title">Memory</string>
+    <string name="memory_file_memory">MEMORY.md</string>
+    <string name="memory_file_user">USER.md</string>
+    <string name="memory_cap_format">%1$s of %2$s characters</string>
+    <string name="memory_read_note">The agent reads this file once, at the start of each session. Changes apply from the next session.</string>
+    <string name="memory_read_failed">Could not read this memory file. Try again.</string>
+    <string name="memory_empty">No entries yet. Add one below.</string>
+    <string name="memory_entry_edit">Edit</string>
+    <string name="memory_entry_remove">Remove</string>
+    <string name="memory_entry_save">Save</string>
+    <string name="memory_entry_cancel">Cancel</string>
+    <string name="memory_edit_label">Entry text</string>
+    <string name="memory_draft_label">New entry</string>
+    <string name="memory_draft_hint">One fact per entry, for example: Run tests with pytest -q.</string>
+    <string name="memory_draft_add">Add entry</string>
+    <string name="memory_problem_path">That path is not allowed. Vault paths end in .md, and no folder or file name starts with a dot.</string>
+    <string name="memory_problem_not_found">That entry or note no longer exists. Reload and try again.</string>
+    <string name="memory_problem_over_cap">That would go over the size limit. Shorten the text or remove an entry first.</string>
+    <string name="memory_problem_invalid_entry">An entry needs text, and it cannot contain the section sign (§).</string>
+    <string name="memory_problem_unsafe">This entry has blocked content, such as an instruction to ignore earlier rules, a credential, or hidden characters. Reword it.</string>
+
+    <!-- Skills. -->
+    <string name="skills_title">Skills</string>
+    <string name="skills_install">Install</string>
+    <string name="skills_empty">No skills yet. A skill is a folder with a SKILL.md file in the skills folder.</string>
+    <string name="skills_search_placeholder">Search skills</string>
+    <string name="skills_search_clear">Clear search</string>
+    <string name="skills_no_match">No skills match this search.</string>
+    <string name="skills_invalid_prefix">Invalid skill: %1$s</string>
+    <string name="skills_detail_title">Skill</string>
+    <string name="skills_field_license">License</string>
+    <string name="skills_field_compatibility">Compatibility</string>
+    <string name="skills_field_tools">Allowed tools</string>
+    <string name="skills_body_title">SKILL.md body</string>
+    <string name="skills_problem_invalid">This skill could not be read. Check its frontmatter, then open it again.</string>
+    <string name="skills_install_na_title">Install a skill</string>
+    <string name="skills_install_na_body">Installing needs a review step that the core cannot run yet. Skills can be read here, but not added.</string>
+
+    <!-- Vault: list, note, editor, map, and lint. -->
+    <string name="vault_title">Vault</string>
+    <string name="vault_sync">Sync</string>
+    <string name="vault_search_placeholder">Search notes by title, tag, or text</string>
+    <string name="vault_search_clear">Clear search</string>
+    <string name="vault_standard_hint">The index and the log appear here when they exist. Search to find any other note.</string>
+    <string name="vault_no_hits">No notes match this search.</string>
+    <string name="vault_new_note">New note</string>
+    <string name="vault_tab_notes">Notes</string>
+    <string name="vault_tab_map">Map</string>
+    <string name="vault_tab_lint">Lint</string>
+    <string name="vault_note_title">Note</string>
+    <string name="vault_note_edit">Edit</string>
+    <string name="vault_note_map">Map from this note</string>
+    <string name="vault_backlinks_title">Linked from (%1$d)</string>
+    <string name="vault_link_missing">%1$s (note not found)</string>
+    <string name="vault_link_open_failed">Could not open this link. The note is not at the vault root or in this note’s folder.</string>
+    <string name="vault_edit_title">Edit note</string>
+    <string name="vault_new_title">New note</string>
+    <string name="vault_path_label">Note path</string>
+    <string name="vault_path_hint">A Markdown path inside the vault, such as notes/auth.md. Names cannot start with a dot.</string>
+    <string name="vault_source_label">Note text</string>
+    <string name="vault_append_label">Text to add</string>
+    <string name="vault_source_hint">Start with frontmatter that has a description line. Link to another note with [[Note name]].</string>
+    <string name="vault_mode_replace">Replace note</string>
+    <string name="vault_mode_append">Add to end</string>
+    <string name="vault_save">Save note</string>
+    <string name="vault_problem_invalid_note">This note needs a description line in its frontmatter. Add one and save again.</string>
+    <string name="vault_map_title">Map</string>
+    <string name="vault_map_empty">The map has no lines yet.</string>
+    <string name="vault_lint_title">Lint</string>
+    <string name="vault_lint_orphans">Notes with no links (%1$d)</string>
+    <string name="vault_lint_none">Every note has a link into it.</string>
+    <string name="vault_lint_not_checked_title">Not checked yet</string>
+    <string name="vault_lint_not_checked">Unresolved links and missing descriptions are not checked yet. The core has no lint call for them.</string>
+    <string name="vault_sync_na_title">Sync and export</string>
+    <string name="vault_sync_na_body">Sync needs a shared folder, and the core does not expose it yet. The vault stays on this phone.</string>
+</resources>

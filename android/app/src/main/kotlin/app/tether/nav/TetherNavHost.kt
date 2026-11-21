@@ -105,6 +105,7 @@ fun TetherNavHost(module: AppModule) {
                     onOpenSession = { nav.open("session/${Uri.encode(it)}") },
                 )
                 placeholderRoutes(nav = nav)
+                memoryRoutes(gateways = module.memoryArea, nav = nav)
                 composable("share-project") {
                     val projects by produceState(emptyList<ProjectSummary>()) {
                         value = withContext(Dispatchers.IO) { module.home.projects.projects() }
@@ -230,7 +231,7 @@ private fun DrawerHost(
         onOpenSession = { nav.closeThen { nav.open("session/${Uri.encode(it)}") } },
         onNewSession = { nav.closeThen { nav.go(Route.NewSession) } },
         onOpenSettings = { nav.closeThen { nav.go(Route.Settings) } },
-        onOpenSkills = { nav.closeThen { nav.go(Route.Skills) } },
+        onOpenSkills = { nav.closeThen { nav.open(SKILLS_MEMORY_ROUTE) } },
         now = now,
         onSearchMessages = { query -> nav.closeThen { nav.open(searchPath(query)) } },
     )

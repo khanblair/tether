@@ -11,6 +11,8 @@ import app.tether.home.CoreProjectGateway
 import app.tether.home.HomeSources
 import app.tether.home.ProjectGateway
 import app.tether.home.createHomeSources
+import app.tether.memory.MemoryAreaGateways
+import app.tether.memory.createMemoryAreaGateways
 import app.tether.messages.AppMessages
 import app.tether.providers.CoreProviderGateway
 import app.tether.providers.ProviderGateway
@@ -61,6 +63,9 @@ class AppModule(
 
     /** Session lists and creation. The runtime opens on the first call, off the main thread. */
     val sessionGateway: SessionGateway by lazy { CoreSessionGateway(databasePath, vault) }
+
+    /** Memory, skills, and vault for the Skills and memory screens. */
+    val memoryArea: MemoryAreaGateways = createMemoryAreaGateways(context.filesDir)
 
     /** Model, mode, rename, usage, rewind, and message search for the session screens. */
     val sessionSettings: SessionSettingsGateway by lazy {

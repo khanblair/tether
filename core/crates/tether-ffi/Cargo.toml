@@ -32,6 +32,12 @@ tokio = { workspace = true, features = ["rt-multi-thread"] }
 tokio-util.workspace = true
 uniffi.workspace = true
 
+tether-sandbox = { path = "../tether-sandbox" }
+tether-linux = { path = "../tether-linux" }
+tether-vcs = { path = "../tether-vcs" }
+
+toml.workspace = true
+
 [dev-dependencies]
 tempfile.workspace = true
 rusqlite.workspace = true

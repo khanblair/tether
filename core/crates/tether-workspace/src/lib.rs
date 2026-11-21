@@ -1,5 +1,6 @@
-//! Project workspace: path guard, file index, search, watcher.
+//! Project workspace: path guard, file index, search, and archives.
 
+pub mod archive;
 mod file_index;
 mod path_guard;
 

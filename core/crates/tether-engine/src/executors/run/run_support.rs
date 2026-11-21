@@ -5,7 +5,8 @@ use tether_sandbox::{OutputSink, RunOutcome};
 use tether_types::Executor;
 use tokio::sync::mpsc;
 
-use super::{OUTPUT_HEAD, OUTPUT_TAIL, PreparedCall, RunContext, RunReport, RunStatus};
+use super::{OUTPUT_HEAD, OUTPUT_TAIL, PreparedCall, RunContext, RunReport};
+use crate::executors::RunStatus;
 use crate::tool_loop::PrepareContext;
 
 pub(super) fn parse_executor(value: &Value) -> Result<Executor, String> {

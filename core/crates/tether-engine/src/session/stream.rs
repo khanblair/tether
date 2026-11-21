@@ -38,10 +38,12 @@ impl SessionActor {
             let (tx, mut rx) = mpsc::channel(32);
             let attempt = request.clone();
             let attempt_cancel = cancel.clone();
-            let provider_task =
-                tokio::spawn(
-                    async move { provider.stream_chat(&attempt, tx, attempt_cancel).await },
-                );
+            let attempt_provider = Arc::clone(&provider);
+            let provider_task = tokio::spawn(async move {
+                attempt_provider
+                    .stream_chat(&attempt, tx, attempt_cancel)
+                    .await
+            });
             let collected = self.collect(&mut rx, &mut output).await;
             if let Err(error) = collected {
                 provider_task.abort();

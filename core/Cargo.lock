@@ -3967,7 +3967,9 @@ dependencies = [
 name = "tether-ffi"
 version = "0.0.4"
 dependencies = [
+ "reqwest 0.12.28",
  "rusqlite",
+ "serde_json",
  "tempfile",
  "tether-engine",
  "tether-linux",

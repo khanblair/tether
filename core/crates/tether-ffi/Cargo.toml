@@ -38,6 +38,10 @@ tether-vcs = { path = "../tether-vcs" }
 
 toml.workspace = true
 
+serde_json.workspace = true
+
+reqwest.workspace = true
+
 [dev-dependencies]
 tempfile.workspace = true
 rusqlite.workspace = true

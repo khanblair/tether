@@ -189,7 +189,6 @@ fn inspect_entries(
     }
     let mut entries = Vec::with_capacity(archive.len());
     let mut paths = std::collections::HashSet::new();
-    let mut top = None;
     let mut total = 0_u64;
     for index in 0..archive.len() {
         let entry = archive.by_index(index)?;

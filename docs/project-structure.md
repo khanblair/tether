@@ -40,13 +40,13 @@ tether/
 │   ├── fixtures/model-lists/ Provider list responses for catalog tests
 │   └── crates/
 │       ├── tether-types/      ids, message, model catalog, session, text, usage, error, event (CoreEvent); no UniFFI code
-│       ├── tether-store/      migrations/{0001_init,0002_message_fts,0003_checkpoints}.sql; src/{lib,db,error,migrations,models,models_tests,provider_configs,schema_tests,sessions,sessions_tests,session_search,checkpoints,checkpoints/tests}.rs
+│       ├── tether-store/      migrations/{0001_init,0002_message_fts,0003_checkpoints}.sql; src/{lib,db,error,migrations,models,models_tests,provider_configs,projects,projects_tests,schema_tests,sessions,sessions_tests,session_search,checkpoints,checkpoints/tests}.rs
 │       ├── tether-engine/     VERSION, EventSink, Core, provider_connection.rs (key check), session.rs and session/rewind.rs (actor commands), tool_loop.rs and tool_loop/ (file tool exchanges), checkpoint_capture.rs (guarded snapshots), rewind.rs (restore modes), session_provider.rs (provider factory), session_tests.rs, updates/ (app updates)
 │       ├── tether-secrets/    SecretStore, SecretRef, Secret, SecretsPlatform trait, errors (src/{lib,error,platform,reference,secret,store,store_tests}.rs)
 │       ├── tether-providers/  lib.rs (ChatProvider, ModelCatalog), catalog.rs, pricing/ and data/prices/, request.rs, event.rs, error.rs, sse.rs (SseParser), client.rs (shared HTTP client), anthropic/ (adapter), openai/ (adapter), gemini/ (adapter), openai_compat/ (adapter), deepseek.rs, openrouter.rs, transport.rs (shared request and stream code)
 │       ├── tether-ffi/        UniFFI surface, builds libtether_core.so
 │       │   ├── uniffi.toml
-│       │   └── src/{lib.rs, callbacks.rs, provider_settings.rs, sessions.rs, updater.rs, secrets.rs, views/{mod,event,types,error,checkpoint}.rs, bin/uniffi-bindgen.rs}
+│       │   └── src/{lib.rs, callbacks.rs, provider_settings.rs, projects.rs, projects/tests.rs, sessions.rs, sessions/tests.rs, updater.rs, secrets.rs, views/{mod,event,types,error,checkpoint,project,session}.rs, bin/uniffi-bindgen.rs}
 │       ├── tether-quality/    data/slop_words.txt and slop_patterns.toml (shared with slop-lint)
 │       ├── tether-workspace/   PathGuard and FileIndex: path checks, scan, glob, grep
 │       ├── tether-tools/       src/{lib,fs,fs/tests,edit,edit/tests}.rs; guarded read and edit tools
@@ -75,7 +75,7 @@ tether/
 │   ├── slop-lint/             Rust CLI with its own workspace and tests
 │   ├── site/{build.ts, site.css}   Builds the Pages site from docs/
 │   ├── prototype/             Clickable mobile UI prototype (HTML, CSS, JavaScript; no build step)
-│   └── gen-bindings.sh  gen-icons.ts  check-file-length.sh  check-commit-size.sh  check-smell-fixtures.sh  bump-version.sh  setup.sh  setup-release-signing.sh
+│   └── gen-bindings.sh  gen-icons.ts  check-file-length.sh  check-commit-size.sh  check-smell-fixtures.sh  bump-version.sh  release-version.sh  setup.sh  setup-release-signing.sh
 └── .github/
     ├── workflows/{ci.yml, pr.yml, release.yml, pages.yml}
     └── pull_request_template.md  CODEOWNERS  dependabot.yml
@@ -498,7 +498,7 @@ tools/
 │   ├── pr.yml               issue-link check on every pull request and description edit
 │   ├── nightly.yml          Benchmarks and live provider smoke tests (planned, P1)
 │   ├── pages.yml            Builds and deploys the docs site to GitHub Pages
-│   └── release.yml          Build, sign, and publish a GitHub Release for both flavors when the core version has no tag
+│   └── release.yml          Build, sign, and publish a GitHub Release for both flavors on every merge that changes code
 ├── pull_request_template.md Checklist including docs and progress tracker
 ├── dependabot.yml           Weekly dependency update PRs
 └── CODEOWNERS               Review owners per folder

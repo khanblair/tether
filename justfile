@@ -40,10 +40,11 @@ test-core:
 test-android:
     cd android && ./gradlew testFullDebugUnitTest testPlayDebugUnitTest :core-bridge:testDebugUnitTest :designsystem:testDebugUnitTest
 
-# Tests for slop-lint and the version bump script.
+# Tests for slop-lint and the version scripts.
 test-tools:
     cd tools/slop-lint && cargo test
     tools/bump-version.sh --self-test
+    tools/release-version.sh --self-test
 
 # Instrumented tests on the connected device or emulator.
 test-device:

@@ -26,6 +26,10 @@ pub struct SessionRecord {
     pub mode: PermissionMode,
     /// Last saved state.
     pub status: SessionStatus,
+    /// Creation time in Unix milliseconds.
+    pub created_at: i64,
+    /// Time of the last change to the session, in Unix milliseconds.
+    pub updated_at: i64,
 }
 
 impl Store {
@@ -69,33 +73,9 @@ impl Store {
             model_id: model.model_id.clone(),
             mode,
             status: SessionStatus::Idle,
+            created_at: now_ms,
+            updated_at: now_ms,
         })
-    }
-
-    /// Loads one session, or `None` when its id is absent.
-    ///
-    /// # Errors
-    /// Returns an error when SQLite fails or saved enum text is invalid.
-    pub fn load_session(&self, id: &SessionId) -> Result<Option<SessionRecord>, StoreError> {
-        let row: Option<(String, String, String, String, String, String)> = self.conn
-            .query_row(
-                "SELECT project_id, title, provider, model_id, mode, status FROM sessions WHERE id = ?1",
-                [id.as_str()],
-                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?, row.get(5)?)),
-            )
-            .optional()?;
-        let Some((project_id, title, provider, model_id, mode, status)) = row else {
-            return Ok(None);
-        };
-        Ok(Some(SessionRecord {
-            id: id.clone(),
-            project_id: ProjectId::new(project_id),
-            title,
-            provider: parse_enum("provider", provider)?,
-            model_id,
-            mode: parse_enum("mode", mode)?,
-            status: parse_enum("status", status)?,
-        }))
     }
 
     /// Loads transcript messages and their parts in sequence order.
@@ -357,7 +337,10 @@ impl Store {
     }
 }
 
-fn parse_enum<T: std::str::FromStr>(field: &'static str, value: String) -> Result<T, StoreError> {
+pub(crate) fn parse_enum<T: std::str::FromStr>(
+    field: &'static str,
+    value: String,
+) -> Result<T, StoreError> {
     value
         .parse()
         .map_err(|_| StoreError::InvalidSessionEnum { field, value })

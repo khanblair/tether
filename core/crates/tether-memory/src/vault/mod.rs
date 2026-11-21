@@ -47,6 +47,8 @@ pub struct VaultLink {
     pub alias: Option<String>,
     /// Whether the target note exists in the rebuilt index.
     pub resolved: bool,
+    /// Relative path of the target note, when resolved.
+    pub resolved_path: Option<String>,
 }
 
 /// One complete, deterministic view of the vault files.
@@ -110,11 +112,7 @@ impl VaultIndex {
     pub fn backlinks(&self, path: &str) -> Vec<&VaultLink> {
         self.links
             .iter()
-            .filter(|link| {
-                link.resolved
-                    && resolve_target(&self.notes, &link.source_path, &link.target)
-                        == Some(path.to_owned())
-            })
+            .filter(|link| link.resolved_path.as_deref() == Some(path))
             .collect()
     }
 }
@@ -124,7 +122,8 @@ fn resolve_links(notes: &BTreeMap<String, VaultNote>) -> Vec<VaultLink> {
     let mut links = Vec::new();
     for note in notes.values() {
         for mut link in parse_links(&note.path, &note.source) {
-            link.resolved = resolve_target(notes, &note.path, &link.target).is_some();
+            link.resolved_path = resolve_target(notes, &note.path, &link.target);
+            link.resolved = link.resolved_path.is_some();
             links.push(link);
         }
     }
@@ -288,6 +287,7 @@ fn parse_links(source_path: &str, source: &str) -> Vec<VaultLink> {
                 heading,
                 alias,
                 resolved: false,
+                resolved_path: None,
             });
         }
         rest = &rest[end + 2..];

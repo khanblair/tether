@@ -1,20 +1,12 @@
 package app.tether.session
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -23,197 +15,295 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontWeight
 import app.tether.R
 import app.tether.core.generated.CoreEventView
-import app.tether.core.generated.MessagePartView
 import app.tether.core.generated.MessageView
-import app.tether.core.generated.RoleView
+import app.tether.core.generated.ProviderView
 import app.tether.design.TetherTheme
+import app.tether.design.components.BannerTone
+import app.tether.design.components.InlineBanner
+import app.tether.design.components.TetherTextButton
 import app.tether.design.components.TetherTopBar
-import app.tether.design.tokens.TetherSize
 import app.tether.design.tokens.TetherSpace
+import app.tether.messages.AppMessages
 import app.tether.shell.BackButton
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+/**
+ * The session's messages and status, as the core saved them. Every core event reloads it, so a
+ * streamed reply grows in place and a finished turn shows its saved text.
+ */
+private data class TranscriptSnapshot(
+    val messages: List<MessageView>,
+    val status: SessionStatus,
+    val details: SessionDetails,
+    val usage: SessionUsage,
+)
+
+private suspend fun SessionConnection.snapshot(): TranscriptSnapshot =
+    withContext(Dispatchers.IO) {
+        TranscriptSnapshot(
+            messages = transcript().filterNot(MessageView::rewound).sortedBy(MessageView::seq),
+            status = status(),
+            details = settings.details(sessionId),
+            usage = settings.usage(sessionId),
+        )
+    }
 
 /** Persisted messages are read off the main thread when the session route opens. */
 @Composable
 fun TranscriptScreen(
     connection: SessionConnection?,
     onBack: () -> Unit,
+    sheets: SessionSheetEnv? = null,
 ) {
-    var messages by remember(connection) { mutableStateOf<List<MessageView>>(emptyList()) }
+    var snapshot by remember(connection) { mutableStateOf<TranscriptSnapshot?>(null) }
     var failed by remember(connection) { mutableStateOf(false) }
-    var running by remember(connection) { mutableStateOf(false) }
-    var status by remember(connection) { mutableStateOf<SessionStatus?>(null) }
-    var proposedTool by remember(connection) { mutableStateOf<Pair<String, String>?>(null) }
-    LaunchedEffect(connection) {
-        if (connection != null) {
-            try {
-                messages =
-                    withContext(Dispatchers.IO) { connection.transcript() }
-                        .filterNot(MessageView::rewound)
-                        .sortedBy(MessageView::seq)
-                status = withContext(Dispatchers.IO) { connection.status() }
-                connection.changes.collect { event ->
-                    if (event.endsTurn()) running = false
-                    proposedTool = event.proposedToolOr(proposedTool)
-                    messages =
-                        withContext(Dispatchers.IO) { connection.transcript() }
-                            .filterNot(MessageView::rewound)
-                            .sortedBy(MessageView::seq)
-                    status = withContext(Dispatchers.IO) { connection.status() }
-                }
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (_: Exception) {
-                failed = true
-            }
-        }
+    var turn by remember(connection) { mutableStateOf(TurnState()) }
+    var actionsFor by remember(connection) { mutableStateOf<MessageView?>(null) }
+    val sheetControl = remember(connection) { SessionSheetControl() }
+    val scope = rememberCoroutineScope()
+    val offline = rememberOffline()
+    val messages = snapshot?.messages.orEmpty()
+
+    fun retryLast() {
+        val active = connection ?: return
+        scope.resendLastMessage(
+            active,
+            messages,
+            onStart = { turn = turn.onSendStarted() },
+            onFailed = { turn = turn.onSendFailed() },
+        )
     }
+    SnapshotReload(
+        connection = connection,
+        reloads = sheetControl.reloads,
+        onLoaded = { snapshot = it },
+        onFailed = { failed = true },
+    )
+    CoreEvents(
+        connection = connection,
+        onEvent = { event -> turn = turn.onEvent(event, System.currentTimeMillis()) },
+        onLoaded = { snapshot = it },
+        onFailed = { failed = true },
+    )
     TranscriptContent(
         messages = messages,
         failed = failed,
-        status = status,
-        proposedTool = proposedTool,
+        title = snapshot?.details?.title ?: stringResource(R.string.route_session_title),
+        status = snapshot?.status,
+        usage = snapshot?.usage,
+        turn = turn,
+        provider = snapshot?.details?.provider,
+        offline = offline,
         onBack = onBack,
+        onModelClick = sheetOpener(sheets, sheetControl, SessionSheetKind.Model),
+        onModeClick = sheetOpener(sheets, sheetControl, SessionSheetKind.Mode),
+        onMore = sheetOpener(sheets, sheetControl, SessionSheetKind.Menu),
+        onRetry = if (connection != null && lastUserText(messages) != null) ::retryLast else null,
+        onOpenProviders = sheets?.openProviders,
+        onDismissStopped = { turn = turn.onDismissStopped() },
+        onLongPress = { actionsFor = it },
         composer =
             connection?.let { active ->
                 {
                     ComposerControls(
                         connection = active,
-                        running = running,
-                        onRunningChange = {
-                            running = it
-                            proposedTool = null
-                        },
-                        onFailure = { failed = true },
+                        modelId = snapshot?.details?.modelId.orEmpty(),
+                        running = turn.running,
+                        onSendStart = { turn = turn.onSendStarted() },
+                        onSendFailed = { turn = turn.onSendFailed() },
                     )
                 }
             },
     )
-}
-
-@Composable
-private fun ComposerControls(
-    connection: SessionConnection,
-    running: Boolean,
-    onRunningChange: (Boolean) -> Unit,
-    onFailure: () -> Unit,
-) {
-    val scope = rememberCoroutineScope()
-    Composer(
-        modelId = connection.modelId,
-        running = running,
-        onSend = { text ->
-            onRunningChange(true)
-            scope.launch(Dispatchers.IO) {
-                try {
-                    connection.send(text)
-                } catch (_: Exception) {
-                    onRunningChange(false)
-                    onFailure()
-                }
-            }
-        },
-        onStop = { scope.launch(Dispatchers.IO) { connection.stop() } },
+    MessageSheetSlot(
+        message = actionsFor,
+        toasts = sheets?.messages,
+        onDone = { actionsFor = null },
+    )
+    SessionSheetsSlot(
+        connection = connection,
+        sheets = sheets,
+        control = sheetControl,
+        isRunning = { turn.running },
     )
 }
+
+/** Applies each core event and reloads the snapshot. A failed reload marks the screen failed. */
+@Composable
+private fun CoreEvents(
+    connection: SessionConnection?,
+    onEvent: (CoreEventView) -> Unit,
+    onLoaded: (TranscriptSnapshot) -> Unit,
+    onFailed: () -> Unit,
+) {
+    LaunchedEffect(connection) {
+        if (connection != null) {
+            try {
+                coroutineScope {
+                    // Listen before the first read, so an event sent during the read is not lost.
+                    launch(start = CoroutineStart.UNDISPATCHED) {
+                        connection.changes.collect { event ->
+                            onEvent(event)
+                            onLoaded(connection.snapshot())
+                        }
+                    }
+                    onLoaded(connection.snapshot())
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                onFailed()
+            }
+        }
+    }
+}
+
+/** Reloads the transcript after a sheet changed the session. The first load is in the screen. */
+@Composable
+private fun SnapshotReload(
+    connection: SessionConnection?,
+    reloads: Int,
+    onLoaded: (TranscriptSnapshot) -> Unit,
+    onFailed: () -> Unit,
+) {
+    LaunchedEffect(connection, reloads) {
+        if (connection != null && reloads > 0) {
+            try {
+                onLoaded(connection.snapshot())
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                onFailed()
+            }
+        }
+    }
+}
+
+/** The sheet for the message a long press chose. It is hidden while [message] is null. */
+@Composable
+private fun MessageSheetSlot(
+    message: MessageView?,
+    toasts: AppMessages?,
+    onDone: () -> Unit,
+) {
+    val copy = rememberCopyMessage(toasts)
+    message?.let { chosen ->
+        MessageActionsSheet(
+            onCopy = {
+                copy(chosen)
+                onDone()
+            },
+            onDismiss = onDone,
+        )
+    }
+}
+
+/** A sheet opener for a session with sheets. Without sheets, the control has no action. */
+private fun sheetOpener(
+    sheets: SessionSheetEnv?,
+    control: SessionSheetControl,
+    kind: SessionSheetKind,
+): (() -> Unit)? = sheets?.let { { control.openSheet(kind) } }
 
 /** Lazy items use persisted IDs so rows keep their identity as text arrives. */
 @Composable
 fun TranscriptContent(
     messages: List<MessageView>,
     failed: Boolean,
+    title: String,
     status: SessionStatus? = null,
-    proposedTool: Pair<String, String>? = null,
+    usage: SessionUsage? = null,
+    turn: TurnState = TurnState(),
+    provider: ProviderView? = null,
+    offline: Boolean = false,
     onBack: () -> Unit,
+    onModelClick: (() -> Unit)? = null,
+    onModeClick: (() -> Unit)? = null,
+    onMore: (() -> Unit)? = null,
+    onRetry: (() -> Unit)? = null,
+    onOpenProviders: (() -> Unit)? = null,
+    onDismissStopped: () -> Unit = {},
+    onLongPress: ((MessageView) -> Unit)? = null,
     composer: (@Composable () -> Unit)? = null,
 ) {
     val listState = rememberLazyListState()
-    FollowTail(listState, messages)
+    FollowTail(listState, messages, turn.hasFooter)
     Scaffold(
         containerColor = TetherTheme.colors.bg,
         topBar = {
             TetherTopBar(
-                title = stringResource(R.string.route_session_title),
+                title = title,
                 navigationIcon = { BackButton(onBack) },
+                actions = {
+                    if (onMore != null) {
+                        TetherTextButton(
+                            label = stringResource(R.string.session_more),
+                            onClick = onMore,
+                        )
+                    }
+                },
             )
         },
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             Box(modifier = Modifier.weight(1f)) {
-                if (messages.isEmpty()) {
-                    val emptyLabel =
-                        if (failed) R.string.transcript_load_failed else R.string.transcript_empty
-                    Text(
-                        text = stringResource(emptyLabel),
-                        color = TetherTheme.colors.text2,
-                        modifier = Modifier.padding(TetherSpace.space4),
-                    )
-                } else {
-                    LazyColumn(
-                        state = listState,
-                        verticalArrangement = Arrangement.spacedBy(TetherSpace.space4),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.fillMaxSize(),
-                    ) {
-                        items(messages, key = MessageView::id) { message ->
-                            TranscriptMessage(
-                                message,
-                                Modifier.widthIn(max = TetherSize.transcriptMax).fillMaxWidth(),
-                            )
-                        }
-                    }
-                }
-            }
-            proposedTool?.let { (tool, target) ->
-                Text(
-                    text = "${stringResource(R.string.transcript_tool)} · $tool: $target",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = TetherTheme.colors.text2,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .background(TetherTheme.colors.surfaceSunken)
-                            .padding(TetherSpace.space3),
+                TranscriptList(
+                    messages = messages,
+                    failed = failed,
+                    turn = turn,
+                    provider = provider,
+                    listState = listState,
+                    onRetry = onRetry,
+                    onOpenProviders = onOpenProviders,
+                    onDismissStopped = onDismissStopped,
+                    onLongPress = onLongPress,
                 )
             }
-            StatusLine(status)
+            turn.proposedTool?.let { (tool, target) -> ProposedToolBar(tool, target) }
+            StatusLine(status, usage, onModelClick, onModeClick)
+            if (offline) {
+                InlineBanner(
+                    text = stringResource(R.string.states_offline),
+                    tone = BannerTone.Warning,
+                    modifier = Modifier.padding(horizontal = TetherSpace.space4),
+                )
+            }
             composer?.invoke()
         }
     }
 }
 
 /**
- * Keeps the newest message in view while the reader is at the bottom. The flag changes only when
- * the scroll position changes, so a streamed reply that grows below the viewport does not count as
+ * Keeps the newest item in view while the reader is at the bottom. [footer] adds the turn footer
+ * as the last item, so it scrolls into view when it appears. The flag changes only when the
+ * scroll position changes, so a streamed reply that grows below the viewport does not count as
  * the reader leaving the bottom.
  */
 @Composable
 private fun FollowTail(
     listState: LazyListState,
     messages: List<MessageView>,
+    footer: Boolean,
 ) {
     var followTail by remember { mutableStateOf(true) }
     LaunchedEffect(listState) {
         snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
             .collect { followTail = listState.isAtBottom() }
     }
-    LaunchedEffect(messages) {
-        val last = messages.lastIndex
-        if (last >= 0 && shouldFollow(followTail, hasNewContent = true)) {
+    LaunchedEffect(messages, footer) {
+        val lastItem = messages.size + (if (footer) 1 else 0) - 1
+        if (lastItem >= 0 && shouldFollow(followTail, hasNewContent = true)) {
             // A large offset clamps to the list end, so a growing reply stays in view.
-            listState.scrollToItem(last, Int.MAX_VALUE)
+            listState.scrollToItem(lastItem, Int.MAX_VALUE)
         }
     }
 }
@@ -240,110 +330,4 @@ internal fun CoreEventView.endsTurn(): Boolean =
         is CoreEventView.TurnInterrupted,
         -> true
         else -> false
-    }
-
-private fun CoreEventView.proposedToolOr(current: Pair<String, String>?): Pair<String, String>? =
-    if (this is CoreEventView.ToolProposed) tool to target else current
-
-@Composable
-private fun TranscriptMessage(
-    message: MessageView,
-    modifier: Modifier = Modifier,
-) {
-    val label =
-        when (message.role) {
-            RoleView.USER -> R.string.transcript_you
-            RoleView.ASSISTANT -> R.string.transcript_agent
-            RoleView.TOOL -> R.string.transcript_tool
-            RoleView.SYSTEM_NOTE -> R.string.transcript_system
-        }
-    Column(
-        verticalArrangement = Arrangement.spacedBy(TetherSpace.space2),
-        modifier = modifier.padding(horizontal = TetherSpace.space4),
-    ) {
-        Text(
-            stringResource(label),
-            style = MaterialTheme.typography.labelMedium,
-            color = TetherTheme.colors.text2,
-        )
-        message.parts.forEach { part ->
-            when (part) {
-                is MessagePartView.Text -> MarkdownBlocks(part.text)
-                is MessagePartView.Thinking -> Text(part.text, color = TetherTheme.colors.text2)
-                is MessagePartView.CompactionSummary ->
-                    Text(part.text, color = TetherTheme.colors.text2)
-                else ->
-                    Text(
-                        stringResource(R.string.transcript_attachment),
-                        color = TetherTheme.colors.text2,
-                    )
-            }
-        }
-    }
-}
-
-@Composable
-private fun MarkdownBlocks(source: String) {
-    splitMarkdown(source).forEach { block ->
-        if (block.code) {
-            Text(
-                text = block.text,
-                style = TetherTheme.mono,
-                color = TetherTheme.colors.text,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .background(TetherTheme.colors.surfaceSunken)
-                        .padding(TetherSpace.space3),
-            )
-        } else {
-            Text(
-                text = inlineMarkdown(block.text),
-                style = MaterialTheme.typography.bodyMedium,
-                color = TetherTheme.colors.text,
-            )
-        }
-    }
-}
-
-internal data class MarkdownBlock(
-    val text: String,
-    val code: Boolean,
-)
-
-/** Keeps fenced code separate from prose; incomplete fences stay visible while streaming. */
-internal fun splitMarkdown(source: String): List<MarkdownBlock> {
-    val result = mutableListOf<MarkdownBlock>()
-    val text = StringBuilder()
-    var inCode = false
-    source.lineSequence().forEach { line ->
-        if (line.startsWith("```")) {
-            if (text.isNotEmpty()) result += MarkdownBlock(text.toString().trimEnd('\n'), inCode)
-            text.clear()
-            inCode = !inCode
-        } else {
-            text.append(line).append('\n')
-        }
-    }
-    if (text.isNotEmpty()) result += MarkdownBlock(text.toString().trimEnd('\n'), inCode)
-    return result
-}
-
-/** Styles bold spans while leaving malformed delimiters as plain text. */
-internal fun inlineMarkdown(source: String): AnnotatedString =
-    buildAnnotatedString {
-        var cursor = 0
-        while (cursor < source.length) {
-            val start = source.indexOf("**", cursor)
-            val end = if (start >= 0) source.indexOf("**", start + 2) else -1
-            if (end < 0) {
-                append(source.substring(cursor))
-                break
-            }
-            append(source.substring(cursor, start))
-            pushStyle(SpanStyle(fontWeight = FontWeight.Bold))
-            append(source.substring(start + 2, end))
-            pop()
-            cursor = end + 2
-        }
     }

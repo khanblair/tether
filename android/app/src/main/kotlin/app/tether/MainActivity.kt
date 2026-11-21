@@ -17,15 +17,18 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.tether.design.TetherTheme
 import app.tether.nav.TetherNavHost
+import app.tether.settings.AppLockLayers
 
 /** The single activity. All screens are Compose destinations. */
 class MainActivity : ComponentActivity() {
     /**
-     * Asks the system for a biometric check before a saved key is shown. On Android 11 and later
-     * the screen lock PIN, pattern, or password is also accepted, so a phone with no enrolled
-     * fingerprint can still reveal a key. [onError] runs for a cancel and for a failure alike.
+     * Asks the system for a biometric check before a saved key is shown, or before a session
+     * changes to Bypass. [title] defaults to the key reveal title. On Android 11 and later the
+     * screen lock PIN, pattern, or password is also accepted, so a phone with no enrolled
+     * fingerprint can still pass the check. [onError] runs for a cancel and for a failure alike.
      */
     fun authenticateForKeyReveal(
+        title: String? = null,
         onSuccess: () -> Unit,
         onError: () -> Unit,
     ) {
@@ -33,7 +36,7 @@ class MainActivity : ComponentActivity() {
             BiometricPrompt
                 .Builder(
                     this,
-                ).setTitle(getString(R.string.settings_reveal_auth_title))
+                ).setTitle(title ?: getString(R.string.settings_reveal_auth_title))
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             builder.setAllowedAuthenticators(
                 BiometricManager.Authenticators.BIOMETRIC_STRONG or
@@ -71,11 +74,37 @@ class MainActivity : ComponentActivity() {
         module.shareInbox.accept(intent)
         setContent {
             val mode by module.themeMode.collectAsStateWithLifecycle()
+            val locked by (application as TetherApp).appLock.locked.collectAsStateWithLifecycle()
             TetherTheme(mode = mode) {
                 SystemBars(dark = TetherTheme.isDark)
-                TetherNavHost(module = module)
+                AppLockLayers(locked = locked, onUnlock = ::requestUnlock) {
+                    TetherNavHost(module = module)
+                }
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        (application as TetherApp).appLock.onStarted()
+    }
+
+    override fun onStop() {
+        (application as TetherApp).appLock.onStopped()
+        super.onStop()
+    }
+
+    /**
+     * Runs the biometric check for the app lock. A pass unlocks; a cancel or a failure keeps it.
+     */
+    private fun requestUnlock() {
+        val appLock = (application as TetherApp).appLock
+        appLock.beginPrompt()
+        authenticateForKeyReveal(
+            title = getString(R.string.settings_area_unlock_prompt),
+            onSuccess = { appLock.endPrompt(unlocked = true) },
+            onError = { appLock.endPrompt(unlocked = false) },
+        )
     }
 
     override fun onNewIntent(intent: Intent) {

@@ -2,7 +2,177 @@ use tether_types::{
     MessagePart, ModelRef, PermissionMode, ProjectId, Provider, Role, SessionStatus, ToolCallId,
 };
 
-use crate::Store;
+use crate::{Store, StoreError};
+
+#[test]
+fn session_model_and_mode_updates_persist_and_bump_activity() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("tether.db");
+    let mut store = Store::open(&path).unwrap();
+    let project = seed_project(&store);
+    let session = store
+        .create_session(
+            &project,
+            &ModelRef {
+                provider: Provider::Anthropic,
+                model_id: "first".into(),
+            },
+            PermissionMode::Ask,
+            10,
+        )
+        .unwrap();
+    store
+        .set_session_model(&session.id, Provider::Gemini, "second", 20)
+        .unwrap();
+    store
+        .set_session_mode(&session.id, PermissionMode::Auto, 30)
+        .unwrap();
+    drop(store);
+    let saved = Store::open(&path)
+        .unwrap()
+        .load_session(&session.id)
+        .unwrap()
+        .unwrap();
+    assert_eq!(saved.provider, Provider::Gemini);
+    assert_eq!(saved.model_id, "second");
+    assert_eq!(saved.mode, PermissionMode::Auto);
+    assert_eq!(saved.updated_at, 30);
+}
+
+#[test]
+fn settings_updates_advance_activity_within_one_millisecond() {
+    let mut store = Store::open_in_memory().unwrap();
+    let project = seed_project(&store);
+    let session = store
+        .create_session(
+            &project,
+            &ModelRef {
+                provider: Provider::Anthropic,
+                model_id: "first".into(),
+            },
+            PermissionMode::Ask,
+            10,
+        )
+        .unwrap();
+    store
+        .set_session_model(&session.id, Provider::Gemini, "second", 10)
+        .unwrap();
+    assert_eq!(
+        store.load_session(&session.id).unwrap().unwrap().updated_at,
+        11
+    );
+    store
+        .set_session_mode(&session.id, PermissionMode::Auto, 10)
+        .unwrap();
+    assert_eq!(
+        store.load_session(&session.id).unwrap().unwrap().updated_at,
+        12
+    );
+}
+
+#[test]
+fn active_status_blocks_model_and_mode_updates() {
+    let mut store = Store::open_in_memory().unwrap();
+    let project = seed_project(&store);
+    let session = store
+        .create_session(
+            &project,
+            &ModelRef {
+                provider: Provider::Anthropic,
+                model_id: "first".into(),
+            },
+            PermissionMode::Ask,
+            10,
+        )
+        .unwrap();
+    for status in [
+        SessionStatus::Requesting,
+        SessionStatus::Streaming,
+        SessionStatus::CheckingTool,
+        SessionStatus::RunningTool,
+        SessionStatus::AwaitingApproval,
+    ] {
+        store.set_session_status(&session.id, status, 11).unwrap();
+        assert!(matches!(
+            store.set_session_model(&session.id, Provider::Gemini, "second", 20),
+            Err(StoreError::SessionBusy)
+        ));
+        assert!(matches!(
+            store.set_session_mode(&session.id, PermissionMode::Auto, 20),
+            Err(StoreError::SessionBusy)
+        ));
+    }
+    let saved = store.load_session(&session.id).unwrap().unwrap();
+    assert_eq!(saved.provider, Provider::Anthropic);
+    assert_eq!(saved.model_id, "first");
+    assert_eq!(saved.mode, PermissionMode::Ask);
+    assert_eq!(saved.updated_at, 11);
+}
+
+#[test]
+fn rename_trims_title_and_rejects_blank_text() {
+    let mut store = Store::open_in_memory().unwrap();
+    let project = seed_project(&store);
+    let session = store
+        .create_session(
+            &project,
+            &ModelRef {
+                provider: Provider::Anthropic,
+                model_id: "first".into(),
+            },
+            PermissionMode::Ask,
+            10,
+        )
+        .unwrap();
+    store.rename_session(&session.id, "  New name  ").unwrap();
+    assert_eq!(
+        store.load_session(&session.id).unwrap().unwrap().title,
+        "New name"
+    );
+    assert!(matches!(
+        store.rename_session(&session.id, " \n "),
+        Err(StoreError::EmptySessionTitle)
+    ));
+    assert_eq!(
+        store.load_session(&session.id).unwrap().unwrap().title,
+        "New name"
+    );
+}
+
+#[test]
+fn session_search_finds_titles_and_old_text_but_skips_rewound_text() {
+    let mut store = Store::open_in_memory().unwrap();
+    let project = seed_project(&store);
+    let session = store
+        .create_session(
+            &project,
+            &ModelRef {
+                provider: Provider::Anthropic,
+                model_id: "first".into(),
+            },
+            PermissionMode::Ask,
+            10,
+        )
+        .unwrap();
+    store.rename_session(&session.id, "Alpha title").unwrap();
+    let message = store.begin_turn(&session.id, "Old needle", 11).unwrap();
+    assert_eq!(
+        store.search_sessions(&project, "alpha").unwrap()[0].id,
+        session.id
+    );
+    assert_eq!(
+        store.search_sessions(&project, "needle").unwrap()[0].id,
+        session.id
+    );
+    store
+        .conn
+        .execute(
+            "UPDATE messages SET rewound = 1 WHERE id = ?1",
+            [message.as_str()],
+        )
+        .unwrap();
+    assert_eq!(store.search_sessions(&project, "needle").unwrap(), []);
+}
 
 pub(crate) fn seed_project(store: &Store) -> ProjectId {
     let id = ProjectId::new("01TESTPROJECT00000000000000");
@@ -235,4 +405,23 @@ fn tool_exchange_messages_survive_reopening() {
         Store::open(&path).unwrap().messages(&session.id).unwrap(),
         vec![assistant, result]
     );
+}
+
+#[test]
+fn session_times_are_saved_and_follow_the_last_change() {
+    let mut store = Store::open_in_memory().unwrap();
+    let project = seed_project(&store);
+    let model = ModelRef {
+        provider: Provider::Anthropic,
+        model_id: "model".into(),
+    };
+    let session = store
+        .create_session(&project, &model, PermissionMode::Ask, 1_000)
+        .unwrap();
+    assert_eq!((session.created_at, session.updated_at), (1_000, 1_000));
+    store
+        .set_session_status(&session.id, SessionStatus::Streaming, 5_000)
+        .unwrap();
+    let loaded = store.load_session(&session.id).unwrap().unwrap();
+    assert_eq!((loaded.created_at, loaded.updated_at), (1_000, 5_000));
 }

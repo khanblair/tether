@@ -6,11 +6,15 @@
 mod checkpoint;
 mod error;
 mod event;
+mod project;
+mod session;
 mod types;
 
 pub use checkpoint::{CheckpointView, RewindScopeView};
 pub use error::{CoreErrorView, ErrorKindView};
 pub use event::CoreEventView;
+pub use project::ProjectView;
+pub use session::{ModelView, SessionRecordView, SessionUsageView, SupportView, TranscriptHitView};
 pub use types::{
     ConnectionStatusView, ExecutorView, MessagePartView, MessageView, ModelRefView,
     PermissionModeView, ProviderView, RoleView, SessionStatusView, ToolCallStatusView,

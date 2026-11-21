@@ -181,14 +181,14 @@ pub struct SnapshotInput {
 }
 
 impl Store {
-    /// Lists a session's checkpoints from newest to oldest.
+    /// Lists a session's live checkpoints from newest to oldest.
     ///
     /// # Errors
     /// Returns an error if SQLite cannot read a checkpoint.
     pub fn list_checkpoints(&self, session_id: &SessionId) -> Result<Vec<Checkpoint>, StoreError> {
         let mut statement = self
             .conn
-            .prepare("SELECT id FROM checkpoints WHERE session_id = ?1 ORDER BY rowid DESC")?;
+            .prepare("SELECT c.id FROM checkpoints c WHERE c.session_id = ?1 AND (c.message_id IS NULL OR EXISTS (SELECT 1 FROM messages m WHERE m.id = c.message_id AND m.rewound = 0)) ORDER BY c.rowid DESC")?;
         let ids = statement
             .query_map([session_id.as_str()], |row| row.get::<_, String>(0))?
             .collect::<Result<Vec<_>, _>>()?;

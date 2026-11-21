@@ -23,18 +23,35 @@ fun PlaceholderScreen(
     route: Route,
     onBack: () -> Unit,
 ) {
+    PlaceholderScreen(
+        title = stringResource(route.title),
+        explanation = stringResource(R.string.placeholder_body),
+        onBack = onBack,
+    )
+}
+
+/**
+ * A screen for a feature the app cannot do yet: its name, one sentence on what it needs, and a back
+ * arrow.
+ */
+@Composable
+fun PlaceholderScreen(
+    title: String,
+    explanation: String,
+    onBack: () -> Unit,
+) {
     Scaffold(
         containerColor = TetherTheme.colors.bg,
         topBar = {
             TetherTopBar(
-                title = stringResource(route.title),
+                title = title,
                 navigationIcon = { BackButton(onBack) },
             )
         },
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding).padding(TetherSpace.space4)) {
             Text(
-                text = stringResource(R.string.placeholder_body),
+                text = explanation,
                 style = MaterialTheme.typography.bodyLarge,
                 color = TetherTheme.colors.text2,
             )

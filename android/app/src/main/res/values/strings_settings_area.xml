@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Main Settings list. -->
+    <string name="settings_area_profile_unset_title">Your name</string>
+    <string name="settings_area_profile_subtitle">Local profile. Stays on this phone.</string>
+    <string name="settings_area_list_models">Models and defaults</string>
+    <string name="settings_area_list_models_unset">No default. New sessions use the first saved key.</string>
+    <string name="settings_area_list_permissions">Permissions</string>
+    <string name="settings_area_list_permissions_mode">Default mode: %1$s</string>
+    <string name="settings_area_list_executors">Executors</string>
+    <string name="settings_area_list_executors_body">Sandbox. Linux mode and CI are not available yet.</string>
+    <string name="settings_area_list_github">GitHub</string>
+    <string name="settings_area_list_mcp">MCP servers</string>
+    <string name="settings_area_list_skills">Skills and memory</string>
+    <string name="settings_area_list_quality">Quality gate</string>
+    <string name="settings_area_list_budgets">Budgets</string>
+    <string name="settings_area_not_available">Not available yet</string>
+    <string name="settings_area_list_notifications">Notifications</string>
+    <string name="settings_area_list_notifications_on">Allowed</string>
+    <string name="settings_area_list_notifications_off">Off in system settings</string>
+    <string name="settings_area_list_privacy">Privacy</string>
+    <string name="settings_area_list_privacy_on">App lock on</string>
+    <string name="settings_area_list_privacy_off">App lock off</string>
+    <string name="settings_area_list_data">Data</string>
+    <string name="settings_area_data_used">%1$s used by projects and sessions</string>
+    <string name="settings_area_data_unknown">Could not read storage</string>
+
+    <!-- Profile. -->
+    <string name="settings_area_profile_title">Profile</string>
+    <string name="settings_area_profile_name">Display name</string>
+    <string name="settings_area_profile_note">Shown in this app only. Stored on this phone.</string>
+    <string name="settings_area_save">Save</string>
+
+    <!-- Models and defaults. -->
+    <string name="settings_area_models_title">Models and defaults</string>
+    <string name="settings_area_models_failed">Could not read the saved models or projects. Try again later.</string>
+    <string name="settings_area_models_defaults">Defaults for new sessions</string>
+    <string name="settings_area_default_model">Default model</string>
+    <string name="settings_area_default_model_unset">Not set. New sessions use the first saved key.</string>
+    <string name="settings_area_reviewer_model">Reviewer model</string>
+    <string name="settings_area_reviewer_model_na">Not available yet. Needs /review, which ships in phase P8.</string>
+    <string name="settings_area_summary_model">Summary model</string>
+    <string name="settings_area_summary_model_na">Not available yet. Needs compaction, which ships in phase P9.</string>
+    <string name="settings_area_models_per_project">Per project</string>
+    <string name="settings_area_uses_app_default">Uses the app default</string>
+    <string name="settings_area_models_none">No models saved. Test the connection in Providers.</string>
+    <string name="settings_area_open_providers">Open Providers</string>
+
+    <!-- Permissions. -->
+    <string name="settings_area_permissions_title">Permissions</string>
+    <string name="settings_area_permissions_failed">Could not read the saved project modes. Try again later.</string>
+    <string name="settings_area_permissions_defaults">Default for new sessions</string>
+    <string name="settings_area_default_mode">Default mode</string>
+    <string name="settings_area_saved_rules">Saved rules</string>
+    <string name="settings_area_saved_rules_na">Not available yet. Needs approval rules, which ship in phase P3.</string>
+    <string name="settings_area_push_guard">Push guard</string>
+    <string name="settings_area_push_guard_na">Not available yet. Needs GitHub pushes, which ship in phase P4.</string>
+
+    <!-- Notifications. -->
+    <string name="settings_area_notifications_title">Notifications</string>
+    <string name="settings_area_notifications_on">Notifications are on for Tether.</string>
+    <string name="settings_area_notifications_off_title">Notifications are off in system settings</string>
+    <string name="settings_area_notifications_off_body">A run that needs approval waits inside the app until you open it. Long runs will not tell you when they finish.</string>
+    <string name="settings_area_allow_notifications">Allow notifications</string>
+    <string name="settings_area_open_system_settings">Open system settings</string>
+    <string name="settings_area_channels">Channels</string>
+    <string name="settings_area_channel_on">On</string>
+    <string name="settings_area_channel_off">Off</string>
+    <string name="settings_area_channel_approvals">Approvals</string>
+    <string name="settings_area_channel_approvals_desc">Allow or deny a command. Heads-up with sound.</string>
+    <string name="settings_area_channel_run_status">Run status</string>
+    <string name="settings_area_channel_run_status_desc">Silent. Shows while a turn runs.</string>
+    <string name="settings_area_channel_finished">Finished turns</string>
+    <string name="settings_area_channel_finished_desc">Default importance.</string>
+    <string name="settings_area_channel_budget">Budget and errors</string>
+    <string name="settings_area_channel_budget_desc">Heads-up when a limit or an error stops work.</string>
+    <string name="settings_area_selected">Selected</string>
+
+    <!-- Privacy and the app lock. -->
+    <string name="settings_area_privacy_title">Privacy</string>
+    <string name="settings_area_privacy_lock">App lock</string>
+    <string name="settings_area_app_lock">Biometric app lock</string>
+    <string name="settings_area_app_lock_body">Asks for your fingerprint or screen lock when Tether starts, and again after 30 seconds in the background.</string>
+    <string name="settings_area_privacy_protects">What the lock protects</string>
+    <string name="settings_area_privacy_protects_body">Sessions, code, and approval requests on this phone. Until the check passes, Tether shows only the lock screen.</string>
+    <string name="settings_area_lock_prompt">Turn on the app lock</string>
+    <string name="settings_area_unlock_prompt">Unlock Tether</string>
+    <string name="settings_area_lock_title">Tether is locked</string>
+    <string name="settings_area_lock_body">Use your fingerprint or screen lock to continue.</string>
+    <string name="settings_area_unlock">Unlock</string>
+
+    <!-- Data and cache. -->
+    <string name="settings_area_data_title">Data</string>
+    <string name="settings_area_data_stored">Stored on this phone</string>
+    <string name="settings_area_data_database">Database</string>
+    <string name="settings_area_data_database_body">Sessions, messages, and settings.</string>
+    <string name="settings_area_data_workspaces">Projects</string>
+    <string name="settings_area_data_workspaces_body">Project folders and their files.</string>
+    <string name="settings_area_data_blobs">Checkpoints</string>
+    <string name="settings_area_data_blobs_body">Copies of files before each change, for rewind.</string>
+    <string name="settings_area_data_cache">Cache</string>
+    <string name="settings_area_update_cache">Update cache</string>
+    <string name="settings_area_clear_update_cache">Clear update cache</string>
+    <string name="settings_area_cache_cleared">Update cache cleared</string>
+    <string name="settings_area_cache_failed">Some update files could not be deleted. Try again.</string>
+    <string name="settings_area_size_unknown">Unknown</string>
+
+    <!-- Executors. -->
+    <string name="settings_area_executors_title">Executors</string>
+    <string name="settings_area_executor_default">Default</string>
+    <string name="settings_area_sandbox">Sandbox</string>
+    <string name="settings_area_sandbox_body">Runs commands in the built-in sandbox.</string>
+    <string name="settings_area_executor_other">Other executors</string>
+    <string name="settings_area_linux_mode">Linux mode</string>
+    <string name="settings_area_linux_mode_na">Not available yet. Needs Linux mode, which ships in phase P7.</string>
+    <string name="settings_area_ci">CI</string>
+    <string name="settings_area_ci_na">Not available yet. Needs CI runs, which ship in phase P6.</string>
+
+    <!-- Screens the app cannot show yet. -->
+    <string name="settings_area_github_title">GitHub</string>
+    <string name="settings_area_github_na_body">Not available yet. Needs GitHub sign-in, which ships in phase P4.</string>
+    <string name="settings_area_mcp_title">MCP servers</string>
+    <string name="settings_area_mcp_na_body">Not available yet. Needs MCP servers, which ship in phase P9.</string>
+    <string name="settings_area_skills_title">Skills and memory</string>
+    <string name="settings_area_quality_title">Quality gate</string>
+    <string name="settings_area_quality_na_body">Not available yet. Needs the quality gate, which ships in phase P8.</string>
+    <string name="settings_area_budgets_title">Budgets</string>
+    <string name="settings_area_budgets_na_body">Not available yet. Needs budgets and pausing, which ship in phase P9.</string>
+</resources>

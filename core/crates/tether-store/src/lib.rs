@@ -10,10 +10,14 @@ mod migrations;
 mod models;
 #[cfg(test)]
 mod models_tests;
+mod projects;
+#[cfg(test)]
+mod projects_tests;
 mod provider_configs;
 #[cfg(test)]
 mod schema_tests;
 mod session_fts;
+mod session_load;
 mod session_search;
 mod sessions;
 #[cfg(test)]
@@ -25,5 +29,6 @@ pub use checkpoints::{BlobStore, Checkpoint, CheckpointFile, SnapshotInput};
 pub use db::Store;
 pub use error::StoreError;
 pub use models::{CATALOG_TTL_MS, catalog_is_fresh};
+pub use projects::{ProjectDefaults, ProjectRecord};
 pub use session_fts::SessionSearchHit;
 pub use sessions::SessionRecord;

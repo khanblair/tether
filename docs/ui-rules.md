@@ -84,6 +84,15 @@ Compact (phone portrait), from top to bottom:
 - Shows repo and branch, uncommitted changes (tap opens the diff), default executor, and recent sessions.
 - Primary action: **New session**. The composer is visible at the bottom so the user can start typing at once.
 
+### New empty project
+- A full screen opened from New project > New empty project. One field, **Project name** (1 to 80 characters, no control characters), a line under it ("Stored on this phone, in a private folder."), and a primary **Create** button that stays disabled until the trimmed name is not empty.
+- A name that is too long or has a control character shows the reason in `danger` under the field as the user types. Create opens the new project's home. A failure to create the folder shows an inline block with **Try again** and creates nothing.
+
+### Starting a session
+- **New session** on a project home takes the first provider that has a saved key and the first model in that provider's saved list, creates the session, and opens it. The composer row shows the model name. The session opens without tools until approvals ship (P3).
+- No provider has a key: no session is created. An inline block says "No provider key yet. Add one to start a session." with **Add a key**, which opens Providers.
+- A key is saved but its model list is empty: no session is created. The block says "Test the connection in Providers so the model list is saved." with **Open Providers**.
+
 ### Session
 - User messages: inset from the left by `space.8`, `surface` background, `radius.md`.
 - Agent text: full width, no background, `type.body-l`.

@@ -19,6 +19,34 @@ fn seeded_store() -> Store {
 }
 
 #[test]
+fn checkpoint_list_hides_rewound_anchors_but_keeps_unanchored_entries() {
+    let root = tempfile::tempdir().unwrap();
+    let blobs = BlobStore::open(root.path().join("blobs")).unwrap();
+    let mut store = seeded_store();
+    let session = SessionId::new("session");
+    let anchor = store.begin_turn(&session, "first", 2).unwrap();
+    let input = [SnapshotInput {
+        path: "note.txt".into(),
+        content: None,
+    }];
+    let anchored = store
+        .save_checkpoint(&session, Some(&anchor), &blobs, &input, 3)
+        .unwrap();
+    let unanchored = store
+        .save_checkpoint(&session, None, &blobs, &input, 4)
+        .unwrap();
+    store.rewind_conversation(&session, &anchor).unwrap();
+    let ids: Vec<_> = store
+        .list_checkpoints(&session)
+        .unwrap()
+        .into_iter()
+        .map(|c| c.id)
+        .collect();
+    assert_eq!(ids, vec![unanchored.id]);
+    assert_ne!(ids, vec![anchored.id]);
+}
+
+#[test]
 fn checkpoint_stores_prior_content_and_deduplicates_blobs() {
     let root = tempfile::tempdir().unwrap();
     let workspace = root.path().join("workspace");

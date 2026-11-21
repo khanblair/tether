@@ -2,15 +2,27 @@ package app.tether.di
 
 import android.content.Context
 import app.tether.core.CoreClient
+import app.tether.core.generated.ProjectRuntime
 import app.tether.core.generated.ProviderSettings
 import app.tether.core.generated.Updater
 import app.tether.core.keystoreSecretVault
 import app.tether.design.ThemeMode
+import app.tether.home.CoreProjectGateway
 import app.tether.home.HomeSources
+import app.tether.home.ProjectGateway
 import app.tether.home.createHomeSources
+import app.tether.memory.MemoryAreaGateways
+import app.tether.memory.createMemoryAreaGateways
 import app.tether.messages.AppMessages
 import app.tether.providers.CoreProviderGateway
 import app.tether.providers.ProviderGateway
+import app.tether.session.CoreSessionGateway
+import app.tether.session.SessionGateway
+import app.tether.session.SessionSettingsGateway
+import app.tether.session.SessionStarter
+import app.tether.session.createSessionSettingsGateway
+import app.tether.settings.PrefsSettingsStore
+import app.tether.settings.createProjectDefaultsGateway
 import app.tether.share.ShareInbox
 import app.tether.theme.PrefsThemeStore
 import app.tether.theme.ThemeController
@@ -43,10 +55,37 @@ class AppModule(
             lazy { ProviderSettings(context.getDatabasePath("tether.db").absolutePath, vault) },
         )
 
+    /** The project list and creation. The runtime opens on the first call, off the main thread. */
+    val projectGateway: ProjectGateway =
+        CoreProjectGateway(
+            lazy { ProjectRuntime(databasePath, workspacesRoot) },
+        )
+
+    /** Session lists and creation. The runtime opens on the first call, off the main thread. */
+    val sessionGateway: SessionGateway by lazy { CoreSessionGateway(databasePath, vault) }
+
+    /** Memory, skills, and vault for the Skills and memory screens. */
+    val memoryArea: MemoryAreaGateways = createMemoryAreaGateways(context.filesDir)
+
+    /** Model, mode, rename, usage, rewind, and message search for the session screens. */
+    val sessionSettings: SessionSettingsGateway by lazy {
+        createSessionSettingsGateway(databasePath, vault)
+    }
+
+    /** Starts a session in a project, choosing the first provider that has a key. */
+    val sessionStarter: SessionStarter by lazy {
+        SessionStarter(
+            providerGateway,
+            sessionGateway,
+            projectDefaults = createProjectDefaultsGateway(databasePath, workspacesRoot),
+            appDefaults = PrefsSettingsStore(context),
+        )
+    }
+
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     /** The data behind the home screens: projects and sessions. Debug and release builds differ. */
-    val home: HomeSources = createHomeSources()
+    val home: HomeSources = createHomeSources(projectGateway, sessionGateway)
 
     /** The update flow, shared by the Needs attention list and the About screen. */
     val updates: UpdatesController by lazy {

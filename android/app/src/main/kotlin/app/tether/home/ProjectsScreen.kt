@@ -22,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.tether.R
 import app.tether.design.TetherIcons
@@ -50,6 +51,10 @@ fun ProjectsScreen(
     var searching by rememberSaveable { mutableStateOf(false) }
     var sheetOpen by rememberSaveable { mutableStateOf(false) }
     val hasProjects = state.totalCount > 0
+    LifecycleResumeEffect(Unit) {
+        viewModel.refresh()
+        onPauseOrDispose {}
+    }
     val toggleSearch = {
         if (searching) {
             searching = false
@@ -68,7 +73,7 @@ fun ProjectsScreen(
             )
         },
         bottomBar = {
-            NewProjectBar(onClick = { sheetOpen = true })
+            if (!state.loading) NewProjectBar(onClick = { sheetOpen = true })
         },
     ) { padding ->
         ProjectsBody(
@@ -142,6 +147,10 @@ private fun ProjectsBody(
     onOpenProject: (String) -> Unit,
     modifier: Modifier,
 ) {
+    if (state.loading) {
+        Box(modifier = modifier.fillMaxSize())
+        return
+    }
     if (state.totalCount == 0) {
         Text(
             text = stringResource(R.string.home_empty_body),

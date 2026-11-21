@@ -12,6 +12,15 @@
     <string name="route_skills_title">Skills and memory</string>
     <string name="route_clone_title">Clone from GitHub</string>
     <string name="route_new_project_title">New empty project</string>
+
+    <!-- New empty project -->
+    <string name="new_project_name_label">Project name</string>
+    <string name="new_project_helper">Stored on this phone, in a private folder.</string>
+    <string name="new_project_too_long">Use 80 characters or fewer.</string>
+    <string name="new_project_control">Use letters and numbers, not control characters.</string>
+    <string name="new_project_failed">The project could not be created.</string>
+    <string name="new_project_try_again">Try again</string>
+    <string name="new_project_create">Create</string>
     <string name="route_import_title">Import a zip</string>
     <string name="route_project_home_title">Project home</string>
     <string name="project_home_missing">Project not found.</string>
@@ -30,6 +39,19 @@
     <string name="project_home_linux">Linux mode</string>
     <string name="project_home_no_executor">Not configured</string>
     <string name="project_home_new_session">New session</string>
+
+    <!-- Project home sessions and starting a session -->
+    <string name="project_home_sessions_title">Sessions</string>
+    <string name="project_home_sessions_empty">No sessions yet.</string>
+    <string name="project_home_no_key">No provider key yet. Add one to start a session.</string>
+    <string name="project_home_add_key">Add a key</string>
+    <string name="project_home_no_models">Test the connection in Providers so the model list is saved.</string>
+    <string name="project_home_open_providers">Open Providers</string>
+    <string name="project_home_start_failed">The session could not be started.</string>
+    <string name="project_home_try_again">Try again</string>
+    <string name="project_session_failed">Stopped with an error</string>
+    <string name="project_session_done">Done</string>
+    <string name="project_session_idle">Idle</string>
     <string name="route_session_title">Session</string>
     <string name="route_diff_title">Diff</string>
     <string name="route_files_title">Files</string>
@@ -41,7 +63,7 @@
     <!-- Shared -->
     <string name="nav_back_label">Back</string>
     <string name="session_unavailable_title">Session</string>
-    <string name="session_unavailable_body">This session is not available. It may have been deleted, or it is sample data.</string>
+    <string name="session_unavailable_body">This session is not available. It may have been deleted.</string>
     <string name="placeholder_body">This screen arrives in a later phase. See the build plan.</string>
 
     <!-- Rust core card (About, debug builds only) -->
@@ -302,6 +324,8 @@
     <string name="updates_problem_download_missing">The downloaded update is no longer there. Download it again.</string>
     <string name="transcript_empty">No messages in this session yet.</string>
     <string name="transcript_load_failed">Could not load this session.</string>
+    <string name="transcript_turn_failed">The reply failed.</string>
+    <string name="transcript_send_failed">The message could not be sent.</string>
     <string name="transcript_you">You</string>
     <string name="transcript_agent">Agent</string>
     <string name="transcript_tool">Tool</string>
@@ -317,9 +341,6 @@
     <string name="status_mode_auto">Auto</string>
     <string name="status_mode_bypass">Bypass</string>
     <string name="status_unknown">Unknown</string>
-    <string name="status_percent">%1$d%%</string>
-    <string name="status_cost">$%1$s</string>
-    <string name="status_line">%1$s · %2$s · %3$s · %4$s</string>
     <string name="composer_image_staged">Image selected. Sending images is not available yet.</string>
     <string name="composer_image_remove">Remove image</string>
     <string name="composer_voice">Speak</string>

@@ -78,7 +78,7 @@ Why one process: the core holds session state in memory and SQLite; splitting it
 
 Rule: only `tether-engine` coordinates other crates. Leaf crates never call each other except where the table lists the dependency.
 
-Status: `tether-types`, `tether-engine`, `tether-ffi`, `tether-store`, `tether-secrets`, and `tether-providers` contain code. The other crates are empty libraries that hold their place in the workspace (see project-structure.md, Present now). P1-11 adds a plain text session actor. P1-15 adds store queries for sessions by project, title, and saved non-rewound text, plus rename. The UI and UniFFI entry points still follow. Each actor owns one store connection and serializes its turns on a Tokio channel. It saves the user message before the request and saves each reply batch before emitting it. A process restart marks an active session `Interrupted`; the transcript, including any saved partial reply, remains readable. `SessionRuntime` exposes create, load, transcript, open, send, and interrupt through UniFFI. The transcript and composer screens follow in P1-12 and P1-13.
+Status: `tether-types`, `tether-engine`, `tether-ffi`, `tether-store`, `tether-secrets`, and `tether-providers` contain code. The other crates are empty libraries that hold their place in the workspace (see project-structure.md, Present now). P1-11 adds a plain text session actor. P1-15 adds store queries for sessions by project, title, and saved non-rewound text, plus rename. Each actor owns one store connection and serializes its turns on a Tokio channel. It saves the user message before the request and saves each reply batch before emitting it. A process restart marks an active session `Interrupted`; the transcript, including any saved partial reply, remains readable. `SessionRuntime` exposes create, load, list, transcript, open, send, and interrupt through UniFFI. It also reads the first model id in a provider's saved catalog. `ProjectRuntime` creates, lists, and loads projects. Project creation adds the database row and workspace directory, and removes the row if directory creation fails. The P1-22 Android screens follow.
 
 `tether-tools` (P2-04, P2-05): `ReadTools` uses the workspace path guard for UTF-8 file reads, direct directory lists, and indexed glob and regex grep. File reads stop at 1 MiB; results stop at 1,000 entries. The engine registers these read tools. `EditTools` uses the same guard for write, exact edit, multi-edit, move, and delete. Multi-edit stages replacements in memory and writes once after every exact match succeeds. Temporary files keep text replacement atomic.
 
@@ -248,7 +248,7 @@ SQLite database at `files/db/tether.db`, WAL mode, foreign keys on. IDs are ULID
 
 | Table | Columns | Notes |
 |---|---|---|
-| `projects` | id, name, path, remote_url, default_branch, default_provider, default_model_id, default_mode, created_at, opened_at | `path` is relative to `files/workspaces/`; a `CHECK` rejects empty, absolute, and `..` paths |
+| `projects` | id, name, path, remote_url, default_branch, default_provider, default_model_id, default_mode, created_at, opened_at | `path` is a safe name relative to `files/workspaces/`, with the last 8 ULID characters as a suffix; a `CHECK` rejects empty, absolute, and `..` paths. Project lists count sessions and sort by newest session activity |
 | `sessions` | id, project_id, title, provider, model_id, mode, status, created_at, updated_at, cost_micros, tokens_in, tokens_out | `cost_micros` is USD × 1,000,000 |
 | `messages` | id, session_id, role, seq, created_at, rewound | role: user, assistant, tool, system_note |
 | `message_parts` | id, message_id, seq, kind, body_json | kind: text, image_ref, tool_call, tool_result, thinking, compaction_summary |
@@ -284,12 +284,15 @@ The core's API is the UniFFI surface. There are no HTTP routes.
 | Function | Purpose |
 |---|---|
 | `init(config: CoreConfig, sink: EventSink, platform: PlatformCallbacks)` | Start the core |
-| `list_projects()` / `create_project(spec)` / `clone_project(url, opts)` / `import_zip(fd)` / `delete_project(id)` | Projects |
-| `list_sessions(project_id)` / `create_session(project_id, opts)` / `load_session(id)` | Sessions |
+| `ProjectRuntime.create_project(name)` / `list_projects()` / `load_project(id)` | Save a project and its workspace, then read project details; clone, import, and user deletion follow |
+| `SessionRuntime.list_sessions(project_id)` / `create_session(project_id, provider, model_id)` / `load_session(id)` / `default_model(provider)` | List or open sessions and read the first saved model id |
 | `send_message(session_id, input: UserInput)` | Start a turn |
 | `approve(tool_call_id, scope: ApprovalScope)` / `deny(tool_call_id, reason)` | Approvals |
 | `interrupt(session_id)` / `resume(session_id)` | Turn control |
-| `set_mode(session_id, mode)` / `set_model(session_id, model)` | Session settings |
+| `SessionRuntime.set_session_mode(session_id, mode)` / `set_session_model(session_id, provider, model_id)` / `rename_session(session_id, title)` / `list_models(provider)` / `session_usage(session_id)` | Session settings and the model picker; model and mode changes are refused while a turn runs, and the app reopens its `SessionRunner` after one |
+| `SessionRuntime.search_sessions(project_id, query)` / `search_transcripts(phrase, limit)` | Title and text search in one project, and full-text search of saved messages (limit 50) |
+| `ProjectRuntime.set_project_defaults(project_id, provider, model_id, mode)` | A project's default model pair and permission mode; the pair is set or cleared together |
+| `MemoryRuntime` (`read`, `apply`, `frozen_block`), `SkillsRuntime` (`list`, `read`), `VaultRuntime` (`search`, `read`, `write`, `append`, `links`, `orphans`, `map`) | Capped memory files, skill folders (reading only), and the Markdown vault; each takes its directory and rejects escapes and symlinked files. Skill install and approval, vault sync, and import follow |
 | `list_checkpoints(session_id)` / `rewind(checkpoint_id, what)` | Rewind |
 | `get_diff(project_id, scope)` / `apply_hunk_action(...)` | Diff review |
 | `run_command(project_id, cmd, executor)` | User-initiated run |
@@ -325,7 +328,7 @@ All under the app's private `files/` directory unless noted.
 
 | Path | Contents |
 |---|---|
-| `workspaces/<project-id>/` | Project files and `.git` |
+| `workspaces/<project-path>/` | Project files and `.git`; the path uses a name slug and a ULID suffix |
 | `db/tether.db` | SQLite database |
 | `blobs/<aa>/<hash>` | Content-addressed blobs |
 | `secrets/<ref>.bin` | The bytes `SecretsPlatform.wrap` returned (AES-GCM with a Keystore key: 12-byte IV, ciphertext, tag), after a 5-byte header (`TSEC` and a format version). `<ref>` allows only `a-z`, `0-9`, `-`, and `_`, up to 64 characters |
@@ -418,7 +421,7 @@ Two separate systems: the in-app quality gate that checks the user's code, and t
 
 Not in CI yet: instrumented and Compose UI tests on an emulator (run locally with `just test-device`), the `bench` job, and the nightly live provider smoke tests. Slop-lint does not yet check code comments or commit messages.
 
-Other workflows: `pr.yml` runs the `issue-link` check on every pull request and on every edit of its description. `pages.yml` builds and deploys the docs site on changes to docs, images, tokens, or the site tools. `release.yml` runs on every push to `main`. When the version in `core/Cargo.toml` has no tag yet, it publishes a signed GitHub Release (see development.md section 13).
+Other workflows: `pr.yml` runs the `issue-link` check on every pull request and on every edit of its description. `pages.yml` builds and deploys the docs site on changes to docs, images, tokens, or the site tools. `release.yml` runs on every push to `main` that changes more than docs. It picks the next version with `tools/release-version.sh` and publishes a signed GitHub Release (see development.md section 13).
 
 `tools/slop-lint` reuses the same rule data as the in-app gate, so the product and the repo follow one definition of AI slop.
 

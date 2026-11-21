@@ -1,6 +1,10 @@
 package app.tether.nav
 
 import android.net.Uri
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
@@ -10,10 +14,12 @@ import app.tether.home.AttentionScreen
 import app.tether.home.DashboardScreen
 import app.tether.home.DashboardViewModel
 import app.tether.home.NewProjectChoice
+import app.tether.home.NewProjectScreen
+import app.tether.home.NewProjectViewModel
 import app.tether.home.ProjectHomeScreen
+import app.tether.home.ProjectHomeViewModel
 import app.tether.home.ProjectsScreen
 import app.tether.home.ProjectsViewModel
-import app.tether.home.latestSessionForProject
 
 /** The start screens: Home, Projects, and Needs attention. */
 internal fun NavGraphBuilder.homeRoutes(
@@ -72,23 +78,61 @@ private fun NavGraphBuilder.projectRoutes(
             onNewProject = { choice -> nav.go(choice.route()) },
         )
     }
+    projectHomeRoute(module, nav)
+    newProjectRoute(module, nav)
+}
+
+/** One project's home, with its sessions and the New session button. */
+private fun NavGraphBuilder.projectHomeRoute(
+    module: AppModule,
+    nav: TetherNav,
+) {
     composable(Routes.PROJECT_HOME) { entry ->
-        val id = entry.arguments?.getString("projectId")
-        val project =
-            module.home.projects
-                .projects()
-                .firstOrNull { it.id == id }
+        val id = entry.arguments?.getString("projectId").orEmpty()
+        val home: ProjectHomeViewModel =
+            viewModel(
+                key = id,
+                factory =
+                    ProjectHomeViewModel.factory(
+                        id,
+                        module.home.projects,
+                        module.home.sessions,
+                        module.sessionStarter,
+                    ),
+            )
+        val state by home.state.collectAsStateWithLifecycle()
+        LifecycleResumeEffect(home) {
+            home.refresh()
+            onPauseOrDispose {}
+        }
+        LaunchedEffect(home) {
+            home.openedSessions.collect { nav.open("session/${Uri.encode(it)}") }
+        }
         ProjectHomeScreen(
-            project = project,
-            lastSession =
-                project?.let {
-                    latestSessionForProject(
-                        it,
-                        module.home.sessions.sessions(),
-                    )
-                },
+            state = state,
             onBack = nav::back,
-            onNewSession = { nav.go(Route.NewSession) },
+            onOpenSession = { nav.open("session/${Uri.encode(it)}") },
+            onNewSession = home::startSession,
+            onOpenProviders = { nav.go(Route.Providers) },
+        )
+    }
+}
+
+/** New empty project. Create replaces this screen with the new project's home. */
+private fun NavGraphBuilder.newProjectRoute(
+    module: AppModule,
+    nav: TetherNav,
+) {
+    composable(Route.NewProject.path) {
+        val create: NewProjectViewModel =
+            viewModel(factory = NewProjectViewModel.factory(module.projectGateway))
+        val state by create.state.collectAsStateWithLifecycle()
+        NewProjectScreen(
+            state = state,
+            onBack = nav::back,
+            onNameChange = create::onNameChange,
+            onCreate = create::create,
+            onCreated = { id -> nav.replace(projectHomePath(id), Route.NewProject) },
         )
     }
 }

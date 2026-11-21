@@ -2,8 +2,16 @@
 
 //! P0 holds only the version and the event hand-off used by the FFI layer.
 
+mod budget;
 mod checkpoint_capture;
+pub mod commands;
+pub mod config;
+pub mod context;
+pub mod executors;
+pub mod network;
+pub mod notify;
 pub mod permissions;
+pub mod prompt;
 mod provider_connection;
 mod rewind;
 mod session;
@@ -18,12 +26,21 @@ mod session_tool_tests;
 mod session_usage_tests;
 mod tool_loop;
 pub mod updates;
+mod usage;
 
 pub use checkpoint_capture::capture_checkpoint;
 pub use provider_connection::{ProviderCheck, check_provider, provider_test_targets};
 pub use rewind::{RewindError, RewindScope, rewind_checkpoint, rewind_conversation_only};
-pub use session::{ProviderFactory, SessionActor, SessionActorError, SessionHandle, ToolRuntime};
+pub use session::{
+    ProviderFactory, SessionActor, SessionActorError, SessionActorOptions, SessionHandle,
+    ToolRuntime,
+};
 pub use session_provider::provider_for;
+pub use tool_loop::git_tools::{
+    CommitGate, CommitInput, GateFinding, GateSeverity, GitIdentityReader, GitTools,
+    GithubClientFactory, TransportFactory,
+};
+pub use tool_loop::session_tools::{SESSION_TOOL_SPECS, SessionToolSpec, SessionTools};
 pub use tool_loop::{
     ExecuteContext, PrepareContext, PreparedCall, RegistryError, ToolHandler, ToolOutput,
     ToolRegistry,
@@ -50,6 +67,41 @@ pub struct ApprovalRequest {
     pub target: String,
 }
 
+/// A question the platform may answer while a tool turn waits.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct QuestionRequest {
+    /// Session that owns the question.
+    pub session_id: SessionId,
+    /// Provider call identifier.
+    pub tool_call_id: ToolCallId,
+    /// Question text.
+    pub question: String,
+    /// Tappable answer options.
+    pub options: Vec<String>,
+    /// Whether typed answers are accepted.
+    pub allow_free_text: bool,
+}
+
+/// The answer returned by the platform for a question.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Answer {
+    /// Text selected or entered by the user.
+    Text(String),
+    /// The question ended without an answer.
+    Cancelled,
+}
+
+/// Resolves questions without blocking the tool loop thread.
+pub trait Asker: Send + Sync {
+    /// Reports whether the platform can display an interactive question.
+    fn interactive(&self) -> bool {
+        true
+    }
+
+    /// Waits for an answer or resolves as cancelled when cancellation fires.
+    fn ask(&self, request: QuestionRequest, cancel: CancellationToken) -> BoxFuture<'_, Answer>;
+}
+
 /// The user's answer to an approval request.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ApprovalAnswer {
@@ -58,8 +110,18 @@ pub enum ApprovalAnswer {
         /// Whether the user selected Always allow.
         always: bool,
     },
+    /// The call may run after an approval notification action.
+    AllowFromNotification {
+        /// Whether the user selected Always allow.
+        always: bool,
+    },
     /// The call must not run.
     Deny {
+        /// Optional user-provided explanation.
+        reason: Option<String>,
+    },
+    /// The call was denied from an approval notification.
+    DenyFromNotification {
         /// Optional user-provided explanation.
         reason: Option<String>,
     },

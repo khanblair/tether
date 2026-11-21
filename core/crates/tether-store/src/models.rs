@@ -20,6 +20,23 @@ pub fn catalog_is_fresh(fetched_at_ms: i64, now_ms: i64) -> bool {
 }
 
 impl Store {
+    /// Returns the cached price for one provider model.
+    ///
+    /// # Errors
+    /// Returns an error when SQLite fails or a cached row has invalid stored data.
+    pub fn model_price(
+        &self,
+        provider: Provider,
+        model_id: &str,
+    ) -> Result<Option<ModelPrice>, StoreError> {
+        self.models(provider).map(|models| {
+            models
+                .into_iter()
+                .find(|model| model.id == model_id)
+                .and_then(|model| model.price)
+        })
+    }
+
     /// Replaces the whole cached list for `provider` and stamps it `fetched_at_ms`.
     ///
     /// # Errors

@@ -1,9 +1,18 @@
 //! Events the core sends to the platform layer.
 
 use crate::{
-    ConnectionStatus, CoreError, MessageId, Provider, SessionId, SessionStatus, ToolCallId,
-    ToolCallStatus, UsageSnapshot,
+    ConnectionStatus, CoreError, MessageId, Plan, Provider, SessionId, SessionStatus, TodoItem,
+    ToolCallId, ToolCallStatus, UsageSnapshot,
 };
+
+/// The limit scope that produced a budget event.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BudgetScope {
+    /// The current session's limit.
+    Session,
+    /// The selected UTC day's limit.
+    Day,
+}
 
 /// One event emitted by the core. Changing this enum changes the FFI surface;
 /// regenerate the Kotlin bindings with `just bindings`.
@@ -96,6 +105,35 @@ pub enum CoreEvent {
         /// How it ended.
         status: ToolCallStatus,
     },
+    /// The session checklist changed.
+    TodoUpdated {
+        /// The session whose checklist changed.
+        session_id: SessionId,
+        /// The complete replacement checklist.
+        items: Vec<TodoItem>,
+    },
+    /// The model asked the user a question.
+    QuestionAsked {
+        /// The session that owns the question.
+        session_id: SessionId,
+        /// The call waiting for an answer.
+        tool_call_id: ToolCallId,
+        /// The question text.
+        question: String,
+        /// Optional tappable answers.
+        options: Vec<String>,
+        /// Whether the user may type an answer.
+        allow_free_text: bool,
+    },
+    /// The model submitted a plan for review.
+    PlanReady {
+        /// The session that owns the plan.
+        session_id: SessionId,
+        /// The call that submitted the plan.
+        tool_call_id: ToolCallId,
+        /// The proposed plan.
+        plan: Plan,
+    },
     /// Session totals changed.
     UsageUpdated {
         /// The session the totals belong to.
@@ -136,6 +174,41 @@ pub enum CoreEvent {
         provider: Provider,
         /// Its new state.
         status: ConnectionStatus,
+    },
+    /// A budget crossed its warning threshold.
+    BudgetWarning {
+        /// The session about to make a request.
+        session_id: SessionId,
+        /// The limit that was crossed.
+        scope: BudgetScope,
+        /// Integer percentage of the limit already spent.
+        percent: u8,
+        /// Amount spent in USD micros.
+        spent_micros: u64,
+        /// Configured limit in USD micros.
+        limit_micros: u64,
+    },
+    /// A budget reached its limit and the session is paused.
+    BudgetReached {
+        /// The session that was paused.
+        session_id: SessionId,
+        /// The limit that was reached.
+        scope: BudgetScope,
+        /// Amount spent in USD micros.
+        spent_micros: u64,
+        /// Configured limit in USD micros.
+        limit_micros: u64,
+    },
+    /// A context range was replaced by a saved summary.
+    ContextCompacted {
+        /// The session that was compacted.
+        session_id: SessionId,
+        /// The saved summary message.
+        summary_message_id: MessageId,
+        /// Estimated or reported tokens before compaction.
+        tokens_before: u32,
+        /// Estimated tokens after compaction.
+        tokens_after: u32,
     },
 }
 

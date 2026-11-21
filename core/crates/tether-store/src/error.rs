@@ -131,6 +131,18 @@ pub enum StoreError {
     /// A stored sequence or usage counter does not fit the public type.
     #[error("session counter is out of range")]
     SessionCounterOverflow,
+    /// A saved plan call has an unexpected shape.
+    #[error("saved plan is invalid")]
+    InvalidPlan,
+    /// A budget is below one cent or above ten thousand dollars.
+    #[error("budget is outside the supported range")]
+    InvalidBudget,
+    /// A compaction threshold is outside the supported range.
+    #[error("context compaction threshold is outside the supported range")]
+    InvalidContextThreshold,
+    /// A usage query used an invalid UTC date.
+    #[error("usage day is invalid")]
+    InvalidDay,
     /// A transient screen state was offered for storage. Only a finished test result is saved.
     #[error("provider status {status} is screen state and is not stored")]
     TransientStatus {

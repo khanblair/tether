@@ -74,6 +74,19 @@ pub struct SessionUsageView {
     pub tokens_out: u64,
     /// Cost in USD micros.
     pub cost_micros: u64,
+    /// False when at least one response had no known model price.
+    pub price_known: bool,
+}
+
+/// One section of the current system prompt.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct PromptSectionView {
+    /// Stable section name.
+    pub name: String,
+    /// Character count.
+    pub chars: u32,
+    /// Approximate token count.
+    pub approx_tokens: u32,
 }
 
 impl From<UsageSnapshot> for SessionUsageView {
@@ -82,6 +95,7 @@ impl From<UsageSnapshot> for SessionUsageView {
             tokens_in: usage.tokens_in,
             tokens_out: usage.tokens_out,
             cost_micros: usage.cost_micros,
+            price_known: true,
         }
     }
 }

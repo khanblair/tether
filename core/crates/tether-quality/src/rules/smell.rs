@@ -163,7 +163,7 @@ fn parameter_count(ctx: &RuleContext<'_>) -> Vec<Finding> {
                 .map_or(0, |node| {
                     node_text(node, &parsed.source)
                         .split(',')
-                        .filter(|part| !part.trim().is_empty() && !part.contains('='))
+                        .filter(|part| !part.trim().is_empty())
                         .count() as u32
                 });
             let start = line(function);

@@ -52,6 +52,8 @@ tree-sitter-bash = "0.25"
 similar = "3"
 toml = "1"
 tar = "0.4"
+zip = { version = "9", default-features = false, features = ["deflate"] }
+ignore = "0.4"
 flate2 = "1"
 portable-pty = "0.9"
 tether-sandbox = { path = "crates/tether-sandbox" }

@@ -1,5 +1,6 @@
 //! Signed runtime pack manifests and streaming verification.
 
+use std::collections::BTreeMap;
 use std::fmt;
 use std::io::Write;
 
@@ -31,6 +32,25 @@ pub struct PackEntry {
     pub entry: String,
     /// Files included in the pack.
     pub files: Vec<PackFile>,
+    /// Read-only support folders mounted into the guest.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub mounts: Vec<PackMount>,
+    /// Safe environment variables supplied by the pack.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub env: BTreeMap<String, String>,
+    /// Arguments inserted after the program name.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub args_prefix: Vec<String>,
+}
+
+/// A read-only support folder from a runtime pack.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct PackMount {
+    /// Relative folder path inside the installed pack.
+    pub path: String,
+    /// Absolute guest path that receives the folder.
+    pub guest: String,
 }
 
 /// One file listed in a runtime pack.
@@ -178,9 +198,66 @@ pub(crate) fn validate_manifest(manifest: &PackManifest) -> Result<(), PackError
         for file in &pack.files {
             validate_file(&pack.id, file, &mut paths)?;
         }
+        validate_mounts(pack)?;
+        validate_env(pack)?;
         if !paths.contains(&pack.entry) {
             return Err(PackError::Manifest(format!(
                 "{}: entry not listed",
+                pack.id
+            )));
+        }
+    }
+    Ok(())
+}
+
+fn validate_mounts(pack: &PackEntry) -> Result<(), PackError> {
+    let mut guests = std::collections::BTreeSet::new();
+    for mount in &pack.mounts {
+        validate_path(&pack.id, &mount.path)?;
+        if !guests.insert(&mount.guest) {
+            return Err(PackError::Manifest(format!(
+                "{}: duplicate mount guest {}",
+                pack.id, mount.guest
+            )));
+        }
+        validate_guest_path(&pack.id, &mount.guest)?;
+    }
+    Ok(())
+}
+
+fn validate_guest_path(id: &str, guest: &str) -> Result<(), PackError> {
+    let path = std::path::Path::new(guest);
+    if !path.is_absolute()
+        || path.components().any(|component| {
+            matches!(component, std::path::Component::ParentDir)
+                || matches!(component, std::path::Component::CurDir)
+        })
+        || guest == "/workspace"
+        || guest == "/tmp"
+        || guest.starts_with("/workspace/")
+        || guest.starts_with("/tmp/")
+    {
+        return Err(PackError::Manifest(format!("{id}: mount guest rejected")));
+    }
+    Ok(())
+}
+
+fn validate_env(pack: &PackEntry) -> Result<(), PackError> {
+    for (name, value) in &pack.env {
+        let mut bytes = name.bytes();
+        let valid = bytes
+            .next()
+            .is_some_and(|byte| byte.is_ascii_uppercase() || byte == b'_')
+            && bytes.all(|byte| byte.is_ascii_uppercase() || byte.is_ascii_digit() || byte == b'_');
+        if !valid || matches!(name.as_str(), "HOME" | "PATH" | "TMPDIR" | "LANG") {
+            return Err(PackError::Manifest(format!(
+                "{}: environment name rejected",
+                pack.id
+            )));
+        }
+        if value.chars().count() > 256 {
+            return Err(PackError::Manifest(format!(
+                "{}: environment value too long",
                 pack.id
             )));
         }

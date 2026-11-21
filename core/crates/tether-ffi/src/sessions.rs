@@ -1,22 +1,26 @@
 //! UniFFI entry point for session creation, transcript reads, and plain chat turns.
 
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
-use tether_engine::{ProviderFactory, SessionActor, SessionHandle, ToolRuntime, provider_for};
+use tether_engine::prompt::PromptSources;
+use tether_engine::{ProviderFactory, SessionHandle, provider_for};
 use tether_secrets::SecretRef;
-use tether_store::{BlobStore, SessionRecord, Store};
+use tether_store::Store;
 use tether_types::{CoreError, ModelRef, PermissionMode, ProjectId, Provider, SessionId};
-use tether_workspace::PathGuard;
 
 use crate::approvals::ApprovalBroker;
 use crate::{
     CheckpointView, EventSink, MessageView, ProviderView, RewindScopeView, SecretVault,
-    SessionRecordView,
+    SendOutcomeView, SessionRecordView,
 };
 
+#[path = "sessions/open.rs"]
+mod open;
+#[path = "sessions/prompt.rs"]
+mod prompt;
 #[path = "sessions/ux.rs"]
 mod ux;
 use ux::now_ms;
@@ -48,6 +52,12 @@ pub enum SessionRuntimeError {
     /// Bypass is only available after the app confirms it in memory.
     #[error("bypass needs confirmation")]
     BypassNeedsConfirmation,
+    /// Global instructions exceed the 32 KiB cap.
+    #[error("global instructions exceed their character cap")]
+    InstructionsTooLong,
+    /// Plan execution needs a working mode other than Plan or Bypass.
+    #[error("working mode must not be Plan or Bypass")]
+    InvalidWorkingMode,
 }
 
 /// Owns the process runtime. Reopening it marks unfinished turns as interrupted.
@@ -58,7 +68,11 @@ pub struct SessionRuntime {
     sink: Arc<dyn EventSink>,
     pub(crate) runtime: Arc<tokio::runtime::Runtime>,
     pub(crate) runners: Mutex<HashMap<SessionId, Arc<SessionRunner>>>,
+    pub(crate) project_roots: Mutex<HashMap<SessionId, PathBuf>>,
     pub(crate) broker: Arc<ApprovalBroker>,
+    files_root: PathBuf,
+    pub(crate) network: Arc<tether_engine::network::NetworkControl>,
+    pub(crate) notify: Arc<crate::notify::NotifyState>,
 }
 
 #[uniffi::export]
@@ -82,13 +96,18 @@ impl SessionRuntime {
             .enable_all()
             .build()
             .map_err(|_| SessionRuntimeError::Unavailable)?;
+        let files_root = prompt::files_root(Path::new(database_path));
         Ok(Arc::new(Self {
             database_path: database_path.into(),
             vault,
             sink,
             runtime: Arc::new(runtime),
             runners: Mutex::new(HashMap::new()),
+            project_roots: Mutex::new(HashMap::new()),
             broker: Arc::new(ApprovalBroker::new()),
+            files_root,
+            network: Arc::new(tether_engine::network::NetworkControl::new()),
+            notify: Arc::new(crate::notify::NotifyState::new()),
         }))
     }
 
@@ -237,76 +256,31 @@ impl SessionRuntime {
 }
 
 impl SessionRuntime {
-    fn open(
-        &self,
-        session_id: &str,
-        workspaces_root: Option<&Path>,
-    ) -> Result<Arc<SessionRunner>, SessionRuntimeError> {
-        let id = SessionId::new(session_id);
-        let mut runners = self
-            .runners
-            .lock()
-            .map_err(|_| SessionRuntimeError::Unavailable)?;
-        if let Some(existing) = runners.get(&id) {
-            return Ok(Arc::clone(existing));
-        }
-        let store = self.store()?;
-        let session = store
-            .load_session(&id)
-            .map_err(|_| SessionRuntimeError::Unavailable)?
-            .ok_or(SessionRuntimeError::NotFound)?;
-        provider_key(&self.vault, session.provider)?;
-        let provider_factory = session_provider_factory(Arc::clone(&self.vault), session.provider);
-        let sink: Arc<dyn tether_engine::EventSink> =
-            Arc::new(crate::callbacks::SinkAdapter(Arc::clone(&self.sink)));
-        let (actor, handle) = if let Some(root) = workspaces_root {
-            let tools = session_tool_runtime(&store, &session, root, Arc::clone(&self.broker))?;
-            SessionActor::new_with_tool_runtime(store, &id, provider_factory, sink, tools)
-        } else {
-            SessionActor::new_with_provider_factory(store, &id, provider_factory, sink)
-        }
-        .map_err(|_| SessionRuntimeError::Unavailable)?;
-        self.runtime.spawn(actor.run());
-        let runner = Arc::new(SessionRunner {
-            handle,
-            runtime: Arc::clone(&self.runtime),
-            valid: AtomicBool::new(true),
-        });
-        runners.insert(id, Arc::clone(&runner));
-        Ok(runner)
+    pub(crate) fn session_sink(&self) -> Arc<dyn tether_engine::EventSink> {
+        Arc::new(crate::notify::SessionSink {
+            sink: Arc::clone(&self.sink),
+            state: Arc::clone(&self.notify),
+        })
     }
+
     pub(crate) fn store(&self) -> Result<Store, SessionRuntimeError> {
         Store::open(Path::new(&self.database_path)).map_err(|_| SessionRuntimeError::Unavailable)
     }
-}
 
-fn session_tool_runtime(
-    store: &Store,
-    session: &SessionRecord,
-    root: &Path,
-    approver: Arc<ApprovalBroker>,
-) -> Result<ToolRuntime, SessionRuntimeError> {
-    let root_guard = PathGuard::new(root).map_err(|_| SessionRuntimeError::Unavailable)?;
-    let project_path = store
-        .project_path(&session.project_id)
-        .map_err(|_| SessionRuntimeError::Unavailable)?
-        .ok_or(SessionRuntimeError::Unavailable)?;
-    let project_root = root_guard
-        .resolve(&project_path)
-        .map_err(|_| SessionRuntimeError::Unavailable)?;
-    let guard = PathGuard::new(project_root).map_err(|_| SessionRuntimeError::Unavailable)?;
-    let blob_root = root
-        .parent()
-        .ok_or(SessionRuntimeError::Unavailable)?
-        .join("blobs");
-    let blobs = BlobStore::open(blob_root).map_err(|_| SessionRuntimeError::Unavailable)?;
-    Ok(ToolRuntime {
-        guard,
-        blobs,
-        approver,
-        mode: Arc::new(Mutex::new(session.mode)),
-        handlers: Vec::new(),
-    })
+    fn global_instructions_path(&self) -> PathBuf {
+        self.files_root.join("instructions").join("GLOBAL.md")
+    }
+
+    fn prompt_sources(&self, project_name: &str, project_root: Option<PathBuf>) -> PromptSources {
+        PromptSources {
+            project_name: project_name.to_owned(),
+            project_root,
+            memory_root: Some(self.files_root.join("memory")),
+            vault_root: Some(self.files_root.join("memory").join("vault")),
+            global_instructions_path: Some(self.global_instructions_path()),
+            ..PromptSources::default()
+        }
+    }
 }
 
 fn provider_key(
@@ -364,6 +338,39 @@ impl SessionRunner {
                 tether_engine::SessionActorError::EmptyMessage => SessionRuntimeError::EmptyInput,
                 _ => SessionRuntimeError::Unavailable,
             })
+    }
+
+    /// Queues a turn and returns resolved and skipped file mentions.
+    ///
+    /// # Errors
+    /// Returns an error for empty input, a stopped actor, or unavailable storage.
+    pub fn send_message_with_outcome(
+        &self,
+        text: String,
+    ) -> Result<SendOutcomeView, SessionRuntimeError> {
+        if !self.valid.load(Ordering::Acquire) {
+            return Err(SessionRuntimeError::Unavailable);
+        }
+        self.runtime
+            .block_on(self.handle.send_message_with_mentions(text))
+            .map(Into::into)
+            .map_err(|error| match error {
+                tether_engine::SessionActorError::EmptyMessage => SessionRuntimeError::EmptyInput,
+                _ => SessionRuntimeError::Unavailable,
+            })
+    }
+
+    /// Clears future model context while preserving the transcript.
+    ///
+    /// # Errors
+    /// Returns an error when the actor is stopped or storage is unavailable.
+    pub fn clear_context(&self) -> Result<(), SessionRuntimeError> {
+        if !self.valid.load(Ordering::Acquire) {
+            return Err(SessionRuntimeError::Unavailable);
+        }
+        self.runtime
+            .block_on(self.handle.clear_context())
+            .map_err(|_| SessionRuntimeError::Unavailable)
     }
 
     /// Cancels the active turn. Saved text remains in the transcript.

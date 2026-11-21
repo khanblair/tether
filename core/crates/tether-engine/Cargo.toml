@@ -23,6 +23,12 @@ thiserror.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true
 
+tether-sandbox = { path = "../tether-sandbox" }
+tether-linux = { path = "../tether-linux" }
+tether-vcs = { path = "../tether-vcs" }
+
+toml.workspace = true
+
 [dev-dependencies]
 rusqlite.workspace = true
 tokio = { workspace = true, features = ["net", "io-util", "test-util"] }

@@ -50,6 +50,61 @@ fn session_list_orders_activity_and_rejects_unknown_project() {
 }
 
 #[test]
+fn global_instructions_round_trip_with_cap_and_removal() {
+    let dir = tempfile::tempdir().unwrap();
+    let db = dir.path().join("tether.db");
+    Store::open(&db).unwrap();
+    let vault = SecretVault::new(
+        dir.path().join("secrets").to_string_lossy().into_owned(),
+        Arc::new(PlainPlatform),
+    );
+    let runtime = SessionRuntime::new(db.to_str().unwrap(), vault, Arc::new(NoopSink)).unwrap();
+
+    runtime
+        .set_global_instructions(Some("Use the project checks.".into()))
+        .unwrap();
+    assert_eq!(
+        runtime.global_instructions().unwrap(),
+        Some("Use the project checks.".into())
+    );
+    assert!(matches!(
+        runtime.set_global_instructions(Some("x".repeat(32 * 1024 + 1))),
+        Err(SessionRuntimeError::InstructionsTooLong)
+    ));
+    runtime.set_global_instructions(None).unwrap();
+    assert_eq!(runtime.global_instructions().unwrap(), None);
+}
+
+#[test]
+fn prompt_sections_are_ordered_and_have_token_counts() {
+    let dir = tempfile::tempdir().unwrap();
+    let db = dir.path().join("tether.db");
+    let session_id = seeded_session(&db);
+    let vault = SecretVault::new(
+        dir.path().join("secrets").to_string_lossy().into_owned(),
+        Arc::new(PlainPlatform),
+    );
+    let runtime = SessionRuntime::new(db.to_str().unwrap(), vault, Arc::new(NoopSink)).unwrap();
+    let sections = runtime
+        .session_prompt_sections(session_id.as_str())
+        .unwrap();
+
+    assert_eq!(
+        sections.first().map(|section| section.name.as_str()),
+        Some("Base")
+    );
+    assert_eq!(
+        sections.last().map(|section| section.name.as_str()),
+        Some("Date")
+    );
+    assert!(
+        sections
+            .iter()
+            .all(|section| { section.approx_tokens == section.chars.saturating_add(3) / 4 })
+    );
+}
+
+#[test]
 fn default_model_reads_first_saved_model_or_none() {
     let dir = tempfile::tempdir().unwrap();
     let db = dir.path().join("tether.db");
@@ -194,7 +249,7 @@ fn workspace_session_requires_a_saved_project_folder() {
     let store = Store::open(&db).unwrap();
     let saved = store.load_session(&session_id).unwrap().unwrap();
     let tools =
-        session_tool_runtime(&store, &saved, &root, Arc::new(ApprovalBroker::new())).unwrap();
+        session_tool_runtime(&store, &saved, &root, Arc::new(ApprovalBroker::new()), &db).unwrap();
     assert!(!tools.approver.interactive());
     assert!(
         runtime

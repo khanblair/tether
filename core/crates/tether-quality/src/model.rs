@@ -1,6 +1,6 @@
 //! Public data types shared by the quality rules.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 use std::ops::RangeInclusive;
 use std::path::PathBuf;
 
@@ -58,54 +58,6 @@ pub struct Batch {
     pub files: Vec<FileChange>,
 }
 
-/// Configurable rule thresholds and later quality-gate settings.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct Thresholds {
-    /// Maximum function lines.
-    pub function_lines: u32,
-    /// Maximum Kotlin composable lines.
-    pub kotlin_composable_lines: u32,
-    /// Maximum nesting depth.
-    pub nesting: u32,
-    /// Maximum function parameters.
-    pub parameters: u32,
-    /// Maximum ordinary file lines.
-    pub file_lines: u32,
-    /// Maximum test-only file lines.
-    pub test_file_lines: u32,
-    /// Minimum duplicate line run.
-    pub duplicate_lines: u32,
-    /// Maximum fields in a type.
-    pub struct_fields: u32,
-    /// Maximum functions in a type.
-    pub struct_functions: u32,
-    /// Per-rule severity overrides.
-    pub severity_overrides: BTreeMap<String, Severity>,
-    /// Disabled rule identifiers.
-    pub disabled_rules: BTreeSet<String>,
-    /// Maximum findings returned by a registry run.
-    pub max_findings: usize,
-}
-
-impl Default for Thresholds {
-    fn default() -> Self {
-        Self {
-            function_lines: 50,
-            kotlin_composable_lines: 80,
-            nesting: 3,
-            parameters: 5,
-            file_lines: 400,
-            test_file_lines: 800,
-            duplicate_lines: 10,
-            struct_fields: 12,
-            struct_functions: 20,
-            severity_overrides: BTreeMap::new(),
-            disabled_rules: BTreeSet::new(),
-            max_findings: 200,
-        }
-    }
-}
-
 /// Packages and language hints collected from project manifests.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct ProjectManifest {
@@ -128,7 +80,7 @@ pub struct RuleContext<'a> {
     /// The full edit batch.
     pub batch: &'a Batch,
     /// Active thresholds.
-    pub thresholds: &'a Thresholds,
+    pub thresholds: &'a crate::Thresholds,
     /// Project manifest data.
     pub manifest: &'a ProjectManifest,
 }

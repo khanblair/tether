@@ -328,6 +328,21 @@ impl Store {
         })
     }
 
+    /// Returns whether every recorded response for a session had a known price.
+    ///
+    /// # Errors
+    /// Returns an error when the session is absent or SQLite fails.
+    pub fn session_price_known(&self, id: &SessionId) -> Result<bool, StoreError> {
+        self.conn
+            .query_row(
+                "SELECT price_known FROM sessions WHERE id = ?1",
+                [id.as_str()],
+                |row| row.get(0),
+            )
+            .optional()?
+            .ok_or(StoreError::MissingSessionRow)
+    }
+
     /// Marks turns left active by process death as interrupted.
     ///
     /// # Errors

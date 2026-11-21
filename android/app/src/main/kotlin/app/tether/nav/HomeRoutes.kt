@@ -114,6 +114,7 @@ private fun NavGraphBuilder.projectHomeRoute(
             onOpenSession = { nav.open("session/${Uri.encode(it)}") },
             onNewSession = home::startSession,
             onOpenProviders = { nav.go(Route.Providers) },
+            onOpenFiles = { nav.open(filesPath(id)) },
         )
     }
 }

@@ -236,3 +236,22 @@ fn tool_exchange_messages_survive_reopening() {
         vec![assistant, result]
     );
 }
+
+#[test]
+fn session_times_are_saved_and_follow_the_last_change() {
+    let mut store = Store::open_in_memory().unwrap();
+    let project = seed_project(&store);
+    let model = ModelRef {
+        provider: Provider::Anthropic,
+        model_id: "model".into(),
+    };
+    let session = store
+        .create_session(&project, &model, PermissionMode::Ask, 1_000)
+        .unwrap();
+    assert_eq!((session.created_at, session.updated_at), (1_000, 1_000));
+    store
+        .set_session_status(&session.id, SessionStatus::Streaming, 5_000)
+        .unwrap();
+    let loaded = store.load_session(&session.id).unwrap().unwrap();
+    assert_eq!((loaded.created_at, loaded.updated_at), (1_000, 5_000));
+}

@@ -5751,6 +5751,16 @@ data class SessionRecordView (
      * Saved status.
      */
     var `status`: SessionStatusView
+    , 
+    /**
+     * Creation time in Unix milliseconds.
+     */
+    var `createdAtMs`: kotlin.Long
+    , 
+    /**
+     * Time of the last change, in Unix milliseconds.
+     */
+    var `updatedAtMs`: kotlin.Long
     
 ){
     
@@ -5773,6 +5783,8 @@ public object FfiConverterTypeSessionRecordView: FfiConverterRustBuffer<SessionR
             FfiConverterTypeProviderView.read(buf),
             FfiConverterString.read(buf),
             FfiConverterTypeSessionStatusView.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
         )
     }
 
@@ -5782,7 +5794,9 @@ public object FfiConverterTypeSessionRecordView: FfiConverterRustBuffer<SessionR
             FfiConverterString.allocationSize(value.`title`) +
             FfiConverterTypeProviderView.allocationSize(value.`provider`) +
             FfiConverterString.allocationSize(value.`modelId`) +
-            FfiConverterTypeSessionStatusView.allocationSize(value.`status`)
+            FfiConverterTypeSessionStatusView.allocationSize(value.`status`) +
+            FfiConverterLong.allocationSize(value.`createdAtMs`) +
+            FfiConverterLong.allocationSize(value.`updatedAtMs`)
     )
 
     override fun write(value: SessionRecordView, buf: ByteBuffer) {
@@ -5792,6 +5806,8 @@ public object FfiConverterTypeSessionRecordView: FfiConverterRustBuffer<SessionR
             FfiConverterTypeProviderView.write(value.`provider`, buf)
             FfiConverterString.write(value.`modelId`, buf)
             FfiConverterTypeSessionStatusView.write(value.`status`, buf)
+            FfiConverterLong.write(value.`createdAtMs`, buf)
+            FfiConverterLong.write(value.`updatedAtMs`, buf)
     }
 }
 

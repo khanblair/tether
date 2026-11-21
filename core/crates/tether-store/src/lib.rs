@@ -17,6 +17,7 @@ mod provider_configs;
 #[cfg(test)]
 mod schema_tests;
 mod session_fts;
+mod session_load;
 mod session_search;
 mod sessions;
 #[cfg(test)]

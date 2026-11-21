@@ -68,6 +68,9 @@ All components start as **Planned**. Screenshot tests start with the first featu
 | `ModeSheet` | Pick one of five permission modes; Bypass asks for a biometric check. App module | `current`, `onPick`, `enabled` | each mode selected, bypass confirm, disabled while a turn runs | P1 | Built |
 | `SessionMenuSheet` | Rename and Rewind for a session. App module | `onRename`, `onRewind` | default | P1 | Built |
 | `RewindSheet` | Checkpoints with three restore scopes and a confirmation for file scopes. App module | `checkpoints`, `scope`, `onRewind` | list, empty, confirm, error | P2 | Built |
+| `TurnFooter` | The blocks under the transcript: rejected key, rate limit, other failure, stopped, and the thinking label. App module | `problem`, `onRetry`, `onOpenProviders`, `onDismiss` | each problem, stopped, thinking | P1 | Built |
+| `MessageActionsSheet` | Long press on a message opens it; Copy only for now. App module | `onCopy` | default | P1 | Built |
+| `OfflineBanner` | Banner under the status line while the phone has no network. App module | `visible` | hidden, visible | P1 | Built |
 | `SearchScreen` | Message search with scope chips and the match in bold. App module | `query`, `scope`, `hits` | idle, loading, hits, nothing found | P1 | Built |
 | `TetherDialog` | Confirmation dialog | `title`, `body`, `confirm`, `dismiss`, `destructive` | default, destructive | P1 | Planned |
 | `TwoPaneScaffold` | Expanded and large layouts | `primary`, `detail`, `list` | compact, medium, expanded, large | P10 | Planned |

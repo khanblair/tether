@@ -1,10 +1,27 @@
 package app.tether.home
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class ProjectsViewModelTest {
+    private val dispatcher = StandardTestDispatcher()
+
+    @Before
+    fun setUp() = Dispatchers.setMain(dispatcher)
+
+    @After
+    fun tearDown() = Dispatchers.resetMain()
+
     private val projects =
         listOf(
             ProjectSummary("1", "acme-api", "main", 3, lastActivityAt = 1_000L, running = true),
@@ -21,13 +38,44 @@ class ProjectsViewModelTest {
         )
 
     private class FakeProjects(
-        private val items: List<ProjectSummary>,
+        var items: List<ProjectSummary>,
     ) : ProjectsSource {
         override fun projects(): List<ProjectSummary> = items
     }
 
-    private fun viewModel(items: List<ProjectSummary> = projects) =
-        ProjectsViewModel(FakeProjects(items), clock = { 42L })
+    /** A view model whose first read has finished, so the list is ready to check. */
+    private fun viewModel(items: List<ProjectSummary> = projects): ProjectsViewModel {
+        val vm = ProjectsViewModel(FakeProjects(items), clock = { 42L }, io = dispatcher)
+        dispatcher.scheduler.advanceUntilIdle()
+        return vm
+    }
+
+    @Test
+    fun the_list_is_loading_until_the_first_read_finishes() {
+        val vm = ProjectsViewModel(FakeProjects(projects), clock = { 42L }, io = dispatcher)
+        assertTrue(vm.state.value.loading)
+        assertTrue(
+            vm.state.value.projects
+                .isEmpty(),
+        )
+        dispatcher.scheduler.advanceUntilIdle()
+        assertFalse(vm.state.value.loading)
+        assertEquals(4, vm.state.value.totalCount)
+    }
+
+    @Test
+    fun refresh_reads_the_source_again_and_keeps_the_query() {
+        val source = FakeProjects(projects)
+        val vm = ProjectsViewModel(source, clock = { 42L }, io = dispatcher)
+        dispatcher.scheduler.advanceUntilIdle()
+        vm.onQueryChange("tether")
+        source.items = projects + ProjectSummary("5", "tether-web", "main", 0, 9_000L, false)
+        vm.refresh()
+        dispatcher.scheduler.advanceUntilIdle()
+        val state = vm.state.value
+        assertEquals(5, state.totalCount)
+        assertEquals(listOf("tether-web", "tether"), state.projects.map { it.name })
+    }
 
     @Test
     fun the_list_starts_with_every_project_most_recent_first() {

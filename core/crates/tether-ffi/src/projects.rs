@@ -5,9 +5,9 @@ use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use tether_store::{Store, StoreError};
-use tether_types::ProjectId;
+use tether_types::{ModelRef, PermissionMode, ProjectId};
 
-use crate::ProjectView;
+use crate::{PermissionModeView, ProjectView, ProviderView};
 
 /// A project operation failed.
 #[derive(Debug, thiserror::Error, uniffi::Error)]
@@ -15,6 +15,9 @@ pub enum ProjectRuntimeError {
     /// The project name is invalid.
     #[error("invalid project name")]
     InvalidName,
+    /// A default provider and model id were not both set or both absent.
+    #[error("invalid project defaults")]
+    InvalidDefaults,
     /// The requested project does not exist.
     #[error("project not found")]
     NotFound,
@@ -94,6 +97,47 @@ impl ProjectRuntime {
             .map_err(|_| ProjectRuntimeError::Unavailable)?
             .map(Into::into)
             .ok_or(ProjectRuntimeError::NotFound)
+    }
+
+    /// Saves a project's model and permission defaults.
+    ///
+    /// # Errors
+    /// Returns an error for an incomplete model pair, unknown project, or unavailable storage.
+    pub fn set_project_defaults(
+        &self,
+        project_id: String,
+        provider: Option<ProviderView>,
+        model_id: Option<String>,
+        mode: Option<PermissionModeView>,
+    ) -> Result<(), ProjectRuntimeError> {
+        let model = match (provider, model_id) {
+            (Some(provider), Some(model_id)) => Some(ModelRef {
+                provider: provider.into(),
+                model_id,
+            }),
+            (None, None) => None,
+            _ => return Err(ProjectRuntimeError::InvalidDefaults),
+        };
+        self.store()?
+            .set_project_defaults(
+                &ProjectId::new(project_id),
+                model,
+                mode.map(permission_mode),
+            )
+            .map_err(|error| match error {
+                StoreError::MissingProject => ProjectRuntimeError::NotFound,
+                _ => ProjectRuntimeError::Unavailable,
+            })
+    }
+}
+
+fn permission_mode(mode: PermissionModeView) -> PermissionMode {
+    match mode {
+        PermissionModeView::Plan => PermissionMode::Plan,
+        PermissionModeView::Ask => PermissionMode::Ask,
+        PermissionModeView::AcceptEdits => PermissionMode::AcceptEdits,
+        PermissionModeView::Auto => PermissionMode::Auto,
+        PermissionModeView::Bypass => PermissionMode::Bypass,
     }
 }
 

@@ -77,3 +77,88 @@ fn projects_order_by_session_activity_and_count_sessions() {
         None
     );
 }
+
+#[test]
+fn project_defaults_round_trip_through_load_list_and_session_defaults() {
+    let mut store = Store::open_in_memory().unwrap();
+    let project = store.create_project("Defaults", 100).unwrap();
+    assert_eq!(project.default_provider, None);
+    assert_eq!(project.default_model_id, None);
+    assert_eq!(project.default_mode, None);
+    assert_eq!(store.session_defaults(&project.id).unwrap().model, None);
+    assert_eq!(store.session_defaults(&project.id).unwrap().mode, None);
+
+    store
+        .set_project_defaults(
+            &project.id,
+            Some(model()),
+            Some(PermissionMode::AcceptEdits),
+        )
+        .unwrap();
+    let loaded = store.load_project(&project.id).unwrap().unwrap();
+    assert_eq!(loaded.default_provider, Some(Provider::Anthropic));
+    assert_eq!(loaded.default_model_id.as_deref(), Some("saved-model"));
+    assert_eq!(loaded.default_mode, Some(PermissionMode::AcceptEdits));
+    assert_eq!(store.list_projects().unwrap(), vec![loaded]);
+    assert_eq!(
+        store.session_defaults(&project.id).unwrap().model,
+        Some(model())
+    );
+    assert_eq!(
+        store.session_defaults(&project.id).unwrap().mode,
+        Some(PermissionMode::AcceptEdits)
+    );
+}
+
+#[test]
+fn clearing_project_defaults_clears_the_pair_and_mode() {
+    let mut store = Store::open_in_memory().unwrap();
+    let project = store.create_project("Defaults", 100).unwrap();
+    store
+        .set_project_defaults(&project.id, Some(model()), Some(PermissionMode::Auto))
+        .unwrap();
+    store.set_project_defaults(&project.id, None, None).unwrap();
+    let loaded = store.load_project(&project.id).unwrap().unwrap();
+    assert_eq!(loaded.default_provider, None);
+    assert_eq!(loaded.default_model_id, None);
+    assert_eq!(loaded.default_mode, None);
+    assert_eq!(store.session_defaults(&project.id).unwrap().model, None);
+    assert_eq!(store.session_defaults(&project.id).unwrap().mode, None);
+}
+
+#[test]
+fn project_model_columns_must_be_set_or_cleared_together() {
+    let mut store = Store::open_in_memory().unwrap();
+    let project = store.create_project("Defaults", 100).unwrap();
+    let provider_only = store.conn.execute(
+        "UPDATE projects SET default_provider = 'anthropic' WHERE id = ?1",
+        [project.id.as_str()],
+    );
+    assert!(matches!(
+        provider_only,
+        Err(rusqlite::Error::SqliteFailure(_, _))
+    ));
+    let model_only = store.conn.execute(
+        "UPDATE projects SET default_model_id = 'saved-model' WHERE id = ?1",
+        [project.id.as_str()],
+    );
+    assert!(matches!(
+        model_only,
+        Err(rusqlite::Error::SqliteFailure(_, _))
+    ));
+    assert_eq!(store.session_defaults(&project.id).unwrap().model, None);
+}
+
+#[test]
+fn unknown_project_has_no_defaults_to_update_or_read() {
+    let store = Store::open_in_memory().unwrap();
+    let missing = ProjectId::new("missing");
+    assert!(matches!(
+        store.set_project_defaults(&missing, Some(model()), Some(PermissionMode::Ask)),
+        Err(StoreError::MissingProject)
+    ));
+    assert!(matches!(
+        store.session_defaults(&missing),
+        Err(StoreError::MissingProject)
+    ));
+}

@@ -63,3 +63,50 @@ fn project_list_survives_reopening_and_unknown_id_is_not_found() {
         Err(ProjectRuntimeError::InvalidName)
     ));
 }
+
+#[test]
+fn project_defaults_are_visible_after_reopening() {
+    let temp = tempfile::tempdir().unwrap();
+    let db = temp.path().join("tether.db");
+    let root = temp.path().join("workspaces");
+    let runtime = ProjectRuntime::new(db.to_str().unwrap(), root.to_str().unwrap()).unwrap();
+    let project = runtime.create_project("Saved".into()).unwrap();
+    runtime
+        .set_project_defaults(
+            project.id.clone(),
+            Some(ProviderView::Anthropic),
+            Some("saved-model".into()),
+            Some(PermissionModeView::AcceptEdits),
+        )
+        .unwrap();
+    let loaded = runtime.load_project(project.id.clone()).unwrap();
+    assert_eq!(loaded.default_provider, Some(ProviderView::Anthropic));
+    assert_eq!(loaded.default_model_id.as_deref(), Some("saved-model"));
+    assert_eq!(loaded.default_mode, Some(PermissionModeView::AcceptEdits));
+    drop(runtime);
+    let reopened = ProjectRuntime::new(db.to_str().unwrap(), root.to_str().unwrap()).unwrap();
+    assert_eq!(reopened.load_project(project.id.clone()).unwrap(), loaded);
+    assert_eq!(reopened.list_projects().unwrap(), vec![loaded]);
+}
+
+#[test]
+fn project_defaults_reject_incomplete_model_pairs() {
+    let temp = tempfile::tempdir().unwrap();
+    let db = temp.path().join("tether.db");
+    let root = temp.path().join("workspaces");
+    let runtime = ProjectRuntime::new(db.to_str().unwrap(), root.to_str().unwrap()).unwrap();
+    let project = runtime.create_project("Saved".into()).unwrap();
+    for (provider, model_id) in [
+        (Some(ProviderView::Anthropic), None),
+        (None, Some("saved-model".into())),
+    ] {
+        assert!(matches!(
+            runtime.set_project_defaults(project.id.clone(), provider, model_id, None),
+            Err(ProjectRuntimeError::InvalidDefaults)
+        ));
+    }
+    assert_eq!(
+        runtime.load_project(project.id).unwrap().default_provider,
+        None
+    );
+}

@@ -2,6 +2,8 @@
 
 use tether_store::ProjectRecord;
 
+use crate::{PermissionModeView, ProviderView};
+
 /// Project details and session activity.
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct ProjectView {
@@ -17,6 +19,12 @@ pub struct ProjectView {
     pub last_activity_ms: i64,
     /// Number of sessions.
     pub session_count: u32,
+    /// Default provider for new sessions, when a model is saved.
+    pub default_provider: Option<ProviderView>,
+    /// Default model id for new sessions, when a model is saved.
+    pub default_model_id: Option<String>,
+    /// Default permission mode for new sessions.
+    pub default_mode: Option<PermissionModeView>,
 }
 
 impl From<ProjectRecord> for ProjectView {
@@ -28,6 +36,9 @@ impl From<ProjectRecord> for ProjectView {
             created_at_ms: project.created_at,
             last_activity_ms: project.last_activity_at,
             session_count: project.session_count,
+            default_provider: project.default_provider.map(Into::into),
+            default_model_id: project.default_model_id,
+            default_mode: project.default_mode.map(Into::into),
         }
     }
 }

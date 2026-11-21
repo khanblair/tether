@@ -1,13 +1,14 @@
 //! Project rows and workspace directory names.
 
 use rusqlite::{OptionalExtension, Row, params};
-use tether_types::ProjectId;
+use tether_types::{ModelRef, PermissionMode, ProjectId, Provider};
 use ulid::Ulid;
 
 use crate::{Store, StoreError};
 
 const PROJECT_COLUMNS: &str = "SELECT p.id, p.name, p.path, p.created_at,
-    COALESCE(MAX(s.updated_at), p.created_at), COUNT(s.id)
+    COALESCE(MAX(s.updated_at), p.created_at), COUNT(s.id),
+    p.default_provider, p.default_model_id, p.default_mode
     FROM projects p LEFT JOIN sessions s ON s.project_id = p.id";
 
 /// A saved project and its current session activity.
@@ -25,9 +26,34 @@ pub struct ProjectRecord {
     pub last_activity_at: i64,
     /// Number of saved sessions.
     pub session_count: u32,
+    /// Default provider for new sessions, when a model is saved.
+    pub default_provider: Option<Provider>,
+    /// Default model id for new sessions, when a model is saved.
+    pub default_model_id: Option<String>,
+    /// Default permission mode for new sessions.
+    pub default_mode: Option<PermissionMode>,
 }
 
-type ProjectRow = (String, String, String, i64, i64, i64);
+/// Optional project settings to apply when a new session starts.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProjectDefaults {
+    /// Saved model reference, if set.
+    pub model: Option<ModelRef>,
+    /// Saved permission mode, if set.
+    pub mode: Option<PermissionMode>,
+}
+
+type ProjectRow = (
+    String,
+    String,
+    String,
+    i64,
+    i64,
+    i64,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+);
 
 impl Store {
     /// Creates a project with a unique, safe workspace directory name.
@@ -52,6 +78,9 @@ impl Store {
             created_at: now_ms,
             last_activity_at: now_ms,
             session_count: 0,
+            default_provider: None,
+            default_model_id: None,
+            default_mode: None,
         })
     }
 
@@ -80,6 +109,50 @@ impl Store {
             .transpose()
     }
 
+    /// Saves a project's model and permission defaults. A missing model clears both model columns.
+    ///
+    /// # Errors
+    /// Returns an error when the project is absent or SQLite cannot update it.
+    pub fn set_project_defaults(
+        &self,
+        id: &ProjectId,
+        model: Option<ModelRef>,
+        mode: Option<PermissionMode>,
+    ) -> Result<(), StoreError> {
+        let (provider, model_id) = model.map_or((None, None), |value| {
+            (Some(value.provider), Some(value.model_id))
+        });
+        let changed = self.conn.execute(
+            "UPDATE projects SET default_provider = ?2, default_model_id = ?3, default_mode = ?4 WHERE id = ?1",
+            params![
+                id.as_str(),
+                provider.map(Provider::as_str),
+                model_id.as_deref(),
+                mode.map(PermissionMode::as_str),
+            ],
+        )?;
+        if changed == 0 {
+            return Err(StoreError::MissingProject);
+        }
+        Ok(())
+    }
+
+    /// Reads the defaults for a new session without changing `create_session`.
+    ///
+    /// # Errors
+    /// Returns an error when the project is absent or its row cannot be read.
+    pub fn session_defaults(&self, id: &ProjectId) -> Result<ProjectDefaults, StoreError> {
+        let project = self.load_project(id)?.ok_or(StoreError::MissingProject)?;
+        let model = project
+            .default_provider
+            .zip(project.default_model_id)
+            .map(|(provider, model_id)| ModelRef { provider, model_id });
+        Ok(ProjectDefaults {
+            model,
+            mode: project.default_mode,
+        })
+    }
+
     /// Removes a project row after workspace creation fails.
     ///
     /// # Errors
@@ -99,6 +172,9 @@ fn project_row(row: &Row<'_>) -> rusqlite::Result<ProjectRow> {
         row.get(3)?,
         row.get(4)?,
         row.get(5)?,
+        row.get(6)?,
+        row.get(7)?,
+        row.get(8)?,
     ))
 }
 
@@ -110,6 +186,15 @@ fn decode_project(row: ProjectRow) -> Result<ProjectRecord, StoreError> {
         created_at: row.3,
         last_activity_at: row.4,
         session_count: u32::try_from(row.5).map_err(|_| StoreError::SessionCounterOverflow)?,
+        default_provider: row
+            .6
+            .map(|value| crate::sessions::parse_enum("default_provider", value))
+            .transpose()?,
+        default_model_id: row.7,
+        default_mode: row
+            .8
+            .map(|value| crate::sessions::parse_enum("default_mode", value))
+            .transpose()?,
     })
 }
 

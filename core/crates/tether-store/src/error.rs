@@ -7,6 +7,9 @@ use thiserror::Error;
 /// A failure while opening, migrating, or using the database.
 #[derive(Debug, Error)]
 pub enum StoreError {
+    /// A project name is blank, too long, or contains control characters.
+    #[error("invalid project name")]
+    InvalidProjectName,
     /// A checkpoint blob could not be read or written.
     #[error("checkpoint file error: {0}")]
     CheckpointIo(#[from] std::io::Error),

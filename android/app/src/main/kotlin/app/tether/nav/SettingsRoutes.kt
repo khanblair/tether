@@ -25,7 +25,9 @@ internal fun NavGraphBuilder.settingsRoutes(
     composable(Route.Settings.path) {
         SettingsScreen(
             module = module,
+            settings = settingsDepsOf(LocalContext.current),
             onBack = nav::back,
+            onOpen = nav::open,
             onOpenProviders = { nav.go(Route.Providers) },
             onOpenAbout = { nav.go(Route.About) },
         )
@@ -39,6 +41,7 @@ internal fun NavGraphBuilder.settingsRoutes(
             onBack = nav::back,
         )
     }
+    settingsAreaRoutes(module = module, nav = nav)
     composable(Route.Providers.path) {
         ProvidersScreen(
             viewModel = viewModel(factory = ProvidersViewModel.factory(module.providerGateway)),

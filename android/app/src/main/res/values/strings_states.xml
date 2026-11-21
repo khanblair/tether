@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Turn problems in the transcript: a failed turn, a stop, and the thinking wait. -->
+    <string name="states_provider_unknown">the provider</string>
+    <string name="states_key_rejected_title">Key rejected by %1$s</string>
+    <string name="states_key_rejected_body">Check the key in Providers.</string>
+    <string name="states_open_providers">Open Providers</string>
+    <string name="states_rate_title">Rate limit from %1$s</string>
+    <string name="states_rate_body">Too many requests in a short time. Wait a moment, then retry.</string>
+    <string name="states_retry_now">Retry now</string>
+    <string name="states_retry">Retry</string>
+    <string name="states_network_title">Network problem</string>
+    <string name="states_network_body">The connection failed or timed out. Check the network, then retry.</string>
+    <string name="states_stopped_title">Stopped</string>
+    <string name="states_stopped_body">The turn stopped before it finished.</string>
+    <string name="states_stopped_running">Stopped while running %1$s: %2$s.</string>
+    <string name="states_dismiss">Dismiss</string>
+    <string name="states_thinking">Thinking</string>
+    <string name="states_thinking_seconds">%1$d s</string>
+
+    <!-- Connectivity: the banner under the status line. -->
+    <string name="states_offline">Offline. Messages will fail until you reconnect.</string>
+
+    <!-- Message actions: a long press on a message opens a sheet with Copy. -->
+    <string name="states_message_actions">Message actions</string>
+    <string name="states_message_sheet_title">Message</string>
+    <string name="states_copy">Copy</string>
+    <string name="states_copied">Copied</string>
+</resources>

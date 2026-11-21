@@ -1,20 +1,12 @@
 package app.tether.session
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -23,21 +15,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import app.tether.R
 import app.tether.core.generated.CoreEventView
-import app.tether.core.generated.MessagePartView
 import app.tether.core.generated.MessageView
-import app.tether.core.generated.RoleView
+import app.tether.core.generated.ProviderView
 import app.tether.design.TetherTheme
 import app.tether.design.components.BannerTone
 import app.tether.design.components.InlineBanner
 import app.tether.design.components.TetherTextButton
 import app.tether.design.components.TetherTopBar
-import app.tether.design.tokens.TetherSize
 import app.tether.design.tokens.TetherSpace
+import app.tether.messages.AppMessages
 import app.tether.shell.BackButton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
@@ -76,18 +66,85 @@ fun TranscriptScreen(
 ) {
     var snapshot by remember(connection) { mutableStateOf<TranscriptSnapshot?>(null) }
     var failed by remember(connection) { mutableStateOf(false) }
-    var running by remember(connection) { mutableStateOf(false) }
-    var proposedTool by remember(connection) { mutableStateOf<Pair<String, String>?>(null) }
-    var turnError by remember(connection) { mutableStateOf<String?>(null) }
+    var turn by remember(connection) { mutableStateOf(TurnState()) }
+    var actionsFor by remember(connection) { mutableStateOf<MessageView?>(null) }
     val sheetControl = remember(connection) { SessionSheetControl() }
-    val turnFailed = stringResource(R.string.transcript_turn_failed)
-    val sendFailed = stringResource(R.string.transcript_send_failed)
+    val scope = rememberCoroutineScope()
+    val offline = rememberOffline()
+    val messages = snapshot?.messages.orEmpty()
+
+    fun retryLast() {
+        val active = connection ?: return
+        scope.resendLastMessage(
+            active,
+            messages,
+            onStart = { turn = turn.onSendStarted() },
+            onFailed = { turn = turn.onSendFailed() },
+        )
+    }
     SnapshotReload(
         connection = connection,
         reloads = sheetControl.reloads,
         onLoaded = { snapshot = it },
         onFailed = { failed = true },
     )
+    CoreEvents(
+        connection = connection,
+        onEvent = { event -> turn = turn.onEvent(event, System.currentTimeMillis()) },
+        onLoaded = { snapshot = it },
+        onFailed = { failed = true },
+    )
+    TranscriptContent(
+        messages = messages,
+        failed = failed,
+        title = snapshot?.details?.title ?: stringResource(R.string.route_session_title),
+        status = snapshot?.status,
+        usage = snapshot?.usage,
+        turn = turn,
+        provider = snapshot?.details?.provider,
+        offline = offline,
+        onBack = onBack,
+        onModelClick = sheetOpener(sheets, sheetControl, SessionSheetKind.Model),
+        onModeClick = sheetOpener(sheets, sheetControl, SessionSheetKind.Mode),
+        onMore = sheetOpener(sheets, sheetControl, SessionSheetKind.Menu),
+        onRetry = if (connection != null && lastUserText(messages) != null) ::retryLast else null,
+        onOpenProviders = sheets?.openProviders,
+        onDismissStopped = { turn = turn.onDismissStopped() },
+        onLongPress = { actionsFor = it },
+        composer =
+            connection?.let { active ->
+                {
+                    ComposerControls(
+                        connection = active,
+                        modelId = snapshot?.details?.modelId.orEmpty(),
+                        running = turn.running,
+                        onSendStart = { turn = turn.onSendStarted() },
+                        onSendFailed = { turn = turn.onSendFailed() },
+                    )
+                }
+            },
+    )
+    MessageSheetSlot(
+        message = actionsFor,
+        toasts = sheets?.messages,
+        onDone = { actionsFor = null },
+    )
+    SessionSheetsSlot(
+        connection = connection,
+        sheets = sheets,
+        control = sheetControl,
+        isRunning = { turn.running },
+    )
+}
+
+/** Applies each core event and reloads the snapshot. A failed reload marks the screen failed. */
+@Composable
+private fun CoreEvents(
+    connection: SessionConnection?,
+    onEvent: (CoreEventView) -> Unit,
+    onLoaded: (TranscriptSnapshot) -> Unit,
+    onFailed: () -> Unit,
+) {
     LaunchedEffect(connection) {
         if (connection != null) {
             try {
@@ -95,59 +152,19 @@ fun TranscriptScreen(
                     // Listen before the first read, so an event sent during the read is not lost.
                     launch(start = CoroutineStart.UNDISPATCHED) {
                         connection.changes.collect { event ->
-                            if (event.endsTurn()) running = false
-                            proposedTool = event.proposedToolOr(proposedTool)
-                            event.turnFailureOr(turnFailed)?.let { turnError = it }
-                            snapshot = connection.snapshot()
+                            onEvent(event)
+                            onLoaded(connection.snapshot())
                         }
                     }
-                    snapshot = connection.snapshot()
+                    onLoaded(connection.snapshot())
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {
-                failed = true
+                onFailed()
             }
         }
     }
-    TranscriptContent(
-        messages = snapshot?.messages.orEmpty(),
-        failed = failed,
-        title = snapshot?.details?.title ?: stringResource(R.string.route_session_title),
-        status = snapshot?.status,
-        usage = snapshot?.usage,
-        proposedTool = proposedTool,
-        turnError = turnError,
-        onBack = onBack,
-        onModelClick = sheetOpener(sheets, sheetControl, SessionSheetKind.Model),
-        onModeClick = sheetOpener(sheets, sheetControl, SessionSheetKind.Mode),
-        onMore = sheetOpener(sheets, sheetControl, SessionSheetKind.Menu),
-        composer =
-            connection?.let { active ->
-                {
-                    ComposerControls(
-                        connection = active,
-                        modelId = snapshot?.details?.modelId.orEmpty(),
-                        running = running,
-                        onSendStart = {
-                            running = true
-                            turnError = null
-                            proposedTool = null
-                        },
-                        onSendFailed = {
-                            running = false
-                            turnError = sendFailed
-                        },
-                    )
-                }
-            },
-    )
-    SessionSheetsSlot(
-        connection = connection,
-        sheets = sheets,
-        control = sheetControl,
-        isRunning = { running },
-    )
 }
 
 /** Reloads the transcript after a sheet changed the session. The first load is in the screen. */
@@ -171,40 +188,31 @@ private fun SnapshotReload(
     }
 }
 
+/** The sheet for the message a long press chose. It is hidden while [message] is null. */
+@Composable
+private fun MessageSheetSlot(
+    message: MessageView?,
+    toasts: AppMessages?,
+    onDone: () -> Unit,
+) {
+    val copy = rememberCopyMessage(toasts)
+    message?.let { chosen ->
+        MessageActionsSheet(
+            onCopy = {
+                copy(chosen)
+                onDone()
+            },
+            onDismiss = onDone,
+        )
+    }
+}
+
 /** A sheet opener for a session with sheets. Without sheets, the control has no action. */
 private fun sheetOpener(
     sheets: SessionSheetEnv?,
     control: SessionSheetControl,
     kind: SessionSheetKind,
 ): (() -> Unit)? = sheets?.let { { control.openSheet(kind) } }
-
-@Composable
-private fun ComposerControls(
-    connection: SessionConnection,
-    modelId: String,
-    running: Boolean,
-    onSendStart: () -> Unit,
-    onSendFailed: () -> Unit,
-) {
-    val scope = rememberCoroutineScope()
-    Composer(
-        modelId = modelId,
-        running = running,
-        onSend = { text ->
-            onSendStart()
-            scope.launch {
-                try {
-                    withContext(Dispatchers.IO) { connection.send(text) }
-                } catch (cancelled: CancellationException) {
-                    throw cancelled
-                } catch (_: Exception) {
-                    onSendFailed()
-                }
-            }
-        },
-        onStop = { scope.launch(Dispatchers.IO) { connection.stop() } },
-    )
-}
 
 /** Lazy items use persisted IDs so rows keep their identity as text arrives. */
 @Composable
@@ -214,16 +222,21 @@ fun TranscriptContent(
     title: String,
     status: SessionStatus? = null,
     usage: SessionUsage? = null,
-    proposedTool: Pair<String, String>? = null,
-    turnError: String? = null,
+    turn: TurnState = TurnState(),
+    provider: ProviderView? = null,
+    offline: Boolean = false,
     onBack: () -> Unit,
     onModelClick: (() -> Unit)? = null,
     onModeClick: (() -> Unit)? = null,
     onMore: (() -> Unit)? = null,
+    onRetry: (() -> Unit)? = null,
+    onOpenProviders: (() -> Unit)? = null,
+    onDismissStopped: () -> Unit = {},
+    onLongPress: ((MessageView) -> Unit)? = null,
     composer: (@Composable () -> Unit)? = null,
 ) {
     val listState = rememberLazyListState()
-    FollowTail(listState, messages)
+    FollowTail(listState, messages, turn.hasFooter)
     Scaffold(
         containerColor = TetherTheme.colors.bg,
         topBar = {
@@ -243,75 +256,54 @@ fun TranscriptContent(
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             Box(modifier = Modifier.weight(1f)) {
-                if (messages.isEmpty()) {
-                    val emptyLabel =
-                        if (failed) R.string.transcript_load_failed else R.string.transcript_empty
-                    Text(
-                        text = stringResource(emptyLabel),
-                        color = TetherTheme.colors.text2,
-                        modifier = Modifier.padding(TetherSpace.space4),
-                    )
-                } else {
-                    LazyColumn(
-                        state = listState,
-                        verticalArrangement = Arrangement.spacedBy(TetherSpace.space4),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.fillMaxSize(),
-                    ) {
-                        items(messages, key = MessageView::id) { message ->
-                            TranscriptMessage(
-                                message,
-                                Modifier.widthIn(max = TetherSize.transcriptMax).fillMaxWidth(),
-                            )
-                        }
-                    }
-                }
-            }
-            proposedTool?.let { (tool, target) ->
-                Text(
-                    text = "${stringResource(R.string.transcript_tool)} · $tool: $target",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = TetherTheme.colors.text2,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .background(TetherTheme.colors.surfaceSunken)
-                            .padding(TetherSpace.space3),
+                TranscriptList(
+                    messages = messages,
+                    failed = failed,
+                    turn = turn,
+                    provider = provider,
+                    listState = listState,
+                    onRetry = onRetry,
+                    onOpenProviders = onOpenProviders,
+                    onDismissStopped = onDismissStopped,
+                    onLongPress = onLongPress,
                 )
             }
-            turnError?.let { message ->
-                InlineBanner(
-                    text = message,
-                    tone = BannerTone.Danger,
-                    modifier = Modifier.padding(TetherSpace.space4),
-                )
-            }
+            turn.proposedTool?.let { (tool, target) -> ProposedToolBar(tool, target) }
             StatusLine(status, usage, onModelClick, onModeClick)
+            if (offline) {
+                InlineBanner(
+                    text = stringResource(R.string.states_offline),
+                    tone = BannerTone.Warning,
+                    modifier = Modifier.padding(horizontal = TetherSpace.space4),
+                )
+            }
             composer?.invoke()
         }
     }
 }
 
 /**
- * Keeps the newest message in view while the reader is at the bottom. The flag changes only when
- * the scroll position changes, so a streamed reply that grows below the viewport does not count as
+ * Keeps the newest item in view while the reader is at the bottom. [footer] adds the turn footer
+ * as the last item, so it scrolls into view when it appears. The flag changes only when the
+ * scroll position changes, so a streamed reply that grows below the viewport does not count as
  * the reader leaving the bottom.
  */
 @Composable
 private fun FollowTail(
     listState: LazyListState,
     messages: List<MessageView>,
+    footer: Boolean,
 ) {
     var followTail by remember { mutableStateOf(true) }
     LaunchedEffect(listState) {
         snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
             .collect { followTail = listState.isAtBottom() }
     }
-    LaunchedEffect(messages) {
-        val last = messages.lastIndex
-        if (last >= 0 && shouldFollow(followTail, hasNewContent = true)) {
+    LaunchedEffect(messages, footer) {
+        val lastItem = messages.size + (if (footer) 1 else 0) - 1
+        if (lastItem >= 0 && shouldFollow(followTail, hasNewContent = true)) {
             // A large offset clamps to the list end, so a growing reply stays in view.
-            listState.scrollToItem(last, Int.MAX_VALUE)
+            listState.scrollToItem(lastItem, Int.MAX_VALUE)
         }
     }
 }
@@ -339,47 +331,3 @@ internal fun CoreEventView.endsTurn(): Boolean =
         -> true
         else -> false
     }
-
-private fun CoreEventView.proposedToolOr(current: Pair<String, String>?): Pair<String, String>? =
-    if (this is CoreEventView.ToolProposed) tool to target else current
-
-/** The error a failed turn reports, or [fallback] when the core sent no text. Else null. */
-private fun CoreEventView.turnFailureOr(fallback: String): String? =
-    if (this is CoreEventView.TurnFailed) error.message.ifBlank { fallback } else null
-
-@Composable
-private fun TranscriptMessage(
-    message: MessageView,
-    modifier: Modifier = Modifier,
-) {
-    val label =
-        when (message.role) {
-            RoleView.USER -> R.string.transcript_you
-            RoleView.ASSISTANT -> R.string.transcript_agent
-            RoleView.TOOL -> R.string.transcript_tool
-            RoleView.SYSTEM_NOTE -> R.string.transcript_system
-        }
-    Column(
-        verticalArrangement = Arrangement.spacedBy(TetherSpace.space2),
-        modifier = modifier.padding(horizontal = TetherSpace.space4),
-    ) {
-        Text(
-            stringResource(label),
-            style = MaterialTheme.typography.labelMedium,
-            color = TetherTheme.colors.text2,
-        )
-        message.parts.forEach { part ->
-            when (part) {
-                is MessagePartView.Text -> MarkdownBlocks(part.text)
-                is MessagePartView.Thinking -> Text(part.text, color = TetherTheme.colors.text2)
-                is MessagePartView.CompactionSummary ->
-                    Text(part.text, color = TetherTheme.colors.text2)
-                else ->
-                    Text(
-                        stringResource(R.string.transcript_attachment),
-                        color = TetherTheme.colors.text2,
-                    )
-            }
-        }
-    }
-}

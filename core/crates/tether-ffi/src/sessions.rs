@@ -2,8 +2,8 @@
 
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use tether_engine::{ProviderFactory, SessionActor, SessionHandle, ToolRuntime, provider_for};
 use tether_secrets::SecretRef;
@@ -16,6 +16,10 @@ use crate::{
     SessionRecordView,
 };
 
+#[path = "sessions/ux.rs"]
+mod ux;
+use ux::now_ms;
+
 /// A session could not be created, opened, or updated.
 #[derive(Debug, thiserror::Error, uniffi::Error)]
 pub enum SessionRuntimeError {
@@ -25,9 +29,18 @@ pub enum SessionRuntimeError {
     /// The selected provider has no saved key.
     #[error("provider key is not saved")]
     MissingKey,
-    /// The model id or message is empty.
-    #[error("a model and message must have text")]
+    /// The model id, message, or title is empty.
+    #[error("input must have text")]
     EmptyInput,
+    /// The session is in the middle of a turn or approval.
+    #[error("session is busy")]
+    Busy,
+    /// A checkpoint snapshot failed its hash or size check.
+    #[error("checkpoint snapshot is corrupt")]
+    CorruptSnapshot,
+    /// A checkpoint path failed the workspace guard.
+    #[error("checkpoint path is invalid")]
+    InvalidPath,
     /// The session store or provider is unavailable.
     #[error("session is unavailable")]
     Unavailable,
@@ -251,6 +264,7 @@ impl SessionRuntime {
         let runner = Arc::new(SessionRunner {
             handle,
             runtime: Arc::clone(&self.runtime),
+            valid: AtomicBool::new(true),
         });
         runners.insert(id, Arc::clone(&runner));
         Ok(runner)
@@ -321,6 +335,7 @@ fn session_provider_factory(vault: Arc<SecretVault>, provider: Provider) -> Prov
 pub struct SessionRunner {
     handle: SessionHandle,
     runtime: Arc<tokio::runtime::Runtime>,
+    valid: AtomicBool,
 }
 
 #[uniffi::export]
@@ -331,6 +346,9 @@ impl SessionRunner {
     /// # Errors
     /// Returns an error for empty input or a stopped actor.
     pub fn send_message(&self, text: String) -> Result<(), SessionRuntimeError> {
+        if !self.valid.load(Ordering::Acquire) {
+            return Err(SessionRuntimeError::Unavailable);
+        }
         self.runtime
             .block_on(self.handle.send_message(text))
             .map_err(|error| match error {
@@ -354,25 +372,29 @@ impl SessionRunner {
         checkpoint_id: String,
         scope: RewindScopeView,
     ) -> Result<(), SessionRuntimeError> {
+        if !self.valid.load(Ordering::Acquire) {
+            return Err(SessionRuntimeError::Unavailable);
+        }
         self.runtime
             .block_on(self.handle.rewind(checkpoint_id, scope.into()))
-            .map_err(|error| match error {
-                tether_engine::SessionActorError::Rewind(tether_engine::RewindError::Store(
-                    tether_store::StoreError::MissingCheckpoint,
-                )) => SessionRuntimeError::NotFound,
-                _ => SessionRuntimeError::Unavailable,
-            })
+            .map_err(|error| map_rewind_error(&error))
     }
 }
 
-fn now_ms() -> i64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_or(0, |duration| {
-            i64::try_from(duration.as_millis()).unwrap_or(i64::MAX)
-        })
+fn map_rewind_error(error: &tether_engine::SessionActorError) -> SessionRuntimeError {
+    use tether_engine::{RewindError, SessionActorError};
+    match error {
+        SessionActorError::Rewind(RewindError::Store(
+            tether_store::StoreError::MissingCheckpoint,
+        )) => SessionRuntimeError::NotFound,
+        SessionActorError::Rewind(RewindError::CorruptSnapshot) => {
+            SessionRuntimeError::CorruptSnapshot
+        }
+        SessionActorError::Rewind(RewindError::InvalidPath) => SessionRuntimeError::InvalidPath,
+        _ => SessionRuntimeError::Unavailable,
+    }
 }
 
 #[cfg(test)]
-#[path = "sessions/tests.rs"]
+#[path = "sessions/session_tests.rs"]
 mod tests;

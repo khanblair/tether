@@ -30,6 +30,12 @@ pub enum RewindError {
     /// A workspace path or file operation failed.
     #[error("rewind file failed: {0}")]
     Io(#[from] io::Error),
+    /// A saved blob failed its size or hash check.
+    #[error("checkpoint snapshot is corrupt")]
+    CorruptSnapshot,
+    /// A saved path failed the workspace guard.
+    #[error("checkpoint path is invalid")]
+    InvalidPath,
     /// A conversation rewind needs a saved assistant message.
     #[error("checkpoint has no conversation anchor")]
     NoMessage,
@@ -98,16 +104,23 @@ fn file_plan(
     let mut plan = BTreeMap::new();
     for checkpoint in chain {
         for file in &checkpoint.files {
-            let target = checked_target(guard, &file.path)?;
+            let target = checked_target(guard, &file.path).map_err(|_| RewindError::InvalidPath)?;
             let bytes = file
                 .blob_hash
                 .as_deref()
-                .map(|hash| blobs.get(hash))
+                .map(|hash| read_snapshot(blobs, hash))
                 .transpose()?;
             plan.insert(target, bytes);
         }
     }
     Ok(plan)
+}
+
+fn read_snapshot(blobs: &BlobStore, hash: &str) -> Result<Vec<u8>, RewindError> {
+    blobs.get(hash).map_err(|error| match error.kind() {
+        io::ErrorKind::InvalidData | io::ErrorKind::InvalidInput => RewindError::CorruptSnapshot,
+        _ => RewindError::Io(error),
+    })
 }
 
 fn checked_target(guard: &PathGuard, relative: &Path) -> io::Result<PathBuf> {
@@ -133,6 +146,14 @@ fn restore_file(target: &Path, bytes: Option<&[u8]>) -> io::Result<()> {
             fs::create_dir_all(parent)?;
             let mut temporary = tempfile::NamedTempFile::new_in(parent)?;
             temporary.write_all(bytes)?;
+            #[cfg(unix)]
+            match fs::metadata(target) {
+                Ok(metadata) => temporary
+                    .as_file()
+                    .set_permissions(metadata.permissions())?,
+                Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+                Err(error) => return Err(error),
+            }
             temporary.as_file().sync_all()?;
             temporary.persist(target).map_err(|error| error.error)?;
             Ok(())
@@ -161,7 +182,7 @@ mod tests {
     use tokio::sync::mpsc;
     use tokio_util::sync::CancellationToken;
 
-    use super::{RewindScope, rewind_checkpoint};
+    use super::{RewindError, RewindScope, rewind_checkpoint};
     use crate::{
         SessionActor, ToolRuntime,
         session_tests::{Recorder, next_event},
@@ -289,6 +310,23 @@ mod tests {
     }
 
     #[test]
+    fn conversation_rewind_hides_abandoned_checkpoints() {
+        let (root, mut store, session, checkpoint, blobs) = fixture();
+        assert_eq!(store.list_checkpoints(&session).unwrap().len(), 2);
+        let guard = PathGuard::new(root.path().join("workspace")).unwrap();
+        rewind_checkpoint(
+            &mut store,
+            &session,
+            &checkpoint,
+            RewindScope::Both,
+            &guard,
+            &blobs,
+        )
+        .unwrap();
+        assert_eq!(store.list_checkpoints(&session).unwrap(), []);
+    }
+
+    #[test]
     fn corrupt_blob_aborts_before_changing_any_file() {
         let (root, mut store, session, checkpoint, blobs) = fixture();
         let saved = store.load_checkpoint(&checkpoint).unwrap().unwrap();
@@ -297,14 +335,18 @@ mod tests {
             .iter()
             .find_map(|file| file.blob_hash.as_deref())
             .unwrap();
-        fs::write(
+        let wrong_hash = blobs.put(b"other valid content").unwrap();
+        fs::copy(
+            root.path()
+                .join("blobs")
+                .join(&wrong_hash[..2])
+                .join(&wrong_hash),
             root.path().join("blobs").join(&hash[..2]).join(hash),
-            b"damaged",
         )
         .unwrap();
         let workspace = root.path().join("workspace");
         let guard = PathGuard::new(&workspace).unwrap();
-        assert!(
+        assert!(matches!(
             rewind_checkpoint(
                 &mut store,
                 &session,
@@ -312,9 +354,9 @@ mod tests {
                 RewindScope::Both,
                 &guard,
                 &blobs
-            )
-            .is_err()
-        );
+            ),
+            Err(RewindError::CorruptSnapshot)
+        ));
         assert_eq!(fs::read(workspace.join("note.txt")).unwrap(), b"latest");
         assert!(workspace.join("new.txt").exists());
         assert!(
@@ -323,6 +365,51 @@ mod tests {
                 .unwrap()
                 .iter()
                 .all(|message| !message.rewound)
+        );
+    }
+
+    #[test]
+    fn rejected_snapshot_path_has_specific_error() {
+        let (root, mut store, session, checkpoint, blobs) = fixture();
+        rusqlite::Connection::open(root.path().join("store.db")).unwrap()
+            .execute("UPDATE checkpoint_files SET path = '../outside' WHERE checkpoint_id = ?1 AND path = 'note.txt'", [&checkpoint])
+            .unwrap();
+        let guard = PathGuard::new(root.path().join("workspace")).unwrap();
+        assert!(matches!(
+            rewind_checkpoint(
+                &mut store,
+                &session,
+                &checkpoint,
+                RewindScope::Files,
+                &guard,
+                &blobs
+            ),
+            Err(RewindError::InvalidPath)
+        ));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn restoring_existing_script_keeps_executable_mode() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let (root, mut store, session, checkpoint, blobs) = fixture();
+        let workspace = root.path().join("workspace");
+        let script = workspace.join("note.txt");
+        fs::set_permissions(&script, fs::Permissions::from_mode(0o755)).unwrap();
+        let guard = PathGuard::new(&workspace).unwrap();
+        rewind_checkpoint(
+            &mut store,
+            &session,
+            &checkpoint,
+            RewindScope::Files,
+            &guard,
+            &blobs,
+        )
+        .unwrap();
+        assert_eq!(
+            fs::metadata(script).unwrap().permissions().mode() & 0o777,
+            0o755
         );
     }
 

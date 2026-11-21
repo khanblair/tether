@@ -53,6 +53,19 @@ impl From<ProviderView> for Provider {
         }
     }
 }
+
+/// Maps the selected permission mode to the saved session mode.
+impl From<PermissionModeView> for PermissionMode {
+    fn from(view: PermissionModeView) -> Self {
+        match view {
+            PermissionModeView::Plan => Self::Plan,
+            PermissionModeView::Ask => Self::Ask,
+            PermissionModeView::AcceptEdits => Self::AcceptEdits,
+            PermissionModeView::Auto => Self::Auto,
+            PermissionModeView::Bypass => Self::Bypass,
+        }
+    }
+}
 mirror_enum!(
     /// FFI view of [`SessionStatus`].
     SessionStatusView <=> SessionStatus {
@@ -246,6 +259,20 @@ mod tests {
             ToolCallStatusView::from(ToolCallStatus::TimedOut),
             ToolCallStatusView::TimedOut
         );
+    }
+
+    #[test]
+    fn every_permission_mode_maps_to_and_from_the_store_type() {
+        for mode in [
+            PermissionMode::Plan,
+            PermissionMode::Ask,
+            PermissionMode::AcceptEdits,
+            PermissionMode::Auto,
+            PermissionMode::Bypass,
+        ] {
+            let view = PermissionModeView::from(mode);
+            assert_eq!(PermissionMode::from(view), mode);
+        }
     }
 
     #[test]

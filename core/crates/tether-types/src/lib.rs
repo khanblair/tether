@@ -8,18 +8,22 @@ mod event;
 mod ids;
 mod message;
 mod model;
+mod plan;
 mod session;
 mod text;
+mod todo;
 mod usage;
 
 pub use error::CoreError;
-pub use event::CoreEvent;
+pub use event::{BudgetScope, CoreEvent};
 pub use ids::{MessageId, ProjectId, SessionId, ToolCallId};
 pub use message::{Message, MessagePart, Role};
 pub use model::{ModelCaps, ModelInfo, ModelPrice, PriceSource, Support};
+pub use plan::Plan;
 pub use session::{
     ConnectionStatus, Executor, ModelRef, NewRule, PermissionMode, PermissionRule, Provider,
     SessionStatus, ToolCallStatus,
 };
 pub use text::UnknownValue;
+pub use todo::{TodoItem, TodoStatus};
 pub use usage::UsageSnapshot;

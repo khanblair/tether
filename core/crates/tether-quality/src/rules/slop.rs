@@ -156,6 +156,9 @@ fn unknown_import(ctx: &RuleContext<'_>) -> Vec<Finding> {
                 .unwrap_or(package)
                 .replace('-', "_");
             let profile = language_profile(parsed.language);
+            if matches!(root.as_str(), "crate" | "self" | "super") {
+                return None;
+            }
             let known = ctx
                 .manifest
                 .declared_packages
@@ -185,20 +188,24 @@ fn broad_catch(ctx: &RuleContext<'_>) -> Vec<Finding> {
     let Some(parsed) = ctx.parsed else {
         return Vec::new();
     };
-    let pattern = Regex::new(r"(?is)(except\s*(?:Exception)?|catch\s*\([^)]*(?:Exception|Throwable|e)?[^)]*\))\s*[:{](.*?)(?:\}|\n\s*\n)").ok();
+    let pattern = Regex::new(
+        r"(?im)^\s*(except\s*(?:Exception)?|catch\s*\([^)]*(?:Exception|Throwable|e)?[^)]*\))\s*[:{]",
+    )
+    .ok();
     let Some(pattern) = pattern else {
         return Vec::new();
     };
     pattern
         .captures_iter(&parsed.source)
         .filter_map(|capture| {
-            let body = capture.get(2)?.as_str();
+            let start = capture.get(0)?.end();
+            let body = parsed.source[start..].lines().next().unwrap_or_default();
+            let line = line_count(&parsed.source[..capture.get(0)?.start()]) + 1;
             let statements = body
                 .split(';')
                 .filter(|item| !item.trim().is_empty())
                 .count();
             let has_call = body.contains('(');
-            let line = line_count(&parsed.source[..capture.get(0)?.start()]) + 1;
             (statements <= 3 && !has_call && changed(ctx, line, line)).then(|| {
                 super::util::candidate(
                     ctx,
@@ -308,14 +315,13 @@ fn banned_word_identifier(ctx: &RuleContext<'_>) -> Vec<Finding> {
         .find_iter(&parsed.source)
         .filter_map(|found| {
             let text = found.as_str();
-            if text.starts_with('"') && !text.contains(' ') {
-                return None;
-            }
-            let lower = text.to_ascii_lowercase();
-            if !words
+            let lower = text.trim_matches('"').to_ascii_lowercase();
+            let matches_word = words
                 .iter()
-                .any(|word| lower == *word || lower.starts_with(&format!("{word}_")))
-            {
+                .any(|word| lower == *word || lower.starts_with(&format!("{word}_")));
+            let matches_string =
+                text.starts_with('"') && words.iter().any(|word| lower.contains(word));
+            if !matches_word && !matches_string {
                 return None;
             }
             let line = line_count(&parsed.source[..found.start()]) + 1;

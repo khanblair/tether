@@ -21,8 +21,12 @@ mod highlight;
 mod language;
 mod manifest;
 mod model;
+mod prose;
 mod registry;
+mod report;
+mod review;
 mod rules;
+mod thresholds;
 
 pub use highlight::{HighlightClass, HighlightSpan, highlight};
 pub use language::{
@@ -30,7 +34,13 @@ pub use language::{
 };
 pub use manifest::manifest_from_files;
 pub use model::{
-    Batch, FileChange, Finding, ProjectManifest, Rule, RuleContext, Severity, Thresholds,
-    changed_lines,
+    Batch, FileChange, Finding, ProjectManifest, Rule, RuleContext, Severity, changed_lines,
 };
+pub use prose::{ProseKind, check_prose};
 pub use registry::Registry;
+pub use report::{Counts, QualityReport};
+pub use review::{
+    ParsedReview, ReviewFinding, ReviewInput, ReviewParseError, ReviewPrompt, parse_review,
+    review_prompt,
+};
+pub use thresholds::{ConfigIssue, Thresholds};

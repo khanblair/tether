@@ -36,6 +36,16 @@ internal class TetherNav(
         }
     }
 
+    /**
+     * Opens Home and clears the rest of the back stack, including the start destination, so Home
+     * is the only screen and Back leaves the app.
+     */
+    fun openHomeAsRoot() {
+        controller.navigate(Route.Home.path) {
+            popUpTo(controller.graph.startDestinationId) { inclusive = true }
+        }
+    }
+
     /** Opens [path] and removes [removing] from the back stack, so Back skips it. */
     fun replace(
         path: String,

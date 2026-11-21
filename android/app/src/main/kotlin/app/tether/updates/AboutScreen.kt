@@ -40,6 +40,8 @@ import app.tether.design.TetherIcons
 import app.tether.design.TetherTheme
 import app.tether.design.components.BannerTone
 import app.tether.design.components.InlineBanner
+import app.tether.design.components.ListGroup
+import app.tether.design.components.ListRow
 import app.tether.design.components.PrimaryButton
 import app.tether.design.components.TetherIcon
 import app.tether.design.components.TetherTextButton
@@ -49,6 +51,7 @@ import app.tether.design.tokens.TetherRadius
 import app.tether.design.tokens.TetherSize
 import app.tether.design.tokens.TetherSpace
 import app.tether.messages.AppMessages
+import app.tether.settings.ChevronTrailing
 import app.tether.shell.BackButton
 
 /**
@@ -61,6 +64,7 @@ fun AboutScreen(
     core: CoreClient,
     messages: AppMessages,
     showCoreCard: Boolean,
+    onShowWelcome: () -> Unit,
     onBack: () -> Unit,
 ) {
     val state by controller.state.collectAsStateWithLifecycle()
@@ -80,12 +84,14 @@ fun AboutScreen(
         onAction = { action -> controller.perform(action) },
         onBack = onBack,
         coreCard = if (showCoreCard) coreCard else null,
+        onShowWelcome = onShowWelcome,
     )
 }
 
 /**
  * The stateless About screen. [AboutScreen] supplies the state and the actions. [coreCard] is an
- * optional card shown below the updates card.
+ * optional card shown below the updates card. [onShowWelcome] adds the row that replays the
+ * first-run flow.
  */
 @Composable
 fun AboutContent(
@@ -93,6 +99,7 @@ fun AboutContent(
     onAction: (UpdateAction) -> Unit,
     onBack: () -> Unit,
     coreCard: (@Composable () -> Unit)? = null,
+    onShowWelcome: (() -> Unit)? = null,
 ) {
     Scaffold(
         containerColor = TetherTheme.colors.bg,
@@ -118,9 +125,22 @@ fun AboutContent(
             ) {
                 AppHeader(version = state.currentVersion)
                 UpdateCard(state = state, card = updateCardFor(state), onAction = onAction)
+                onShowWelcome?.let { ShowWelcomeRow(onShow = it) }
                 coreCard?.invoke()
             }
         }
+    }
+}
+
+@Composable
+private fun ShowWelcomeRow(onShow: () -> Unit) {
+    ListGroup {
+        ListRow(
+            title = stringResource(R.string.about_show_welcome_title),
+            subtitle = stringResource(R.string.about_show_welcome_sub),
+            trailing = { ChevronTrailing() },
+            onClick = onShow,
+        )
     }
 }
 

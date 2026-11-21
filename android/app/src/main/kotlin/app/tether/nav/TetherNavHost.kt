@@ -26,6 +26,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
@@ -55,6 +56,8 @@ import kotlinx.coroutines.withContext
 @Composable
 fun TetherNavHost(module: AppModule) {
     val navController = rememberNavController()
+    val context = LocalContext.current
+    val start = remember { startRoute(settingsDepsOf(context).store) }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val nav =
@@ -92,7 +95,8 @@ fun TetherNavHost(module: AppModule) {
         },
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            NavHost(navController = navController, startDestination = Route.Home.path) {
+            NavHost(navController = navController, startDestination = start) {
+                onboardingRoutes(module = module, nav = nav)
                 homeRoutes(module = module, nav = nav, attentionItems = attention)
                 settingsRoutes(module = module, nav = nav)
                 sessionSheetRoutes(

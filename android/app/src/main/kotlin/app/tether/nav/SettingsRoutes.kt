@@ -32,15 +32,7 @@ internal fun NavGraphBuilder.settingsRoutes(
             onOpenAbout = { nav.go(Route.About) },
         )
     }
-    composable(Route.About.path) {
-        AboutScreen(
-            controller = module.updates,
-            core = module.core,
-            messages = module.messages,
-            showCoreCard = isDebuggable(LocalContext.current.applicationInfo),
-            onBack = nav::back,
-        )
-    }
+    aboutRoute(module, nav)
     settingsAreaRoutes(module = module, nav = nav)
     composable(Route.Providers.path) {
         ProvidersScreen(
@@ -67,6 +59,27 @@ internal fun NavGraphBuilder.settingsRoutes(
                 onBack = nav::back,
             )
         }
+    }
+}
+
+/** The About screen. Its replay row clears the first-run flag and opens the flow. */
+private fun NavGraphBuilder.aboutRoute(
+    module: AppModule,
+    nav: TetherNav,
+) {
+    composable(Route.About.path) {
+        val settings = settingsDepsOf(LocalContext.current).store
+        AboutScreen(
+            controller = module.updates,
+            core = module.core,
+            messages = module.messages,
+            showCoreCard = isDebuggable(LocalContext.current.applicationInfo),
+            onShowWelcome = {
+                settings.saveOnboarded(false)
+                nav.go(Route.Onboarding)
+            },
+            onBack = nav::back,
+        )
     }
 }
 

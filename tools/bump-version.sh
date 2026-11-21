@@ -99,5 +99,7 @@ tmp="$(mktemp)"
 awk -v v="$new" '!done && /^version = "[0-9.]+"$/ { print "version = \"" v "\""; done = 1; next } { print }' \
   "$manifest" >"$tmp"
 mv "$tmp" "$manifest"
-(cd "$root/core" && cargo update --workspace --offline --quiet)
+# Only the workspace crates change version, so the offline index is enough on a developer machine.
+# A fresh CI runner has no cached index and needs the network for the same command.
+(cd "$root/core" && { cargo update --workspace --offline --quiet 2>/dev/null || cargo update --workspace --quiet; })
 echo "version $current -> $new in core/Cargo.toml and core/Cargo.lock"

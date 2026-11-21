@@ -21,7 +21,9 @@ cli = ["uniffi/cli"]
 
 [dependencies]
 tether-engine.workspace = true
+tether-memory = { path = "../tether-memory" }
 tether-secrets.workspace = true
+tether-skills = { path = "../tether-skills" }
 tether-store.workspace = true
 tether-types.workspace = true
 tether-workspace = { path = "../tether-workspace" }

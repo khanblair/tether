@@ -17,6 +17,8 @@ pub enum SandboxError {
     Module(String),
     /// The module cache lock was poisoned.
     CacheUnavailable,
+    /// The runner could not set up or complete a host operation.
+    Runtime(String),
 }
 
 /// Compiled modules keyed by a SHA-256 hash of their exact WASM bytes.

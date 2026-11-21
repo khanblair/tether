@@ -97,6 +97,8 @@ jobs:
         run: tools/check-commit-size.sh --self-test
       - name: Version bump self test
         run: tools/bump-version.sh --self-test
+      - name: Release version self test
+        run: tools/release-version.sh --self-test
       - name: No commit touches more than 15 files
         if: github.event_name == 'pull_request'
         env:

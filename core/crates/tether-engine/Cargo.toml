@@ -12,6 +12,8 @@ tether-store.workspace = true
 tether-providers.workspace = true
 tether-tools = { path = "../tether-tools" }
 tether-workspace = { path = "../tether-workspace" }
+tether-memory = { path = "../tether-memory" }
+tether-skills = { path = "../tether-skills" }
 reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true

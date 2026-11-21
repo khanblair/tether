@@ -18,6 +18,9 @@ pub enum ProjectRuntimeError {
     /// A default provider and model id were not both set or both absent.
     #[error("invalid project defaults")]
     InvalidDefaults,
+    /// Bypass needs an in-memory app confirmation.
+    #[error("bypass needs confirmation")]
+    BypassNeedsConfirmation,
     /// The requested project does not exist.
     #[error("project not found")]
     NotFound,
@@ -126,6 +129,7 @@ impl ProjectRuntime {
             )
             .map_err(|error| match error {
                 StoreError::MissingProject => ProjectRuntimeError::NotFound,
+                StoreError::BypassNeedsConfirmation => ProjectRuntimeError::BypassNeedsConfirmation,
                 _ => ProjectRuntimeError::Unavailable,
             })
     }

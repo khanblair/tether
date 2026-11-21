@@ -453,7 +453,9 @@ mod tests {
             ToolRuntime {
                 guard: PathGuard::new(&workspace).unwrap(),
                 blobs,
-                approve: Arc::new(|_, _| false),
+                approver: Arc::new(|_: &str, _: &str| false),
+                mode: Arc::new(std::sync::Mutex::new(tether_types::PermissionMode::Ask)),
+                handlers: Vec::new(),
             },
         )
         .unwrap();

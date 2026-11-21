@@ -33,6 +33,7 @@ impl RunLimits {
     pub fn store_limits(self) -> StoreLimits {
         StoreLimitsBuilder::new()
             .memory_size(self.memory_bytes)
+            .trap_on_grow_failure(true)
             .build()
     }
 

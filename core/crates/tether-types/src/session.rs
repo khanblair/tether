@@ -36,6 +36,36 @@ pub enum Executor {
     Ci,
 }
 
+text_enum!(Executor {
+    Sandbox => "sandbox",
+    Linux => "linux",
+    Ci => "ci",
+});
+
+/// A project rule that can relax an approval for one tool target.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PermissionRule {
+    /// Stable rule id.
+    pub id: String,
+    /// Tool name covered by the rule.
+    pub tool: String,
+    /// Exact target or conservative path prefix.
+    pub pattern: String,
+    /// Executor covered by the rule, when the tool runs a command.
+    pub executor: Option<Executor>,
+}
+
+/// The safe, user-facing fields used to create a permission rule.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NewRule {
+    /// Tool name covered by the rule.
+    pub tool: String,
+    /// Exact target or conservative path prefix.
+    pub pattern: String,
+    /// Executor covered by the rule, when the tool runs a command.
+    pub executor: Option<Executor>,
+}
+
 /// A model provider the user can connect (product-scope F1).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Provider {

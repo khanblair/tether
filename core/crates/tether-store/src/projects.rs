@@ -119,6 +119,9 @@ impl Store {
         model: Option<ModelRef>,
         mode: Option<PermissionMode>,
     ) -> Result<(), StoreError> {
+        if mode == Some(PermissionMode::Bypass) {
+            return Err(StoreError::BypassNeedsConfirmation);
+        }
         let (provider, model_id) = model.map_or((None, None), |value| {
             (Some(value.provider), Some(value.model_id))
         });

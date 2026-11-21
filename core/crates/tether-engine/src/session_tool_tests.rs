@@ -130,7 +130,9 @@ async fn session_actor_runs_read_tool_and_reopens_saved_exchange() {
         ToolRuntime {
             guard: PathGuard::new(&workspace).unwrap(),
             blobs: BlobStore::open(root.path().join("blobs")).unwrap(),
-            approve: Arc::new(|_, _| false),
+            approver: Arc::new(|_: &str, _: &str| false),
+            mode: Arc::new(std::sync::Mutex::new(tether_types::PermissionMode::Ask)),
+            handlers: Vec::new(),
         },
     )
     .unwrap();

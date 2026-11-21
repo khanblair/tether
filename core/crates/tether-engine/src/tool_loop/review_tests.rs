@@ -7,7 +7,7 @@ use tether_providers::{
     BoxFuture, ChatProvider, ChatRequest, ProviderError, ResponseUsage, StopReason, StreamEvent,
 };
 use tether_store::{BlobStore, Store};
-use tether_types::{CoreEvent, MessagePart, SessionId, ToolCallId};
+use tether_types::{CoreEvent, Message, MessagePart, SessionId, ToolCallId};
 use tether_workspace::PathGuard;
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
@@ -71,7 +71,8 @@ async fn malformed_tool_json_never_enters_saved_history() {
         store: &mut store,
         blobs: &blobs,
         cancel: CancellationToken::new(),
-        approve: &|_, _| false,
+        approver: &|_: &str, _: &str| false,
+        mode: &super::ask_mode,
         sink: None,
     };
     let result = ToolLoop::new(PathGuard::new(root.path()).unwrap())
@@ -167,7 +168,8 @@ async fn completed_response_usage_survives_a_later_provider_failure() {
         store: &mut store,
         blobs: &blobs,
         cancel: CancellationToken::new(),
-        approve: &|_, _| false,
+        approver: &|_: &str, _: &str| false,
+        mode: &super::ask_mode,
         sink: None,
     };
     let result = ToolLoop::new(PathGuard::new(root.path()).unwrap())
@@ -276,7 +278,8 @@ async fn cancellation_saves_results_for_every_pending_tool_call() {
         store: &mut store,
         blobs: &blobs,
         cancel,
-        approve: &|_, _| false,
+        approver: &|_: &str, _: &str| false,
+        mode: &super::ask_mode,
         sink: Some(&sink),
     };
     let result = ToolLoop::new(PathGuard::new(root.path()).unwrap())
@@ -295,6 +298,10 @@ async fn cancellation_saves_results_for_every_pending_tool_call() {
         .await;
     assert!(result.is_err());
     let messages = store.messages(&session_id).unwrap();
+    assert_cancelled_results(&messages);
+}
+
+fn assert_cancelled_results(messages: &[Message]) {
     assert_eq!(messages.len(), 4);
     for (number, message) in messages.iter().skip(1).enumerate() {
         assert!(matches!(

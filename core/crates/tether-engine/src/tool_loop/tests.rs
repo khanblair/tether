@@ -171,7 +171,8 @@ async fn five_step_read_and_edit_fixture_completes() {
         store: &mut store,
         blobs: &blobs,
         cancel: CancellationToken::new(),
-        approve: &approve,
+        approver: &approve,
+        mode: &super::ask_mode,
         sink: Some(&sink),
     };
     let result = loop_runner
@@ -223,20 +224,35 @@ fn invalid_arguments_and_denial_do_not_mutate() {
     let root = tempfile::tempdir().unwrap();
     fs::write(root.path().join("note.txt"), "old").unwrap();
     let loop_runner = ToolLoop::new(PathGuard::new(root.path()).unwrap());
-    let denied = super::dispatch::run(
-        &loop_runner,
-        "write_file",
-        r#"{"path":"note.txt","text":"new"}"#,
-        &|_, _| false,
-        &mut |_| Ok(()),
-    );
-    assert_eq!(denied.unwrap_err(), "tool approval denied");
-    let malformed = super::dispatch::run(
-        &loop_runner,
+    let prepared = loop_runner
+        .registry
+        .prepare(
+            "write_file",
+            r#"{"path":"note.txt","text":"new"}"#,
+            &super::PrepareContext {
+                guard: &PathGuard::new(root.path()).unwrap(),
+            },
+        )
+        .unwrap();
+    assert!(matches!(
+        super::permissions::decide(
+            tether_types::PermissionMode::Plan,
+            prepared.effect,
+            &[],
+            super::permissions::PermissionRequest {
+                tool: "write_file",
+                target: "note.txt",
+                executor: None
+            },
+        ),
+        super::permissions::Decision::Block { .. }
+    ));
+    let malformed = loop_runner.registry.prepare(
         "read_file",
         r#"{"path":12}"#,
-        &|_, _| true,
-        &mut |_| Ok(()),
+        &super::PrepareContext {
+            guard: &PathGuard::new(root.path()).unwrap(),
+        },
     );
     assert!(malformed.unwrap_err().contains("path must be a string"));
     assert_eq!(

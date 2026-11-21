@@ -1,5 +1,6 @@
 //! UniFFI surface of the core, built as `libtether_core.so`.
 
+mod approvals;
 mod callbacks;
 mod memory;
 mod projects;
@@ -28,9 +29,10 @@ pub use updater::{DownloadProgress, ReleaseView, UpdateCheckView, Updater, Updat
 pub use vault::{VaultLinkView, VaultLinksView, VaultNoteView, VaultRuntime, VaultRuntimeError};
 pub use views::{
     CheckpointView, ConnectionStatusView, CoreErrorView, CoreEventView, ErrorKindView,
-    ExecutorView, MessagePartView, MessageView, ModelRefView, ModelView, PermissionModeView,
-    ProjectView, ProviderView, RewindScopeView, RoleView, SessionRecordView, SessionStatusView,
-    SessionUsageView, SupportView, ToolCallStatusView, TranscriptHitView, UsageSnapshotView,
+    ExecutorView, MessagePartView, MessageView, ModelRefView, ModelView, PendingApprovalView,
+    PermissionModeView, PermissionRuleView, ProjectView, ProviderView, RewindScopeView, RoleView,
+    SessionRecordView, SessionStatusView, SessionUsageView, SupportView, ToolCallStatusView,
+    TranscriptHitView, UsageSnapshotView,
 };
 
 uniffi::setup_scaffolding!();

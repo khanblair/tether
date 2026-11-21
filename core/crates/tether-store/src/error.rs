@@ -111,6 +111,9 @@ pub enum StoreError {
     /// A session is in the middle of a turn or approval.
     #[error("session is busy")]
     SessionBusy,
+    /// Bypass is an in-memory confirmation and cannot be saved.
+    #[error("bypass needs confirmation")]
+    BypassNeedsConfirmation,
     /// A model id has no visible text.
     #[error("session model is empty")]
     EmptySessionModel,

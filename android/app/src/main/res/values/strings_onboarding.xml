@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Shared by every onboarding step. -->
+    <string name="onboarding_step">Step %1$d of %2$d</string>
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_continue">Continue</string>
+
+    <!-- Step 1: welcome. -->
+    <string name="onboarding_welcome_headline">Code from your phone.</string>
+    <string name="onboarding_welcome_body">Tether runs a coding agent on this device. Your projects and your model keys stay here.</string>
+    <string name="onboarding_name_label">Display name (optional)</string>
+    <string name="onboarding_name_note">Stored only on this phone. Used as the author of commits.</string>
+
+    <!-- Step 2: add a provider key. -->
+    <string name="onboarding_key_title">Add a provider key</string>
+    <string name="onboarding_key_intro">Any one provider is enough. The key is kept in the Android Keystore and leaves this phone only in requests to that provider.</string>
+    <string name="onboarding_key_label">API key</string>
+    <string name="onboarding_key_hint">Saved on this phone, then tested with the provider.</string>
+    <string name="onboarding_save_and_test">Save and test</string>
+    <string name="onboarding_key_rejected">This key was not accepted. Paste it again, or create a new key with the provider.</string>
+    <string name="onboarding_testing_body">Checking the key with the provider.</string>
+    <string name="onboarding_key_accepted_body">The provider accepted this key. Next, open a project.</string>
+
+    <!-- Step 3: open a project. -->
+    <string name="onboarding_project_title">Open a project</string>
+    <string name="onboarding_project_intro">A project is a code repository stored on this phone. The agent can only touch files inside it.</string>
+    <string name="onboarding_new_project">New empty project</string>
+    <string name="onboarding_clone_title">Clone from GitHub</string>
+    <string name="onboarding_clone_sub">Needs GitHub sign-in, which is not built yet.</string>
+    <string name="onboarding_import_title">Import a zip</string>
+    <string name="onboarding_import_sub">Needs the zip import screens, which are not built yet.</string>
+
+    <!-- Not-available screens behind the open-project step. -->
+    <string name="onboarding_github_title">Sign in to GitHub</string>
+    <string name="onboarding_github_body">GitHub sign-in is not built yet. It needs the device sign-in before a repository can be cloned.</string>
+    <string name="onboarding_archive_title">Import a zip</string>
+    <string name="onboarding_archive_body">Importing a zip is not built yet. It needs the screens that pick an archive and unpack it into a project.</string>
+
+    <!-- About: replay the flow. -->
+    <string name="about_show_welcome_title">Show the welcome again</string>
+    <string name="about_show_welcome_sub">Replays the setup: your name, a provider key, and a project.</string>
+</resources>

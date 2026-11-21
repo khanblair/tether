@@ -8,7 +8,6 @@ import app.tether.core.generated.ConnectionStatusView
 import app.tether.core.generated.ProviderSettingsException
 import app.tether.core.generated.ProviderStatusView
 import app.tether.core.generated.ProviderView
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,7 +15,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /** State holder for one provider's key, test, and status. Every core call runs on [io]. */
 class ProviderDetailViewModel(
@@ -194,16 +192,7 @@ class ProviderDetailViewModel(
         mutableState.update { it.copy(message = null) }
     }
 
-    private suspend fun <T> call(block: () -> T): Result<T> =
-        try {
-            Result.success(withContext(io) { block() })
-        } catch (cancelled: CancellationException) {
-            throw cancelled
-        } catch (
-            @Suppress("TooGenericExceptionCaught") failure: Exception,
-        ) {
-            Result.failure(failure)
-        }
+    private suspend fun <T> call(block: () -> T): Result<T> = callCore(io, block)
 
     companion object {
         /** Builds the detail model for [provider] with the app's gateway. */

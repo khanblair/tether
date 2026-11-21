@@ -80,14 +80,7 @@ fun ProviderDetailScreen(
         onKeyChange = viewModel::onKeyChange,
         onPaste = {
             scope.launch {
-                val clip = clipboard.getClipEntry()?.clipData
-                val text =
-                    clip
-                        ?.takeIf { it.itemCount > 0 }
-                        ?.getItemAt(0)
-                        ?.text
-                        ?.toString()
-                if (!text.isNullOrEmpty()) viewModel.onKeyChange(text)
+                clipboard.firstText()?.let(viewModel::onKeyChange)
             }
         },
         onToggleReveal = {
@@ -251,25 +244,17 @@ private fun ResultBanner(state: ProviderDetailUiState) {
                 title = stringResource(R.string.provider_detail_accepted_title),
                 tone = BannerTone.Success,
             )
-        state.status == ConnectionStatusView.BAD_KEY ->
-            InlineBanner(
-                text = stringResource(R.string.provider_detail_rejected_body),
-                title = stringResource(R.string.provider_detail_rejected_title),
-                tone = BannerTone.Danger,
-            )
-        state.status == ConnectionStatusView.NETWORK_ERROR ->
-            InlineBanner(
-                text = stringResource(R.string.provider_detail_offline_body),
-                title = stringResource(R.string.provider_detail_offline_title),
-                tone = BannerTone.Warning,
-            )
-        state.status == ConnectionStatusView.BLOCKED ->
-            InlineBanner(
-                text = stringResource(R.string.provider_detail_blocked_body),
-                title = stringResource(R.string.provider_detail_blocked_title),
-                tone = BannerTone.Danger,
-            )
+        else -> connectionMessage(state.status)?.let { ConnectionBanner(it) }
     }
+}
+
+@Composable
+private fun ConnectionBanner(message: ConnectionMessage) {
+    InlineBanner(
+        text = stringResource(message.body),
+        title = stringResource(message.title),
+        tone = message.tone,
+    )
 }
 
 @Composable

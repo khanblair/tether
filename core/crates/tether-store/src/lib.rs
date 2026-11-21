@@ -29,6 +29,6 @@ pub use checkpoints::{BlobStore, Checkpoint, CheckpointFile, SnapshotInput};
 pub use db::Store;
 pub use error::StoreError;
 pub use models::{CATALOG_TTL_MS, catalog_is_fresh};
-pub use projects::ProjectRecord;
+pub use projects::{ProjectDefaults, ProjectRecord};
 pub use session_fts::SessionSearchHit;
 pub use sessions::SessionRecord;

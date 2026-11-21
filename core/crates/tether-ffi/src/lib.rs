@@ -1,11 +1,14 @@
 //! UniFFI surface of the core, built as `libtether_core.so`.
 
 mod callbacks;
+mod memory;
 mod projects;
 mod provider_settings;
 mod secrets;
 mod sessions;
+mod skills;
 mod updater;
+mod vault;
 mod views;
 
 use std::sync::Arc;
@@ -13,16 +16,21 @@ use std::sync::Arc;
 use tether_engine::Core;
 
 pub use callbacks::EventSink;
+pub use memory::{
+    MemoryActionView, MemoryResultView, MemoryRuntime, MemoryRuntimeError, MemoryTargetView,
+};
 pub use projects::{ProjectRuntime, ProjectRuntimeError};
 pub use provider_settings::{ProviderSettings, ProviderSettingsError, ProviderStatusView};
 pub use secrets::{SecretVault, SecretVaultError, SecretsPlatform, SecretsPlatformFailure};
 pub use sessions::{SessionRunner, SessionRuntime, SessionRuntimeError};
+pub use skills::{SkillDetailView, SkillView, SkillsRuntime, SkillsRuntimeError};
 pub use updater::{DownloadProgress, ReleaseView, UpdateCheckView, Updater, UpdaterError};
+pub use vault::{VaultLinkView, VaultLinksView, VaultNoteView, VaultRuntime, VaultRuntimeError};
 pub use views::{
     CheckpointView, ConnectionStatusView, CoreErrorView, CoreEventView, ErrorKindView,
-    ExecutorView, MessagePartView, MessageView, ModelRefView, PermissionModeView, ProjectView,
-    ProviderView, RewindScopeView, RoleView, SessionRecordView, SessionStatusView,
-    ToolCallStatusView, UsageSnapshotView,
+    ExecutorView, MessagePartView, MessageView, ModelRefView, ModelView, PermissionModeView,
+    ProjectView, ProviderView, RewindScopeView, RoleView, SessionRecordView, SessionStatusView,
+    SessionUsageView, SupportView, ToolCallStatusView, TranscriptHitView, UsageSnapshotView,
 };
 
 uniffi::setup_scaffolding!();

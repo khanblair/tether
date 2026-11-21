@@ -10,6 +10,9 @@ pub enum StoreError {
     /// A project name is blank, too long, or contains control characters.
     #[error("invalid project name")]
     InvalidProjectName,
+    /// A project id did not name an existing row.
+    #[error("project not found")]
+    MissingProject,
     /// A checkpoint blob could not be read or written.
     #[error("checkpoint file error: {0}")]
     CheckpointIo(#[from] std::io::Error),
@@ -105,6 +108,12 @@ pub enum StoreError {
     /// A session title has no visible text.
     #[error("session title is empty")]
     EmptySessionTitle,
+    /// A session is in the middle of a turn or approval.
+    #[error("session is busy")]
+    SessionBusy,
+    /// A model id has no visible text.
+    #[error("session model is empty")]
+    EmptySessionModel,
     /// A session row has an enum value this version does not know.
     #[error("session row has invalid {field} value: {value}")]
     InvalidSessionEnum {

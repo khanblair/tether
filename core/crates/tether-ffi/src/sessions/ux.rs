@@ -90,10 +90,20 @@ impl SessionRuntime {
     /// # Errors
     /// Returns an error for an absent session or invalid stored usage.
     pub fn session_usage(&self, session_id: &str) -> Result<SessionUsageView, SessionRuntimeError> {
-        self.store()?
-            .session_usage(&SessionId::new(session_id))
-            .map(Into::into)
-            .map_err(|error| settings_error(&error))
+        let store = self.store()?;
+        let id = SessionId::new(session_id);
+        let usage = store
+            .session_usage(&id)
+            .map_err(|error| settings_error(&error))?;
+        let price_known = store
+            .session_price_known(&id)
+            .map_err(|error| settings_error(&error))?;
+        Ok(SessionUsageView {
+            tokens_in: usage.tokens_in,
+            tokens_out: usage.tokens_out,
+            cost_micros: usage.cost_micros,
+            price_known,
+        })
     }
 
     /// Finds sessions in one project by title or live message text.

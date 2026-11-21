@@ -9,6 +9,7 @@ use tether_engine::{ApprovalAnswer, ApprovalRequest, Approver};
 use tether_types::{ProjectId, SessionId, ToolCallId};
 use tokio::sync::oneshot;
 
+use crate::questions::QuestionBroker;
 use crate::views::{PendingApprovalView, PermissionRuleView};
 use crate::{SessionRuntime, SessionRuntimeError};
 
@@ -21,6 +22,7 @@ struct Pending {
 pub(crate) struct ApprovalBroker {
     interactive: AtomicBool,
     pending: Mutex<HashMap<ToolCallId, Pending>>,
+    questions: Arc<QuestionBroker>,
 }
 
 impl ApprovalBroker {
@@ -28,7 +30,12 @@ impl ApprovalBroker {
         Self {
             interactive: AtomicBool::new(false),
             pending: Mutex::new(HashMap::new()),
+            questions: Arc::new(QuestionBroker::new()),
         }
+    }
+
+    pub(crate) fn questions(&self) -> Arc<QuestionBroker> {
+        Arc::clone(&self.questions)
     }
 
     pub(crate) fn set_interactive(&self, enabled: bool) {
@@ -56,6 +63,20 @@ impl ApprovalBroker {
             .ok_or(SessionRuntimeError::NotFound)?;
         drop(pending.answer.send(answer));
         Ok(())
+    }
+
+    fn answer_from_notification(
+        &self,
+        session_id: &SessionId,
+        tool_call_id: &ToolCallId,
+        allow: bool,
+    ) -> Result<(), SessionRuntimeError> {
+        let answer = if allow {
+            ApprovalAnswer::AllowFromNotification { always: false }
+        } else {
+            ApprovalAnswer::DenyFromNotification { reason: None }
+        };
+        self.answer(session_id, tool_call_id, answer)
     }
 
     fn pending_for(
@@ -189,6 +210,38 @@ impl SessionRuntime {
         )
     }
 
+    /// Answers a pending approval from a background notification.
+    ///
+    /// # Errors
+    /// Returns `NotFound` when the call is unknown or already answered.
+    pub fn approve_from_notification(
+        &self,
+        session_id: &str,
+        tool_call_id: &str,
+    ) -> Result<(), SessionRuntimeError> {
+        self.broker.answer_from_notification(
+            &SessionId::new(session_id),
+            &ToolCallId::new(tool_call_id),
+            true,
+        )
+    }
+
+    /// Denies a pending approval from a background notification.
+    ///
+    /// # Errors
+    /// Returns `NotFound` when the call is unknown or already answered.
+    pub fn deny_from_notification(
+        &self,
+        session_id: &str,
+        tool_call_id: &str,
+    ) -> Result<(), SessionRuntimeError> {
+        self.broker.answer_from_notification(
+            &SessionId::new(session_id),
+            &ToolCallId::new(tool_call_id),
+            false,
+        )
+    }
+
     /// Lists approvals waiting for one session.
     ///
     /// # Errors
@@ -255,11 +308,15 @@ impl SessionRuntime {
     /// Turns app-delivered approval waiting on or off.
     pub fn set_interactive_approvals(&self, enabled: bool) {
         self.broker.set_interactive(enabled);
+        self.broker.questions().set_interactive(enabled);
     }
 }
 
 impl SessionRuntime {
-    fn runner(&self, session_id: &str) -> Result<Arc<crate::SessionRunner>, SessionRuntimeError> {
+    pub(crate) fn runner(
+        &self,
+        session_id: &str,
+    ) -> Result<Arc<crate::SessionRunner>, SessionRuntimeError> {
         self.runners
             .lock()
             .map_err(|_| SessionRuntimeError::Unavailable)?

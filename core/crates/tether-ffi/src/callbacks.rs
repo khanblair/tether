@@ -13,6 +13,50 @@ pub trait EventSink: Send + Sync {
     fn on_event(&self, event: CoreEventView);
 }
 
+/// Receives background approval and turn notifications.
+#[uniffi::export(with_foreign)]
+pub trait NotifyPlatform: Send + Sync {
+    /// Shows an approval action.
+    fn show_approval(
+        &self,
+        session_id: String,
+        tool_call_id: String,
+        tool: String,
+        target: String,
+        summary: String,
+    );
+    /// Shows a question action.
+    fn show_question(
+        &self,
+        session_id: String,
+        tool_call_id: String,
+        question: String,
+        options: Vec<String>,
+    );
+    /// Shows a finished turn.
+    fn show_turn_finished(&self, session_id: String, title: String, ok: bool, message: String);
+    /// Updates the current tool step.
+    fn update_run_progress(&self, session_id: String, step: String);
+    /// Clears notifications for one session.
+    fn clear(&self, session_id: String);
+}
+
+/// Starts and stops the platform foreground run service.
+#[uniffi::export(with_foreign)]
+pub trait RunServicePlatform: Send + Sync {
+    /// Starts the service.
+    fn start_run_service(&self);
+    /// Stops the service.
+    fn stop_run_service(&self);
+}
+
+/// Reports connectivity to the core.
+#[uniffi::export(with_foreign)]
+pub trait NetworkPlatform: Send + Sync {
+    /// Returns the current connectivity state.
+    fn is_online(&self) -> bool;
+}
+
 /// Adapts the platform sink to the engine's own sink trait.
 pub(crate) struct SinkAdapter(pub(crate) Arc<dyn EventSink>);
 

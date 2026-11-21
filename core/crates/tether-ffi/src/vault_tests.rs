@@ -55,6 +55,53 @@ fn vault_runtime_write_read_append_search_links_orphans_and_map() {
 }
 
 #[test]
+fn vault_runtime_links_expose_resolved_paths() {
+    let dir = tempfile::tempdir().unwrap();
+    let runtime = VaultRuntime::new(dir.path().to_str().unwrap()).unwrap();
+    runtime
+        .write(
+            "folder/Map.md",
+            "---\ndescription: Links\n---\n[[Plan]] [[Local]] [[Auth]] [[Shared]] [[Missing]]",
+        )
+        .unwrap();
+    for path in [
+        "Plan.md",
+        "folder/Local.md",
+        "notes/Auth.md",
+        "one/Shared.md",
+        "two/Shared.md",
+    ] {
+        runtime
+            .write(path, "---\ndescription: Note\n---\nText")
+            .unwrap();
+    }
+    let links = runtime.links("folder/Map.md").unwrap();
+    let paths: Vec<_> = links
+        .outgoing
+        .iter()
+        .map(|link| link.resolved_path.as_deref())
+        .collect();
+    assert_eq!(
+        paths,
+        [
+            Some("Plan.md"),
+            Some("folder/Local.md"),
+            Some("notes/Auth.md"),
+            None,
+            None
+        ]
+    );
+    assert!(
+        links
+            .outgoing
+            .iter()
+            .all(|link| link.resolved == link.resolved_path.is_some())
+    );
+    let incoming = runtime.links("notes/Auth.md").unwrap().incoming;
+    assert_eq!(incoming[0].resolved_path.as_deref(), Some("notes/Auth.md"));
+}
+
+#[test]
 fn vault_runtime_rejects_escape_and_redacts_invalid_note_path() {
     let dir = tempfile::tempdir().unwrap();
     let root = dir.path().join("vault");

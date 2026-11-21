@@ -5,7 +5,7 @@ use std::fs::{self, OpenOptions};
 use std::io::{self, Write};
 use std::path::{Component, Path, PathBuf};
 
-use super::{VaultError, VaultIndex, VaultLink, VaultNote, parse_note, resolve_target};
+use super::{VaultError, VaultIndex, VaultLink, VaultNote, parse_note};
 
 const MAX_NOTE_BYTES: usize = 128 * 1024;
 
@@ -218,8 +218,8 @@ fn resolved_neighbors(index: &VaultIndex, path: &str) -> Vec<String> {
     index
         .links
         .iter()
-        .filter(|link| link.source_path == path && link.resolved)
-        .filter_map(|link| resolve_target(&index.notes, path, &link.target))
+        .filter(|link| link.source_path == path)
+        .filter_map(|link| link.resolved_path.clone())
         .collect()
 }
 

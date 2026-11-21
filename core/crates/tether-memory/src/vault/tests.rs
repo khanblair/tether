@@ -52,6 +52,46 @@ fn rebuild_is_deterministic_and_marks_missing_links() {
 }
 
 #[test]
+fn resolved_paths_cover_root_sibling_unique_ambiguous_and_missing() {
+    let fixture = VaultFixture::new();
+    fixture.write(
+        "folder/Map.md",
+        "---\ndescription: Links\n---\n[[Plan]] [[Local]] [[Auth]] [[Shared]] [[Missing]]",
+    );
+    for path in [
+        "Plan.md",
+        "folder/Local.md",
+        "notes/Auth.md",
+        "one/Shared.md",
+        "two/Shared.md",
+    ] {
+        fixture.write(path, "---\ndescription: Note\n---\nText");
+    }
+    let index = VaultIndex::rebuild(&fixture.path).unwrap();
+    let paths: Vec<_> = index
+        .links
+        .iter()
+        .map(|link| link.resolved_path.as_deref())
+        .collect();
+    assert_eq!(
+        paths,
+        [
+            Some("Plan.md"),
+            Some("folder/Local.md"),
+            Some("notes/Auth.md"),
+            None,
+            None
+        ]
+    );
+    assert!(
+        index
+            .links
+            .iter()
+            .all(|link| link.resolved == link.resolved_path.is_some())
+    );
+}
+
+#[test]
 fn note_without_description_is_rejected() {
     let fixture = VaultFixture::new();
     fixture.write("NoDescription.md", "---\ntype: moc\n---\n# Note");

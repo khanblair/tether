@@ -96,12 +96,16 @@ impl MemoryRuntime {
     }
 
     /// Reads one memory file. A missing file is empty.
-    #[must_use]
-    pub fn read(&self, target: MemoryTargetView) -> String {
+    ///
+    /// # Errors
+    /// Returns `InvalidPath` for a symlinked file or `Unavailable` for a read failure.
+    pub fn read(&self, target: MemoryTargetView) -> Result<String, MemoryRuntimeError> {
         if !self.files_safe() {
-            return String::new();
+            return Err(MemoryRuntimeError::InvalidPath);
         }
-        self.store.read(target.into()).unwrap_or_default()
+        self.store
+            .read(target.into())
+            .map_err(|error| map_error(&error))
     }
 
     /// Applies one exact memory change and returns the character meter.
@@ -133,13 +137,16 @@ impl MemoryRuntime {
     }
 
     /// Formats the current files as an untrusted session snapshot block.
-    #[must_use]
-    pub fn frozen_block(&self) -> String {
+    ///
+    /// # Errors
+    /// Returns `InvalidPath` for a symlinked file or `Unavailable` for a read failure.
+    pub fn frozen_block(&self) -> Result<String, MemoryRuntimeError> {
         if !self.files_safe() {
-            return String::new();
+            return Err(MemoryRuntimeError::InvalidPath);
         }
         FrozenMemorySnapshot::load(&self.store)
-            .map_or_else(|_| String::new(), |snapshot| snapshot.system_block())
+            .map(|snapshot| snapshot.system_block())
+            .map_err(|error| map_error(&error))
     }
 }
 

@@ -1211,10 +1211,10 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_tether_core_checksum_method_memoryruntime_apply() and 0xFFFF) != 51060) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_tether_core_checksum_method_memoryruntime_frozen_block() and 0xFFFF) != 54904) {
+    if ((lib.uniffi_tether_core_checksum_method_memoryruntime_frozen_block() and 0xFFFF) != 22384) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_tether_core_checksum_method_memoryruntime_read() and 0xFFFF) != 743) {
+    if ((lib.uniffi_tether_core_checksum_method_memoryruntime_read() and 0xFFFF) != 26136) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_method_projectruntime_create_project() and 0xFFFF) != 451) {
@@ -2503,11 +2503,17 @@ public interface MemoryRuntimeInterface {
     
     /**
      * Formats the current files as an untrusted session snapshot block.
+     *
+     * # Errors
+     * Returns `InvalidPath` for a symlinked file or `Unavailable` for a read failure.
      */
     fun `frozenBlock`(): kotlin.String
     
     /**
      * Reads one memory file. A missing file is empty.
+     *
+     * # Errors
+     * Returns `InvalidPath` for a symlinked file or `Unavailable` for a read failure.
      */
     fun `read`(`target`: MemoryTargetView): kotlin.String
     
@@ -2658,10 +2664,14 @@ open class MemoryRuntime: Disposable, AutoCloseable, MemoryRuntimeInterface
     
     /**
      * Formats the current files as an untrusted session snapshot block.
-     */override fun `frozenBlock`(): kotlin.String {
+     *
+     * # Errors
+     * Returns `InvalidPath` for a symlinked file or `Unavailable` for a read failure.
+     */
+    @Throws(MemoryRuntimeException::class)override fun `frozenBlock`(): kotlin.String {
             return FfiConverterString.lift(
     callWithHandle {
-    uniffiRustCall() { _status ->
+    uniffiRustCallWithError(MemoryRuntimeException) { _status ->
     UniffiLib.uniffi_tether_core_fn_method_memoryruntime_frozen_block(
         it,
         _status)
@@ -2674,10 +2684,14 @@ open class MemoryRuntime: Disposable, AutoCloseable, MemoryRuntimeInterface
     
     /**
      * Reads one memory file. A missing file is empty.
-     */override fun `read`(`target`: MemoryTargetView): kotlin.String {
+     *
+     * # Errors
+     * Returns `InvalidPath` for a symlinked file or `Unavailable` for a read failure.
+     */
+    @Throws(MemoryRuntimeException::class)override fun `read`(`target`: MemoryTargetView): kotlin.String {
             return FfiConverterString.lift(
     callWithHandle {
-    uniffiRustCall() { _status ->
+    uniffiRustCallWithError(MemoryRuntimeException) { _status ->
     UniffiLib.uniffi_tether_core_fn_method_memoryruntime_read(
         it,
         
@@ -7908,6 +7922,11 @@ data class VaultLinkView (
      * Whether the target exists.
      */
     var `resolved`: kotlin.Boolean
+    , 
+    /**
+     * Relative path of the target note, when resolved.
+     */
+    var `resolvedPath`: kotlin.String?
     
 ){
     
@@ -7929,6 +7948,7 @@ public object FfiConverterTypeVaultLinkView: FfiConverterRustBuffer<VaultLinkVie
             FfiConverterOptionalString.read(buf),
             FfiConverterOptionalString.read(buf),
             FfiConverterBoolean.read(buf),
+            FfiConverterOptionalString.read(buf),
         )
     }
 
@@ -7937,7 +7957,8 @@ public object FfiConverterTypeVaultLinkView: FfiConverterRustBuffer<VaultLinkVie
             FfiConverterString.allocationSize(value.`target`) +
             FfiConverterOptionalString.allocationSize(value.`heading`) +
             FfiConverterOptionalString.allocationSize(value.`alias`) +
-            FfiConverterBoolean.allocationSize(value.`resolved`)
+            FfiConverterBoolean.allocationSize(value.`resolved`) +
+            FfiConverterOptionalString.allocationSize(value.`resolvedPath`)
     )
 
     override fun write(value: VaultLinkView, buf: ByteBuffer) {
@@ -7946,6 +7967,7 @@ public object FfiConverterTypeVaultLinkView: FfiConverterRustBuffer<VaultLinkVie
             FfiConverterOptionalString.write(value.`heading`, buf)
             FfiConverterOptionalString.write(value.`alias`, buf)
             FfiConverterBoolean.write(value.`resolved`, buf)
+            FfiConverterOptionalString.write(value.`resolvedPath`, buf)
     }
 }
 

@@ -45,6 +45,8 @@ pub struct VaultLinkView {
     pub alias: Option<String>,
     /// Whether the target exists.
     pub resolved: bool,
+    /// Relative path of the target note, when resolved.
+    pub resolved_path: Option<String>,
 }
 
 /// Outgoing and incoming links for one note.
@@ -202,6 +204,7 @@ impl From<VaultLink> for VaultLinkView {
             heading: link.heading,
             alias: link.alias,
             resolved: link.resolved,
+            resolved_path: link.resolved_path,
         }
     }
 }

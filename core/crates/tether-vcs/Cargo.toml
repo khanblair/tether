@@ -8,6 +8,7 @@ description = "Git through gitoxide: clone, status, commit, branch, push."
 
 [dependencies]
 reqwest.workspace = true
+gix.workspace = true
 serde_json.workspace = true
 tether-secrets.workspace = true
 thiserror.workspace = true

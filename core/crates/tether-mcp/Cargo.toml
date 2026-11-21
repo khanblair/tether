@@ -6,5 +6,15 @@ rust-version.workspace = true
 publish.workspace = true
 description = "MCP client: Streamable HTTP and stdio transports."
 
+[dependencies]
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tether-providers.workspace = true
+tether-secrets.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
+
 [lints]
 workspace = true

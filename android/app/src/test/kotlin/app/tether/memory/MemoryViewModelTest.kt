@@ -150,6 +150,16 @@ class MemoryViewModelTest {
         }
 
     @Test
+    fun an_empty_read_has_zero_entries_and_no_read_failure() =
+        runTest(dispatcher) {
+            val vm = viewModel(FakeMemoryGateway(mapOf(MemoryFile.Memory to "")))
+            advanceUntilIdle()
+            assertEquals(emptyList<String>(), vm.state.value.entries)
+            assertFalse(vm.state.value.readFailed)
+            assertFalse(vm.state.value.loading)
+        }
+
+    @Test
     fun a_failed_read_marks_the_file_unreadable() =
         runTest(dispatcher) {
             val gateway = FakeMemoryGateway()

@@ -40,7 +40,16 @@ class VaultListViewModel(
     /** Searches the vault for [text]. A blank text shows the standard notes again. */
     fun onQueryChange(text: String) {
         mutableState.value = mutableState.value.copy(query = text, problem = null)
-        val needle = text.trim()
+        runCurrentQuery()
+    }
+
+    /** Runs the current query again, so notes created or edited since the last read show up. */
+    fun refresh() {
+        runCurrentQuery()
+    }
+
+    private fun runCurrentQuery() {
+        val needle = mutableState.value.query.trim()
         if (needle.isEmpty()) {
             showStandardNotes()
             return

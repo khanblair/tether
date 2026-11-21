@@ -66,19 +66,19 @@ class VaultNoteViewModel(
     }
 
     /**
-     * Opens the note a resolved [link] points to. The core gives no path for a link, so the
-     * candidate paths are tried in order. [onOpen] gets the path that was found.
+     * Opens the note a resolved [link] points to, at the path the core resolved it to. A link with
+     * no resolved path does nothing. [onOpen] gets that path once the note is confirmed readable.
      */
     fun openLink(
         link: BodyLink,
         onOpen: (String) -> Unit,
     ) {
-        if (!link.resolved) return
+        val target = link.resolvedPath ?: return
         mutableState.value = mutableState.value.copy(linkFailed = false)
         viewModelScope.launch {
-            val found = callCore(io) { firstReadable(linkCandidates(path, link.target)) }
-            found.fold(
-                onSuccess = { target -> if (target != null) onOpen(target) else markLinkFailed() },
+            val readable = callCore(io) { isReadable(target) }
+            readable.fold(
+                onSuccess = { if (it) onOpen(target) else markLinkFailed() },
                 onFailure = { markLinkFailed() },
             )
         }
@@ -88,13 +88,11 @@ class VaultNoteViewModel(
         mutableState.value = mutableState.value.copy(linkFailed = true)
     }
 
-    private fun firstReadable(candidates: List<String>): String? =
-        candidates.firstOrNull { candidate ->
-            try {
-                gateway.read(candidate)
-                true
-            } catch (missing: AreaFailure) {
-                if (missing.problem == AreaProblem.NotFound) false else throw missing
-            }
+    private fun isReadable(target: String): Boolean =
+        try {
+            gateway.read(target)
+            true
+        } catch (missing: AreaFailure) {
+            if (missing.problem == AreaProblem.NotFound) false else throw missing
         }
 }

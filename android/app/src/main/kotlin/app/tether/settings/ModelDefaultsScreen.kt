@@ -1,6 +1,10 @@
 package app.tether.settings
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -17,6 +21,7 @@ import app.tether.design.components.ListRow
 import app.tether.design.components.SectionTitle
 import app.tether.design.components.TetherSheet
 import app.tether.design.components.TetherTextButton
+import app.tether.design.tokens.TetherSpace
 import app.tether.providers.providerNameRes
 
 /** The app default model, the per-project models, and the two models the app cannot use yet. */
@@ -98,28 +103,35 @@ private fun ModelPickSheet(
         title = stringResource(R.string.settings_area_default_model),
         onDismiss = onDismiss,
     ) {
-        if (state.providers.isEmpty()) {
-            Text(
-                text = stringResource(R.string.settings_area_models_none),
-                style = MaterialTheme.typography.bodyMedium,
-                color = TetherTheme.colors.text2,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            TetherTextButton(
-                label = stringResource(R.string.settings_area_open_providers),
-                onClick = onOpenProviders,
-            )
-        }
-        if (target is ModelTarget.Project) {
-            ListGroup {
-                ListRow(
-                    title = stringResource(R.string.settings_area_uses_app_default),
-                    trailing = selectedTrailing(current == null),
-                    onClick = { onPick(null) },
+        Column(
+            modifier =
+                Modifier
+                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = TetherSpace.space2),
+        ) {
+            if (state.providers.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.settings_area_models_none),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = TetherTheme.colors.text2,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                TetherTextButton(
+                    label = stringResource(R.string.settings_area_open_providers),
+                    onClick = onOpenProviders,
                 )
             }
+            if (target is ModelTarget.Project) {
+                ListGroup {
+                    ListRow(
+                        title = stringResource(R.string.settings_area_uses_app_default),
+                        trailing = selectedTrailing(current == null),
+                        onClick = { onPick(null) },
+                    )
+                }
+            }
+            state.providers.forEach { group -> ProviderGroup(group, current, onPick) }
         }
-        state.providers.forEach { group -> ProviderGroup(group, current, onPick) }
     }
 }
 

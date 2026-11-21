@@ -21,7 +21,13 @@ fun parseBody(body: String): List<BodyPart> {
         val alias = match.groupValues[ALIAS_GROUP].trim().ifEmpty { null }
         val label = alias ?: listOfNotNull(target, heading).joinToString(" > ")
         parts +=
-            BodyPart.BodyLink(target = target, heading = heading, label = label, resolved = false)
+            BodyPart.BodyLink(
+                target = target,
+                heading = heading,
+                label = label,
+                resolved = false,
+                resolvedPath = null,
+            )
         last = match.range.last + 1
     }
     if (last < body.length) parts += BodyPart.BodyText(body.substring(last))
@@ -29,8 +35,9 @@ fun parseBody(body: String): List<BodyPart> {
 }
 
 /**
- * Marks each link resolved when the core reports its target as found. [outgoing] is the core's
- * list of links written in the note. A link the core did not list stays unresolved.
+ * Marks each link resolved when the core reports its target as found, and copies the path the core
+ * resolved it to. [outgoing] is the core's list of links written in the note. A link the core did
+ * not list, or lists without a path, stays unresolved.
  */
 fun resolveBodyLinks(
     parts: List<BodyPart>,
@@ -45,7 +52,8 @@ fun resolveBodyLinks(
                     it.target.trim() == part.target &&
                         it.heading?.trim() == part.heading
                 }
-            part.copy(resolved = found?.resolved ?: false)
+            val path = found?.resolvedPath
+            part.copy(resolved = found?.resolved == true && path != null, resolvedPath = path)
         }
     }
 
@@ -63,20 +71,6 @@ fun noteBody(source: String): String {
     } else {
         source
     }
-}
-
-/**
- * The paths a link to [target] written in the note at [fromPath] may point to, in the order the
- * core tries them: the vault root first, then the note's own folder.
- */
-fun linkCandidates(
-    fromPath: String,
-    target: String,
-): List<String> {
-    val file = "${target.removeSuffix(".md")}.md"
-    val folder = fromPath.substringBeforeLast('/', "")
-    val sibling = if (folder.isEmpty()) file else "$folder/$file"
-    return listOf(file, sibling).distinct()
 }
 
 /**

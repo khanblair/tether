@@ -102,6 +102,47 @@ class VaultListViewModelTest {
         }
 
     @Test
+    fun refresh_shows_the_new_rows_for_the_same_query() =
+        runTest(dispatcher) {
+            val gateway =
+                FakeVaultGateway(
+                    mutableMapOf(
+                        "notes/auth.md" to note("notes/auth.md", "x"),
+                    ),
+                )
+            val vm = VaultListViewModel(gateway, dispatcher)
+            advanceUntilIdle()
+            vm.onQueryChange("auth")
+            advanceUntilIdle()
+            gateway.notes["notes/auth-two.md"] = note("notes/auth-two.md", "y")
+            vm.refresh()
+            advanceUntilIdle()
+            assertEquals(
+                listOf("notes/auth.md", "notes/auth-two.md"),
+                vm.state.value.notes
+                    .map { it.path },
+            )
+            assertEquals("auth", vm.state.value.query)
+        }
+
+    @Test
+    fun refresh_with_a_blank_query_shows_a_standard_note_created_since() =
+        runTest(dispatcher) {
+            val gateway = FakeVaultGateway()
+            val vm = VaultListViewModel(gateway, dispatcher)
+            advanceUntilIdle()
+            assertEquals(emptyList<VaultNote>(), vm.state.value.notes)
+            gateway.notes["index.md"] = note("index.md", "index")
+            vm.refresh()
+            advanceUntilIdle()
+            assertEquals(
+                listOf("index.md"),
+                vm.state.value.notes
+                    .map { it.path },
+            )
+        }
+
+    @Test
     fun a_failed_search_shows_the_problem() =
         runTest(dispatcher) {
             val gateway = FakeVaultGateway(mutableMapOf("log.md" to note("log.md", "log")))

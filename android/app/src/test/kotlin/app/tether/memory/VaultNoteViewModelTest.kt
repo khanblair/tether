@@ -18,13 +18,46 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class VaultNoteViewModelTest {
     private val dispatcher = StandardTestDispatcher()
-    private val source = "---\ndescription: Auth\n---\nSee [[Token rotation]] and [[Commit style]]."
+    private val source =
+        "---\ndescription: Auth\n---\nSee [[Token rotation]], [[Commit style]] and [[Auth]]."
     private val outgoing =
         listOf(
-            VaultLink("notes/auth.md", "Token rotation", null, null, resolved = false),
-            VaultLink("notes/auth.md", "Commit style", null, null, resolved = true),
+            VaultLink(
+                "notes/auth.md",
+                "Token rotation",
+                null,
+                null,
+                resolved = false,
+                resolvedPath = null,
+            ),
+            VaultLink(
+                "notes/auth.md",
+                "Commit style",
+                null,
+                null,
+                resolved = true,
+                resolvedPath = "Commit style.md",
+            ),
+            VaultLink(
+                "notes/auth.md",
+                "Auth",
+                null,
+                null,
+                resolved = true,
+                resolvedPath = "notes/Auth.md",
+            ),
         )
-    private val incoming = listOf(VaultLink("index.md", "notes/auth", null, null, resolved = true))
+    private val incoming =
+        listOf(
+            VaultLink(
+                "index.md",
+                "notes/auth",
+                null,
+                null,
+                resolved = true,
+                resolvedPath = "notes/auth.md",
+            ),
+        )
 
     @Before
     fun setUp() = Dispatchers.setMain(dispatcher)
@@ -44,25 +77,21 @@ class VaultNoteViewModelTest {
         )
     }
 
+    private fun VaultNoteViewModel.links(): List<BodyLink> =
+        state.value.parts.filterIsInstance<BodyLink>()
+
     @Test
     fun the_body_shows_its_links_marked_resolved_or_missing() =
         runTest(dispatcher) {
             val vm = VaultNoteViewModel(gateway(), "notes/auth.md", dispatcher)
             advanceUntilIdle()
-            val parts = vm.state.value.parts
             assertEquals(
-                listOf(
-                    "See ",
-                    "Token rotation",
-                    " and ",
-                    "Commit style",
-                    ".",
-                ),
-                parts.map { if (it is BodyLink) it.label else (it as BodyPart.BodyText).text },
+                listOf(false, true, true),
+                vm.links().map { it.resolved },
             )
             assertEquals(
-                listOf(false, true),
-                parts.filterIsInstance<BodyLink>().map { it.resolved },
+                listOf("Token rotation", "Commit style", "Auth"),
+                vm.links().map { it.label },
             )
         }
 
@@ -80,44 +109,20 @@ class VaultNoteViewModelTest {
         }
 
     @Test
-    fun a_resolved_link_opens_the_note_at_the_vault_root_first() =
+    fun a_resolved_link_opens_the_path_the_core_resolved_it_to() =
         runTest(dispatcher) {
             val vm =
                 VaultNoteViewModel(
-                    gateway(note("Commit style.md", "root")),
+                    gateway(note("notes/Auth.md", "auth note")),
                     "notes/auth.md",
                     dispatcher,
                 )
             advanceUntilIdle()
             val opened = mutableListOf<String>()
-            vm.openLink(
-                vm.state.value.parts
-                    .filterIsInstance<BodyLink>()
-                    .last(),
-            ) { opened += it }
+            vm.openLink(vm.links().last()) { opened += it }
             advanceUntilIdle()
-            assertEquals(listOf("Commit style.md"), opened)
+            assertEquals(listOf("notes/Auth.md"), opened)
             assertFalse(vm.state.value.linkFailed)
-        }
-
-    @Test
-    fun a_resolved_link_falls_back_to_the_note_folder() =
-        runTest(dispatcher) {
-            val vm =
-                VaultNoteViewModel(
-                    gateway(note("notes/Commit style.md", "folder")),
-                    "notes/auth.md",
-                    dispatcher,
-                )
-            advanceUntilIdle()
-            val opened = mutableListOf<String>()
-            vm.openLink(
-                vm.state.value.parts
-                    .filterIsInstance<BodyLink>()
-                    .last(),
-            ) { opened += it }
-            advanceUntilIdle()
-            assertEquals(listOf("notes/Commit style.md"), opened)
         }
 
     @Test
@@ -126,18 +131,14 @@ class VaultNoteViewModelTest {
             val vm = VaultNoteViewModel(gateway(), "notes/auth.md", dispatcher)
             advanceUntilIdle()
             val opened = mutableListOf<String>()
-            vm.openLink(
-                vm.state.value.parts
-                    .filterIsInstance<BodyLink>()
-                    .last(),
-            ) { opened += it }
+            vm.openLink(vm.links().last()) { opened += it }
             advanceUntilIdle()
             assertEquals(emptyList<String>(), opened)
             assertTrue(vm.state.value.linkFailed)
         }
 
     @Test
-    fun an_unresolved_link_is_not_tappable() =
+    fun a_link_with_no_resolved_path_is_missing_and_not_tappable() =
         runTest(dispatcher) {
             val vm =
                 VaultNoteViewModel(
@@ -147,12 +148,9 @@ class VaultNoteViewModelTest {
                 )
             advanceUntilIdle()
             val opened = mutableListOf<String>()
-            vm.openLink(
-                vm.state.value.parts
-                    .filterIsInstance<BodyLink>()
-                    .first(),
-            ) { opened += it }
+            vm.openLink(vm.links().first()) { opened += it }
             advanceUntilIdle()
+            assertEquals(false, vm.links().first().resolved)
             assertEquals(emptyList<String>(), opened)
             assertFalse(vm.state.value.linkFailed)
         }

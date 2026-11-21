@@ -18,9 +18,21 @@ class VaultRulesTest {
         assertEquals(
             listOf(
                 BodyText("See "),
-                BodyLink("Auth session design", null, "Auth session design", resolved = false),
+                BodyLink(
+                    "Auth session design",
+                    null,
+                    "Auth session design",
+                    resolved = false,
+                    resolvedPath = null,
+                ),
                 BodyText(" and "),
-                BodyLink("Commit style", "Tests", "the tests", resolved = false),
+                BodyLink(
+                    "Commit style",
+                    "Tests",
+                    "the tests",
+                    resolved = false,
+                    resolvedPath = null,
+                ),
                 BodyText("."),
             ),
             parts,
@@ -43,13 +55,34 @@ class VaultRulesTest {
                     heading = null,
                     alias = null,
                     resolved = true,
+                    resolvedPath = "notes/Auth session design.md",
                 ),
             )
         val parts =
             resolveBodyLinks(parseBody("[[Auth session design]] and [[Token rotation]]"), outgoing)
         val links = parts.filterIsInstance<BodyLink>()
         assertEquals(true, links[0].resolved)
+        assertEquals("notes/Auth session design.md", links[0].resolvedPath)
         assertEquals(false, links[1].resolved)
+        assertNull(links[1].resolvedPath)
+    }
+
+    @Test
+    fun a_link_the_core_marks_found_but_gives_no_path_is_missing() {
+        val outgoing =
+            listOf(
+                VaultLink(
+                    "notes/auth.md",
+                    "Auth",
+                    null,
+                    null,
+                    resolved = true,
+                    resolvedPath = null,
+                ),
+            )
+        val link = resolveBodyLinks(parseBody("[[Auth]]"), outgoing).single() as BodyLink
+        assertEquals(false, link.resolved)
+        assertNull(link.resolvedPath)
     }
 
     @Test
@@ -61,24 +94,6 @@ class VaultRulesTest {
     @Test
     fun a_note_without_frontmatter_has_its_whole_source_as_body() {
         assertEquals("# Title", noteBody("# Title"))
-    }
-
-    @Test
-    fun a_link_tries_the_vault_root_then_the_note_folder() {
-        assertEquals(
-            listOf("Token rotation.md", "notes/Token rotation.md"),
-            linkCandidates("notes/auth.md", "Token rotation"),
-        )
-    }
-
-    @Test
-    fun a_note_in_the_root_has_one_candidate() {
-        assertEquals(listOf("Token rotation.md"), linkCandidates("index.md", "Token rotation"))
-    }
-
-    @Test
-    fun a_target_that_already_ends_in_md_is_not_given_a_second_suffix() {
-        assertEquals(listOf("log.md"), linkCandidates("index.md", "log.md"))
     }
 
     @Test

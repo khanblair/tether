@@ -18,13 +18,17 @@ data class VaultNote(
     val source: String,
 )
 
-/** A link written in a note. [resolved] is false when no note matches its target. */
+/**
+ * A link written in a note. [resolved] is false when no note matches its target. [resolvedPath] is
+ * the note path the core resolved the target to, or null when none matches.
+ */
 data class VaultLink(
     val from: String,
     val target: String,
     val heading: String?,
     val alias: String?,
     val resolved: Boolean,
+    val resolvedPath: String?,
 )
 
 /** The links out of one note and the links into it. */
@@ -131,6 +135,7 @@ class CoreVaultGateway(
             heading = heading,
             alias = alias,
             resolved = resolved,
+            resolvedPath = resolvedPath,
         )
 
     private inline fun <T> guard(block: () -> T): T =

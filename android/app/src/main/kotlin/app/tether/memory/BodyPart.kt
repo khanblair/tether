@@ -9,12 +9,14 @@ sealed interface BodyPart {
 
     /**
      * A wiki link. [label] is the alias when the link has one, else the target, with the heading
-     * after it. [resolved] is true when the core found a note for the target.
+     * after it. [resolved] is true when the core found a note for the target, and [resolvedPath]
+     * is that note's path. A link with no [resolvedPath] is shown as missing.
      */
     data class BodyLink(
         val target: String,
         val heading: String?,
         val label: String,
         val resolved: Boolean,
+        val resolvedPath: String?,
     ) : BodyPart
 }

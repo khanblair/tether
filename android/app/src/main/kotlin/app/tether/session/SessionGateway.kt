@@ -2,6 +2,7 @@ package app.tether.session
 
 import app.tether.core.generated.CoreEventView
 import app.tether.core.generated.EventSink
+import app.tether.core.generated.PermissionModeView
 import app.tether.core.generated.ProviderView
 import app.tether.core.generated.SecretVault
 import app.tether.core.generated.SessionRuntime
@@ -32,6 +33,12 @@ interface SessionGateway {
         provider: ProviderView,
         modelId: String,
     ): String
+
+    /** Sets the permission mode of [sessionId]. Used right after creation, before any turn. */
+    fun setMode(
+        sessionId: String,
+        mode: PermissionModeView,
+    )
 }
 
 /**
@@ -63,6 +70,11 @@ class CoreSessionGateway(
         provider: ProviderView,
         modelId: String,
     ): String = runtime.createSession(projectId, provider, modelId).id
+
+    override fun setMode(
+        sessionId: String,
+        mode: PermissionModeView,
+    ) = runtime.setSessionMode(sessionId, mode)
 }
 
 /** The event sink for list and create calls. No turn runs through it, so events are dropped. */

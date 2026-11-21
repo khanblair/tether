@@ -1,9 +1,11 @@
 package app.tether.session
 
+import app.tether.core.generated.PermissionModeView
 import app.tether.core.generated.ProviderView
 import app.tether.providers.ProviderGateway
 import app.tether.settings.AppDefaultSource
 import app.tether.settings.DefaultModel
+import app.tether.settings.ProjectDefaults
 import app.tether.settings.ProjectDefaultsGateway
 
 /** The outcome of [SessionStarter.start]. */
@@ -19,7 +21,10 @@ sealed interface StartResult {
     /** The first provider with a key has no saved model. No session was created. */
     data object NoModels : StartResult
 
-    /** A gateway call threw. No session was created. */
+    /**
+     * A gateway call threw. Either no session was created, or the session was created and its
+     * permission mode could not be set, so the session exists in the core but was not started.
+     */
     data object Failed : StartResult
 }
 
@@ -27,7 +32,8 @@ sealed interface StartResult {
  * Starts a plain chat session in a project. The model comes from the first of these that is set
  * and has a saved key: the project's default, the app default, then the first provider in
  * [ProviderView] order that has a key, with that provider's first saved model. A default whose
- * provider has no key is skipped. Blocking: call it off the main thread.
+ * provider has no key is skipped. The permission mode is the project's default, else the app's;
+ * when neither is saved the core's own mode stays. Blocking: call it off the main thread.
  */
 class SessionStarter(
     private val providers: ProviderGateway,
@@ -39,35 +45,46 @@ class SessionStarter(
     @Suppress("TooGenericExceptionCaught")
     fun start(projectId: String): StartResult =
         try {
-            val chosen =
-                savedChoice(projectDefault(projectId)) ?: savedChoice(appDefaults?.defaultModel())
+            val project = projectDefaults?.load(projectId)
+            val mode = project?.mode ?: appDefaults?.savedDefaultMode()
+            val chosen = savedChoice(project?.model()) ?: savedChoice(appDefaults?.defaultModel())
             if (chosen != null) {
-                StartResult.Started(
-                    sessions.createSession(projectId, chosen.provider, chosen.modelId),
-                )
+                createStarted(projectId, chosen.provider, chosen.modelId, mode)
             } else {
-                firstKeyedStart(projectId)
+                firstKeyedStart(projectId, mode)
             }
         } catch (_: Exception) {
             StartResult.Failed
         }
 
-    private fun firstKeyedStart(projectId: String): StartResult {
+    private fun firstKeyedStart(
+        projectId: String,
+        mode: SessionMode?,
+    ): StartResult {
         val provider =
             ProviderView.entries.firstOrNull { providers.hasKey(it) } ?: return StartResult.NoKey
         val model = sessions.defaultModel(provider)?.trim()?.takeIf(String::isNotEmpty)
         return if (model == null) {
             StartResult.NoModels
         } else {
-            StartResult.Started(sessions.createSession(projectId, provider, model))
+            createStarted(projectId, provider, model, mode)
         }
     }
 
-    private fun projectDefault(projectId: String): DefaultModel? {
-        val saved = projectDefaults?.load(projectId)
-        val provider = saved?.provider
-        val modelId = saved?.modelId
-        return if (provider != null && modelId != null) DefaultModel(provider, modelId) else null
+    /**
+     * Creates the session, then sets [mode] when one is set. A throw from [SessionGateway.setMode]
+     * reaches [start], which returns [StartResult.Failed]. The session stays in the core, not
+     * started.
+     */
+    private fun createStarted(
+        projectId: String,
+        provider: ProviderView,
+        modelId: String,
+        mode: SessionMode?,
+    ): StartResult {
+        val sessionId = sessions.createSession(projectId, provider, modelId)
+        if (mode != null) sessions.setMode(sessionId, PermissionModeView.valueOf(mode.name))
+        return StartResult.Started(sessionId)
     }
 
     /**
@@ -82,3 +99,7 @@ class SessionStarter(
         }
     }
 }
+
+/** The project's model as one value, or null when either half is missing. */
+private fun ProjectDefaults.model(): DefaultModel? =
+    if (provider != null && modelId != null) DefaultModel(provider, modelId) else null

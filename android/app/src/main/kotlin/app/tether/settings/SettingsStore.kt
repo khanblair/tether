@@ -19,6 +19,12 @@ interface SettingsStore : AppDefaultSource {
     /** The default permission mode for new sessions. Accept edits when none is saved. */
     fun defaultMode(): SessionMode
 
+    /** Whether the first-run flow has been finished or skipped. False until then. */
+    fun onboarded(): Boolean
+
+    /** Saves whether the first-run flow is done. Clearing it shows the flow again. */
+    fun saveOnboarded(done: Boolean)
+
     /** Saves the default permission mode. */
     fun saveDefaultMode(mode: SessionMode)
 
@@ -59,13 +65,21 @@ class PrefsSettingsStore(
         }
     }
 
-    override fun defaultMode(): SessionMode {
+    override fun defaultMode(): SessionMode = savedDefaultMode() ?: SessionMode.ACCEPT_EDITS
+
+    override fun savedDefaultMode(): SessionMode? {
         val saved = prefs.getString(DEFAULT_MODE, null)
-        return SessionMode.entries.firstOrNull { it.name == saved } ?: SessionMode.ACCEPT_EDITS
+        return SessionMode.entries.firstOrNull { it.name == saved }
     }
 
     override fun saveDefaultMode(mode: SessionMode) {
         prefs.edit { putString(DEFAULT_MODE, mode.name) }
+    }
+
+    override fun onboarded(): Boolean = prefs.getBoolean(ONBOARDED, false)
+
+    override fun saveOnboarded(done: Boolean) {
+        prefs.edit { putBoolean(ONBOARDED, done) }
     }
 
     override fun appLockEnabled(): Boolean = prefs.getBoolean(APP_LOCK, false)
@@ -84,5 +98,6 @@ class PrefsSettingsStore(
         const val DEFAULT_MODEL = "default_model"
         const val DEFAULT_MODE = "default_mode"
         const val APP_LOCK = "app_lock"
+        const val ONBOARDED = "onboarded"
     }
 }

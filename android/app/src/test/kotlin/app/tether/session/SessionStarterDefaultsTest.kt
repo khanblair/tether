@@ -1,5 +1,6 @@
 package app.tether.session
 
+import app.tether.core.generated.PermissionModeView
 import app.tether.core.generated.ProviderView
 import app.tether.providers.FakeProviderGateway
 import app.tether.settings.DefaultModel
@@ -103,6 +104,52 @@ class SessionStarterDefaultsTest {
     }
 
     @Test
+    fun the_project_mode_wins_over_the_app_mode() {
+        providers.keys[ProviderView.ANTHROPIC] = "key"
+        projectDefaults.saved["p1"] =
+            ProjectDefaults(ProviderView.ANTHROPIC, "claude", SessionMode.PLAN)
+        appDefault.mode = SessionMode.AUTO
+
+        starter.start("p1")
+
+        assertEquals(listOf("new-session" to PermissionModeView.PLAN), sessions.modes)
+    }
+
+    @Test
+    fun the_app_mode_applies_when_the_project_has_none() {
+        providers.keys[ProviderView.ANTHROPIC] = "key"
+        sessions.models[ProviderView.ANTHROPIC] = "first-saved"
+        appDefault.mode = SessionMode.ASK
+
+        starter.start("p1")
+
+        assertEquals(listOf("new-session" to PermissionModeView.ASK), sessions.modes)
+    }
+
+    @Test
+    fun no_saved_mode_makes_no_mode_call() {
+        providers.keys[ProviderView.ANTHROPIC] = "key"
+        sessions.models[ProviderView.ANTHROPIC] = "first-saved"
+
+        starter.start("p1")
+
+        assertTrue(sessions.modes.isEmpty())
+    }
+
+    @Test
+    fun a_failed_mode_call_gives_failed_even_though_the_session_was_created() {
+        providers.keys[ProviderView.ANTHROPIC] = "key"
+        sessions.models[ProviderView.ANTHROPIC] = "first-saved"
+        appDefault.mode = SessionMode.AUTO
+        sessions.setModeError = IllegalStateException("core refused the mode")
+
+        val result = starter.start("p1")
+
+        assertEquals(StartResult.Failed, result)
+        assertEquals(1, sessions.created.size)
+    }
+
+    @Test
     fun a_project_default_that_cannot_be_read_gives_failed_and_creates_nothing() {
         providers.keys[ProviderView.ANTHROPIC] = "key"
         projectDefaults.failLoad = true
@@ -115,8 +162,11 @@ class SessionStarterDefaultsTest {
 
     private class FixedAppDefault : app.tether.settings.AppDefaultSource {
         var model: DefaultModel? = null
+        var mode: SessionMode? = null
 
         override fun defaultModel(): DefaultModel? = model
+
+        override fun savedDefaultMode(): SessionMode? = mode
     }
 
     private class MapProjectDefaults : ProjectDefaultsGateway {

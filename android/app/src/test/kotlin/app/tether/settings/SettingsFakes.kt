@@ -9,6 +9,7 @@ class FakeSettingsStore(
     var model: DefaultModel? = null,
     var mode: SessionMode = SessionMode.ACCEPT_EDITS,
     var lock: Boolean = false,
+    var finished: Boolean = false,
 ) : SettingsStore {
     override fun profileName(): String = name
 
@@ -24,8 +25,16 @@ class FakeSettingsStore(
 
     override fun defaultMode(): SessionMode = mode
 
+    override fun savedDefaultMode(): SessionMode? = mode
+
     override fun saveDefaultMode(mode: SessionMode) {
         this.mode = mode
+    }
+
+    override fun onboarded(): Boolean = finished
+
+    override fun saveOnboarded(done: Boolean) {
+        finished = done
     }
 
     override fun appLockEnabled(): Boolean = lock

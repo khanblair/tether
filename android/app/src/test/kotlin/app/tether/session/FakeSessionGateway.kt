@@ -1,5 +1,6 @@
 package app.tether.session
 
+import app.tether.core.generated.PermissionModeView
 import app.tether.core.generated.ProviderView
 import app.tether.core.generated.SessionStatusView
 
@@ -8,6 +9,10 @@ class FakeSessionGateway : SessionGateway {
     val sessionsByProject = mutableMapOf<String, List<SessionInfo>>()
     val models = mutableMapOf<ProviderView, String?>()
     val created = mutableListOf<Triple<String, ProviderView, String>>()
+    val modes = mutableListOf<Pair<String, PermissionModeView>>()
+
+    /** Throws this from [setMode], and from nothing else. Set it to test a failed mode call. */
+    var setModeError: Exception? = null
 
     /** The id [createSession] returns. */
     var nextSessionId = "new-session"
@@ -40,6 +45,14 @@ class FakeSessionGateway : SessionGateway {
         maybeFail()
         created += Triple(projectId, provider, modelId)
         return nextSessionId
+    }
+
+    override fun setMode(
+        sessionId: String,
+        mode: PermissionModeView,
+    ) {
+        setModeError?.let { throw it }
+        modes += sessionId to mode
     }
 }
 

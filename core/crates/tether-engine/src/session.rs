@@ -3,18 +3,19 @@
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use tether_providers::{ChatProvider, ChatRequest};
+use tether_providers::ChatProvider;
 use tether_store::{BlobStore, SessionRecord, Store, StoreError};
-use tether_types::{CoreError, CoreEvent, SessionId, SessionStatus, UsageSnapshot};
+use tether_types::{CoreError, CoreEvent, PermissionMode, SessionId, SessionStatus};
 use tether_workspace::PathGuard;
 use thiserror::Error;
 use tokio::sync::{mpsc, oneshot};
 use tokio_util::sync::CancellationToken;
 
-use crate::{EventSink, RewindError, RewindScope, ToolLoop, tool_loop::ToolLoopContext};
+use crate::{Approver, EventSink, RewindError, RewindScope, ToolLoop, tool_loop::ToolLoopContext};
 
 mod rewind;
 mod stream;
+mod turn;
 
 const TEXT_BATCH_MS: u64 = 32;
 const TEXT_BATCH_CHARS: usize = 64;
@@ -23,17 +24,19 @@ const MAX_OUTPUT_TOKENS: u32 = 4096;
 /// Resolves the provider and its current credentials when a turn begins.
 pub type ProviderFactory = Arc<dyn Fn() -> Result<Arc<dyn ChatProvider>, CoreError> + Send + Sync>;
 
-/// Approval callback for a proposed tool mutation.
-pub type ToolApproval = Arc<dyn Fn(&str, &str) -> bool + Send + Sync>;
-
 /// A guarded workspace and checkpoint store used by tool turns.
 pub struct ToolRuntime {
     /// Restricts tools to one project workspace.
     pub guard: PathGuard,
     /// Stores prior bytes before file mutations.
     pub blobs: BlobStore,
-    /// Decides whether a proposed file mutation may proceed.
-    pub approve: ToolApproval,
+    /// Resolves interactive approvals.
+    pub approver: Arc<dyn Approver>,
+    /// Current mode, including an in-memory Bypass value.
+    pub mode: Arc<Mutex<PermissionMode>>,
+    /// Tool handlers beyond the file tools: run, git, CI, web, MCP, checklist, and the rest.
+    /// The session setup builds them with their own dependencies.
+    pub handlers: Vec<Arc<dyn crate::ToolHandler>>,
 }
 
 /// A session command could not be accepted or the session could not open.
@@ -64,6 +67,12 @@ enum Command {
     Rewind {
         checkpoint_id: String,
         scope: RewindScope,
+        reply: oneshot::Sender<Result<(), SessionActorError>>,
+    },
+    EnableBypass {
+        reply: oneshot::Sender<Result<(), SessionActorError>>,
+    },
+    DisableBypass {
         reply: oneshot::Sender<Result<(), SessionActorError>>,
     },
 }
@@ -116,6 +125,32 @@ impl SessionHandle {
                 scope,
                 reply,
             })
+            .await
+            .map_err(|_| SessionActorError::Stopped)?;
+        result.await.map_err(|_| SessionActorError::Stopped)?
+    }
+
+    /// Enables the in-memory Bypass mode on this actor.
+    ///
+    /// # Errors
+    /// Returns an error when the actor stopped or has no guarded workspace.
+    pub async fn enable_bypass(&self) -> Result<(), SessionActorError> {
+        let (reply, result) = oneshot::channel();
+        self.tx
+            .send(Command::EnableBypass { reply })
+            .await
+            .map_err(|_| SessionActorError::Stopped)?;
+        result.await.map_err(|_| SessionActorError::Stopped)?
+    }
+
+    /// Disables the in-memory Bypass mode on this actor.
+    ///
+    /// # Errors
+    /// Returns an error when the actor stopped or has no guarded workspace.
+    pub async fn disable_bypass(&self) -> Result<(), SessionActorError> {
+        let (reply, result) = oneshot::channel();
+        self.tx
+            .send(Command::DisableBypass { reply })
             .await
             .map_err(|_| SessionActorError::Stopped)?;
         result.await.map_err(|_| SessionActorError::Stopped)?
@@ -221,80 +256,14 @@ impl SessionActor {
                     let result = self.rewind(&checkpoint_id, scope);
                     drop(reply.send(result));
                 }
+                Command::EnableBypass { reply } => {
+                    drop(reply.send(self.set_bypass(true)));
+                }
+                Command::DisableBypass { reply } => {
+                    drop(reply.send(self.set_bypass(false)));
+                }
             }
         }
-    }
-
-    #[expect(
-        clippy::too_many_lines,
-        reason = "one serialized turn owns persistence, tool execution, usage, and status"
-    )]
-    async fn turn(&mut self, text: String) -> Result<(), CoreError> {
-        let id = self.session.id.clone();
-        self.store
-            .begin_turn(&id, &text, now_ms())
-            .map_err(store_error)?;
-        let messages = self
-            .store
-            .messages(&id)
-            .map_err(store_error)?
-            .into_iter()
-            .filter(|message| !message.rewound)
-            .collect();
-        let request = ChatRequest {
-            model_id: self.session.model_id.clone(),
-            system: String::new(),
-            messages,
-            tools: Vec::new(),
-            max_output_tokens: MAX_OUTPUT_TOKENS,
-            reasoning: None,
-        };
-        let provider = (self.provider_for_turn)()?;
-        let cancel = CancellationToken::new();
-        if let Ok(mut active) = self.active.lock() {
-            *active = Some(cancel.clone());
-        }
-        self.emit_status(SessionStatus::Requesting);
-        let result = if let Some(tools) = &self.tools {
-            let loop_runner = ToolLoop::new(tools.guard.clone());
-            let mut context = ToolLoopContext {
-                session_id: &id,
-                store: &mut self.store,
-                blobs: &tools.blobs,
-                cancel: cancel.clone(),
-                approve: tools.approve.as_ref(),
-                sink: Some(self.sink.as_ref()),
-            };
-            let completed = loop_runner.run(provider, request, &mut context).await;
-            drop(context);
-            match completed {
-                Ok(_) => (UsageSnapshot::default(), Ok(())),
-                Err(error) => (UsageSnapshot::default(), Err(error)),
-            }
-        } else {
-            self.stream(provider, request, cancel).await
-        };
-        if let Ok(mut active) = self.active.lock() {
-            *active = None;
-        }
-        let (usage, result) = result;
-        self.store
-            .add_session_usage(&id, usage, now_ms())
-            .map_err(store_error)?;
-        let totals = self.store.session_usage(&id).map_err(store_error)?;
-        self.sink.on_event(CoreEvent::UsageUpdated {
-            session_id: id.clone(),
-            usage: totals,
-        });
-        result?;
-        self.store
-            .set_session_status(&id, SessionStatus::Idle, now_ms())
-            .map_err(store_error)?;
-        self.emit_status(SessionStatus::Idle);
-        self.sink.on_event(CoreEvent::TurnFinished {
-            session_id: id.clone(),
-        });
-        Ok(())
     }
 
     #[expect(
@@ -343,6 +312,21 @@ impl SessionActor {
             session_id: self.session.id.clone(),
             status,
         });
+    }
+
+    fn set_bypass(&self, enabled: bool) -> Result<(), SessionActorError> {
+        let Some(tools) = &self.tools else {
+            return Err(SessionActorError::NoWorkspace);
+        };
+        let mut mode = tools.mode.lock().map_err(|_| SessionActorError::Stopped)?;
+        *mode = if enabled {
+            PermissionMode::Bypass
+        } else {
+            self.session.mode
+        };
+        drop(mode);
+        self.emit_status(SessionStatus::Idle);
+        Ok(())
     }
 }
 

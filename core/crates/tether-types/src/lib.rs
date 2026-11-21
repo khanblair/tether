@@ -18,7 +18,8 @@ pub use ids::{MessageId, ProjectId, SessionId, ToolCallId};
 pub use message::{Message, MessagePart, Role};
 pub use model::{ModelCaps, ModelInfo, ModelPrice, PriceSource, Support};
 pub use session::{
-    ConnectionStatus, Executor, ModelRef, PermissionMode, Provider, SessionStatus, ToolCallStatus,
+    ConnectionStatus, Executor, ModelRef, NewRule, PermissionMode, PermissionRule, Provider,
+    SessionStatus, ToolCallStatus,
 };
 pub use text::UnknownValue;
 pub use usage::UsageSnapshot;

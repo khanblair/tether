@@ -59,6 +59,9 @@ impl Store {
         mode: PermissionMode,
         now_ms: i64,
     ) -> Result<SessionRecord, StoreError> {
+        if mode == PermissionMode::Bypass {
+            return Err(StoreError::BypassNeedsConfirmation);
+        }
         let id = SessionId::new(Ulid::new().to_string());
         self.conn.execute(
             "INSERT INTO sessions (id, project_id, provider, model_id, mode, status, created_at, updated_at) \

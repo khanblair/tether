@@ -25,6 +25,10 @@ pub(crate) const MIGRATIONS: &[Migration] = &[
         version: 3,
         sql: include_str!("../migrations/0003_checkpoints.sql"),
     },
+    Migration {
+        version: 4,
+        sql: include_str!("../migrations/0004_approvals.sql"),
+    },
 ];
 
 /// The schema version kept in `PRAGMA user_version`. A new database reports 0.
@@ -227,6 +231,16 @@ mod tests {
         let latest_version = latest(MIGRATIONS);
         assert_eq!(apply(&mut conn, MIGRATIONS).unwrap(), latest_version);
         assert_eq!(apply(&mut conn, MIGRATIONS).unwrap(), latest_version);
+    }
+
+    #[test]
+    fn approvals_migration_applies_to_a_0003_database() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        apply(&mut conn, &MIGRATIONS[..3]).unwrap();
+        conn.execute_batch("INSERT INTO projects (id, name, path, created_at) VALUES ('p', 'p', 'p', 1); INSERT INTO sessions (id, project_id, provider, model_id, mode, status, created_at, updated_at) VALUES ('s', 'p', 'openai', 'm', 'ask', 'idle', 1, 1);").unwrap();
+        assert_eq!(apply(&mut conn, MIGRATIONS).unwrap(), 4);
+        assert!(table_exists(&conn, "approvals"));
+        assert!(table_exists(&conn, "permission_rules"));
     }
 
     #[test]

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Project home entry point. -->
+    <string name="files_home_title">Files</string>
+    <string name="files_home_body">Read the project the way the agent sees it.</string>
+
+    <!-- File browser top bar and search. -->
+    <string name="files_search_action">Search file names</string>
+    <string name="files_more_action">More</string>
+    <string name="files_search_placeholder">Search file names</string>
+    <string name="files_search_clear">Clear search</string>
+    <string name="files_nothing_matches">Nothing matches.</string>
+    <string name="files_name_search_failed">Could not search file names. Try again.</string>
+    <string name="files_text_title">Search text</string>
+    <string name="files_text_body">Look for \"%1$s\" inside the project files.</string>
+    <string name="files_text_hit">Line %1$d: %2$s</string>
+    <string name="files_text_none">No lines match.</string>
+    <string name="files_text_failed">Could not search the text. Try again.</string>
+
+    <!-- File browser menu and tree. -->
+    <string name="files_show_ignored">Show ignored files</string>
+    <string name="files_state_on">On</string>
+    <string name="files_state_off">Off</string>
+    <string name="files_ignored">Ignored</string>
+    <string name="files_expanded">Expanded</string>
+    <string name="files_collapsed">Collapsed</string>
+    <string name="files_empty_folder">Empty.</string>
+    <string name="files_folder_failed">Could not open this folder.</string>
+    <string name="files_try_again">Try again</string>
+    <string name="files_truncated">Showing the first 2,000 items.</string>
+    <string name="files_loading">Loading</string>
+
+    <!-- File viewer. -->
+    <string name="files_copy_path">Copy path</string>
+    <string name="files_path_copied">Path copied</string>
+    <string name="files_view_root">Project root</string>
+    <plurals name="files_view_line_count">
+        <item quantity="one">%d line</item>
+        <item quantity="other">%d lines</item>
+    </plurals>
+    <string name="files_view_truncated">Showing the first 256 KB of %1$s.</string>
+    <string name="files_view_binary">This file is not text, so it cannot be shown.</string>
+    <string name="files_view_size">Size %1$s</string>
+    <string name="files_view_failed">Could not open this file.</string>
+</resources>

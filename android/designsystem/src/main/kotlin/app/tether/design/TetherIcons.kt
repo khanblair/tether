@@ -5,16 +5,7 @@
 
 package app.tether.design
 
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.vector.PathBuilder
-import androidx.compose.ui.graphics.vector.addPathNodes
-import androidx.compose.ui.graphics.vector.path
-import androidx.compose.ui.unit.dp
 
 /** Lucide icons drawn in solid black so callers tint them. Build each one once. */
 object TetherIcons {
@@ -188,6 +179,15 @@ object TetherIcons {
         }
     }
 
+    val FileText: ImageVector by lazy {
+        tetherIcon("FileText") {
+            strokeSvg(
+                "M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" +
+                    "M14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8",
+            )
+        }
+    }
+
     val FolderOpen: ImageVector by lazy {
         tetherIcon("FolderOpen") {
             strokeSvg(
@@ -340,55 +340,4 @@ object TetherIcons {
             strokeSvg("m6 9 6 6 6-6")
         }
     }
-}
-
-private const val STROKE_WIDTH = 1.75f
-private val INK: Brush = SolidColor(Color.Black)
-
-private fun tetherIcon(
-    name: String,
-    build: ImageVector.Builder.() -> Unit,
-): ImageVector =
-    ImageVector
-        .Builder(
-            name = name,
-            defaultWidth = 24.dp,
-            defaultHeight = 24.dp,
-            viewportWidth = 24f,
-            viewportHeight = 24f,
-        ).apply(build)
-        .build()
-
-private fun ImageVector.Builder.strokePath(
-    pathBuilder: PathBuilder.() -> Unit,
-): ImageVector.Builder =
-    path(
-        fill = null,
-        stroke = INK,
-        strokeLineWidth = STROKE_WIDTH,
-        strokeLineCap = StrokeCap.Round,
-        strokeLineJoin = StrokeJoin.Round,
-        pathBuilder = pathBuilder,
-    )
-
-private fun ImageVector.Builder.strokeSvg(pathData: String): ImageVector.Builder =
-    addPath(
-        pathData = addPathNodes(pathData),
-        fill = null,
-        stroke = INK,
-        strokeLineWidth = STROKE_WIDTH,
-        strokeLineCap = StrokeCap.Round,
-        strokeLineJoin = StrokeJoin.Round,
-    )
-
-/** A full circle as two half arcs, so it stays one closed subpath. */
-private fun PathBuilder.circle(
-    cx: Float,
-    cy: Float,
-    r: Float,
-) {
-    moveTo(cx - r, cy)
-    arcTo(r, r, 0f, false, true, cx + r, cy)
-    arcTo(r, r, 0f, false, true, cx - r, cy)
-    close()
 }

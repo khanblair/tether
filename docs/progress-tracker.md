@@ -118,6 +118,7 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 
 | Date | ID | Decision | Why | Docs affected |
 |---|---|---|---|---|
+| 2026-11-21 | D34 | Releases publish automatically on every merge to `main` that changes code. `tools/release-version.sh` picks the version: a Cargo.toml version with no tag is published as it is, otherwise the next patch after the newest tag, and a bot commit tries to record it in `core/Cargo.toml`. Docs-only merges never release; `[skip release]` in a PR title or the repository variable `AUTO_RELEASE=false` stops one or all. This reverses D33. Risk: every merge, including unfinished features, reaches all `full` users at once with no staged rollout (D22), and several quick merges queue (the workflow keeps only the newest waiting run) | Owner's request on 2026-11-21 | development, architecture, project-structure, mobile |
 | 2026-11-20 | D33 | The version number of a release is still chosen by a person: `just bump patch` (or `minor`, `major`, an exact version) edits `core/Cargo.toml` and `core/Cargo.lock`, and merging the bump publishes the release (D21). It is not raised on every merge, because every release reaches all `full` users at once with no staged rollout (D22). Merges with no bump, such as #153, #154, and #156, skip the release job by design | Owner's choice after the merges of #153, #154, and #156 did not release. Task P1-21 follow-up | development |
 | 2026-11-19 | D32 | Home is a dashboard, not the project list. This reverses the earlier pick of Projects as the home. Blair saw the first build and asked for a home with stats, graphs, and a brief analysis. Projects stays as a drawer destination. The drawer gains Home, Projects, Needs attention, Usage and cost, and Runs; its header holds a System, Light, Dark theme toggle. Usage shows tokens, not dollars, until prices are wired (P1-14). Debug builds show sample data; release builds never invent numbers | Owner's request on seeing the P1-21 build. Task P1-21, issue #155 | ui-rules, build-plan |
 | 2026-11-19 | D31 | The provider adapters (P1-05 to P1-08) are done on fixture tests. Each has an ignored live smoke test (`cargo test -p tether-providers -- --ignored live_smoke`, with the provider's API key in the environment), but no nightly run is scheduled, and the "live smoke test passes nightly" part of their done-when lines is deferred. A nightly workflow can be its own task | Owner's decision. A nightly run needs repository secrets and costs a few cents a night; the fixtures are hand-written from documented formats, so the live tests are the only check against the real services | build-plan |
@@ -174,6 +175,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Who | What happened | Next |
 |---|---|---|---|
+| 2026-11-21 | Blair with Claude | Automatic releases (D34): every merge to `main` that changes code publishes the next patch. `tools/release-version.sh` picks the version, `tools/bump-version.sh` gains `--next` and carries past 99 (`versionCode` keeps two digits per part), and `release.yml` sets the version in the build, skips docs-only pushes, honors `[skip release]` and `AUTO_RELEASE=false`, and tries to record the version in main. Both scripts have self tests and 12 mutations are caught. The workflow itself cannot be run locally | Merging this publishes the first automatic release; watch the run and check the assets |
 | 2026-11-20 | Codex | Fixed #188 CI's file-length gate by moving the actor rewind handler into `session/rewind.rs`; focused tests and Clippy pass | Rerun CI on the updated branch |
 | 2026-11-20 | Codex | Merged #187 after green CI, closed superseded drafts #184 to #186, and started P2-08 with all three restore modes, guarded files, actor ordering, and FFI calls | Run full checks and open the P2-08 pull request |
 | 2026-11-20 | Codex | Addressed six findings from the #187 Codex review: thinking replay, malformed tool JSON, persisted streaming, per-response usage, bounded grep output, and visible tool targets | Rerun gates and request follow-up review |
@@ -244,6 +246,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Files | Change | PR |
 |---|---|---|---|
+| 2026-11-21 | `.github/workflows/{release,ci}.yml`, `tools/{release-version,bump-version}.sh`, `justfile` | Automatic release on every merge that changes code, with a version picker and self tests | - |
 | 2026-11-20 | `core/crates/tether-{store,engine,types,ffi}/`, architecture, project-structure, progress-tracker | Added checkpoint listing and three rewind modes with guarded file restore, hidden conversation history, actor command, and FFI views | #188 |
 | 2026-11-20 | `core/crates/tether-engine/src/tool_loop*`, `core/crates/tether-workspace/src/file_index*`, progress-tracker | Saved error results for calls left pending on cancellation and excluded nested `.git` directories from the file index | #187 |
 | 2026-11-20 | `core/crates/tether-{engine,store,tools,ffi}/`, `android/app/src/main/kotlin/app/tether/session/TranscriptScreen.kt`, architecture, progress-tracker | Addressed #187 review findings with streamed persistence, reasoning replay, usage accounting, bounded grep, and safe target display | #187 |
@@ -306,6 +309,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Doc | Change |
 |---|---|---|
+| 2026-11-21 | development, architecture, project-structure, mobile, progress-tracker | Releases publish on every merge that changes code (D34, reverses D33); how to skip one or stop them |
 | 2026-11-20 | project-structure, progress-tracker | Recorded the actor rewind module split after #188 CI found a file-length failure |
 | 2026-11-20 | architecture, project-structure, library-docs, progress-tracker | Described the built rewind path and marked P2-04, P2-06, and P2-07 Done after #187 merged |
 | 2026-11-20 | progress-tracker | Recorded cancellation and nested Git fixes for #187 |

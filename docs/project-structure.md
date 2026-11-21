@@ -75,7 +75,7 @@ tether/
 │   ├── slop-lint/             Rust CLI with its own workspace and tests
 │   ├── site/{build.ts, site.css}   Builds the Pages site from docs/
 │   ├── prototype/             Clickable mobile UI prototype (HTML, CSS, JavaScript; no build step)
-│   └── gen-bindings.sh  gen-icons.ts  check-file-length.sh  check-commit-size.sh  check-smell-fixtures.sh  bump-version.sh  setup.sh  setup-release-signing.sh
+│   └── gen-bindings.sh  gen-icons.ts  check-file-length.sh  check-commit-size.sh  check-smell-fixtures.sh  bump-version.sh  release-version.sh  setup.sh  setup-release-signing.sh
 └── .github/
     ├── workflows/{ci.yml, pr.yml, release.yml, pages.yml}
     └── pull_request_template.md  CODEOWNERS  dependabot.yml
@@ -498,7 +498,7 @@ tools/
 │   ├── pr.yml               issue-link check on every pull request and description edit
 │   ├── nightly.yml          Benchmarks and live provider smoke tests (planned, P1)
 │   ├── pages.yml            Builds and deploys the docs site to GitHub Pages
-│   └── release.yml          Build, sign, and publish a GitHub Release for both flavors when the core version has no tag
+│   └── release.yml          Build, sign, and publish a GitHub Release for both flavors on every merge that changes code
 ├── pull_request_template.md Checklist including docs and progress tracker
 ├── dependabot.yml           Weekly dependency update PRs
 └── CODEOWNERS               Review owners per folder

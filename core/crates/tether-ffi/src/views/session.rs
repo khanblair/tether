@@ -19,6 +19,10 @@ pub struct SessionRecordView {
     pub model_id: String,
     /// Saved status.
     pub status: SessionStatusView,
+    /// Creation time in Unix milliseconds.
+    pub created_at_ms: i64,
+    /// Time of the last change, in Unix milliseconds.
+    pub updated_at_ms: i64,
 }
 
 impl From<SessionRecord> for SessionRecordView {
@@ -30,6 +34,8 @@ impl From<SessionRecord> for SessionRecordView {
             provider: session.provider.into(),
             model_id: session.model_id,
             status: session.status.into(),
+            created_at_ms: session.created_at,
+            updated_at_ms: session.updated_at,
         }
     }
 }

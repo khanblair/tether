@@ -1,6 +1,6 @@
 # Progress tracker
 
-Last updated: 20 Nov 2026.
+Last updated: 21 Nov 2026.
 
 ## How to update this file
 
@@ -52,6 +52,7 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 
 | ID | Task | Owner | Status | PR | Notes |
 |---|---|---|---|---|---|
+| P1-22 | First usable loop: create a project, start a session, chat | Codex | In progress | | Issue #189. Rust project creation, listing, loading, session listing, and saved default model are in progress. Android screens follow |
 | P2-08 | Rewind: files, conversation, or both | Codex | In review | #188 | All three restore modes and serialized actor rewind pass tests; CI pending |
 | P2-07 | Edit batches and checkpoints | Codex | Done | #187 | Merged with automatic capture and BLAKE3/zstd deduplication; cleanup remains |
 | P2-06 | Tool loop in the turn | Codex | Done | #187 | Merged with actor persistence, streamed text, five-call fixture, and Android entry point; Android mutations wait for approval UI |
@@ -174,6 +175,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Who | What happened | Next |
 |---|---|---|---|
+| 2026-11-21 | Codex | Added P1-22 project store and FFI calls, session listing, default model lookup, tests, and generated bindings | Run blocked engine update tests and cargo deny in CI; Android screens follow |
 | 2026-11-20 | Codex | Fixed #188 CI's file-length gate by moving the actor rewind handler into `session/rewind.rs`; focused tests and Clippy pass | Rerun CI on the updated branch |
 | 2026-11-20 | Codex | Merged #187 after green CI, closed superseded drafts #184 to #186, and started P2-08 with all three restore modes, guarded files, actor ordering, and FFI calls | Run full checks and open the P2-08 pull request |
 | 2026-11-20 | Codex | Addressed six findings from the #187 Codex review: thinking replay, malformed tool JSON, persisted streaming, per-response usage, bounded grep output, and visible tool targets | Rerun gates and request follow-up review |
@@ -244,6 +246,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Files | Change | PR |
 |---|---|---|---|
+| 2026-11-21 | `core/crates/tether-{store,ffi}/`, generated Kotlin bindings, architecture, project-structure, progress-tracker | Added project storage and workspace creation, session listing, and saved default model lookup | |
 | 2026-11-20 | `core/crates/tether-{store,engine,types,ffi}/`, architecture, project-structure, progress-tracker | Added checkpoint listing and three rewind modes with guarded file restore, hidden conversation history, actor command, and FFI views | #188 |
 | 2026-11-20 | `core/crates/tether-engine/src/tool_loop*`, `core/crates/tether-workspace/src/file_index*`, progress-tracker | Saved error results for calls left pending on cancellation and excluded nested `.git` directories from the file index | #187 |
 | 2026-11-20 | `core/crates/tether-{engine,store,tools,ffi}/`, `android/app/src/main/kotlin/app/tether/session/TranscriptScreen.kt`, architecture, progress-tracker | Addressed #187 review findings with streamed persistence, reasoning replay, usage accounting, bounded grep, and safe target display | #187 |
@@ -306,6 +309,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Doc | Change |
 |---|---|---|
+| 2026-11-21 | architecture, project-structure, progress-tracker | Recorded P1-22 core project and session APIs and their file locations |
 | 2026-11-20 | project-structure, progress-tracker | Recorded the actor rewind module split after #188 CI found a file-length failure |
 | 2026-11-20 | architecture, project-structure, library-docs, progress-tracker | Described the built rewind path and marked P2-04, P2-06, and P2-07 Done after #187 merged |
 | 2026-11-20 | progress-tracker | Recorded cancellation and nested Git fixes for #187 |

@@ -1,6 +1,7 @@
 //! UniFFI surface of the core, built as `libtether_core.so`.
 
 mod callbacks;
+mod projects;
 mod provider_settings;
 mod secrets;
 mod sessions;
@@ -12,14 +13,16 @@ use std::sync::Arc;
 use tether_engine::Core;
 
 pub use callbacks::EventSink;
+pub use projects::{ProjectRuntime, ProjectRuntimeError};
 pub use provider_settings::{ProviderSettings, ProviderSettingsError, ProviderStatusView};
 pub use secrets::{SecretVault, SecretVaultError, SecretsPlatform, SecretsPlatformFailure};
-pub use sessions::{SessionRecordView, SessionRunner, SessionRuntime, SessionRuntimeError};
+pub use sessions::{SessionRunner, SessionRuntime, SessionRuntimeError};
 pub use updater::{DownloadProgress, ReleaseView, UpdateCheckView, Updater, UpdaterError};
 pub use views::{
     CheckpointView, ConnectionStatusView, CoreErrorView, CoreEventView, ErrorKindView,
-    ExecutorView, MessagePartView, MessageView, ModelRefView, PermissionModeView, ProviderView,
-    RewindScopeView, RoleView, SessionStatusView, ToolCallStatusView, UsageSnapshotView,
+    ExecutorView, MessagePartView, MessageView, ModelRefView, PermissionModeView, ProjectView,
+    ProviderView, RewindScopeView, RoleView, SessionRecordView, SessionStatusView,
+    ToolCallStatusView, UsageSnapshotView,
 };
 
 uniffi::setup_scaffolding!();

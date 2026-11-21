@@ -13,7 +13,7 @@ use tether_workspace::PathGuard;
 
 use crate::{
     CheckpointView, EventSink, MessageView, ProviderView, RewindScopeView, SecretVault,
-    SessionStatusView,
+    SessionRecordView,
 };
 
 /// A session could not be created, opened, or updated.
@@ -31,36 +31,6 @@ pub enum SessionRuntimeError {
     /// The session store or provider is unavailable.
     #[error("session is unavailable")]
     Unavailable,
-}
-
-/// Saved session settings and status for the platform.
-#[derive(Debug, Clone, uniffi::Record)]
-pub struct SessionRecordView {
-    /// Session id.
-    pub id: String,
-    /// Project id.
-    pub project_id: String,
-    /// Display title.
-    pub title: String,
-    /// Provider.
-    pub provider: ProviderView,
-    /// Provider model id.
-    pub model_id: String,
-    /// Saved status.
-    pub status: SessionStatusView,
-}
-
-impl From<SessionRecord> for SessionRecordView {
-    fn from(session: SessionRecord) -> Self {
-        Self {
-            id: session.id.into(),
-            project_id: session.project_id.into(),
-            title: session.title,
-            provider: session.provider.into(),
-            model_id: session.model_id,
-            status: session.status.into(),
-        }
-    }
 }
 
 /// Owns the process runtime. Reopening it marks unfinished turns as interrupted.
@@ -141,6 +111,43 @@ impl SessionRuntime {
             .map_err(|_| SessionRuntimeError::Unavailable)?
             .map(Into::into)
             .ok_or(SessionRuntimeError::NotFound)
+    }
+
+    /// Lists a project's sessions by newest activity.
+    ///
+    /// # Errors
+    /// Returns an error when the project is absent or storage cannot be read.
+    pub fn list_sessions(
+        &self,
+        project_id: String,
+    ) -> Result<Vec<SessionRecordView>, SessionRuntimeError> {
+        let store = self.store()?;
+        let id = ProjectId::new(project_id);
+        if store
+            .load_project(&id)
+            .map_err(|_| SessionRuntimeError::Unavailable)?
+            .is_none()
+        {
+            return Err(SessionRuntimeError::NotFound);
+        }
+        store
+            .list_sessions(&id)
+            .map(|sessions| sessions.into_iter().map(Into::into).collect())
+            .map_err(|_| SessionRuntimeError::Unavailable)
+    }
+
+    /// Returns the first model id in the saved provider catalog, if any.
+    ///
+    /// # Errors
+    /// Returns an error when the catalog cannot be read.
+    pub fn default_model(
+        &self,
+        provider: ProviderView,
+    ) -> Result<Option<String>, SessionRuntimeError> {
+        self.store()?
+            .models(provider.into())
+            .map(|models| models.into_iter().next().map(|model| model.id))
+            .map_err(|_| SessionRuntimeError::Unavailable)
     }
 
     /// Reads the saved transcript in message order.
@@ -367,181 +374,5 @@ fn now_ms() -> i64 {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::SecretsPlatform;
-    use tether_types::{ModelRef, SessionStatus};
-
-    struct PlainPlatform;
-
-    impl SecretsPlatform for PlainPlatform {
-        fn wrap(
-            &self,
-            plaintext: Vec<u8>,
-            _context: Vec<u8>,
-        ) -> Result<Vec<u8>, crate::SecretsPlatformFailure> {
-            Ok(plaintext)
-        }
-
-        fn unwrap(
-            &self,
-            wrapped: Vec<u8>,
-            _context: Vec<u8>,
-        ) -> Result<Vec<u8>, crate::SecretsPlatformFailure> {
-            Ok(wrapped)
-        }
-    }
-
-    struct NoopSink;
-
-    impl EventSink for NoopSink {
-        fn on_event(&self, _event: crate::CoreEventView) {}
-    }
-
-    fn seeded_session(db: &Path) -> SessionId {
-        let mut store = Store::open(db).unwrap();
-        let project = ProjectId::new("01TESTPROJECT00000000000000");
-        rusqlite::Connection::open(db)
-            .unwrap()
-            .execute(
-                "INSERT INTO projects (id, name, path, created_at) VALUES (?1, 'Test', 'test', 1)",
-                [project.as_str()],
-            )
-            .unwrap();
-        let session = store
-            .create_session(
-                &project,
-                &ModelRef {
-                    provider: Provider::Anthropic,
-                    model_id: "test-model".into(),
-                },
-                PermissionMode::Ask,
-                1,
-            )
-            .unwrap();
-        store.begin_turn(&session.id, "Hi", 2).unwrap();
-        session.id
-    }
-
-    #[test]
-    fn reopening_recovers_an_active_turn_and_reuses_its_actor() {
-        let dir = tempfile::tempdir().unwrap();
-        let db = dir.path().join("tether.db");
-        let session_id = seeded_session(&db);
-
-        let vault = SecretVault::new(
-            dir.path().join("secrets").to_string_lossy().into_owned(),
-            Arc::new(PlainPlatform),
-        );
-        let runtime =
-            SessionRuntime::new(db.to_str().unwrap(), Arc::clone(&vault), Arc::new(NoopSink))
-                .unwrap();
-        let view = runtime.load_session(session_id.as_str()).unwrap();
-        assert_eq!(view.status, SessionStatusView::Interrupted);
-        assert_eq!(runtime.transcript(session_id.as_str()).unwrap().len(), 1);
-        assert!(matches!(
-            runtime.open_session(session_id.as_str()),
-            Err(SessionRuntimeError::MissingKey)
-        ));
-        vault.put("provider-anthropic", "test-key").unwrap();
-        let first = runtime.open_session(session_id.as_str()).unwrap();
-        let again = runtime.open_session(session_id.as_str()).unwrap();
-        assert!(Arc::ptr_eq(&first, &again));
-        assert_eq!(
-            Store::open(&db)
-                .unwrap()
-                .load_session(&session_id)
-                .unwrap()
-                .unwrap()
-                .status,
-            SessionStatus::Interrupted
-        );
-    }
-
-    #[test]
-    fn workspace_session_requires_a_saved_project_folder() {
-        let dir = tempfile::tempdir().unwrap();
-        let db = dir.path().join("tether.db");
-        let session_id = seeded_session(&db);
-        let vault = SecretVault::new(
-            dir.path().join("secrets").to_string_lossy().into_owned(),
-            Arc::new(PlainPlatform),
-        );
-        vault.put("provider-anthropic", "test-key").unwrap();
-        let runtime = SessionRuntime::new(db.to_str().unwrap(), vault, Arc::new(NoopSink)).unwrap();
-        let root = dir.path().join("workspaces");
-        std::fs::create_dir(&root).unwrap();
-        assert!(matches!(
-            runtime.open_session_with_workspace(session_id.as_str(), root.to_str().unwrap()),
-            Err(SessionRuntimeError::Unavailable)
-        ));
-        std::fs::create_dir(root.join("test")).unwrap();
-        rusqlite::Connection::open(&db)
-            .unwrap()
-            .execute(
-                "UPDATE sessions SET mode = 'accept_edits' WHERE id = ?1",
-                [session_id.as_str()],
-            )
-            .unwrap();
-        let store = Store::open(&db).unwrap();
-        let saved = store.load_session(&session_id).unwrap().unwrap();
-        let tools = session_tool_runtime(&store, &saved, &root).unwrap();
-        assert!(!(tools.approve)("write_file", "test/note.txt"));
-        assert!(
-            runtime
-                .open_session_with_workspace(session_id.as_str(), root.to_str().unwrap())
-                .is_ok()
-        );
-    }
-
-    #[test]
-    fn checkpoint_list_exposes_saved_paths_and_message_anchor() {
-        let dir = tempfile::tempdir().unwrap();
-        let db = dir.path().join("tether.db");
-        let session_id = seeded_session(&db);
-        let mut store = Store::open(&db).unwrap();
-        let anchor = store.messages(&session_id).unwrap()[0].id.clone();
-        let blobs = BlobStore::open(dir.path().join("blobs")).unwrap();
-        let checkpoint = store
-            .save_checkpoint(
-                &session_id,
-                Some(&anchor),
-                &blobs,
-                &[tether_store::SnapshotInput {
-                    path: "note.txt".into(),
-                    content: None,
-                }],
-                4,
-            )
-            .unwrap();
-        let vault = SecretVault::new(
-            dir.path().join("secrets").to_string_lossy().into_owned(),
-            Arc::new(PlainPlatform),
-        );
-        let runtime = SessionRuntime::new(db.to_str().unwrap(), vault, Arc::new(NoopSink)).unwrap();
-        let listed = runtime.list_checkpoints(session_id.as_str()).unwrap();
-        assert_eq!(listed.len(), 1);
-        assert_eq!(listed[0].id, checkpoint.id);
-        assert_eq!(listed[0].message_id.as_deref(), Some(anchor.as_str()));
-        assert_eq!(listed[0].paths, vec!["note.txt"]);
-    }
-
-    #[test]
-    fn provider_factory_reads_the_current_key_after_removal() {
-        let dir = tempfile::tempdir().unwrap();
-        let vault = SecretVault::new(
-            dir.path().join("secrets").to_string_lossy().into_owned(),
-            Arc::new(PlainPlatform),
-        );
-        vault.put("provider-anthropic", "old-key").unwrap();
-        let factory = session_provider_factory(Arc::clone(&vault), Provider::Anthropic);
-        assert!(factory().is_ok());
-        vault.delete("provider-anthropic").unwrap();
-        assert!(matches!(
-            factory(),
-            Err(tether_types::CoreError::Auth { .. })
-        ));
-        vault.put("provider-anthropic", "new-key").unwrap();
-        assert!(factory().is_ok());
-    }
-}
+#[path = "sessions/tests.rs"]
+mod tests;

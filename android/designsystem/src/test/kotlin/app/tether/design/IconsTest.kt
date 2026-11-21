@@ -14,6 +14,7 @@ class IconsTest {
             TetherIcons.CircleDot,
             TetherIcons.ChevronRight,
             TetherIcons.ArrowLeft,
+            TetherIcons.FileText,
             TetherIcons.ChevronLeft,
             TetherIcons.Zap,
             TetherIcons.Trash2,

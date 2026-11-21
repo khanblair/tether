@@ -16,7 +16,9 @@ import app.tether.providers.CoreProviderGateway
 import app.tether.providers.ProviderGateway
 import app.tether.session.CoreSessionGateway
 import app.tether.session.SessionGateway
+import app.tether.session.SessionSettingsGateway
 import app.tether.session.SessionStarter
+import app.tether.session.createSessionSettingsGateway
 import app.tether.share.ShareInbox
 import app.tether.theme.PrefsThemeStore
 import app.tether.theme.ThemeController
@@ -57,6 +59,11 @@ class AppModule(
 
     /** Session lists and creation. The runtime opens on the first call, off the main thread. */
     val sessionGateway: SessionGateway by lazy { CoreSessionGateway(databasePath, vault) }
+
+    /** Model, mode, rename, usage, rewind, and message search for the session screens. */
+    val sessionSettings: SessionSettingsGateway by lazy {
+        createSessionSettingsGateway(databasePath, vault)
+    }
 
     /** Starts a session in a project, choosing the first provider that has a key. */
     val sessionStarter: SessionStarter by lazy { SessionStarter(providerGateway, sessionGateway) }

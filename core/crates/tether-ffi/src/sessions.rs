@@ -11,6 +11,7 @@ use tether_store::{BlobStore, SessionRecord, Store};
 use tether_types::{CoreError, ModelRef, PermissionMode, ProjectId, Provider, SessionId};
 use tether_workspace::PathGuard;
 
+use crate::approvals::ApprovalBroker;
 use crate::{
     CheckpointView, EventSink, MessageView, ProviderView, RewindScopeView, SecretVault,
     SessionRecordView,
@@ -44,6 +45,9 @@ pub enum SessionRuntimeError {
     /// The session store or provider is unavailable.
     #[error("session is unavailable")]
     Unavailable,
+    /// Bypass is only available after the app confirms it in memory.
+    #[error("bypass needs confirmation")]
+    BypassNeedsConfirmation,
 }
 
 /// Owns the process runtime. Reopening it marks unfinished turns as interrupted.
@@ -52,8 +56,9 @@ pub struct SessionRuntime {
     database_path: String,
     vault: Arc<SecretVault>,
     sink: Arc<dyn EventSink>,
-    runtime: Arc<tokio::runtime::Runtime>,
-    runners: Mutex<HashMap<SessionId, Arc<SessionRunner>>>,
+    pub(crate) runtime: Arc<tokio::runtime::Runtime>,
+    pub(crate) runners: Mutex<HashMap<SessionId, Arc<SessionRunner>>>,
+    pub(crate) broker: Arc<ApprovalBroker>,
 }
 
 #[uniffi::export]
@@ -83,6 +88,7 @@ impl SessionRuntime {
             sink,
             runtime: Arc::new(runtime),
             runners: Mutex::new(HashMap::new()),
+            broker: Arc::new(ApprovalBroker::new()),
         }))
     }
 
@@ -254,7 +260,7 @@ impl SessionRuntime {
         let sink: Arc<dyn tether_engine::EventSink> =
             Arc::new(crate::callbacks::SinkAdapter(Arc::clone(&self.sink)));
         let (actor, handle) = if let Some(root) = workspaces_root {
-            let tools = session_tool_runtime(&store, &session, root)?;
+            let tools = session_tool_runtime(&store, &session, root, Arc::clone(&self.broker))?;
             SessionActor::new_with_tool_runtime(store, &id, provider_factory, sink, tools)
         } else {
             SessionActor::new_with_provider_factory(store, &id, provider_factory, sink)
@@ -269,7 +275,7 @@ impl SessionRuntime {
         runners.insert(id, Arc::clone(&runner));
         Ok(runner)
     }
-    fn store(&self) -> Result<Store, SessionRuntimeError> {
+    pub(crate) fn store(&self) -> Result<Store, SessionRuntimeError> {
         Store::open(Path::new(&self.database_path)).map_err(|_| SessionRuntimeError::Unavailable)
     }
 }
@@ -278,6 +284,7 @@ fn session_tool_runtime(
     store: &Store,
     session: &SessionRecord,
     root: &Path,
+    approver: Arc<ApprovalBroker>,
 ) -> Result<ToolRuntime, SessionRuntimeError> {
     let root_guard = PathGuard::new(root).map_err(|_| SessionRuntimeError::Unavailable)?;
     let project_path = store
@@ -296,7 +303,9 @@ fn session_tool_runtime(
     Ok(ToolRuntime {
         guard,
         blobs,
-        approve: Arc::new(|_, _| false),
+        approver,
+        mode: Arc::new(Mutex::new(session.mode)),
+        handlers: Vec::new(),
     })
 }
 
@@ -333,7 +342,7 @@ fn session_provider_factory(vault: Arc<SecretVault>, provider: Provider) -> Prov
 /// A running actor for one session.
 #[derive(uniffi::Object)]
 pub struct SessionRunner {
-    handle: SessionHandle,
+    pub(crate) handle: SessionHandle,
     runtime: Arc<tokio::runtime::Runtime>,
     valid: AtomicBool,
 }
@@ -377,21 +386,7 @@ impl SessionRunner {
         }
         self.runtime
             .block_on(self.handle.rewind(checkpoint_id, scope.into()))
-            .map_err(|error| map_rewind_error(&error))
-    }
-}
-
-fn map_rewind_error(error: &tether_engine::SessionActorError) -> SessionRuntimeError {
-    use tether_engine::{RewindError, SessionActorError};
-    match error {
-        SessionActorError::Rewind(RewindError::Store(
-            tether_store::StoreError::MissingCheckpoint,
-        )) => SessionRuntimeError::NotFound,
-        SessionActorError::Rewind(RewindError::CorruptSnapshot) => {
-            SessionRuntimeError::CorruptSnapshot
-        }
-        SessionActorError::Rewind(RewindError::InvalidPath) => SessionRuntimeError::InvalidPath,
-        _ => SessionRuntimeError::Unavailable,
+            .map_err(|error| ux::map_rewind_error(&error))
     }
 }
 

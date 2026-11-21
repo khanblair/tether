@@ -1,6 +1,8 @@
+use super::ux::map_rewind_error;
 use super::*;
 use crate::SecretsPlatform;
 use crate::SessionStatusView;
+use tether_engine::{ApprovalAnswer, ApprovalRequest, Approver};
 use tether_types::{ModelRef, SessionStatus};
 
 #[test]
@@ -191,8 +193,9 @@ fn workspace_session_requires_a_saved_project_folder() {
         .unwrap();
     let store = Store::open(&db).unwrap();
     let saved = store.load_session(&session_id).unwrap().unwrap();
-    let tools = session_tool_runtime(&store, &saved, &root).unwrap();
-    assert!(!(tools.approve)("write_file", "test/note.txt"));
+    let tools =
+        session_tool_runtime(&store, &saved, &root, Arc::new(ApprovalBroker::new())).unwrap();
+    assert!(!tools.approver.interactive());
     assert!(
         runtime
             .open_session_with_workspace(session_id.as_str(), root.to_str().unwrap())
@@ -279,6 +282,50 @@ fn ux_runtime() -> (
     );
     let runtime = SessionRuntime::new(db.to_str().unwrap(), vault, Arc::new(NoopSink)).unwrap();
     (dir, db, runtime, session.id, project.id)
+}
+
+#[test]
+fn interactive_approval_answers_once_and_unknown_ids_are_not_found() {
+    let (_dir, _db, runtime, session, _project) = ux_runtime();
+    runtime.runtime.block_on(async {
+        let request = ApprovalRequest {
+            session_id: session.clone(),
+            tool_call_id: tether_types::ToolCallId::new("call-1"),
+            tool: "write_file".into(),
+            target: "note.txt".into(),
+        };
+        let denied = runtime
+            .broker
+            .decide(request.clone(), tokio_util::sync::CancellationToken::new())
+            .await;
+        assert_eq!(
+            denied,
+            ApprovalAnswer::Deny {
+                reason: Some("approvals need a newer app version".into())
+            }
+        );
+        runtime.set_interactive_approvals(true);
+        let broker = Arc::clone(&runtime.broker);
+        let waiting = tokio::spawn(async move {
+            broker
+                .decide(request, tokio_util::sync::CancellationToken::new())
+                .await
+        });
+        tokio::task::yield_now().await;
+        assert_eq!(
+            runtime.pending_approvals(session.as_str()).unwrap().len(),
+            1
+        );
+        runtime.approve(session.as_str(), "call-1", true).unwrap();
+        assert_eq!(
+            waiting.await.unwrap(),
+            ApprovalAnswer::Allow { always: true }
+        );
+        assert!(matches!(
+            runtime.approve(session.as_str(), "call-1", false),
+            Err(SessionRuntimeError::NotFound)
+        ));
+    });
 }
 
 #[test]

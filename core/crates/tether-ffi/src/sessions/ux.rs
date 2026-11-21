@@ -18,6 +18,7 @@ fn settings_error(error: &StoreError) -> SessionRuntimeError {
         StoreError::EmptySessionModel | StoreError::EmptySessionTitle => {
             SessionRuntimeError::EmptyInput
         }
+        StoreError::BypassNeedsConfirmation => SessionRuntimeError::BypassNeedsConfirmation,
         _ => SessionRuntimeError::Unavailable,
     }
 }
@@ -155,4 +156,18 @@ pub(super) fn now_ms() -> i64 {
         .map_or(0, |duration| {
             i64::try_from(duration.as_millis()).unwrap_or(i64::MAX)
         })
+}
+
+pub(super) fn map_rewind_error(error: &tether_engine::SessionActorError) -> SessionRuntimeError {
+    use tether_engine::{RewindError, SessionActorError};
+    match error {
+        SessionActorError::Rewind(RewindError::Store(
+            tether_store::StoreError::MissingCheckpoint,
+        )) => SessionRuntimeError::NotFound,
+        SessionActorError::Rewind(RewindError::CorruptSnapshot) => {
+            SessionRuntimeError::CorruptSnapshot
+        }
+        SessionActorError::Rewind(RewindError::InvalidPath) => SessionRuntimeError::InvalidPath,
+        _ => SessionRuntimeError::Unavailable,
+    }
 }

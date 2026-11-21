@@ -11,8 +11,13 @@ use thiserror::Error;
 use tokio::sync::{mpsc, oneshot};
 use tokio_util::sync::CancellationToken;
 
-use crate::{Approver, EventSink, RewindError, RewindScope, ToolLoop, tool_loop::ToolLoopContext};
+use crate::commands::{MentionResolution, resolve_mentions};
+use crate::{
+    Approver, EventSink, RewindError, RewindScope, ToolLoop, prompt::PromptSources,
+    tool_loop::ToolLoopContext,
+};
 
+mod prompt;
 mod rewind;
 mod stream;
 mod turn;
@@ -39,6 +44,16 @@ pub struct ToolRuntime {
     pub handlers: Vec<Arc<dyn crate::ToolHandler>>,
 }
 
+/// Dependencies used when opening a session actor.
+pub struct SessionActorOptions {
+    /// Guarded tool runtime, when tools are enabled.
+    pub tools: Option<ToolRuntime>,
+    /// Prompt files and environment values.
+    pub prompt_sources: PromptSources,
+    /// Optional platform network state.
+    pub network: Option<Arc<crate::network::NetworkControl>>,
+}
+
 /// A session command could not be accepted or the session could not open.
 #[derive(Debug, Error)]
 pub enum SessionActorError {
@@ -60,10 +75,22 @@ pub enum SessionActorError {
     /// A checkpoint could not be restored.
     #[error(transparent)]
     Rewind(#[from] RewindError),
+    /// Prompt source data could not be loaded.
+    #[error("prompt sources unavailable")]
+    Prompt,
+    /// A resumed turn failed after it started.
+    #[error(transparent)]
+    Turn(#[from] CoreError),
+    /// The session is not in the interrupted state.
+    #[error("session is not interrupted")]
+    NotInterrupted,
 }
 
 enum Command {
-    Send(String),
+    Send {
+        text: String,
+        outcome: Option<oneshot::Sender<MentionResolution>>,
+    },
     Rewind {
         checkpoint_id: String,
         scope: RewindScope,
@@ -75,6 +102,23 @@ enum Command {
     DisableBypass {
         reply: oneshot::Sender<Result<(), SessionActorError>>,
     },
+    RunPlan {
+        mode: PermissionMode,
+        reply: oneshot::Sender<Result<(), SessionActorError>>,
+    },
+    ClearContext {
+        reply: oneshot::Sender<Result<(), SessionActorError>>,
+    },
+    Resume {
+        reply: oneshot::Sender<Result<(), SessionActorError>>,
+    },
+    DiscardInterrupted {
+        reply: oneshot::Sender<Result<(), SessionActorError>>,
+    },
+    Compact {
+        focus: Option<String>,
+        reply: oneshot::Sender<Result<(), SessionActorError>>,
+    },
 }
 
 /// Commands for one running session. Clones share its queue and interrupt token.
@@ -82,6 +126,7 @@ enum Command {
 pub struct SessionHandle {
     tx: mpsc::Sender<Command>,
     active: Arc<Mutex<Option<CancellationToken>>>,
+    budget: Arc<crate::budget::BudgetGate>,
 }
 
 impl SessionHandle {
@@ -94,9 +139,34 @@ impl SessionHandle {
             return Err(SessionActorError::EmptyMessage);
         }
         self.tx
-            .send(Command::Send(text))
+            .send(Command::Send {
+                text,
+                outcome: None,
+            })
             .await
             .map_err(|_| SessionActorError::Stopped)
+    }
+
+    /// Queues a turn and returns the file mentions resolved before the provider call.
+    ///
+    /// # Errors
+    /// Returns an error when the actor stopped or the message is empty.
+    pub async fn send_message_with_mentions(
+        &self,
+        text: String,
+    ) -> Result<MentionResolution, SessionActorError> {
+        if text.trim().is_empty() {
+            return Err(SessionActorError::EmptyMessage);
+        }
+        let (reply, result) = oneshot::channel();
+        self.tx
+            .send(Command::Send {
+                text,
+                outcome: Some(reply),
+            })
+            .await
+            .map_err(|_| SessionActorError::Stopped)?;
+        result.await.map_err(|_| SessionActorError::Stopped)
     }
 
     /// Cancels the active provider request, if one is running.
@@ -106,6 +176,12 @@ impl SessionHandle {
         {
             token.cancel();
         }
+    }
+
+    /// Continues a paused turn. The same limit pauses again after another 20% of
+    /// that limit has been spent.
+    pub fn continue_past_budget(&self) {
+        self.budget.continue_past_budget();
     }
 
     /// Cancels the running turn and queues a serialized checkpoint restore.
@@ -155,6 +231,71 @@ impl SessionHandle {
             .map_err(|_| SessionActorError::Stopped)?;
         result.await.map_err(|_| SessionActorError::Stopped)?
     }
+
+    /// Switches to a working mode and starts the plan turn.
+    ///
+    /// # Errors
+    /// Returns an error when the actor stopped or the saved mode cannot change.
+    pub async fn run_plan(&self, mode: PermissionMode) -> Result<(), SessionActorError> {
+        let (reply, result) = oneshot::channel();
+        self.tx
+            .send(Command::RunPlan { mode, reply })
+            .await
+            .map_err(|_| SessionActorError::Stopped)?;
+        result.await.map_err(|_| SessionActorError::Stopped)?
+    }
+
+    /// Clears live model context and keeps the saved transcript.
+    ///
+    /// # Errors
+    /// Returns an error when the actor stopped or storage failed.
+    pub async fn clear_context(&self) -> Result<(), SessionActorError> {
+        let (reply, result) = oneshot::channel();
+        self.tx
+            .send(Command::ClearContext { reply })
+            .await
+            .map_err(|_| SessionActorError::Stopped)?;
+        result.await.map_err(|_| SessionActorError::Stopped)?
+    }
+
+    /// Repairs an interrupted transcript and resumes its last turn.
+    ///
+    /// # Errors
+    /// Returns an error when the session is not interrupted or the actor stopped.
+    pub async fn resume(&self) -> Result<(), SessionActorError> {
+        let (reply, result) = oneshot::channel();
+        self.tx
+            .send(Command::Resume { reply })
+            .await
+            .map_err(|_| SessionActorError::Stopped)?;
+        result.await.map_err(|_| SessionActorError::Stopped)?
+    }
+
+    /// Repairs an interrupted transcript and leaves the session idle.
+    ///
+    /// # Errors
+    /// Returns an error when the session is not interrupted or the actor stopped.
+    pub async fn discard_interrupted(&self) -> Result<(), SessionActorError> {
+        let (reply, result) = oneshot::channel();
+        self.tx
+            .send(Command::DiscardInterrupted { reply })
+            .await
+            .map_err(|_| SessionActorError::Stopped)?;
+        result.await.map_err(|_| SessionActorError::Stopped)?
+    }
+
+    /// Compacts the saved transcript with an optional focus.
+    ///
+    /// # Errors
+    /// Returns an error when storage or the summary request fails.
+    pub async fn compact(&self, focus: Option<String>) -> Result<(), SessionActorError> {
+        let (reply, result) = oneshot::channel();
+        self.tx
+            .send(Command::Compact { focus, reply })
+            .await
+            .map_err(|_| SessionActorError::Stopped)?;
+        result.await.map_err(|_| SessionActorError::Stopped)?
+    }
 }
 
 /// Owns the database connection and the state of one session.
@@ -165,7 +306,12 @@ pub struct SessionActor {
     sink: Arc<dyn EventSink>,
     rx: mpsc::Receiver<Command>,
     active: Arc<Mutex<Option<CancellationToken>>>,
+    budget: Arc<crate::budget::BudgetGate>,
     tools: Option<ToolRuntime>,
+    prompt_sources: PromptSources,
+    prompt_snapshot: Option<tether_store::PromptSnapshot>,
+    project_name: String,
+    network: Option<Arc<crate::network::NetworkControl>>,
 }
 
 impl SessionActor {
@@ -187,54 +333,6 @@ impl SessionActor {
         )
     }
 
-    /// Loads a session with credentials resolved anew for each turn.
-    ///
-    /// # Errors
-    /// Returns an error when the id is absent or the store cannot read it.
-    pub fn new_with_provider_factory(
-        store: Store,
-        id: &SessionId,
-        provider_for_turn: ProviderFactory,
-        sink: Arc<dyn EventSink>,
-    ) -> Result<(Self, SessionHandle), SessionActorError> {
-        let session = store.load_session(id)?.ok_or(SessionActorError::NotFound)?;
-        let (tx, rx) = mpsc::channel(8);
-        let active = Arc::new(Mutex::new(None));
-        let handle = SessionHandle {
-            tx,
-            active: Arc::clone(&active),
-        };
-        Ok((
-            Self {
-                store,
-                session,
-                provider_for_turn,
-                sink,
-                rx,
-                active,
-                tools: None,
-            },
-            handle,
-        ))
-    }
-
-    /// Loads a session that can run guarded file tools and save checkpoints.
-    ///
-    /// # Errors
-    /// Returns an error when the id is absent or the store cannot read it.
-    pub fn new_with_tool_runtime(
-        store: Store,
-        id: &SessionId,
-        provider_for_turn: ProviderFactory,
-        sink: Arc<dyn EventSink>,
-        tools: ToolRuntime,
-    ) -> Result<(Self, SessionHandle), SessionActorError> {
-        let (mut actor, handle) =
-            Self::new_with_provider_factory(store, id, provider_for_turn, sink)?;
-        actor.tools = Some(tools);
-        Ok((actor, handle))
-    }
-
     /// Processes messages until the caller drops every handle.
     #[expect(
         clippy::excessive_nesting,
@@ -243,8 +341,12 @@ impl SessionActor {
     pub async fn run(mut self) {
         while let Some(command) = self.rx.recv().await {
             match command {
-                Command::Send(text) => {
-                    if let Err(error) = self.turn(text).await {
+                Command::Send { text, outcome } => {
+                    let resolution = self.resolve_mentions(&text);
+                    if let Some(reply) = outcome {
+                        drop(reply.send(resolution.clone()));
+                    }
+                    if let Err(error) = self.turn(text, resolution).await {
                         self.end_with_error(error);
                     }
                 }
@@ -262,6 +364,37 @@ impl SessionActor {
                 Command::DisableBypass { reply } => {
                     drop(reply.send(self.set_bypass(false)));
                 }
+                Command::RunPlan { mode, reply } => {
+                    let result = self.set_working_mode(mode);
+                    let started = result.is_ok();
+                    drop(reply.send(result));
+                    if started
+                        && let Err(error) = self
+                            .turn("Run the plan.".into(), MentionResolution::default())
+                            .await
+                    {
+                        self.end_with_error(error);
+                    }
+                }
+                Command::ClearContext { reply } => {
+                    let result = self.clear_context();
+                    drop(reply.send(result));
+                }
+                Command::Resume { reply } => {
+                    let result = self.resume_turn().await;
+                    if let Err(SessionActorError::Turn(error)) = &result {
+                        self.end_with_error(error.clone());
+                    }
+                    drop(reply.send(result));
+                }
+                Command::DiscardInterrupted { reply } => {
+                    let result = self.discard_interrupted();
+                    drop(reply.send(result));
+                }
+                Command::Compact { focus, reply } => {
+                    let result = self.compact(focus).await;
+                    drop(reply.send(result));
+                }
             }
         }
     }
@@ -273,12 +406,19 @@ impl SessionActor {
     fn end_with_error(&mut self, error: CoreError) {
         let id = &self.session.id;
         if matches!(error, CoreError::Cancelled { .. }) {
-            if self
+            let paused = self
                 .store
-                .set_session_status(id, SessionStatus::Idle, now_ms())
-                .is_ok()
-            {
-                self.emit_status(SessionStatus::Idle);
+                .load_session(id)
+                .ok()
+                .flatten()
+                .is_some_and(|session| session.status == SessionStatus::Paused);
+            let status = if paused {
+                SessionStatus::Interrupted
+            } else {
+                SessionStatus::Idle
+            };
+            if self.store.set_session_status(id, status, now_ms()).is_ok() {
+                self.emit_status(status);
                 self.sink.on_event(CoreEvent::TurnInterrupted {
                     session_id: id.clone(),
                 });
@@ -327,6 +467,70 @@ impl SessionActor {
         drop(mode);
         self.emit_status(SessionStatus::Idle);
         Ok(())
+    }
+
+    fn set_working_mode(&mut self, mode: PermissionMode) -> Result<(), SessionActorError> {
+        self.store
+            .set_session_mode(&self.session.id, mode, now_ms())?;
+        self.session.mode = mode;
+        let tools = self.tools.as_ref().ok_or(SessionActorError::NoWorkspace)?;
+        let mut current = tools.mode.lock().map_err(|_| SessionActorError::Stopped)?;
+        *current = mode;
+        Ok(())
+    }
+
+    fn resolve_mentions(&self, text: &str) -> MentionResolution {
+        self.tools
+            .as_ref()
+            .map_or_else(MentionResolution::default, |tools| {
+                resolve_mentions(&tools.guard, text)
+            })
+    }
+
+    fn clear_context(&mut self) -> Result<(), SessionActorError> {
+        self.store.clear_context(&self.session.id)?;
+        self.sink.on_event(CoreEvent::SessionRewound {
+            session_id: self.session.id.clone(),
+        });
+        Ok(())
+    }
+
+    async fn resume_turn(&mut self) -> Result<(), SessionActorError> {
+        let session = self
+            .store
+            .load_session(&self.session.id)
+            .map_err(SessionActorError::Store)?
+            .ok_or(SessionActorError::NotFound)?;
+        if session.status != SessionStatus::Interrupted {
+            return Err(SessionActorError::NotInterrupted);
+        }
+        self.store.repair_interrupted(&self.session.id)?;
+        self.session.status = SessionStatus::Idle;
+        self.turn(String::new(), MentionResolution::default())
+            .await
+            .map_err(Into::into)
+    }
+
+    fn discard_interrupted(&mut self) -> Result<(), SessionActorError> {
+        let session = self
+            .store
+            .load_session(&self.session.id)?
+            .ok_or(SessionActorError::NotFound)?;
+        if session.status != SessionStatus::Interrupted {
+            return Err(SessionActorError::NotInterrupted);
+        }
+        self.store.repair_interrupted(&self.session.id)?;
+        self.store
+            .set_session_status(&self.session.id, SessionStatus::Idle, now_ms())?;
+        self.session.status = SessionStatus::Idle;
+        self.emit_status(SessionStatus::Idle);
+        Ok(())
+    }
+
+    async fn compact(&mut self, focus: Option<String>) -> Result<(), SessionActorError> {
+        crate::session::turn::compact_session(self, focus)
+            .await
+            .map_err(|_| SessionActorError::Prompt)
     }
 }
 

@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use tether_providers::{ChatProvider, ChatRequest, ResponseUsage, StopReason, ToolSpec};
+use tether_providers::{ChatProvider, ChatRequest, StopReason, ToolSpec};
 use tether_store::{BlobStore, Store};
 use tether_types::{
     CoreError, CoreEvent, Message, MessagePart, PermissionMode, Role, SessionId, SessionStatus,
@@ -14,7 +14,9 @@ use tether_workspace::PathGuard;
 use tokio_util::sync::CancellationToken;
 
 mod file_tools;
+pub mod git_tools;
 mod registry;
+pub(crate) mod session_tools;
 mod stream;
 use crate::permissions::{self, Decision, PermissionRequest};
 use crate::{ApprovalAnswer, ApprovalRequest};
@@ -115,28 +117,57 @@ impl ToolLoop {
     /// # Errors
     /// Returns provider, cancellation, or malformed-stream errors. Individual tool
     /// failures become tool results so the model can recover.
+    pub async fn run(
+        &self,
+        provider: Arc<dyn ChatProvider>,
+        request: ChatRequest,
+        context: &mut ToolLoopContext<'_>,
+    ) -> Result<ToolLoopResult, CoreError> {
+        self.run_inner(provider, request, context, None).await
+    }
+
+    /// Runs a tool turn with a budget gate before each provider request.
+    pub(crate) async fn run_with_budget(
+        &self,
+        provider: Arc<dyn ChatProvider>,
+        request: ChatRequest,
+        context: &mut ToolLoopContext<'_>,
+        budget: &crate::budget::BudgetGate,
+    ) -> Result<ToolLoopResult, CoreError> {
+        self.run_inner(provider, request, context, Some(budget))
+            .await
+    }
+
     #[expect(
         clippy::too_many_lines,
         clippy::excessive_nesting,
         clippy::cognitive_complexity,
         reason = "the exchange loop keeps response and tool ordering visible"
     )]
-    pub async fn run(
+    async fn run_inner(
         &self,
         provider: Arc<dyn ChatProvider>,
         mut request: ChatRequest,
         context: &mut ToolLoopContext<'_>,
+        budget: Option<&crate::budget::BudgetGate>,
     ) -> Result<ToolLoopResult, CoreError> {
         request.tools = self.specs();
         let mut usage = UsageSnapshot::default();
         for exchange in 1..=MAX_EXCHANGES {
+            if let Some(budget) = budget {
+                let session = context
+                    .store
+                    .load_session(context.session_id)
+                    .map_err(|_| storage_error())?
+                    .ok_or_else(storage_error)?;
+                let sink = context.sink.ok_or_else(storage_error)?;
+                budget
+                    .check(context.store, &session, sink, &context.cancel, now_ms())
+                    .await?;
+            }
             let response = response(Arc::clone(&provider), request.clone(), context).await?;
             usage.tokens_in = usage.tokens_in.saturating_add(response.usage.tokens_in);
             usage.tokens_out = usage.tokens_out.saturating_add(response.usage.tokens_out);
-            context
-                .store
-                .add_session_usage(context.session_id, response.usage, now_ms())
-                .map_err(|_| storage_error())?;
             let mut parts = Vec::new();
             if !response.thinking.is_empty() {
                 parts.push(MessagePart::Thinking {
@@ -174,6 +205,25 @@ impl ToolLoop {
                     .map_err(|_| storage_error())?
             };
             request.messages.push(assistant.clone());
+            let session = context
+                .store
+                .load_session(context.session_id)
+                .map_err(|_| storage_error())?
+                .ok_or_else(storage_error)?;
+            context
+                .store
+                .record_response_usage(&tether_store::ResponseUsageRecord {
+                    session_id: context.session_id.clone(),
+                    provider: session.provider,
+                    model_id: request.model_id.clone(),
+                    project_id: session.project_id.as_str().into(),
+                    day: crate::usage::utc_day_from_ms(now_ms()),
+                    usage: response.usage,
+                    price_known: response.price_known,
+                    now_ms: now_ms(),
+                })
+                .map_err(|_| storage_error())?;
+            usage.cost_micros = usage.cost_micros.saturating_add(response.usage.cost_micros);
             if response.stop != StopReason::ToolUse {
                 return Ok(ToolLoopResult {
                     messages: request.messages,
@@ -221,10 +271,18 @@ impl ToolLoop {
                     .map_err(|_| storage_error())?
                     .ok_or_else(storage_error)?
                     .project_id;
-                let rules = context
+                let mut rules = context
                     .store
                     .permission_rules(&project_id)
                     .map_err(|_| storage_error())?;
+                rules.extend(
+                    crate::config::project_allowed_command_rules(
+                        context.store,
+                        &project_id,
+                        self.guard.root(),
+                    )
+                    .map_err(|_| storage_error())?,
+                );
                 let decision = permissions::decide(
                     (context.mode)(),
                     prepared.effect,
@@ -272,6 +330,14 @@ impl ToolLoop {
                         status,
                     });
                 }
+                if call.name == "submit_plan" && !is_error {
+                    return Ok(ToolLoopResult {
+                        messages: request.messages,
+                        final_text: text,
+                        exchanges: exchange,
+                        usage,
+                    });
+                }
             }
         }
         Err(invalid("tool exchange limit reached"))
@@ -311,13 +377,13 @@ impl ToolLoop {
         record_approval(context, id, &call, &answer)
             .map_err(|_| "could not save approval".to_owned())?;
         match answer {
-            ApprovalAnswer::Allow { always } => {
+            ApprovalAnswer::Allow { always } | ApprovalAnswer::AllowFromNotification { always } => {
                 save_always_rule(context, input.project_id, &call, always)?;
                 set_status(context, SessionStatus::RunningTool)
                     .map_err(|_| "could not save approval state".to_owned())?;
                 execute_call(self, call, id, context, input.anchor).await
             }
-            ApprovalAnswer::Deny { reason } => {
+            ApprovalAnswer::Deny { reason } | ApprovalAnswer::DenyFromNotification { reason } => {
                 set_status(context, SessionStatus::Requesting)
                     .map_err(|_| "could not save approval state".to_owned())?;
                 Err(denial(reason))
@@ -483,9 +549,11 @@ fn record_approval(
     call: &PreparedCall,
     answer: &ApprovalAnswer,
 ) -> Result<(), CoreError> {
-    let (decision, reason) = match answer {
-        ApprovalAnswer::Allow { .. } => ("allow", None),
-        ApprovalAnswer::Deny { reason } => ("deny", reason.clone()),
+    let (decision, reason, via) = match answer {
+        ApprovalAnswer::Allow { .. } => ("allow", None, "app"),
+        ApprovalAnswer::AllowFromNotification { .. } => ("allow", None, "notification"),
+        ApprovalAnswer::Deny { reason } => ("deny", reason.clone(), "app"),
+        ApprovalAnswer::DenyFromNotification { reason } => ("deny", reason.clone(), "notification"),
     };
     context
         .store
@@ -498,7 +566,7 @@ fn record_approval(
             decision: decision.into(),
             reason,
             decided_at: now_ms(),
-            via: "app".into(),
+            via: via.into(),
         })
         .map_err(|_| storage_error())
 }
@@ -531,17 +599,6 @@ fn truncate(value: &str) -> String {
     let mut output: String = value.chars().take(MAX_RESULT_CHARS).collect();
     output.push_str("\n[output truncated]");
     output
-}
-
-fn usage_snapshot(value: ResponseUsage) -> UsageSnapshot {
-    UsageSnapshot {
-        tokens_in: value
-            .input_tokens
-            .saturating_add(value.cache_read_tokens)
-            .saturating_add(value.cache_write_tokens),
-        tokens_out: value.output_tokens,
-        cost_micros: 0,
-    }
 }
 
 fn invalid(message: &str) -> CoreError {

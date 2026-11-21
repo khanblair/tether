@@ -12,6 +12,7 @@ gix.workspace = true
 serde_json.workspace = true
 tether-secrets.workspace = true
 thiserror.workspace = true
+tokio.workspace = true
 
 [lints]
 workspace = true

@@ -64,6 +64,11 @@ All components start as **Planned**. Screenshot tests start with the first featu
 | `SessionRow` | Session: status mark, title, subtitle | `title`, `subtitle`, `state` (`SessionState`), `onClick` | each state | P1 | Built |
 | `ListRow` | Generic row: icon, title, subtitle, trailing | `title`, `subtitle`, `leading`, `trailing`, `onClick`, `enabled` | default, pressed, disabled | P1 | Built |
 | `TetherSheet` | Modal bottom sheet with a title | `title`, `onDismiss`, `content` | default | P1 | Built |
+| `ModelSheet` | Pick the session's model from the saved lists of providers with a key. App module | `models`, `current`, `onPick`, `enabled` | list, empty, disabled while a turn runs | P1 | Built |
+| `ModeSheet` | Pick one of five permission modes; Bypass asks for a biometric check. App module | `current`, `onPick`, `enabled` | each mode selected, bypass confirm, disabled while a turn runs | P1 | Built |
+| `SessionMenuSheet` | Rename and Rewind for a session. App module | `onRename`, `onRewind` | default | P1 | Built |
+| `RewindSheet` | Checkpoints with three restore scopes and a confirmation for file scopes. App module | `checkpoints`, `scope`, `onRewind` | list, empty, confirm, error | P2 | Built |
+| `SearchScreen` | Message search with scope chips and the match in bold. App module | `query`, `scope`, `hits` | idle, loading, hits, nothing found | P1 | Built |
 | `TetherDialog` | Confirmation dialog | `title`, `body`, `confirm`, `dismiss`, `destructive` | default, destructive | P1 | Planned |
 | `TwoPaneScaffold` | Expanded and large layouts | `primary`, `detail`, `list` | compact, medium, expanded, large | P10 | Planned |
 

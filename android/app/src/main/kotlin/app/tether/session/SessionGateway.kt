@@ -12,6 +12,7 @@ data class SessionInfo(
     val id: String,
     val title: String,
     val status: SessionStatusView,
+    val updatedAtMs: Long,
 )
 
 /**
@@ -47,7 +48,12 @@ class CoreSessionGateway(
 
     override fun listSessions(projectId: String): List<SessionInfo> =
         runtime.listSessions(projectId).map { record ->
-            SessionInfo(id = record.id, title = record.title, status = record.status)
+            SessionInfo(
+                id = record.id,
+                title = record.title,
+                status = record.status,
+                updatedAtMs = record.updatedAtMs,
+            )
         }
 
     override fun defaultModel(provider: ProviderView): String? = runtime.defaultModel(provider)

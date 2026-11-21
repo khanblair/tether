@@ -59,7 +59,14 @@ class CoreHomeSourcesTest {
     @Test
     fun sessions_carry_their_project_name_id_and_state() {
         sessions.sessionsByProject["blog"] =
-            listOf(sessionInfo("c", SessionStatusView.AWAITING_APPROVAL, title = "Fix tests"))
+            listOf(
+                sessionInfo(
+                    "c",
+                    SessionStatusView.AWAITING_APPROVAL,
+                    title = "Fix tests",
+                    updatedAtMs = 9_000L,
+                ),
+            )
 
         val summaries = CoreSessionsSource(projects, sessions).sessions()
 
@@ -70,7 +77,7 @@ class CoreHomeSourcesTest {
         assertEquals("blog", session.projectName)
         assertEquals("blog", session.projectId)
         assertEquals(SessionState.Waiting, session.state)
-        assertEquals(3_000L, session.updatedAt)
+        assertEquals(9_000L, session.updatedAt)
     }
 
     @Test

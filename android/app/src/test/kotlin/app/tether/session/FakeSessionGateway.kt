@@ -48,4 +48,5 @@ fun sessionInfo(
     id: String,
     status: SessionStatusView = SessionStatusView.IDLE,
     title: String = "Session $id",
-) = SessionInfo(id = id, title = title, status = status)
+    updatedAtMs: Long = 0L,
+) = SessionInfo(id = id, title = title, status = status, updatedAtMs = updatedAtMs)

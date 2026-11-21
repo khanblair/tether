@@ -49,8 +49,8 @@ class CoreProjectsSource(
 }
 
 /**
- * The sessions of every project, from the core. The core keeps no per-session time, so each
- * session takes its project's last activity time. Sessions keep the core's order within a project.
+ * The sessions of every project, from the core, each with its own last change time. Sessions keep
+ * the core's order within a project.
  */
 class CoreSessionsSource(
     private val projects: ProjectGateway,
@@ -64,7 +64,7 @@ class CoreSessionsSource(
                     title = session.title,
                     projectName = project.name,
                     state = session.status.toSessionState(),
-                    updatedAt = project.lastActivityMs,
+                    updatedAt = session.updatedAtMs,
                     projectId = project.id,
                 )
             }

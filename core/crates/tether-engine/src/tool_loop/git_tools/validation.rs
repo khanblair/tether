@@ -1,0 +1,202 @@
+use serde_json::Value;
+
+use super::{
+    MAX_PATH, MAX_TEXT, optional_bool, optional_string, optional_usize, require_object, string,
+    target_tool,
+};
+use crate::permissions::Effect as PermissionEffect;
+use crate::tool_loop::PreparedCall;
+
+pub(super) fn allowed_fields(name: &str) -> Option<&'static [&'static str]> {
+    Some(match name {
+        "git_status" => &[],
+        "git_diff" => &["staged", "path", "from", "to"],
+        "git_log" => &["limit", "path"],
+        "git_branch" => &["name", "from", "switch"],
+        "git_commit" => &["message", "paths"],
+        "git_push" => &["branch", "force", "delete"],
+        "pr_create" => &["title", "body", "base", "draft"],
+        "pr_status" => &["number"],
+        _ => return None,
+    })
+}
+
+pub(super) fn prepare(
+    name: &str,
+    args_json: &str,
+    default_branch: Option<&str>,
+) -> Result<PreparedCall, String> {
+    let value = require_object(name, args_json)?;
+    match name {
+        "git_status" => Ok(target_tool(
+            name,
+            PermissionEffect::Read,
+            "status".into(),
+            value,
+        )),
+        "git_diff" => diff(value),
+        "git_log" => log(value),
+        "git_branch" => branch(value),
+        "git_commit" => commit(value),
+        "git_push" => push(value, default_branch),
+        "pr_create" => pr_create(value, default_branch),
+        "pr_status" => pr_status(value),
+        _ => Err("unknown tool".into()),
+    }
+}
+
+fn diff(value: Value) -> Result<PreparedCall, String> {
+    optional_bool(&value, "staged", false)?;
+    let from = optional_string(&value, "from")?;
+    let to = optional_string(&value, "to")?;
+    if from.is_some() != to.is_some() {
+        return Err("from and to must be supplied together".into());
+    }
+    let path = optional_string(&value, "path")?
+        .map(validate_path)
+        .transpose()?;
+    let target = path.map_or_else(|| "diff".into(), |path| format!("diff {path}"));
+    Ok(target_tool(
+        "git_diff",
+        PermissionEffect::Read,
+        target,
+        value,
+    ))
+}
+
+fn log(value: Value) -> Result<PreparedCall, String> {
+    let limit = optional_usize(&value, "limit", 10)?;
+    if !(1..=50).contains(&limit) {
+        return Err("limit must be between 1 and 50".into());
+    }
+    if let Some(path) = optional_string(&value, "path")? {
+        validate_path(path)?;
+    }
+    Ok(target_tool(
+        "git_log",
+        PermissionEffect::Read,
+        "log".into(),
+        value,
+    ))
+}
+
+fn branch(value: Value) -> Result<PreparedCall, String> {
+    let name = optional_string(&value, "name")?.unwrap_or("");
+    if name.len() > 100 || (name.is_empty() && value.get("name").is_some()) {
+        return Err("name is invalid".into());
+    }
+    if let Some(from) = optional_string(&value, "from")? {
+        bounded(from, 200, "from")?;
+    }
+    Ok(target_tool(
+        "git_branch",
+        PermissionEffect::Edit,
+        if name.is_empty() {
+            "create branch".into()
+        } else {
+            format!("create branch {name}")
+        },
+        value,
+    ))
+}
+
+fn commit(value: Value) -> Result<PreparedCall, String> {
+    let message = string(&value, "message")?;
+    bounded(message, MAX_TEXT, "message")?;
+    if message.trim().is_empty() {
+        return Err("commit message is empty".into());
+    }
+    if let Some(paths) = value.get("paths") {
+        let paths = paths.as_array().ok_or("paths must be an array")?;
+        if paths.len() > 100 {
+            return Err("paths must contain at most 100 items".into());
+        }
+        for path in paths {
+            validate_path(path.as_str().ok_or("paths must contain strings")?)?;
+        }
+    }
+    Ok(target_tool(
+        "git_commit",
+        PermissionEffect::Edit,
+        "commit".into(),
+        value,
+    ))
+}
+
+fn push(value: Value, default_branch: Option<&str>) -> Result<PreparedCall, String> {
+    if let Some(branch) = optional_string(&value, "branch")? {
+        bounded(branch, 100, "branch")?;
+    }
+    let force = optional_bool(&value, "force", false)?;
+    let delete = optional_bool(&value, "delete", false)?;
+    if force && delete {
+        return Err("force and delete cannot be combined".into());
+    }
+    let branch = optional_string(&value, "branch")?.unwrap_or(default_branch.unwrap_or("current"));
+    let target = if delete {
+        format!("delete branch {branch} on origin")
+    } else if force {
+        format!("FORCE push {branch} to origin (rewrites history)")
+    } else if default_branch == Some(branch) {
+        format!("push to the default branch {branch} on origin")
+    } else {
+        format!("push {branch} to origin")
+    };
+    Ok(target_tool(
+        "git_push",
+        if force {
+            PermissionEffect::ForcePush
+        } else {
+            PermissionEffect::Push
+        },
+        target,
+        value,
+    ))
+}
+
+fn pr_create(value: Value, default_branch: Option<&str>) -> Result<PreparedCall, String> {
+    let title = string(&value, "title")?;
+    bounded(title, 200, "title")?;
+    if title.trim().is_empty() {
+        return Err("title must not be empty".into());
+    }
+    if let Some(body) = optional_string(&value, "body")? {
+        bounded(body, MAX_TEXT, "body")?;
+    }
+    let base = optional_string(&value, "base")?.unwrap_or(default_branch.unwrap_or("main"));
+    bounded(base, 100, "base")?;
+    Ok(target_tool(
+        "pr_create",
+        PermissionEffect::Push,
+        format!("open pull request \"{title}\" into {base}"),
+        value,
+    ))
+}
+
+fn pr_status(value: Value) -> Result<PreparedCall, String> {
+    if value.get("number").is_some() && value.get("number").and_then(Value::as_u64).is_none() {
+        return Err("number must be a positive integer".into());
+    }
+    Ok(target_tool(
+        "pr_status",
+        PermissionEffect::Network,
+        "pull request status".into(),
+        value,
+    ))
+}
+
+fn validate_path(path: &str) -> Result<String, String> {
+    bounded(path, MAX_PATH, "path")?;
+    if path.is_empty() || path.starts_with('/') || path.split('/').any(|part| part == "..") {
+        return Err("path is invalid".into());
+    }
+    Ok(path.to_owned())
+}
+
+fn bounded(value: &str, max: usize, key: &str) -> Result<(), String> {
+    if value.chars().count() > max {
+        Err(format!("{key} is too long"))
+    } else {
+        Ok(())
+    }
+}

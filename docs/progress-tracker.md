@@ -52,7 +52,7 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 
 | ID | Task | Owner | Status | PR | Notes |
 |---|---|---|---|---|---|
-| P1-22 | First usable loop: create a project, start a session, chat | Codex | In progress | | Issue #189. Rust project creation, listing, loading, session listing, and saved default model are in progress. Android screens follow |
+| P1-22 | First usable loop: create a project, start a session, chat | Blair with Codex, Haiku, and Claude | In review | #190, #191 | Issue #189. Core (#190): create, list, and load projects, list sessions, default model, session times. App (#191, stacked on #190): New empty project, real project and session lists in every build, project home with New session, plain chat sessions, messages for a missing key or model list. Not verified without a device: layout, restart persistence, and a streamed reply with a real key |
 | P2-08 | Rewind: files, conversation, or both | Codex | In review | #188 | All three restore modes and serialized actor rewind pass tests; CI pending |
 | P2-07 | Edit batches and checkpoints | Codex | Done | #187 | Merged with automatic capture and BLAKE3/zstd deduplication; cleanup remains |
 | P2-06 | Tool loop in the turn | Codex | Done | #187 | Merged with actor persistence, streamed text, five-call fixture, and Android entry point; Android mutations wait for approval UI |
@@ -175,6 +175,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Who | What happened | Next |
 |---|---|---|---|
+| 2026-11-21 | Blair with Claude, Codex, and Haiku | Built the first usable loop in two stacked PRs (#190 core by Codex `gpt-6-sol`, #191 app by Haiku). The core had no project API and no session times, so both were added; sample debug projects and sessions were removed because their ids opened real routes and crashed the app. Blair chose contract-first waves for the remaining screens, starting with the session sheets, settings and first run, and skills, memory, and vault | Blair checks #191 in the emulator; merge #190 then #191; Wave 1 contracts follow |
 | 2026-11-21 | Codex | Added P1-22 project store and FFI calls, session listing, default model lookup, tests, and generated bindings | Run blocked engine update tests and cargo deny in CI; Android screens follow |
 | 2026-11-20 | Codex | Fixed #188 CI's file-length gate by moving the actor rewind handler into `session/rewind.rs`; focused tests and Clippy pass | Rerun CI on the updated branch |
 | 2026-11-20 | Codex | Merged #187 after green CI, closed superseded drafts #184 to #186, and started P2-08 with all three restore modes, guarded files, actor ordering, and FFI calls | Run full checks and open the P2-08 pull request |

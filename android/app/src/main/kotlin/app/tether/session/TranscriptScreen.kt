@@ -36,14 +36,35 @@ import app.tether.core.generated.MessagePartView
 import app.tether.core.generated.MessageView
 import app.tether.core.generated.RoleView
 import app.tether.design.TetherTheme
+import app.tether.design.components.BannerTone
+import app.tether.design.components.InlineBanner
 import app.tether.design.components.TetherTopBar
 import app.tether.design.tokens.TetherSize
 import app.tether.design.tokens.TetherSpace
 import app.tether.shell.BackButton
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+/**
+ * The session's messages and status, as the core saved them. Every core event reloads it, so a
+ * streamed reply grows in place and a finished turn shows its saved text.
+ */
+private data class TranscriptSnapshot(
+    val messages: List<MessageView>,
+    val status: SessionStatus,
+)
+
+private suspend fun SessionConnection.snapshot(): TranscriptSnapshot =
+    withContext(Dispatchers.IO) {
+        TranscriptSnapshot(
+            messages = transcript().filterNot(MessageView::rewound).sortedBy(MessageView::seq),
+            status = status(),
+        )
+    }
 
 /** Persisted messages are read off the main thread when the session route opens. */
 @Composable
@@ -51,27 +72,27 @@ fun TranscriptScreen(
     connection: SessionConnection?,
     onBack: () -> Unit,
 ) {
-    var messages by remember(connection) { mutableStateOf<List<MessageView>>(emptyList()) }
+    var snapshot by remember(connection) { mutableStateOf<TranscriptSnapshot?>(null) }
     var failed by remember(connection) { mutableStateOf(false) }
     var running by remember(connection) { mutableStateOf(false) }
-    var status by remember(connection) { mutableStateOf<SessionStatus?>(null) }
     var proposedTool by remember(connection) { mutableStateOf<Pair<String, String>?>(null) }
+    var turnError by remember(connection) { mutableStateOf<String?>(null) }
+    val turnFailed = stringResource(R.string.transcript_turn_failed)
+    val sendFailed = stringResource(R.string.transcript_send_failed)
     LaunchedEffect(connection) {
         if (connection != null) {
             try {
-                messages =
-                    withContext(Dispatchers.IO) { connection.transcript() }
-                        .filterNot(MessageView::rewound)
-                        .sortedBy(MessageView::seq)
-                status = withContext(Dispatchers.IO) { connection.status() }
-                connection.changes.collect { event ->
-                    if (event.endsTurn()) running = false
-                    proposedTool = event.proposedToolOr(proposedTool)
-                    messages =
-                        withContext(Dispatchers.IO) { connection.transcript() }
-                            .filterNot(MessageView::rewound)
-                            .sortedBy(MessageView::seq)
-                    status = withContext(Dispatchers.IO) { connection.status() }
+                coroutineScope {
+                    // Listen before the first read, so an event sent during the read is not lost.
+                    launch(start = CoroutineStart.UNDISPATCHED) {
+                        connection.changes.collect { event ->
+                            if (event.endsTurn()) running = false
+                            proposedTool = event.proposedToolOr(proposedTool)
+                            event.turnFailureOr(turnFailed)?.let { turnError = it }
+                            snapshot = connection.snapshot()
+                        }
+                    }
+                    snapshot = connection.snapshot()
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
@@ -81,10 +102,11 @@ fun TranscriptScreen(
         }
     }
     TranscriptContent(
-        messages = messages,
+        messages = snapshot?.messages.orEmpty(),
         failed = failed,
-        status = status,
+        status = snapshot?.status,
         proposedTool = proposedTool,
+        turnError = turnError,
         onBack = onBack,
         composer =
             connection?.let { active ->
@@ -92,11 +114,15 @@ fun TranscriptScreen(
                     ComposerControls(
                         connection = active,
                         running = running,
-                        onRunningChange = {
-                            running = it
+                        onSendStart = {
+                            running = true
+                            turnError = null
                             proposedTool = null
                         },
-                        onFailure = { failed = true },
+                        onSendFailed = {
+                            running = false
+                            turnError = sendFailed
+                        },
                     )
                 }
             },
@@ -107,21 +133,22 @@ fun TranscriptScreen(
 private fun ComposerControls(
     connection: SessionConnection,
     running: Boolean,
-    onRunningChange: (Boolean) -> Unit,
-    onFailure: () -> Unit,
+    onSendStart: () -> Unit,
+    onSendFailed: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     Composer(
         modelId = connection.modelId,
         running = running,
         onSend = { text ->
-            onRunningChange(true)
-            scope.launch(Dispatchers.IO) {
+            onSendStart()
+            scope.launch {
                 try {
-                    connection.send(text)
+                    withContext(Dispatchers.IO) { connection.send(text) }
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
                 } catch (_: Exception) {
-                    onRunningChange(false)
-                    onFailure()
+                    onSendFailed()
                 }
             }
         },
@@ -136,6 +163,7 @@ fun TranscriptContent(
     failed: Boolean,
     status: SessionStatus? = null,
     proposedTool: Pair<String, String>? = null,
+    turnError: String? = null,
     onBack: () -> Unit,
     composer: (@Composable () -> Unit)? = null,
 ) {
@@ -186,6 +214,13 @@ fun TranscriptContent(
                             .fillMaxWidth()
                             .background(TetherTheme.colors.surfaceSunken)
                             .padding(TetherSpace.space3),
+                )
+            }
+            turnError?.let { message ->
+                InlineBanner(
+                    text = message,
+                    tone = BannerTone.Danger,
+                    modifier = Modifier.padding(TetherSpace.space4),
                 )
             }
             StatusLine(status)
@@ -244,6 +279,10 @@ internal fun CoreEventView.endsTurn(): Boolean =
 
 private fun CoreEventView.proposedToolOr(current: Pair<String, String>?): Pair<String, String>? =
     if (this is CoreEventView.ToolProposed) tool to target else current
+
+/** The error a failed turn reports, or [fallback] when the core sent no text. Else null. */
+private fun CoreEventView.turnFailureOr(fallback: String): String? =
+    if (this is CoreEventView.TurnFailed) error.message.ifBlank { fallback } else null
 
 @Composable
 private fun TranscriptMessage(

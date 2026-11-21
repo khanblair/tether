@@ -36,6 +36,16 @@ internal class TetherNav(
         }
     }
 
+    /** Opens [path] and removes [removing] from the back stack, so Back skips it. */
+    fun replace(
+        path: String,
+        removing: Route,
+    ) {
+        controller.navigate(path) {
+            popUpTo(removing.path) { inclusive = true }
+        }
+    }
+
     fun openDrawer() {
         scope.launch { drawer.open() }
     }

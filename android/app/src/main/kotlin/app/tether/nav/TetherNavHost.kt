@@ -19,6 +19,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -36,6 +37,8 @@ import app.tether.design.components.TetherSnackbarHost
 import app.tether.di.AppModule
 import app.tether.home.AttentionViewModel
 import app.tether.home.HomeDrawer
+import app.tether.home.ProjectSummary
+import app.tether.home.SessionSummary
 import app.tether.session.SessionConnection
 import app.tether.session.SessionUnavailableScreen
 import app.tether.session.TranscriptScreen
@@ -66,6 +69,7 @@ fun TetherNavHost(module: AppModule) {
             .value
             ?.destination
             ?.route
+    LaunchedEffect(currentRoute) { attentionModel.refresh() }
     val snackbars = remember { SnackbarHostState() }
     val shared by module.shareInbox.pending.collectAsStateWithLifecycle()
     LaunchedEffect(shared?.value) {
@@ -92,9 +96,12 @@ fun TetherNavHost(module: AppModule) {
                 settingsRoutes(module = module, nav = nav)
                 placeholderRoutes(nav = nav)
                 composable("share-project") {
+                    val projects by produceState(emptyList<ProjectSummary>()) {
+                        value = withContext(Dispatchers.IO) { module.home.projects.projects() }
+                    }
                     ShareProjectScreen(
                         shared = shared,
-                        projects = module.home.projects.projects(),
+                        projects = projects,
                         onChoose = module.shareInbox::chooseProject,
                         onBack = {
                             module.shareInbox.clear()
@@ -159,12 +166,7 @@ private fun SessionRoute(
             try {
                 connection =
                     withContext(Dispatchers.IO) {
-                        SessionConnection(
-                            module.databasePath,
-                            module.workspacesRoot,
-                            module.vault,
-                            sessionId,
-                        )
+                        SessionConnection(module.databasePath, module.vault, sessionId)
                     }
             } catch (_: SessionRuntimeException) {
                 unavailable = true
@@ -191,7 +193,9 @@ private fun DrawerHost(
     attentionCount: Int,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
-    val sessions = remember { module.home.sessions.sessions() }
+    val sessions by produceState(emptyList<SessionSummary>(), drawerState.currentValue) {
+        value = withContext(Dispatchers.IO) { module.home.sessions.sessions() }
+    }
     val themeMode by module.themeMode.collectAsStateWithLifecycle()
     val now = remember(drawerState.currentValue) { System.currentTimeMillis() }
     HomeDrawer(

@@ -4,6 +4,7 @@
 #
 # Usage: tools/bump-version.sh patch|minor|major   raise one part and reset the parts after it
 #        tools/bump-version.sh X.Y.Z               set an exact version, which must be higher
+#        tools/bump-version.sh --next X.Y.Z [kind]  print the next version, edit nothing
 #        tools/bump-version.sh --self-test         prove the version math
 set -euo pipefail
 
@@ -16,16 +17,25 @@ current_version() {
 }
 
 # The version after [current] for a bump kind (patch, minor, major) or an exact X.Y.Z.
-# Fails for anything else, and for an exact version that is not higher than [current].
+# Minor and patch stop at 99 because versionCode packs each in two digits (see
+# android/app/build.gradle.kts), so a bump past 99 carries into the next part. Fails for anything
+# else, for an exact version with a minor or patch over 99, and for an exact version that is not
+# higher than [current].
 next_version() {
-  local current="$1" kind="$2" major minor patch
+  local current="$1" kind="$2" major minor patch new_minor new_patch
   IFS=. read -r major minor patch <<<"$current"
   case "$kind" in
-    patch) echo "$major.$minor.$((patch + 1))" ;;
-    minor) echo "$major.$((minor + 1)).0" ;;
+    patch)
+      if [ "$patch" -ge 99 ]; then next_version "$current" minor; else echo "$major.$minor.$((patch + 1))"; fi
+      ;;
+    minor)
+      if [ "$minor" -ge 99 ]; then next_version "$current" major; else echo "$major.$((minor + 1)).0"; fi
+      ;;
     major) echo "$((major + 1)).0.0" ;;
     *)
       [[ "$kind" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || return 1
+      IFS=. read -r _ new_minor new_patch <<<"$kind"
+      [ "$new_minor" -le 99 ] && [ "$new_patch" -le 99 ] || return 1
       [ "$(printf '%s\n%s\n' "$current" "$kind" | sort -V | tail -n 1)" = "$kind" ] || return 1
       [ "$kind" != "$current" ] || return 1
       echo "$kind"
@@ -54,12 +64,22 @@ self_test() {
   expect FAIL 0.0.3 0.0.2
   expect FAIL 0.0.3 0.0.10x
   expect FAIL 0.0.3 big
+  expect 0.1.0 0.0.99 patch
+  expect 1.0.0 0.99.99 patch
+  expect 1.0.0 0.99.5 minor
+  expect 0.0.99 0.0.98 patch
+  expect FAIL 0.0.3 0.0.100
+  expect FAIL 0.0.3 0.100.0
   [ "$failed" -eq 0 ] && echo "bump-version self test ok"
   return "$failed"
 }
 
 if [ "${1:-}" = "--self-test" ]; then
   self_test
+  exit
+fi
+if [ "${1:-}" = "--next" ]; then
+  next_version "${2:?usage: tools/bump-version.sh --next X.Y.Z [kind]}" "${3:-patch}"
   exit
 fi
 

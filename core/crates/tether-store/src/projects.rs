@@ -43,6 +43,30 @@ pub struct ProjectDefaults {
     pub mode: Option<PermissionMode>,
 }
 
+/// The remote metadata saved for one project.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProjectRemote {
+    /// The repository's remote URL.
+    pub remote_url: Option<String>,
+    /// The repository's default branch.
+    pub default_branch: Option<String>,
+}
+
+/// The commit identity saved for the current user.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GitIdentity {
+    /// GitHub login, when the identity came from GitHub.
+    pub login: Option<String>,
+    /// Author and committer name.
+    pub name: String,
+    /// Author and committer email.
+    pub email: String,
+    /// Identity source, either `github` or `manual`.
+    pub source: String,
+    /// Update time in Unix milliseconds.
+    pub updated_at: i64,
+}
+
 type ProjectRow = (
     String,
     String,
@@ -56,6 +80,99 @@ type ProjectRow = (
 );
 
 impl Store {
+    /// Reads a project's remote URL and default branch.
+    ///
+    /// # Errors
+    /// Returns an error when SQLite cannot read the project.
+    pub fn project_remote(&self, id: &ProjectId) -> Result<Option<ProjectRemote>, StoreError> {
+        self.conn
+            .query_row(
+                "SELECT remote_url, default_branch FROM projects WHERE id = ?1",
+                [id.as_str()],
+                |row| {
+                    Ok(ProjectRemote {
+                        remote_url: row.get(0)?,
+                        default_branch: row.get(1)?,
+                    })
+                },
+            )
+            .optional()
+            .map_err(Into::into)
+    }
+
+    /// Saves a project's remote URL and default branch.
+    ///
+    /// # Errors
+    /// Returns an error when the project is absent or SQLite cannot update it.
+    pub fn set_project_remote(
+        &self,
+        id: &ProjectId,
+        remote_url: &str,
+        default_branch: &str,
+    ) -> Result<(), StoreError> {
+        let changed = self.conn.execute(
+            "UPDATE projects SET remote_url = ?2, default_branch = ?3 WHERE id = ?1",
+            params![id.as_str(), remote_url, default_branch],
+        )?;
+        (changed == 1)
+            .then_some(())
+            .ok_or(StoreError::MissingProject)
+    }
+
+    /// Reads the single saved Git identity.
+    ///
+    /// # Errors
+    /// Returns an error when SQLite cannot read the identity.
+    pub fn git_identity(&self) -> Result<Option<GitIdentity>, StoreError> {
+        self.conn
+            .query_row(
+                "SELECT login, name, email, source, updated_at FROM git_identity WHERE id = 1",
+                [],
+                |row| {
+                    Ok(GitIdentity {
+                        login: row.get(0)?,
+                        name: row.get(1)?,
+                        email: row.get(2)?,
+                        source: row.get(3)?,
+                        updated_at: row.get(4)?,
+                    })
+                },
+            )
+            .optional()
+            .map_err(Into::into)
+    }
+
+    /// Replaces the saved Git identity.
+    ///
+    /// # Errors
+    /// Returns an error when SQLite cannot write the identity.
+    pub fn set_git_identity(&self, identity: &GitIdentity) -> Result<(), StoreError> {
+        self.conn.execute(
+            "INSERT INTO git_identity (id, login, name, email, source, updated_at)
+             VALUES (1, ?1, ?2, ?3, ?4, ?5)
+             ON CONFLICT(id) DO UPDATE SET login = excluded.login, name = excluded.name,
+                 email = excluded.email, source = excluded.source, updated_at = excluded.updated_at",
+            params![
+                identity.login,
+                identity.name,
+                identity.email,
+                identity.source,
+                identity.updated_at
+            ],
+        )?;
+        Ok(())
+    }
+
+    /// Removes the saved Git identity.
+    ///
+    /// # Errors
+    /// Returns an error when SQLite cannot delete the identity.
+    pub fn clear_git_identity(&self) -> Result<(), StoreError> {
+        self.conn
+            .execute("DELETE FROM git_identity WHERE id = 1", [])?;
+        Ok(())
+    }
+
     /// Creates a project with a unique, safe workspace directory name.
     ///
     /// # Errors

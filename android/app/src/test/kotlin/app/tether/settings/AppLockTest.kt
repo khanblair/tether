@@ -1,5 +1,6 @@
 package app.tether.settings
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -95,5 +96,21 @@ class AppLockTest {
         appLock.endPrompt(unlocked = true)
 
         assertFalse(appLock.locked.value)
+    }
+
+    @Test
+    fun a_locked_app_keeps_the_host_but_hides_it_and_covers_it() {
+        assertEquals(
+            LockLayers(hostSemanticsHidden = true, overlayVisible = true),
+            appLockLayers(locked = true),
+        )
+    }
+
+    @Test
+    fun an_unlocked_app_shows_the_host_with_no_cover() {
+        assertEquals(
+            LockLayers(hostSemanticsHidden = false, overlayVisible = false),
+            appLockLayers(locked = false),
+        )
     }
 }

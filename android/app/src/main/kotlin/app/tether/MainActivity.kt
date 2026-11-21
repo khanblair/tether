@@ -17,7 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.tether.design.TetherTheme
 import app.tether.nav.TetherNavHost
-import app.tether.settings.AppLockScreen
+import app.tether.settings.AppLockLayers
 
 /** The single activity. All screens are Compose destinations. */
 class MainActivity : ComponentActivity() {
@@ -77,9 +77,7 @@ class MainActivity : ComponentActivity() {
             val locked by (application as TetherApp).appLock.locked.collectAsStateWithLifecycle()
             TetherTheme(mode = mode) {
                 SystemBars(dark = TetherTheme.isDark)
-                if (locked) {
-                    AppLockScreen(onUnlock = ::requestUnlock)
-                } else {
+                AppLockLayers(locked = locked, onUnlock = ::requestUnlock) {
                     TetherNavHost(module = module)
                 }
             }

@@ -53,3 +53,16 @@ class AppLock(
         const val LOCK_AFTER_MS = 30_000L
     }
 }
+
+/**
+ * What covers the navigation host for a lock state. [hostSemanticsHidden] clears the host from
+ * accessibility, and [overlayVisible] draws the lock screen over it.
+ */
+data class LockLayers(
+    val hostSemanticsHidden: Boolean,
+    val overlayVisible: Boolean,
+)
+
+/** The layers for a lock state. The host stays composed in both states; only its cover changes. */
+fun appLockLayers(locked: Boolean): LockLayers =
+    LockLayers(hostSemanticsHidden = locked, overlayVisible = locked)

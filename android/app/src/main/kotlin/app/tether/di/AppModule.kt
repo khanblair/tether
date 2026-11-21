@@ -19,6 +19,8 @@ import app.tether.session.SessionGateway
 import app.tether.session.SessionSettingsGateway
 import app.tether.session.SessionStarter
 import app.tether.session.createSessionSettingsGateway
+import app.tether.settings.PrefsSettingsStore
+import app.tether.settings.createProjectDefaultsGateway
 import app.tether.share.ShareInbox
 import app.tether.theme.PrefsThemeStore
 import app.tether.theme.ThemeController
@@ -66,7 +68,14 @@ class AppModule(
     }
 
     /** Starts a session in a project, choosing the first provider that has a key. */
-    val sessionStarter: SessionStarter by lazy { SessionStarter(providerGateway, sessionGateway) }
+    val sessionStarter: SessionStarter by lazy {
+        SessionStarter(
+            providerGateway,
+            sessionGateway,
+            projectDefaults = createProjectDefaultsGateway(databasePath, workspacesRoot),
+            appDefaults = PrefsSettingsStore(context),
+        )
+    }
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 

@@ -289,7 +289,10 @@ The core's API is the UniFFI surface. There are no HTTP routes.
 | `send_message(session_id, input: UserInput)` | Start a turn |
 | `approve(tool_call_id, scope: ApprovalScope)` / `deny(tool_call_id, reason)` | Approvals |
 | `interrupt(session_id)` / `resume(session_id)` | Turn control |
-| `set_mode(session_id, mode)` / `set_model(session_id, model)` | Session settings |
+| `SessionRuntime.set_session_mode(session_id, mode)` / `set_session_model(session_id, provider, model_id)` / `rename_session(session_id, title)` / `list_models(provider)` / `session_usage(session_id)` | Session settings and the model picker; model and mode changes are refused while a turn runs, and the app reopens its `SessionRunner` after one |
+| `SessionRuntime.search_sessions(project_id, query)` / `search_transcripts(phrase, limit)` | Title and text search in one project, and full-text search of saved messages (limit 50) |
+| `ProjectRuntime.set_project_defaults(project_id, provider, model_id, mode)` | A project's default model pair and permission mode; the pair is set or cleared together |
+| `MemoryRuntime` (`read`, `apply`, `frozen_block`), `SkillsRuntime` (`list`, `read`), `VaultRuntime` (`search`, `read`, `write`, `append`, `links`, `orphans`, `map`) | Capped memory files, skill folders (reading only), and the Markdown vault; each takes its directory and rejects escapes and symlinked files. Skill install and approval, vault sync, and import follow |
 | `list_checkpoints(session_id)` / `rewind(checkpoint_id, what)` | Rewind |
 | `get_diff(project_id, scope)` / `apply_hunk_action(...)` | Diff review |
 | `run_command(project_id, cmd, executor)` | User-initiated run |

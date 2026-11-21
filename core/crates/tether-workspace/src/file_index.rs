@@ -31,6 +31,7 @@ pub struct SearchHit {
 pub struct FileIndex {
     guard: PathGuard,
     files: Vec<IndexedFile>,
+    ignores: Vec<String>,
 }
 
 impl FileIndex {
@@ -43,13 +44,32 @@ impl FileIndex {
         let mut files = Vec::new();
         walk(guard.root(), guard.root(), &ignores, &mut files)?;
         files.sort_by(|left, right| left.path.cmp(&right.path));
-        Ok(Self { guard, files })
+        Ok(Self {
+            guard,
+            files,
+            ignores,
+        })
     }
 
     /// Every indexed file in path order.
     #[must_use]
     pub fn files(&self) -> &[IndexedFile] {
         &self.files
+    }
+
+    /// Whether a relative path or one of its parent folders is ignored.
+    #[must_use]
+    pub fn is_ignored(&self, relative: &Path) -> bool {
+        relative
+            .ancestors()
+            .filter(|path| !path.as_os_str().is_empty())
+            .any(|path| {
+                path.components().any(|part| part.as_os_str() == ".git")
+                    || self
+                        .ignores
+                        .iter()
+                        .any(|pattern| glob_match(pattern, &path.to_string_lossy()))
+            })
     }
 
     /// Files whose relative path matches a simple `*` glob.

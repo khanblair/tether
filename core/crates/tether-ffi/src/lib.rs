@@ -1,6 +1,7 @@
 //! UniFFI surface of the core, built as `libtether_core.so`.
 
 mod callbacks;
+mod files;
 mod memory;
 mod projects;
 mod provider_settings;
@@ -16,6 +17,10 @@ use std::sync::Arc;
 use tether_engine::Core;
 
 pub use callbacks::EventSink;
+pub use files::{
+    DirListingView, FileEntryView, FilePreviewView, FileTextHitView, FilesRuntime,
+    FilesRuntimeError,
+};
 pub use memory::{
     MemoryActionView, MemoryResultView, MemoryRuntime, MemoryRuntimeError, MemoryTargetView,
 };

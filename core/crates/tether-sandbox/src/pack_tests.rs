@@ -8,8 +8,8 @@ use tempfile::tempdir;
 use tokio_util::sync::CancellationToken;
 
 use crate::{
-    PackEntry, PackError, PackFetcher, PackFile, PackManifest, install_pack, program_for,
-    verify_manifest,
+    PackEntry, PackError, PackFetcher, PackFile, PackManifest, PackMount, install_pack,
+    program_for, verify_manifest,
 };
 
 const MODULE: &[u8] = b"module bytes";
@@ -54,6 +54,9 @@ fn manifest() -> PackManifest {
                 size_bytes: MODULE.len() as u64,
                 sha256: MODULE_HASH.into(),
             }],
+            mounts: Vec::new(),
+            env: BTreeMap::new(),
+            args_prefix: Vec::new(),
         }],
     }
 }
@@ -143,4 +146,47 @@ fn oversized_fetch_is_rejected_before_install() {
         Err(PackError::Size { .. })
     ));
     assert_eq!(std::fs::read_dir(root.path()).unwrap().count(), 0);
+}
+
+#[test]
+fn old_manifest_without_optional_fields_still_verifies() {
+    let value = serde_json::json!({
+        "format": 1,
+        "packs": [{
+            "id": "python",
+            "version": "1.0.0",
+            "programs": ["python"],
+            "entry": "runtime.wasm",
+            "files": [{"path":"runtime.wasm","size_bytes":12,"sha256":MODULE_HASH}]
+        }]
+    });
+    let parsed: PackManifest = serde_json::from_value(value).unwrap();
+    assert_eq!(parsed.packs[0].mounts.len(), 0);
+    assert_eq!(parsed.packs[0].env.len(), 0);
+    assert_eq!(parsed.packs[0].args_prefix.len(), 0);
+}
+
+#[test]
+fn invalid_mount_and_environment_rules_are_rejected() {
+    let mut manifest = manifest();
+    manifest.packs[0].mounts = vec![PackMount {
+        path: "support".into(),
+        guest: "/workspace/support".into(),
+    }];
+    assert!(matches!(
+        crate::pack::validate_manifest(&manifest),
+        Err(PackError::Manifest(_))
+    ));
+
+    manifest.packs[0].mounts[0].guest = "/opt/support/../bad".into();
+    assert!(matches!(
+        crate::pack::validate_manifest(&manifest),
+        Err(PackError::Manifest(_))
+    ));
+
+    manifest.packs[0].env.insert("bad-name".into(), "x".into());
+    assert!(matches!(
+        crate::pack::validate_manifest(&manifest),
+        Err(PackError::Manifest(_))
+    ));
 }

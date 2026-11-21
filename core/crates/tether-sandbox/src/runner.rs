@@ -1,7 +1,8 @@
 //! Blocking WASI preview 1 command runner.
 
+use std::collections::BTreeMap;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use std::sync::{Arc, mpsc};
 use std::thread;
@@ -10,12 +11,23 @@ use std::time::{Duration, Instant};
 use tokio_util::sync::CancellationToken;
 use wasmtime::{Linker, Store, UpdateDeadline};
 use wasmtime_wasi::p1::{self, WasiP1Ctx};
-use wasmtime_wasi::{FsPerms, I32Exit, WasiCtxBuilder};
+use wasmtime_wasi::{FsPerms, WasiCtxBuilder};
 
+use crate::runner_result::{classify_error, pump, report};
 use crate::runner_support::{
-    STOP_CANCELLED, STOP_NONE, STOP_TIMEOUT, create_run_tmp, sanitize_message, spawn_epoch_thread,
+    STOP_CANCELLED, STOP_NONE, STOP_TIMEOUT, create_run_tmp, spawn_epoch_thread,
 };
+use crate::runner_validation::validate_spec;
 use crate::{CappedOutput, ModuleCache, OutputSink, RunLimits, SandboxError, WasiContextSpec};
+
+/// A host folder mounted read-only at an absolute guest path.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExtraMount {
+    /// Host folder inside the verified pack root.
+    pub host: PathBuf,
+    /// Absolute guest mount path.
+    pub guest: String,
+}
 
 /// A compiled WASI preview 1 command and its per-run settings.
 pub struct RunSpec {
@@ -25,6 +37,14 @@ pub struct RunSpec {
     pub argv: Vec<String>,
     /// Workspace and fixed guest environment.
     pub workspace: WasiContextSpec,
+    /// Absolute guest working directory under `/workspace`.
+    pub cwd: String,
+    /// Canonical folder that may contain support mounts.
+    pub pack_root: PathBuf,
+    /// Read-only support folders visible to the guest.
+    pub extra_mounts: Vec<ExtraMount>,
+    /// Additional pack environment variables.
+    pub extra_env: BTreeMap<String, String>,
     /// Memory, time, and output limits.
     pub limits: RunLimits,
 }
@@ -59,14 +79,14 @@ pub struct RunReport {
 
 /// Runs compiled WASI commands on blocking threads.
 pub struct SandboxRunner {
-    cache: Arc<ModuleCache>,
+    _cache: Arc<ModuleCache>,
 }
 
 impl SandboxRunner {
     /// Creates a runner backed by a module cache.
     #[must_use]
     pub fn new(cache: Arc<ModuleCache>) -> Self {
-        Self { cache }
+        Self { _cache: cache }
     }
 
     /// Runs one command and forwards output while it executes.
@@ -81,6 +101,7 @@ impl SandboxRunner {
         cancel: &CancellationToken,
     ) -> Result<RunReport, SandboxError> {
         let started = Instant::now();
+        validate_spec(spec)?;
         if cancel.is_cancelled() {
             return Ok(report(RunOutcome::Cancelled, started, 0, false));
         }
@@ -122,7 +143,10 @@ impl SandboxRunner {
             module: Arc::clone(&spec.module),
             argv: spec.argv.clone(),
             workspace: spec.workspace.clone(),
+            cwd: spec.cwd.clone(),
             tmp: tmp.to_path_buf(),
+            extra_mounts: spec.extra_mounts.clone(),
+            extra_env: spec.extra_env.clone(),
             limits: spec.limits,
             stdout,
             stderr,
@@ -157,6 +181,9 @@ struct ExecutionInput {
     argv: Vec<String>,
     workspace: WasiContextSpec,
     tmp: std::path::PathBuf,
+    cwd: String,
+    extra_mounts: Vec<ExtraMount>,
+    extra_env: BTreeMap<String, String>,
     limits: RunLimits,
     stdout: wasmtime_wasi::p2::pipe::MemoryOutputPipe,
     stderr: wasmtime_wasi::p2::pipe::MemoryOutputPipe,
@@ -171,6 +198,9 @@ fn spawn_execution(input: ExecutionInput) -> thread::JoinHandle<()> {
             argv: &input.argv,
             workspace: &input.workspace,
             tmp: &input.tmp,
+            cwd: &input.cwd,
+            extra_mounts: &input.extra_mounts,
+            extra_env: &input.extra_env,
             limits: input.limits,
             stdout: input.stdout,
             stderr: input.stderr,
@@ -211,6 +241,9 @@ struct InvokeArgs<'a> {
     argv: &'a [String],
     workspace: &'a WasiContextSpec,
     tmp: &'a Path,
+    cwd: &'a str,
+    extra_mounts: &'a [ExtraMount],
+    extra_env: &'a BTreeMap<String, String>,
     limits: RunLimits,
     stdout: wasmtime_wasi::p2::pipe::MemoryOutputPipe,
     stderr: wasmtime_wasi::p2::pipe::MemoryOutputPipe,
@@ -223,6 +256,9 @@ fn invoke(args: InvokeArgs<'_>) -> Result<RunOutcome, SandboxError> {
         argv,
         workspace,
         tmp,
+        cwd,
+        extra_mounts,
+        extra_env,
         limits,
         stdout,
         stderr,
@@ -232,8 +268,11 @@ fn invoke(args: InvokeArgs<'_>) -> Result<RunOutcome, SandboxError> {
         argv,
         workspace,
         tmp,
+        cwd,
         stdout,
         stderr,
+        extra_mounts,
+        extra_env,
     })?;
     let linker = make_linker(module)?;
     let mut store = make_store(module, wasi, limits, reason);
@@ -254,21 +293,23 @@ struct WasiInputs<'a> {
     argv: &'a [String],
     workspace: &'a WasiContextSpec,
     tmp: &'a Path,
+    cwd: &'a str,
     stdout: wasmtime_wasi::p2::pipe::MemoryOutputPipe,
     stderr: wasmtime_wasi::p2::pipe::MemoryOutputPipe,
+    extra_mounts: &'a [ExtraMount],
+    extra_env: &'a BTreeMap<String, String>,
 }
 
 fn build_wasi(input: WasiInputs<'_>) -> Result<WasiP1Ctx, SandboxError> {
     let mut builder = WasiCtxBuilder::new();
+    let mut env = input.workspace.env.clone();
+    env.extend(input.extra_env.clone());
     builder.args(input.argv).envs(
-        &input
-            .workspace
-            .env
-            .iter()
+        &env.iter()
             .map(|(k, v)| (k.as_str(), v.as_str()))
             .collect::<Vec<_>>(),
     );
-    builder.initial_cwd("/workspace");
+    builder.initial_cwd(input.cwd);
     builder.stdout(input.stdout).stderr(input.stderr);
     builder
         .preopened_dir(&input.workspace.workspace, "/workspace", FsPerms::ReadWrite)
@@ -276,6 +317,11 @@ fn build_wasi(input: WasiInputs<'_>) -> Result<WasiP1Ctx, SandboxError> {
     builder
         .preopened_dir(input.tmp, "/tmp", FsPerms::ReadWrite)
         .map_err(|_| SandboxError::Runtime("temporary mount failed".into()))?;
+    for mount in input.extra_mounts {
+        builder
+            .preopened_dir(&mount.host, &mount.guest, FsPerms::ReadOnly)
+            .map_err(|_| SandboxError::Runtime("support mount failed".into()))?;
+    }
     Ok(builder.build_p1())
 }
 
@@ -314,69 +360,9 @@ struct WasiState {
     limits: wasmtime::StoreLimits,
 }
 
-fn classify_error(error: &wasmtime::Error, reason: &AtomicU8) -> RunOutcome {
-    match reason.load(Ordering::SeqCst) {
-        STOP_CANCELLED => RunOutcome::Cancelled,
-        STOP_TIMEOUT => RunOutcome::TimedOut,
-        _ => {
-            if let Some(exit) = error.downcast_ref::<I32Exit>() {
-                return RunOutcome::Exited(exit.0);
-            }
-            let message = error.to_string();
-            if message.to_ascii_lowercase().contains("memory") {
-                RunOutcome::OutOfMemory
-            } else {
-                RunOutcome::Trapped(sanitize_message(&message))
-            }
-        }
-    }
-}
-
-fn pump(
-    stdout: &wasmtime_wasi::p2::pipe::MemoryOutputPipe,
-    stderr: &wasmtime_wasi::p2::pipe::MemoryOutputPipe,
-    stdout_len: &mut usize,
-    stderr_len: &mut usize,
-    output: &mut CappedOutput<'_>,
-) {
-    let stdout_bytes = stdout.contents();
-    if stdout_bytes.len() > *stdout_len {
-        output.stdout(&stdout_bytes[*stdout_len..]);
-        *stdout_len = stdout_bytes.len();
-    }
-    let stderr_bytes = stderr.contents();
-    if stderr_bytes.len() > *stderr_len {
-        output.stderr(&stderr_bytes[*stderr_len..]);
-        *stderr_len = stderr_bytes.len();
-    }
-}
-
-fn report(
-    outcome: RunOutcome,
-    started: Instant,
-    output_bytes: usize,
-    output_truncated: bool,
-) -> RunReport {
-    RunReport {
-        outcome,
-        elapsed: started.elapsed(),
-        output_bytes,
-        output_truncated,
-    }
-}
-
-impl std::fmt::Debug for SandboxRunner {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter
-            .debug_struct("SandboxRunner")
-            .field("cache", &self.cache)
-            .finish()
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::runner_support::sanitize_message;
 
     #[test]
     fn sanitized_messages_hide_absolute_paths() {

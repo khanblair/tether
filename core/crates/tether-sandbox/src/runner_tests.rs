@@ -1,5 +1,6 @@
 //! Runner behavior tests.
 
+use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -51,6 +52,10 @@ fn run_fixture(body: &str, limits: RunLimits) -> (crate::RunReport, Sink) {
         module,
         argv: vec!["fixture".into()],
         workspace: context,
+        cwd: "/workspace".into(),
+        pack_root: workspace.path().to_path_buf(),
+        extra_mounts: Vec::new(),
+        extra_env: BTreeMap::new(),
         limits,
     };
     let mut sink = Sink::default();
@@ -98,6 +103,10 @@ fn cancellation_interrupts_an_endless_fixture() {
         module,
         argv: vec!["fixture".into()],
         workspace: context,
+        cwd: "/workspace".into(),
+        pack_root: workspace.path().to_path_buf(),
+        extra_mounts: Vec::new(),
+        extra_env: BTreeMap::new(),
         limits: RunLimits::default(),
     };
     let cancel = CancellationToken::new();

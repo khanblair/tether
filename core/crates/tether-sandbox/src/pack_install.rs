@@ -1,5 +1,6 @@
 //! Atomic runtime pack installation and on-device integrity checks.
 
+use std::collections::BTreeMap;
 use std::fs::{self, OpenOptions};
 use std::io;
 use std::path::{Path, PathBuf};
@@ -8,7 +9,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use tokio_util::sync::CancellationToken;
 
 use crate::pack::{
-    PackEntry, PackError, PackFetcher, PackManifest, validate_manifest, validate_name,
+    PackEntry, PackError, PackFetcher, PackManifest, PackMount, validate_manifest, validate_name,
     validate_path,
 };
 use crate::pack_io::{HashingWriter, hash_file};
@@ -19,6 +20,14 @@ pub struct InstalledPack {
     root: PathBuf,
     entry: PackEntry,
 }
+
+/// Verified module bytes and guest settings for a pack program.
+pub type RunSpecParts = (
+    Vec<u8>,
+    Vec<String>,
+    Vec<PackMount>,
+    BTreeMap<String, String>,
+);
 
 impl InstalledPack {
     /// Opens an installed pack without trusting its files.
@@ -87,10 +96,39 @@ impl InstalledPack {
         })
     }
 
+    /// Builds the verified module and guest settings for a program invocation.
+    ///
+    /// # Errors
+    /// Returns an integrity, missing-file, or invalid-pack error.
+    pub fn run_spec_parts(&self, program: &str) -> Result<RunSpecParts, PackError> {
+        self.verify()?;
+        if !self.entry.programs.iter().any(|name| name == program) {
+            return Err(PackError::NotFound {
+                id: self.entry.id.clone(),
+                path: program.to_owned(),
+            });
+        }
+        let module = self.module_bytes()?;
+        let mut argv_prefix = vec![program.to_owned()];
+        argv_prefix.extend(self.entry.args_prefix.iter().cloned());
+        Ok((
+            module,
+            argv_prefix,
+            self.entry.mounts.clone(),
+            self.entry.env.clone(),
+        ))
+    }
+
     /// Returns the pack metadata.
     #[must_use]
     pub fn entry(&self) -> &PackEntry {
         &self.entry
+    }
+
+    /// Returns the canonical installed pack folder.
+    #[must_use]
+    pub fn root(&self) -> &Path {
+        &self.root
     }
 
     fn file_path(&self, path: &str) -> Result<PathBuf, PackError> {
@@ -163,12 +201,12 @@ pub fn install_pack(
         });
     if let Err(error) = result {
         drop(fs::remove_dir_all(&temporary));
-        remove_empty_directory(&root);
+        crate::pack_cleanup::remove_empty_directory(&root);
         return Err(error);
     }
-    if let Err(error) = replace_verified(pack, &root, &temporary) {
+    if let Err(error) = crate::pack_replace::replace_verified(pack, &root, &temporary) {
         drop(fs::remove_dir_all(&temporary));
-        remove_empty_directory(&root);
+        crate::pack_cleanup::remove_empty_directory(&root);
         return Err(error);
     }
     Ok(InstalledPack {
@@ -330,46 +368,4 @@ fn write_manifest(pack: &PackEntry, temporary: &Path) -> Result<(), PackError> {
         id: pack.id.clone(),
         path: "manifest.json".into(),
     })
-}
-
-fn replace_verified(pack: &PackEntry, id_root: &Path, temporary: &Path) -> Result<(), PackError> {
-    let target = id_root.join(&pack.version);
-    let backup = id_root.join(format!(".{}.old", pack.version));
-    let had_target = fs::symlink_metadata(&target).is_ok();
-    if had_target {
-        let metadata = fs::symlink_metadata(&target).map_err(|_| PackError::Path {
-            id: pack.id.clone(),
-            path: String::new(),
-        })?;
-        if metadata.file_type().is_symlink() || !metadata.is_dir() {
-            return Err(PackError::Path {
-                id: pack.id.clone(),
-                path: String::new(),
-            });
-        }
-        drop(fs::remove_dir_all(&backup));
-        fs::rename(&target, &backup).map_err(|_| PackError::Io {
-            id: pack.id.clone(),
-            path: String::new(),
-        })?;
-    }
-    if fs::rename(temporary, &target).is_err() {
-        if had_target {
-            drop(fs::rename(&backup, &target));
-        }
-        return Err(PackError::Io {
-            id: pack.id.clone(),
-            path: String::new(),
-        });
-    }
-    if had_target {
-        drop(fs::remove_dir_all(backup));
-    }
-    Ok(())
-}
-
-fn remove_empty_directory(path: &Path) {
-    if fs::read_dir(path).is_ok_and(|mut entries| entries.next().is_none()) {
-        drop(fs::remove_dir(path));
-    }
 }

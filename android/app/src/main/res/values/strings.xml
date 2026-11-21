@@ -341,9 +341,6 @@
     <string name="status_mode_auto">Auto</string>
     <string name="status_mode_bypass">Bypass</string>
     <string name="status_unknown">Unknown</string>
-    <string name="status_percent">%1$d%%</string>
-    <string name="status_cost">$%1$s</string>
-    <string name="status_line">%1$s · %2$s · %3$s · %4$s</string>
     <string name="composer_image_staged">Image selected. Sending images is not available yet.</string>
     <string name="composer_image_remove">Remove image</string>
     <string name="composer_voice">Speak</string>

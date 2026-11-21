@@ -84,6 +84,7 @@ fun HomeDrawer(
     onOpenSettings: () -> Unit,
     onOpenSkills: () -> Unit,
     now: Long,
+    onSearchMessages: ((String) -> Unit)? = null,
 ) {
     ModalDrawerSheet(
         modifier = Modifier.width(TetherSize.paneList),
@@ -100,6 +101,7 @@ fun HomeDrawer(
                 attentionCount = attentionCount,
                 onDestination = onDestination,
                 onOpenSession = onOpenSession,
+                onSearchMessages = onSearchMessages,
                 now = now,
                 modifier = Modifier.weight(1f),
             )
@@ -161,6 +163,7 @@ private fun DrawerList(
     attentionCount: Int,
     onDestination: (Route) -> Unit,
     onOpenSession: (String) -> Unit,
+    onSearchMessages: ((String) -> Unit)?,
     now: Long,
     modifier: Modifier,
 ) {
@@ -182,6 +185,15 @@ private fun DrawerList(
                 clearLabel = stringResource(R.string.home_search_clear),
                 modifier = Modifier.padding(horizontal = TetherSpace.space4),
             )
+        }
+        if (onSearchMessages != null && query.isNotBlank()) {
+            item {
+                ListRow(
+                    title = stringResource(R.string.drawer_search_all, query.trim()),
+                    leading = { DrawerIcon(TetherIcons.Search) },
+                    onClick = { onSearchMessages(query.trim()) },
+                )
+            }
         }
         if (groups.isEmpty() && query.isNotBlank()) {
             item { NoSessionMatch(query = query) }

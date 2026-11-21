@@ -21,11 +21,13 @@ import app.tether.nav.TetherNavHost
 /** The single activity. All screens are Compose destinations. */
 class MainActivity : ComponentActivity() {
     /**
-     * Asks the system for a biometric check before a saved key is shown. On Android 11 and later
-     * the screen lock PIN, pattern, or password is also accepted, so a phone with no enrolled
-     * fingerprint can still reveal a key. [onError] runs for a cancel and for a failure alike.
+     * Asks the system for a biometric check before a saved key is shown, or before a session
+     * changes to Bypass. [title] defaults to the key reveal title. On Android 11 and later the
+     * screen lock PIN, pattern, or password is also accepted, so a phone with no enrolled
+     * fingerprint can still pass the check. [onError] runs for a cancel and for a failure alike.
      */
     fun authenticateForKeyReveal(
+        title: String? = null,
         onSuccess: () -> Unit,
         onError: () -> Unit,
     ) {
@@ -33,7 +35,7 @@ class MainActivity : ComponentActivity() {
             BiometricPrompt
                 .Builder(
                     this,
-                ).setTitle(getString(R.string.settings_reveal_auth_title))
+                ).setTitle(title ?: getString(R.string.settings_reveal_auth_title))
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             builder.setAllowedAuthenticators(
                 BiometricManager.Authenticators.BIOMETRIC_STRONG or

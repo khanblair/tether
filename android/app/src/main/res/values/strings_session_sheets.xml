@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Model sheet: the picker of models with saved keys. -->
+    <string name="session_model_title">Model</string>
+    <string name="session_model_loading">Loading models</string>
+    <string name="session_model_none">No models saved. Test the connection in Providers.</string>
+    <string name="session_model_context">%1$s context</string>
+    <string name="session_model_price">%1$s in, %2$s out per million tokens</string>
+    <string name="session_badge_tools">Tools</string>
+    <string name="session_badge_vision">Vision</string>
+    <string name="session_badge_reasoning">Reasoning</string>
+    <string name="session_selected">Selected</string>
+    <string name="session_change_model">Change model</string>
+    <string name="session_change_mode">Change permission mode</string>
+
+    <!-- Shared by the session sheets and the status line. -->
+    <string name="session_busy_reason">A turn is running. You can change this when it finishes.</string>
+    <string name="session_error_settings">The change could not be saved. Try again.</string>
+    <string name="session_cost_none">—</string>
+    <string name="session_more">More</string>
+    <string name="status_tokens">%1$s in, %2$s out</string>
+    <string name="status_usage">%1$s · %2$s</string>
+
+    <!-- Mode sheet: the five permission modes, and the Bypass confirmation. -->
+    <string name="session_mode_title">Permission mode</string>
+    <string name="session_mode_scope">Applies to this session.</string>
+    <string name="session_mode_plan_desc">Reads and proposes. Changes nothing.</string>
+    <string name="session_mode_ask_desc">Asks before every edit and every command.</string>
+    <string name="session_mode_accept_edits_desc">Edits files without asking. Asks before commands.</string>
+    <string name="session_mode_auto_desc">Runs allowed commands without asking and asks for anything new. The quality gate blocks bad commits.</string>
+    <string name="session_mode_bypass_desc">Asks for nothing except pushes. The status line turns red. Needs a fingerprint or screen lock.</string>
+    <string name="session_bypass_title">Turn on Bypass for this session?</string>
+    <string name="session_bypass_body">The agent will edit files and run commands without asking. It still asks before pushing. Every action is logged in the transcript.</string>
+    <string name="session_bypass_confirm">Confirm with fingerprint</string>
+    <string name="session_bypass_cancel">Cancel</string>
+    <string name="session_bypass_denied">Bypass was not turned on.</string>
+    <string name="session_bypass_auth_title">Turn on Bypass</string>
+
+    <!-- Session menu and the rename sheet. -->
+    <string name="session_menu_title">Session</string>
+    <string name="session_menu_rename">Rename</string>
+    <string name="session_menu_rewind">Rewind</string>
+    <string name="session_menu_rewind_sub">Restore files, the conversation, or both</string>
+    <string name="session_rename_title">Rename session</string>
+    <string name="session_rename_label">Title</string>
+    <string name="session_rename_save">Save</string>
+
+    <!-- Rewind sheet: checkpoints, restore scopes, and the confirmation for file scopes. -->
+    <string name="session_rewind_title">Rewind</string>
+    <string name="session_rewind_restore">Restore</string>
+    <string name="session_rewind_loading">Loading checkpoints</string>
+    <string name="session_rewind_none">No checkpoints yet. One is saved before each edit batch.</string>
+    <plurals name="session_rewind_files">
+        <item quantity="one">%1$d file</item>
+        <item quantity="other">%1$d files</item>
+    </plurals>
+    <string name="session_rewind_chip_both">Files and conversation</string>
+    <string name="session_rewind_chip_files">Files only</string>
+    <string name="session_rewind_chip_conversation">Conversation only</string>
+    <string name="session_rewind_button_both">Rewind files and conversation</string>
+    <string name="session_rewind_button_files">Rewind files only</string>
+    <string name="session_rewind_button_conversation">Rewind conversation only</string>
+    <plurals name="session_rewind_hint_files">
+        <item quantity="one">This restores %1$d file to the checkpoint.</item>
+        <item quantity="other">This restores %1$d files to the checkpoint.</item>
+    </plurals>
+    <string name="session_rewind_hint_both">%1$s Messages after the checkpoint are removed too.</string>
+    <string name="session_rewind_hint_conversation">This removes the messages after the checkpoint. Files stay as they are.</string>
+    <string name="session_rewind_confirm_title">Restore files?</string>
+    <string name="session_rewind_confirm_body">This overwrites the current files with the copies saved at the checkpoint.</string>
+    <string name="session_rewind_confirm_action">Rewind</string>
+    <string name="session_rewind_cancel">Cancel</string>
+    <string name="session_rewound_toast">Rewound</string>
+    <string name="session_error_corrupt">A saved file copy is damaged, so nothing was restored.</string>
+    <string name="session_error_invalid_path">A saved path is not allowed, so nothing was restored.</string>
+    <string name="session_error_rewind">The rewind could not run.</string>
+
+    <!-- Message search and its drawer entry. -->
+    <string name="session_search_title">Search</string>
+    <string name="session_search_placeholder">Search messages</string>
+    <string name="session_search_hint">Type to search every saved message.</string>
+    <string name="session_search_none">Nothing found.</string>
+    <string name="session_search_scope_project">This project</string>
+    <string name="session_search_scope_all">All projects</string>
+    <string name="session_error_search">The search could not run.</string>
+    <string name="drawer_search_all">Search all messages for \"%1$s\"</string>
+</resources>

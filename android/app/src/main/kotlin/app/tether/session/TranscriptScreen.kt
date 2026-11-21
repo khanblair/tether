@@ -26,10 +26,6 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontWeight
 import app.tether.R
 import app.tether.core.generated.CoreEventView
 import app.tether.core.generated.MessagePartView
@@ -38,6 +34,7 @@ import app.tether.core.generated.RoleView
 import app.tether.design.TetherTheme
 import app.tether.design.components.BannerTone
 import app.tether.design.components.InlineBanner
+import app.tether.design.components.TetherTextButton
 import app.tether.design.components.TetherTopBar
 import app.tether.design.tokens.TetherSize
 import app.tether.design.tokens.TetherSpace
@@ -56,6 +53,8 @@ import kotlinx.coroutines.withContext
 private data class TranscriptSnapshot(
     val messages: List<MessageView>,
     val status: SessionStatus,
+    val details: SessionDetails,
+    val usage: SessionUsage,
 )
 
 private suspend fun SessionConnection.snapshot(): TranscriptSnapshot =
@@ -63,6 +62,8 @@ private suspend fun SessionConnection.snapshot(): TranscriptSnapshot =
         TranscriptSnapshot(
             messages = transcript().filterNot(MessageView::rewound).sortedBy(MessageView::seq),
             status = status(),
+            details = settings.details(sessionId),
+            usage = settings.usage(sessionId),
         )
     }
 
@@ -71,14 +72,22 @@ private suspend fun SessionConnection.snapshot(): TranscriptSnapshot =
 fun TranscriptScreen(
     connection: SessionConnection?,
     onBack: () -> Unit,
+    sheets: SessionSheetEnv? = null,
 ) {
     var snapshot by remember(connection) { mutableStateOf<TranscriptSnapshot?>(null) }
     var failed by remember(connection) { mutableStateOf(false) }
     var running by remember(connection) { mutableStateOf(false) }
     var proposedTool by remember(connection) { mutableStateOf<Pair<String, String>?>(null) }
     var turnError by remember(connection) { mutableStateOf<String?>(null) }
+    val sheetControl = remember(connection) { SessionSheetControl() }
     val turnFailed = stringResource(R.string.transcript_turn_failed)
     val sendFailed = stringResource(R.string.transcript_send_failed)
+    SnapshotReload(
+        connection = connection,
+        reloads = sheetControl.reloads,
+        onLoaded = { snapshot = it },
+        onFailed = { failed = true },
+    )
     LaunchedEffect(connection) {
         if (connection != null) {
             try {
@@ -104,15 +113,21 @@ fun TranscriptScreen(
     TranscriptContent(
         messages = snapshot?.messages.orEmpty(),
         failed = failed,
+        title = snapshot?.details?.title ?: stringResource(R.string.route_session_title),
         status = snapshot?.status,
+        usage = snapshot?.usage,
         proposedTool = proposedTool,
         turnError = turnError,
         onBack = onBack,
+        onModelClick = sheetOpener(sheets, sheetControl, SessionSheetKind.Model),
+        onModeClick = sheetOpener(sheets, sheetControl, SessionSheetKind.Mode),
+        onMore = sheetOpener(sheets, sheetControl, SessionSheetKind.Menu),
         composer =
             connection?.let { active ->
                 {
                     ComposerControls(
                         connection = active,
+                        modelId = snapshot?.details?.modelId.orEmpty(),
                         running = running,
                         onSendStart = {
                             running = true
@@ -127,18 +142,53 @@ fun TranscriptScreen(
                 }
             },
     )
+    SessionSheetsSlot(
+        connection = connection,
+        sheets = sheets,
+        control = sheetControl,
+        isRunning = { running },
+    )
 }
+
+/** Reloads the transcript after a sheet changed the session. The first load is in the screen. */
+@Composable
+private fun SnapshotReload(
+    connection: SessionConnection?,
+    reloads: Int,
+    onLoaded: (TranscriptSnapshot) -> Unit,
+    onFailed: () -> Unit,
+) {
+    LaunchedEffect(connection, reloads) {
+        if (connection != null && reloads > 0) {
+            try {
+                onLoaded(connection.snapshot())
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                onFailed()
+            }
+        }
+    }
+}
+
+/** A sheet opener for a session with sheets. Without sheets, the control has no action. */
+private fun sheetOpener(
+    sheets: SessionSheetEnv?,
+    control: SessionSheetControl,
+    kind: SessionSheetKind,
+): (() -> Unit)? = sheets?.let { { control.openSheet(kind) } }
 
 @Composable
 private fun ComposerControls(
     connection: SessionConnection,
+    modelId: String,
     running: Boolean,
     onSendStart: () -> Unit,
     onSendFailed: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     Composer(
-        modelId = connection.modelId,
+        modelId = modelId,
         running = running,
         onSend = { text ->
             onSendStart()
@@ -161,10 +211,15 @@ private fun ComposerControls(
 fun TranscriptContent(
     messages: List<MessageView>,
     failed: Boolean,
+    title: String,
     status: SessionStatus? = null,
+    usage: SessionUsage? = null,
     proposedTool: Pair<String, String>? = null,
     turnError: String? = null,
     onBack: () -> Unit,
+    onModelClick: (() -> Unit)? = null,
+    onModeClick: (() -> Unit)? = null,
+    onMore: (() -> Unit)? = null,
     composer: (@Composable () -> Unit)? = null,
 ) {
     val listState = rememberLazyListState()
@@ -173,8 +228,16 @@ fun TranscriptContent(
         containerColor = TetherTheme.colors.bg,
         topBar = {
             TetherTopBar(
-                title = stringResource(R.string.route_session_title),
+                title = title,
                 navigationIcon = { BackButton(onBack) },
+                actions = {
+                    if (onMore != null) {
+                        TetherTextButton(
+                            label = stringResource(R.string.session_more),
+                            onClick = onMore,
+                        )
+                    }
+                },
             )
         },
     ) { padding ->
@@ -223,7 +286,7 @@ fun TranscriptContent(
                     modifier = Modifier.padding(TetherSpace.space4),
                 )
             }
-            StatusLine(status)
+            StatusLine(status, usage, onModelClick, onModeClick)
             composer?.invoke()
         }
     }
@@ -320,69 +383,3 @@ private fun TranscriptMessage(
         }
     }
 }
-
-@Composable
-private fun MarkdownBlocks(source: String) {
-    splitMarkdown(source).forEach { block ->
-        if (block.code) {
-            Text(
-                text = block.text,
-                style = TetherTheme.mono,
-                color = TetherTheme.colors.text,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .background(TetherTheme.colors.surfaceSunken)
-                        .padding(TetherSpace.space3),
-            )
-        } else {
-            Text(
-                text = inlineMarkdown(block.text),
-                style = MaterialTheme.typography.bodyMedium,
-                color = TetherTheme.colors.text,
-            )
-        }
-    }
-}
-
-internal data class MarkdownBlock(
-    val text: String,
-    val code: Boolean,
-)
-
-/** Keeps fenced code separate from prose; incomplete fences stay visible while streaming. */
-internal fun splitMarkdown(source: String): List<MarkdownBlock> {
-    val result = mutableListOf<MarkdownBlock>()
-    val text = StringBuilder()
-    var inCode = false
-    source.lineSequence().forEach { line ->
-        if (line.startsWith("```")) {
-            if (text.isNotEmpty()) result += MarkdownBlock(text.toString().trimEnd('\n'), inCode)
-            text.clear()
-            inCode = !inCode
-        } else {
-            text.append(line).append('\n')
-        }
-    }
-    if (text.isNotEmpty()) result += MarkdownBlock(text.toString().trimEnd('\n'), inCode)
-    return result
-}
-
-/** Styles bold spans while leaving malformed delimiters as plain text. */
-internal fun inlineMarkdown(source: String): AnnotatedString =
-    buildAnnotatedString {
-        var cursor = 0
-        while (cursor < source.length) {
-            val start = source.indexOf("**", cursor)
-            val end = if (start >= 0) source.indexOf("**", start + 2) else -1
-            if (end < 0) {
-                append(source.substring(cursor))
-                break
-            }
-            append(source.substring(cursor, start))
-            pushStyle(SpanStyle(fontWeight = FontWeight.Bold))
-            append(source.substring(start + 2, end))
-            pop()
-            cursor = end + 2
-        }
-    }

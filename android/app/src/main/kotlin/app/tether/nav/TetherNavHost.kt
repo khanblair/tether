@@ -40,6 +40,7 @@ import app.tether.home.HomeDrawer
 import app.tether.home.ProjectSummary
 import app.tether.home.SessionSummary
 import app.tether.session.SessionConnection
+import app.tether.session.SessionSheetEnv
 import app.tether.session.SessionUnavailableScreen
 import app.tether.session.TranscriptScreen
 import app.tether.share.ShareProjectScreen
@@ -94,6 +95,11 @@ fun TetherNavHost(module: AppModule) {
             NavHost(navController = navController, startDestination = Route.Home.path) {
                 homeRoutes(module = module, nav = nav, attentionItems = attention)
                 settingsRoutes(module = module, nav = nav)
+                sessionSheetRoutes(
+                    settings = module.sessionSettings,
+                    onBack = nav::back,
+                    onOpenSession = { nav.open("session/${Uri.encode(it)}") },
+                )
                 placeholderRoutes(nav = nav)
                 composable("share-project") {
                     val projects by produceState(emptyList<ProjectSummary>()) {
@@ -112,8 +118,8 @@ fun TetherNavHost(module: AppModule) {
                 composable("session/{sessionId}") { entry ->
                     SessionRoute(
                         module = module,
+                        nav = nav,
                         sessionId = entry.arguments?.getString("sessionId"),
-                        onBack = nav::back,
                     )
                 }
             }
@@ -156,9 +162,10 @@ private fun SnackbarMessages(
 @Composable
 private fun SessionRoute(
     module: AppModule,
+    nav: TetherNav,
     sessionId: String?,
-    onBack: () -> Unit,
 ) {
+    val onBack: () -> Unit = nav::back
     var connection by remember(sessionId) { mutableStateOf<SessionConnection?>(null) }
     var unavailable by remember(sessionId) { mutableStateOf(sessionId == null) }
     LaunchedEffect(sessionId) {
@@ -179,7 +186,16 @@ private fun SessionRoute(
     if (unavailable) {
         SessionUnavailableScreen(onBack = onBack)
     } else {
-        TranscriptScreen(connection = connection, onBack = onBack)
+        TranscriptScreen(
+            connection = connection,
+            onBack = onBack,
+            sheets =
+                SessionSheetEnv(
+                    providers = module.providerGateway,
+                    messages = module.messages,
+                    openProviders = { nav.go(Route.Providers) },
+                ),
+        )
     }
 }
 
@@ -212,5 +228,6 @@ private fun DrawerHost(
         onOpenSettings = { nav.closeThen { nav.go(Route.Settings) } },
         onOpenSkills = { nav.closeThen { nav.go(Route.Skills) } },
         now = now,
+        onSearchMessages = { query -> nav.closeThen { nav.open(searchPath(query)) } },
     )
 }

@@ -6,6 +6,7 @@ use super::helpers::{
     worktree_diff,
 };
 use super::log::log_order;
+use super::stageable::stageable_files;
 use super::{
     BTreeMap, BranchInfo, ByteSlice, CommitId, CommitInfo, DiffSpec, Identity, Path, PathBuf,
     PreviousValue, Repo, RepoError, StatusEntry, StatusItem, fs,
@@ -275,17 +276,17 @@ impl Repo {
         Ok(())
     }
 
-    /// Stages every change git reports: modified and new files that are not ignored, and
-    /// tracked files that were deleted. Ignored files are never staged.
+    /// Stages what `git add -A` would: tracked files that changed or were deleted, and
+    /// untracked files that no ignore rule excludes. It walks the worktree itself instead of
+    /// trusting status, so a rename can never leave the new file out.
     ///
     /// # Errors
     /// Returns an error when the worktree or index cannot be read.
     pub fn stage_all(&self) -> Result<(), RepoError> {
         let repo = self.git()?;
-        self.status()?
-            .into_iter()
-            .filter(|entry| entry.worktree_state.is_some())
-            .try_for_each(|entry| stage_one(&repo, &entry.path))?;
+        stageable_files(&repo, &self.root)?
+            .iter()
+            .try_for_each(|path| stage_one(&repo, path))?;
         self.drop_missing_tracked(&repo)
     }
 

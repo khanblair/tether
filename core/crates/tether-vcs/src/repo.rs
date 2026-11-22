@@ -171,5 +171,6 @@ mod diff;
 mod helpers;
 mod log;
 mod ops;
+mod stageable;
 
 pub use helpers::{branch_name_for_task, unique_branch_name, validate_branch_name};

@@ -121,3 +121,41 @@ fn switching_branches_refuses_to_drop_staged_changes() {
     );
     assert_eq!(repo.current_branch().unwrap().as_deref(), Some("main"));
 }
+
+#[test]
+fn stage_all_follows_nested_ignore_files_the_info_exclude_and_tracked_files_in_ignored_folders() {
+    let (dir, repo) = init_repo("stage-rules");
+    write(&dir.path().join(".gitignore"), b"vendor/\n");
+    write(&dir.path().join("sub/.gitignore"), b"*.tmp\n!keep.tmp\n");
+    write(&dir.path().join("vendor/forced.txt"), b"one\n");
+    add_commit(dir.path(), "base");
+    git_ok(dir.path(), &["add", "-f", "vendor/forced.txt"]);
+    git_ok(dir.path(), &["commit", "-q", "-m", "force add"]);
+    write(&dir.path().join(".git/info/exclude"), b"private.txt\n");
+
+    write(&dir.path().join("vendor/forced.txt"), b"two\n");
+    write(&dir.path().join("vendor/other.txt"), b"untracked\n");
+    write(&dir.path().join("sub/a.tmp"), b"ignored\n");
+    write(&dir.path().join("sub/keep.tmp"), b"kept\n");
+    write(&dir.path().join("sub/real.txt"), b"real\n");
+    write(&dir.path().join("private.txt"), b"mine\n");
+    write(&dir.path().join("top.tmp"), b"not ignored at the top\n");
+
+    repo.stage_all().expect("stage all");
+    repo.commit("rules", &identity()).expect("commit");
+    assert_eq!(
+        committed_paths(dir.path()),
+        [
+            ".gitignore",
+            "sub/.gitignore",
+            "sub/keep.tmp",
+            "sub/real.txt",
+            "top.tmp",
+            "vendor/forced.txt"
+        ]
+    );
+    assert_eq!(
+        git_ok(dir.path(), &["show", "HEAD:vendor/forced.txt"]),
+        b"two\n".to_vec()
+    );
+}

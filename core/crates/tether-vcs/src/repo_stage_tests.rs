@@ -159,3 +159,23 @@ fn stage_all_follows_nested_ignore_files_the_info_exclude_and_tracked_files_in_i
         b"two\n".to_vec()
     );
 }
+
+#[test]
+fn stage_all_keeps_every_file_when_many_are_staged_in_one_call() {
+    let (dir, repo) = init_repo("stage-many");
+    write(&dir.path().join("seed.txt"), b"seed\n");
+    add_commit(dir.path(), "base");
+    let mut expected = vec!["seed.txt".to_owned()];
+    for folder in 0..12 {
+        for file in 0..25 {
+            let path = format!("d{folder:02}/f{file:02}.txt");
+            write(&dir.path().join(&path), format!("{path}\n").as_bytes());
+            expected.push(path);
+        }
+    }
+    expected.sort();
+    repo.stage_all().expect("stage all");
+    repo.commit("many", &identity()).expect("commit");
+    assert_eq!(committed_paths(dir.path()), expected);
+    assert_eq!(git_ok(dir.path(), &["fsck", "--strict"]), Vec::<u8>::new());
+}

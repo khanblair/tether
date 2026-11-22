@@ -7,6 +7,8 @@ mod approvals;
 mod budgets;
 mod checkpoints;
 mod context;
+#[cfg(test)]
+mod context_tests;
 mod db;
 mod error;
 mod migrations;

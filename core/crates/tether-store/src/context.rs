@@ -134,8 +134,14 @@ impl Store {
             })
             .cloned()
             .collect::<Vec<_>>();
+        // A summary is placed where its compacted range was, never at its own position.
+        let in_place = messages.into_iter().filter(|message| {
+            !compactions
+                .iter()
+                .any(|item| item.summary_message_id == message.id)
+        });
         let mut result = Vec::new();
-        for message in messages {
+        for message in in_place {
             let seq = message.seq;
             match compactions
                 .iter()

@@ -53,9 +53,9 @@ fn decode_plan(args_json: &str) -> Result<Plan, StoreError> {
     Ok(Plan {
         summary: string(object, "summary")?,
         steps: list(object, "steps")?,
-        files: list(object, "files")?,
-        commands: list(object, "commands")?,
-        open_questions: list(object, "open_questions")?,
+        files: optional_list(object, "files")?,
+        commands: optional_list(object, "commands")?,
+        open_questions: optional_list(object, "open_questions")?,
     })
 }
 
@@ -65,6 +65,18 @@ fn string(object: &serde_json::Map<String, Value>, key: &str) -> Result<String, 
         .and_then(Value::as_str)
         .map(str::to_owned)
         .ok_or(StoreError::InvalidPlan)
+}
+
+/// Reads a list the `submit_plan` schema allows to be omitted; a missing key is an empty list.
+fn optional_list(
+    object: &serde_json::Map<String, Value>,
+    key: &str,
+) -> Result<Vec<String>, StoreError> {
+    if object.contains_key(key) {
+        list(object, key)
+    } else {
+        Ok(Vec::new())
+    }
 }
 
 fn list(object: &serde_json::Map<String, Value>, key: &str) -> Result<Vec<String>, StoreError> {

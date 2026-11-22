@@ -9,7 +9,8 @@ use tether_store::Store;
 use tether_types::SessionId;
 use tether_workspace::PathGuard;
 
-use super::{PromptSectionView, SessionRuntime, SessionRuntimeError};
+use super::{SessionRuntime, SessionRuntimeError};
+use crate::PromptSectionView;
 
 #[uniffi::export]
 impl SessionRuntime {
@@ -66,12 +67,7 @@ impl SessionRuntime {
             .load_project(&session.project_id)
             .map_err(|_| SessionRuntimeError::Unavailable)?
             .ok_or(SessionRuntimeError::Unavailable)?;
-        let project_root = self
-            .project_roots
-            .lock()
-            .map_err(|_| SessionRuntimeError::Unavailable)?
-            .get(&id)
-            .cloned();
+        let project_root = project_root_of(self, &id)?;
         let sources = self.prompt_sources(&project.name, project_root.clone());
         let snapshot = snapshot_for(&store, &id, &sources)?;
         let instructions = load_instructions(
@@ -109,6 +105,18 @@ impl SessionRuntime {
             })
             .collect())
     }
+}
+
+fn project_root_of(
+    runtime: &SessionRuntime,
+    id: &SessionId,
+) -> Result<Option<PathBuf>, SessionRuntimeError> {
+    Ok(runtime
+        .project_roots
+        .lock()
+        .map_err(|_| SessionRuntimeError::Unavailable)?
+        .get(id)
+        .cloned())
 }
 
 pub(super) fn files_root(database_path: &Path) -> PathBuf {

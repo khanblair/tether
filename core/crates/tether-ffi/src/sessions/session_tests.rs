@@ -1,8 +1,10 @@
+use super::open::{ToolWiring, session_tool_runtime};
 use super::ux::map_rewind_error;
 use super::*;
 use crate::SecretsPlatform;
 use crate::SessionStatusView;
 use tether_engine::{ApprovalAnswer, ApprovalRequest, Approver};
+use tether_store::BlobStore;
 use tether_types::{ModelRef, SessionStatus};
 
 #[test]
@@ -231,7 +233,8 @@ fn workspace_session_requires_a_saved_project_folder() {
         Arc::new(PlainPlatform),
     );
     vault.put("provider-anthropic", "test-key").unwrap();
-    let runtime = SessionRuntime::new(db.to_str().unwrap(), vault, Arc::new(NoopSink)).unwrap();
+    let runtime =
+        SessionRuntime::new(db.to_str().unwrap(), Arc::clone(&vault), Arc::new(NoopSink)).unwrap();
     let root = dir.path().join("workspaces");
     std::fs::create_dir(&root).unwrap();
     assert!(matches!(
@@ -248,8 +251,17 @@ fn workspace_session_requires_a_saved_project_folder() {
         .unwrap();
     let store = Store::open(&db).unwrap();
     let saved = store.load_session(&session_id).unwrap().unwrap();
-    let tools =
-        session_tool_runtime(&store, &saved, &root, Arc::new(ApprovalBroker::new()), &db).unwrap();
+    let tools = session_tool_runtime(
+        &store,
+        &saved,
+        ToolWiring {
+            root: &root,
+            database_path: &db,
+            approver: Arc::new(ApprovalBroker::new()),
+            vault,
+        },
+    )
+    .unwrap();
     assert!(!tools.approver.interactive());
     assert!(
         runtime

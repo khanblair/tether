@@ -70,7 +70,7 @@ pub struct SessionRuntime {
     pub(crate) runners: Mutex<HashMap<SessionId, Arc<SessionRunner>>>,
     pub(crate) project_roots: Mutex<HashMap<SessionId, PathBuf>>,
     pub(crate) broker: Arc<ApprovalBroker>,
-    files_root: PathBuf,
+    pub(crate) files_root: PathBuf,
     pub(crate) network: Arc<tether_engine::network::NetworkControl>,
     pub(crate) notify: Arc<crate::notify::NotifyState>,
 }

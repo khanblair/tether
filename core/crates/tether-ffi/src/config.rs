@@ -3,7 +3,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use tether_engine::config::{self, ConfigIssue, ConfigOrigin, EffectiveConfig};
+use tether_engine::config::{self, ConfigIssue, ConfigOrigin, EffectiveConfig, SessionConfig};
 use tether_types::ProjectId;
 
 use crate::{ExecutorView, ModelRefView, ProjectRuntime, ProjectRuntimeError};
@@ -64,7 +64,7 @@ impl ProjectRuntime {
     pub fn trust_project(&self, project_id: String) -> Result<(), ProjectRuntimeError> {
         self.store()?
             .trust_project(&ProjectId::new(project_id), now_ms())
-            .map_err(map_store_error)
+            .map_err(|error| map_store_error(&error))
     }
 
     /// Revokes a project's configuration trust.
@@ -93,9 +93,9 @@ impl ProjectRuntime {
     /// Returns `NotFound` for an unknown project.
     pub fn config_issues(
         &self,
-        project_id: String,
+        project_id: &str,
     ) -> Result<Vec<ConfigIssueView>, ProjectRuntimeError> {
-        let (_, mut issues) = self.project_config(&project_id)?;
+        let (_, mut issues) = self.project_config(project_id)?;
         let (_, global_issues) =
             config::load_global(&global_config_path(Path::new(&self.database_path)));
         issues.extend(global_issues);
@@ -108,14 +108,14 @@ impl ProjectRuntime {
     /// Returns `NotFound` for an unknown project.
     pub fn effective_config(
         &self,
-        project_id: String,
+        project_id: &str,
     ) -> Result<EffectiveConfigView, ProjectRuntimeError> {
-        let (project, _) = self.project_config(&project_id)?;
+        let (project, _) = self.project_config(project_id)?;
         let (global, _) = config::load_global(&global_config_path(Path::new(&self.database_path)));
         Ok(view(config::effective_config(
             &global,
             &project,
-            &Default::default(),
+            &SessionConfig::default(),
         )))
     }
 
@@ -212,7 +212,7 @@ fn global_config_path(database_path: &Path) -> PathBuf {
     files.join("config").join("global.toml")
 }
 
-fn map_store_error(error: tether_store::StoreError) -> ProjectRuntimeError {
+fn map_store_error(error: &tether_store::StoreError) -> ProjectRuntimeError {
     match error {
         tether_store::StoreError::MissingProject => ProjectRuntimeError::NotFound,
         _ => ProjectRuntimeError::Unavailable,

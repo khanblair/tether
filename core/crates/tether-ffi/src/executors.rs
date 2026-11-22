@@ -8,7 +8,7 @@ use tether_linux::{RootfsManager, RootfsStatus};
 use tether_sandbox::installed_programs;
 use tether_types::ProjectId;
 
-use crate::{SessionRuntime, SessionRuntimeError};
+use crate::SessionRuntime;
 
 /// Platform paths and verifying keys for the local executors.
 #[derive(Debug, Clone, uniffi::Record)]
@@ -178,7 +178,6 @@ fn read_paths(files_root: &Path) -> Result<ExecutorPaths, ExecutorRuntimeError> 
             "packs_root" => packs_root = Some(PathBuf::from(value)),
             "linux_root" => linux_root = Some(PathBuf::from(value)),
             "proot_path" => proot_path = Some(PathBuf::from(value)),
-            "loader_path" | "pack_key" | "rootfs_key" => {}
             _ => {}
         }
     }

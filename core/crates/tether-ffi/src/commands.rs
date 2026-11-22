@@ -66,7 +66,7 @@ impl SessionRuntime {
     /// Lists built-in commands for the composer.
     #[must_use]
     pub fn command_sheet(&self) -> Vec<CommandView> {
-        command_views(&CommandRegistry::builtin(), &current_capabilities())
+        command_views(&CommandRegistry::builtin(), current_capabilities())
     }
 
     /// Resolves a built-in command for the composer.
@@ -75,11 +75,11 @@ impl SessionRuntime {
     /// Returns unknown or unavailable command details.
     pub fn resolve_command(
         &self,
-        input: String,
+        input: &str,
     ) -> Result<CommandResolutionView, CommandRuntimeError> {
         let registry = CommandRegistry::builtin();
         registry
-            .resolve(&input, &current_capabilities(), &[])
+            .resolve(input, &current_capabilities(), &[])
             .map(command_view)
             .map_err(map_error)
     }
@@ -98,13 +98,10 @@ impl SessionRuntime {
         let project = store
             .load_project(&session.project_id)
             .map_err(|_| crate::SessionRuntimeError::Unavailable)?;
-        let title = project.map_or(session.title.clone(), |project| {
-            if session.title.is_empty() {
-                project.name
-            } else {
-                session.title.clone()
-            }
-        });
+        let title = match project {
+            Some(project) if session.title.is_empty() => project.name,
+            _ => session.title.clone(),
+        };
         let messages = store
             .messages(&id)
             .map_err(|_| crate::SessionRuntimeError::Unavailable)?;
@@ -138,7 +135,7 @@ impl From<MentionResolution> for SendOutcomeView {
     }
 }
 
-fn command_views(registry: &CommandRegistry, capabilities: &Capabilities) -> Vec<CommandView> {
+fn command_views(registry: &CommandRegistry, capabilities: Capabilities) -> Vec<CommandView> {
     registry
         .commands()
         .iter()

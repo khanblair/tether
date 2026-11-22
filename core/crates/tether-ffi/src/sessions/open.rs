@@ -1,12 +1,10 @@
 use std::path::Path;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 
-use tether_engine::{
-    ProviderFactory, SessionActor, SessionActorOptions, SessionHandle, ToolRuntime,
-};
+use tether_engine::{SessionActor, SessionActorOptions, ToolRuntime};
 use tether_store::{BlobStore, SessionRecord, Store};
-use tether_types::{Provider, SessionId};
+use tether_types::SessionId;
 use tether_workspace::PathGuard;
 
 use super::{
@@ -44,10 +42,12 @@ impl SessionRuntime {
             let tools = session_tool_runtime(
                 &store,
                 &session,
-                root,
-                Arc::clone(&self.broker),
-                Path::new(&self.database_path),
-                Arc::clone(&self.vault),
+                ToolWiring {
+                    root,
+                    database_path: Path::new(&self.database_path),
+                    approver: Arc::clone(&self.broker),
+                    vault: Arc::clone(&self.vault),
+                },
             )?;
             let project = store
                 .load_project(&session.project_id)
@@ -99,14 +99,24 @@ impl SessionRuntime {
     }
 }
 
-fn session_tool_runtime(
+/// Paths and shared services that a session's tool runtime is built from.
+pub(super) struct ToolWiring<'a> {
+    /// Workspaces root folder that holds the project folders.
+    pub(super) root: &'a Path,
+    /// Path of the SQLite database, opened again for the session tools.
+    pub(super) database_path: &'a Path,
+    /// Approval broker shared with the session.
+    pub(super) approver: Arc<ApprovalBroker>,
+    /// Secret vault used by the git tools.
+    pub(super) vault: Arc<crate::SecretVault>,
+}
+
+pub(super) fn session_tool_runtime(
     store: &Store,
     session: &SessionRecord,
-    root: &Path,
-    approver: Arc<ApprovalBroker>,
-    database_path: &Path,
-    vault: Arc<crate::SecretVault>,
+    wiring: ToolWiring<'_>,
 ) -> Result<ToolRuntime, SessionRuntimeError> {
+    let root = wiring.root;
     let root_guard = PathGuard::new(root).map_err(|_| SessionRuntimeError::Unavailable)?;
     let project_path = store
         .project_path(&session.project_id)
@@ -122,32 +132,9 @@ fn session_tool_runtime(
         .ok_or(SessionRuntimeError::Unavailable)?
         .join("blobs");
     let blobs = BlobStore::open(blob_root).map_err(|_| SessionRuntimeError::Unavailable)?;
-    let session_store = Store::open(database_path).map_err(|_| SessionRuntimeError::Unavailable)?;
-    let remote = store
-        .project_remote(&session.project_id)
-        .map_err(|_| SessionRuntimeError::Unavailable)?;
-    let git_root = project_root.clone();
-    let has_git = tether_vcs::Repo::open(&git_root).is_ok();
-    let git_handler = if has_git
-        || remote
-            .as_ref()
-            .and_then(|value| value.remote_url.as_ref())
-            .is_some()
-    {
-        let git_runtime = crate::GitRuntime::new(
-            database_path.to_string_lossy().as_ref(),
-            root.to_string_lossy().as_ref(),
-            vault,
-        )
-        .map_err(|_| SessionRuntimeError::Unavailable)?;
-        Some(crate::git::GitRuntime::tool_handler(
-            git_runtime,
-            remote.as_ref().and_then(|value| value.remote_url.clone()),
-            remote.and_then(|value| value.default_branch),
-        ))
-    } else {
-        None
-    };
+    let session_store =
+        Store::open(wiring.database_path).map_err(|_| SessionRuntimeError::Unavailable)?;
+    let git_handler = git_tool_handler(store, session, &project_root, &wiring)?;
     let mut handlers: Vec<Arc<dyn tether_engine::ToolHandler>> = vec![
         Arc::new(
             tether_engine::executors::RunTools::new(
@@ -158,18 +145,48 @@ fn session_tool_runtime(
             .map_err(|_| SessionRuntimeError::Unavailable)?,
         ),
         Arc::new(tether_engine::SessionTools::new(
-            approver.questions(),
+            wiring.approver.questions(),
             Arc::new(Mutex::new(session_store)),
         )),
     ];
-    if let Some(git_handler) = git_handler {
-        handlers.push(git_handler);
-    }
+    handlers.extend(git_handler);
+    let approver_dyn: Arc<dyn tether_engine::Approver> = wiring.approver;
     Ok(ToolRuntime {
         guard,
         blobs,
-        approver: Arc::clone(&approver),
+        approver: approver_dyn,
         mode: Arc::new(Mutex::new(session.mode)),
         handlers,
     })
+}
+
+/// Builds the git tool handler when the project has a repository or a remote URL.
+fn git_tool_handler(
+    store: &Store,
+    session: &SessionRecord,
+    project_root: &Path,
+    wiring: &ToolWiring<'_>,
+) -> Result<Option<Arc<dyn tether_engine::ToolHandler>>, SessionRuntimeError> {
+    let remote = store
+        .project_remote(&session.project_id)
+        .map_err(|_| SessionRuntimeError::Unavailable)?;
+    let has_git = tether_vcs::Repo::open(project_root).is_ok();
+    let has_remote_url = remote
+        .as_ref()
+        .and_then(|value| value.remote_url.as_ref())
+        .is_some();
+    if !has_git && !has_remote_url {
+        return Ok(None);
+    }
+    let git_runtime = crate::GitRuntime::new(
+        wiring.database_path.to_string_lossy().as_ref(),
+        wiring.root.to_string_lossy().as_ref(),
+        Arc::clone(&wiring.vault),
+    )
+    .map_err(|_| SessionRuntimeError::Unavailable)?;
+    Ok(Some(crate::git::GitRuntime::tool_handler(
+        git_runtime,
+        remote.as_ref().and_then(|value| value.remote_url.clone()),
+        remote.and_then(|value| value.default_branch),
+    )))
 }

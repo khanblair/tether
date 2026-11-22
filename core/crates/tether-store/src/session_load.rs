@@ -41,6 +41,9 @@ impl Store {
         mode: PermissionMode,
         now_ms: i64,
     ) -> Result<(), StoreError> {
+        if mode == PermissionMode::Bypass {
+            return Err(StoreError::BypassNeedsConfirmation);
+        }
         let changed = self.conn.execute(
             "UPDATE sessions SET mode = ?2, updated_at = MAX(updated_at + 1, ?3) WHERE id = ?1 AND status NOT IN ('requesting', 'streaming', 'checking_tool', 'running_tool', 'awaiting_approval')",
             params![id.as_str(), mode.as_str(), now_ms],

@@ -59,6 +59,9 @@ impl Store {
         mode: PermissionMode,
         now_ms: i64,
     ) -> Result<SessionRecord, StoreError> {
+        if mode == PermissionMode::Bypass {
+            return Err(StoreError::BypassNeedsConfirmation);
+        }
         let id = SessionId::new(Ulid::new().to_string());
         self.conn.execute(
             "INSERT INTO sessions (id, project_id, provider, model_id, mode, status, created_at, updated_at) \
@@ -323,6 +326,21 @@ impl Store {
             tokens_out: u64::try_from(output).map_err(|_| StoreError::SessionCounterOverflow)?,
             cost_micros: u64::try_from(cost).map_err(|_| StoreError::SessionCounterOverflow)?,
         })
+    }
+
+    /// Returns whether every recorded response for a session had a known price.
+    ///
+    /// # Errors
+    /// Returns an error when the session is absent or SQLite fails.
+    pub fn session_price_known(&self, id: &SessionId) -> Result<bool, StoreError> {
+        self.conn
+            .query_row(
+                "SELECT price_known FROM sessions WHERE id = ?1",
+                [id.as_str()],
+                |row| row.get(0),
+            )
+            .optional()?
+            .ok_or(StoreError::MissingSessionRow)
     }
 
     /// Marks turns left active by process death as interrupted.

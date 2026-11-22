@@ -1,13 +1,29 @@
 //! UniFFI surface of the core, built as `libtether_core.so`.
 
+mod approvals;
 mod callbacks;
+mod commands;
+mod config;
+mod context;
+mod executors;
+mod files;
+mod git;
+mod git_support;
+mod git_types;
+mod github;
 mod memory;
+mod network;
+mod notify;
 mod projects;
 mod provider_settings;
+mod questions;
+mod resume;
 mod secrets;
+mod session_control;
 mod sessions;
 mod skills;
 mod updater;
+mod usage;
 mod vault;
 mod views;
 
@@ -15,7 +31,20 @@ use std::sync::Arc;
 
 use tether_engine::Core;
 
-pub use callbacks::EventSink;
+pub use callbacks::{EventSink, NetworkPlatform, NotifyPlatform, RunServicePlatform};
+pub use commands::{CommandResolutionView, CommandRuntimeError, CommandView, SendOutcomeView};
+pub use config::{ConfigIssueView, EffectiveConfigView};
+pub use executors::{ExecutorAvailabilityView, ExecutorPathsView, ExecutorRuntimeError};
+pub use files::{
+    DirListingView, FileEntryView, FilePreviewView, FileTextHitView, FilesRuntime,
+    FilesRuntimeError,
+};
+pub use git::GitRuntime;
+pub use git_types::{
+    CloneProgressView, GitBranchView, GitCommitView, GitDiffSpecView, GitRuntimeError,
+    GitStatusView, ShallowChoiceView,
+};
+pub use github::{DeviceGrantView, GithubRepoView, GithubStatusView, SignInStateView};
 pub use memory::{
     MemoryActionView, MemoryResultView, MemoryRuntime, MemoryRuntimeError, MemoryTargetView,
 };
@@ -25,12 +54,17 @@ pub use secrets::{SecretVault, SecretVaultError, SecretsPlatform, SecretsPlatfor
 pub use sessions::{SessionRunner, SessionRuntime, SessionRuntimeError};
 pub use skills::{SkillDetailView, SkillView, SkillsRuntime, SkillsRuntimeError};
 pub use updater::{DownloadProgress, ReleaseView, UpdateCheckView, Updater, UpdaterError};
+pub use usage::{UsageRuntime, UsageRuntimeError};
 pub use vault::{VaultLinkView, VaultLinksView, VaultNoteView, VaultRuntime, VaultRuntimeError};
 pub use views::{
-    CheckpointView, ConnectionStatusView, CoreErrorView, CoreEventView, ErrorKindView,
-    ExecutorView, MessagePartView, MessageView, ModelRefView, ModelView, PermissionModeView,
-    ProjectView, ProviderView, RewindScopeView, RoleView, SessionRecordView, SessionStatusView,
-    SessionUsageView, SupportView, ToolCallStatusView, TranscriptHitView, UsageSnapshotView,
+    BudgetScopeView, BudgetView, CheckpointView, CompactionView, ConnectionStatusView,
+    ContextBreakdownView, ContextSectionView, CoreErrorView, CoreEventView, DayUsageView,
+    ErrorKindView, ExecutorView, InterruptionView, MessagePartView, MessageView, ModelRefView,
+    ModelUsageView, ModelView, PendingApprovalView, PendingQuestionView, PermissionModeView,
+    PermissionRuleView, PlanView, ProjectUsageView, ProjectView, PromptSectionView, ProviderView,
+    RewindScopeView, RoleView, SessionRecordView, SessionStatusView, SessionUsageView, SupportView,
+    TodoItemView, TodoStatusView, ToolCallStatusView, TranscriptHitView, UsageSnapshotView,
+    UsageSummaryView, UsageTotalsView,
 };
 
 uniffi::setup_scaffolding!();

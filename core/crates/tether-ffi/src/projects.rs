@@ -18,6 +18,9 @@ pub enum ProjectRuntimeError {
     /// A default provider and model id were not both set or both absent.
     #[error("invalid project defaults")]
     InvalidDefaults,
+    /// Bypass needs an in-memory app confirmation.
+    #[error("bypass needs confirmation")]
+    BypassNeedsConfirmation,
     /// The requested project does not exist.
     #[error("project not found")]
     NotFound,
@@ -29,8 +32,8 @@ pub enum ProjectRuntimeError {
 /// Opens projects in the app database and creates their workspace directories.
 #[derive(uniffi::Object)]
 pub struct ProjectRuntime {
-    database_path: String,
-    workspaces_root: String,
+    pub(crate) database_path: String,
+    pub(crate) workspaces_root: String,
 }
 
 #[uniffi::export]
@@ -126,6 +129,7 @@ impl ProjectRuntime {
             )
             .map_err(|error| match error {
                 StoreError::MissingProject => ProjectRuntimeError::NotFound,
+                StoreError::BypassNeedsConfirmation => ProjectRuntimeError::BypassNeedsConfirmation,
                 _ => ProjectRuntimeError::Unavailable,
             })
     }
@@ -142,7 +146,7 @@ fn permission_mode(mode: PermissionModeView) -> PermissionMode {
 }
 
 impl ProjectRuntime {
-    fn store(&self) -> Result<Store, ProjectRuntimeError> {
+    pub(crate) fn store(&self) -> Result<Store, ProjectRuntimeError> {
         Store::open(Path::new(&self.database_path)).map_err(|_| ProjectRuntimeError::Unavailable)
     }
 }

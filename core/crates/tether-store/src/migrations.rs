@@ -25,6 +25,38 @@ pub(crate) const MIGRATIONS: &[Migration] = &[
         version: 3,
         sql: include_str!("../migrations/0003_checkpoints.sql"),
     },
+    Migration {
+        version: 4,
+        sql: include_str!("../migrations/0004_approvals.sql"),
+    },
+    Migration {
+        version: 5,
+        sql: include_str!("../migrations/0005_prompt_snapshot.sql"),
+    },
+    Migration {
+        version: 6,
+        sql: include_str!("../migrations/0006_session_todos.sql"),
+    },
+    Migration {
+        version: 7,
+        sql: include_str!("../migrations/0007_project_trust.sql"),
+    },
+    Migration {
+        version: 8,
+        sql: include_str!("../migrations/0008_project_network.sql"),
+    },
+    Migration {
+        version: 9,
+        sql: include_str!("../migrations/0009_git_identity.sql"),
+    },
+    Migration {
+        version: 10,
+        sql: include_str!("../migrations/0010_budgets.sql"),
+    },
+    Migration {
+        version: 11,
+        sql: include_str!("../migrations/0011_context.sql"),
+    },
 ];
 
 /// The schema version kept in `PRAGMA user_version`. A new database reports 0.
@@ -227,6 +259,24 @@ mod tests {
         let latest_version = latest(MIGRATIONS);
         assert_eq!(apply(&mut conn, MIGRATIONS).unwrap(), latest_version);
         assert_eq!(apply(&mut conn, MIGRATIONS).unwrap(), latest_version);
+    }
+
+    #[test]
+    fn approvals_migration_applies_to_a_0003_database() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        apply(&mut conn, &MIGRATIONS[..3]).unwrap();
+        conn.execute_batch("INSERT INTO projects (id, name, path, created_at) VALUES ('p', 'p', 'p', 1); INSERT INTO sessions (id, project_id, provider, model_id, mode, status, created_at, updated_at) VALUES ('s', 'p', 'openai', 'm', 'ask', 'idle', 1, 1);").unwrap();
+        assert_eq!(apply(&mut conn, MIGRATIONS).unwrap(), latest(MIGRATIONS));
+        assert!(table_exists(&conn, "approvals"));
+        assert!(table_exists(&conn, "permission_rules"));
+    }
+
+    #[test]
+    fn prompt_snapshot_migration_applies_to_a_0004_database() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        apply(&mut conn, &MIGRATIONS[..4]).unwrap();
+        assert_eq!(apply(&mut conn, &MIGRATIONS[..5]).unwrap(), 5);
+        assert!(table_exists(&conn, "session_prompt_snapshot"));
     }
 
     #[test]

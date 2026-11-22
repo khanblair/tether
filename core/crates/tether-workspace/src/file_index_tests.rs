@@ -13,6 +13,9 @@ fn scan_glob_and_grep_respect_root_ignore() {
     fs::write(root.join(".git/config"), "needle\n").unwrap();
     let index = FileIndex::scan(PathGuard::new(&root).unwrap()).unwrap();
     assert_eq!(index.glob("*.rs").len(), 1);
+    assert!(index.is_ignored(std::path::Path::new("debug.log")));
+    assert!(index.is_ignored(std::path::Path::new(".git/config")));
+    assert!(!index.is_ignored(std::path::Path::new("src/main.rs")));
     let hits = index.grep("needle", 1).unwrap();
     assert_eq!(hits.len(), 1);
     assert_eq!(hits[0].path.to_string_lossy(), "src/main.rs");
@@ -86,5 +89,26 @@ fn grep_skips_binary_and_keeps_later_text_hits() {
             text: "needle".into()
         }]
     );
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn is_ignored_resolves_folders_against_the_project_root() {
+    let root = std::env::temp_dir().join(format!("tether-index-{}", ulid::Ulid::new()));
+    fs::create_dir_all(root.join("src/nested")).unwrap();
+    fs::create_dir_all(root.join("out/deep")).unwrap();
+    fs::create_dir_all(root.join("empty")).unwrap();
+    fs::write(root.join(".gitignore"), "out/\n").unwrap();
+    fs::write(root.join("src/nested/lib.rs"), "x\n").unwrap();
+    fs::write(root.join("out/deep/a.bin"), "x\n").unwrap();
+    let index = FileIndex::scan(PathGuard::new(&root).unwrap()).unwrap();
+    let ignored = |path: &str| index.is_ignored(std::path::Path::new(path));
+    assert!(!ignored("src"));
+    assert!(!ignored("src/nested"));
+    assert!(!ignored("empty"));
+    assert!(ignored("out"));
+    assert!(ignored("out/deep"));
+    assert!(ignored("out/deep/a.bin"));
+    assert!(!ignored("missing"));
     fs::remove_dir_all(root).unwrap();
 }

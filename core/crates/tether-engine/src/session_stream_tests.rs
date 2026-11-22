@@ -369,7 +369,7 @@ async fn the_request_carries_the_session_settings() {
     assert_eq!(request.max_output_tokens, 4096);
     assert_eq!(request.model_id, "test-model");
     assert_eq!(request.tools.len(), 0);
-    assert_eq!(request.system, "");
+    assert_ne!(request.system, "");
     assert_eq!(request.messages[0].role, Role::User);
     assert_eq!(
         request.messages[0].parts,

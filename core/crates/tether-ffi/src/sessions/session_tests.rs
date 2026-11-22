@@ -1,6 +1,10 @@
+use super::open::{ToolWiring, session_tool_runtime};
+use super::ux::map_rewind_error;
 use super::*;
 use crate::SecretsPlatform;
 use crate::SessionStatusView;
+use tether_engine::{ApprovalAnswer, ApprovalRequest, Approver};
+use tether_store::BlobStore;
 use tether_types::{ModelRef, SessionStatus};
 
 #[test]
@@ -45,6 +49,61 @@ fn session_list_orders_activity_and_rejects_unknown_project() {
         runtime.list_sessions("missing".into()),
         Err(SessionRuntimeError::NotFound)
     ));
+}
+
+#[test]
+fn global_instructions_round_trip_with_cap_and_removal() {
+    let dir = tempfile::tempdir().unwrap();
+    let db = dir.path().join("tether.db");
+    Store::open(&db).unwrap();
+    let vault = SecretVault::new(
+        dir.path().join("secrets").to_string_lossy().into_owned(),
+        Arc::new(PlainPlatform),
+    );
+    let runtime = SessionRuntime::new(db.to_str().unwrap(), vault, Arc::new(NoopSink)).unwrap();
+
+    runtime
+        .set_global_instructions(Some("Use the project checks.".into()))
+        .unwrap();
+    assert_eq!(
+        runtime.global_instructions().unwrap(),
+        Some("Use the project checks.".into())
+    );
+    assert!(matches!(
+        runtime.set_global_instructions(Some("x".repeat(32 * 1024 + 1))),
+        Err(SessionRuntimeError::InstructionsTooLong)
+    ));
+    runtime.set_global_instructions(None).unwrap();
+    assert_eq!(runtime.global_instructions().unwrap(), None);
+}
+
+#[test]
+fn prompt_sections_are_ordered_and_have_token_counts() {
+    let dir = tempfile::tempdir().unwrap();
+    let db = dir.path().join("tether.db");
+    let session_id = seeded_session(&db);
+    let vault = SecretVault::new(
+        dir.path().join("secrets").to_string_lossy().into_owned(),
+        Arc::new(PlainPlatform),
+    );
+    let runtime = SessionRuntime::new(db.to_str().unwrap(), vault, Arc::new(NoopSink)).unwrap();
+    let sections = runtime
+        .session_prompt_sections(session_id.as_str())
+        .unwrap();
+
+    assert_eq!(
+        sections.first().map(|section| section.name.as_str()),
+        Some("Base")
+    );
+    assert_eq!(
+        sections.last().map(|section| section.name.as_str()),
+        Some("Date")
+    );
+    assert!(
+        sections
+            .iter()
+            .all(|section| { section.approx_tokens == section.chars.saturating_add(3) / 4 })
+    );
 }
 
 #[test]
@@ -174,7 +233,8 @@ fn workspace_session_requires_a_saved_project_folder() {
         Arc::new(PlainPlatform),
     );
     vault.put("provider-anthropic", "test-key").unwrap();
-    let runtime = SessionRuntime::new(db.to_str().unwrap(), vault, Arc::new(NoopSink)).unwrap();
+    let runtime =
+        SessionRuntime::new(db.to_str().unwrap(), Arc::clone(&vault), Arc::new(NoopSink)).unwrap();
     let root = dir.path().join("workspaces");
     std::fs::create_dir(&root).unwrap();
     assert!(matches!(
@@ -191,8 +251,18 @@ fn workspace_session_requires_a_saved_project_folder() {
         .unwrap();
     let store = Store::open(&db).unwrap();
     let saved = store.load_session(&session_id).unwrap().unwrap();
-    let tools = session_tool_runtime(&store, &saved, &root).unwrap();
-    assert!(!(tools.approve)("write_file", "test/note.txt"));
+    let tools = session_tool_runtime(
+        &store,
+        &saved,
+        ToolWiring {
+            root: &root,
+            database_path: &db,
+            approver: Arc::new(ApprovalBroker::new()),
+            vault,
+        },
+    )
+    .unwrap();
+    assert!(!tools.approver.interactive());
     assert!(
         runtime
             .open_session_with_workspace(session_id.as_str(), root.to_str().unwrap())
@@ -279,6 +349,50 @@ fn ux_runtime() -> (
     );
     let runtime = SessionRuntime::new(db.to_str().unwrap(), vault, Arc::new(NoopSink)).unwrap();
     (dir, db, runtime, session.id, project.id)
+}
+
+#[test]
+fn interactive_approval_answers_once_and_unknown_ids_are_not_found() {
+    let (_dir, _db, runtime, session, _project) = ux_runtime();
+    runtime.runtime.block_on(async {
+        let request = ApprovalRequest {
+            session_id: session.clone(),
+            tool_call_id: tether_types::ToolCallId::new("call-1"),
+            tool: "write_file".into(),
+            target: "note.txt".into(),
+        };
+        let denied = runtime
+            .broker
+            .decide(request.clone(), tokio_util::sync::CancellationToken::new())
+            .await;
+        assert_eq!(
+            denied,
+            ApprovalAnswer::Deny {
+                reason: Some("approvals need a newer app version".into())
+            }
+        );
+        runtime.set_interactive_approvals(true);
+        let broker = Arc::clone(&runtime.broker);
+        let waiting = tokio::spawn(async move {
+            broker
+                .decide(request, tokio_util::sync::CancellationToken::new())
+                .await
+        });
+        tokio::task::yield_now().await;
+        assert_eq!(
+            runtime.pending_approvals(session.as_str()).unwrap().len(),
+            1
+        );
+        runtime.approve(session.as_str(), "call-1", true).unwrap();
+        assert_eq!(
+            waiting.await.unwrap(),
+            ApprovalAnswer::Allow { always: true }
+        );
+        assert!(matches!(
+            runtime.approve(session.as_str(), "call-1", false),
+            Err(SessionRuntimeError::NotFound)
+        ));
+    });
 }
 
 #[test]

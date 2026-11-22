@@ -3,14 +3,14 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use tether_providers::{ChatProvider, ChatRequest, StopReason, StreamEvent};
+use tether_providers::{ChatProvider, ChatRequest, ResponseUsage, StopReason, StreamEvent};
 use tether_types::{CoreError, CoreEvent, MessageId, SessionStatus, ToolCallId, UsageSnapshot};
 use tokio::sync::mpsc;
 use tokio::time::{Instant, sleep_until};
 
 use super::{
     MAX_ARGUMENT_BYTES, MAX_CALLS_PER_EXCHANGE, TEXT_BATCH_CHARS, TEXT_BATCH_MS, ToolLoopContext,
-    cancelled, invalid, now_ms, storage_error, usage_snapshot,
+    cancelled, invalid, now_ms, storage_error,
 };
 
 pub(super) struct Call {
@@ -27,6 +27,7 @@ pub(super) struct Response {
     pub(super) calls: Vec<Call>,
     pub(super) stop: StopReason,
     pub(super) usage: UsageSnapshot,
+    pub(super) price_known: bool,
 }
 
 #[derive(Default)]
@@ -126,13 +127,14 @@ pub(super) async fn response(
     request: ChatRequest,
     context: &mut ToolLoopContext<'_>,
 ) -> Result<Response, CoreError> {
+    let model_id = request.model_id.clone();
     let (tx, mut rx) = mpsc::channel(32);
     let token = context.cancel.clone();
     let task = tokio::spawn(async move { provider.stream_chat(&request, tx, token).await });
     let mut draft = StreamDraft::default();
     let mut calls: Vec<Call> = Vec::new();
     let mut stop = None;
-    let mut usage = UsageSnapshot::default();
+    let mut usage = ResponseUsage::default();
     loop {
         let event = if let Some(deadline) = draft.deadline {
             tokio::select! {
@@ -190,13 +192,16 @@ pub(super) async fn response(
     }) {
         return Err(invalid("tool arguments must be a JSON object"));
     }
+    let priced = crate::usage::price_response(context.store, context.session_id, &model_id, usage)
+        .map_err(|_| storage_error())?;
     Ok(Response {
         text: draft.text,
         thinking: draft.thinking,
         message_id: draft.message_id,
         calls,
         stop,
-        usage,
+        usage: priced.snapshot,
+        price_known: priced.price_known,
     })
 }
 
@@ -205,12 +210,12 @@ fn accept(
     draft: &mut StreamDraft,
     calls: &mut Vec<Call>,
     stop: &mut Option<StopReason>,
-    usage: &mut UsageSnapshot,
+    usage: &mut ResponseUsage,
 ) -> Result<(), CoreError> {
     match event {
         StreamEvent::TextDelta { text: delta } => draft.push_text(&delta),
         StreamEvent::ThinkingDelta { text: delta } => draft.push_thinking(&delta),
-        StreamEvent::Usage(value) => *usage = usage_snapshot(value),
+        StreamEvent::Usage(value) => *usage = value,
         StreamEvent::ToolCallStarted { id, name } => {
             if calls.len() >= MAX_CALLS_PER_EXCHANGE || calls.iter().any(|call| call.id == id) {
                 return Err(invalid("too many or duplicate tool calls"));

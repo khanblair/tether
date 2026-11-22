@@ -5,6 +5,7 @@ use std::io::{self, BufRead, BufReader};
 use std::path::{Path, PathBuf};
 
 use crate::PathGuard;
+use crate::ignore_rules::IgnoreRules;
 
 /// One indexed regular file.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -31,25 +32,45 @@ pub struct SearchHit {
 pub struct FileIndex {
     guard: PathGuard,
     files: Vec<IndexedFile>,
+    rules: IgnoreRules,
 }
 
 impl FileIndex {
-    /// Scans files, skipping `.git` at every depth and root `.gitignore` patterns.
+    /// Scans files with Git-compatible ignore files and Tether defaults.
     ///
     /// # Errors
-    /// Returns an error when a directory cannot be read.
+    /// Returns an error when a directory or ignore file cannot be read.
     pub fn scan(guard: PathGuard) -> io::Result<Self> {
-        let ignores = read_ignores(&guard)?;
-        let mut files = Vec::new();
-        walk(guard.root(), guard.root(), &ignores, &mut files)?;
+        let mut rules = IgnoreRules::load(guard.root())?;
+        let walk = rules.walk(false)?;
+        let mut files: Vec<IndexedFile> = walk
+            .files
+            .into_iter()
+            .map(|file| IndexedFile {
+                path: file.relative,
+                bytes: file.bytes,
+            })
+            .collect();
         files.sort_by(|left, right| left.path.cmp(&right.path));
-        Ok(Self { guard, files })
+        Ok(Self {
+            guard,
+            files,
+            rules,
+        })
     }
 
     /// Every indexed file in path order.
     #[must_use]
     pub fn files(&self) -> &[IndexedFile] {
         &self.files
+    }
+
+    /// Whether a relative path, or a folder above it, is ignored by the scan.
+    #[must_use]
+    pub fn is_ignored(&self, relative: &Path) -> bool {
+        let is_dir = fs::symlink_metadata(self.guard.root().join(relative))
+            .is_ok_and(|metadata| metadata.is_dir());
+        self.rules.is_ignored(relative, is_dir)
     }
 
     /// Files whose relative path matches a simple `*` glob.
@@ -80,6 +101,7 @@ impl FileIndex {
 }
 
 /// Appends matching lines from one file until `hits` reaches `limit`.
+/// Appends matching lines from one file until `hits` reaches `limit`.
 fn grep_file(
     path: &Path,
     relative: &Path,
@@ -104,55 +126,6 @@ fn grep_file(
         }
     }
     hits.extend(file_hits);
-    Ok(())
-}
-
-fn read_ignores(guard: &PathGuard) -> io::Result<Vec<String>> {
-    let path = match guard.resolve(".gitignore") {
-        Ok(path) => path,
-        Err(error) if error.kind() == io::ErrorKind::PermissionDenied => return Ok(Vec::new()),
-        Err(error) => return Err(error),
-    };
-    let text = match fs::read_to_string(path) {
-        Ok(text) => text,
-        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
-        Err(error) => return Err(error),
-    };
-    Ok(text
-        .lines()
-        .map(str::trim)
-        .filter(|line| !line.is_empty() && !line.starts_with('#'))
-        .map(str::to_owned)
-        .collect())
-}
-
-fn walk(
-    root: &Path,
-    directory: &Path,
-    ignores: &[String],
-    files: &mut Vec<IndexedFile>,
-) -> io::Result<()> {
-    for entry in fs::read_dir(directory)? {
-        let entry = entry?;
-        let path = entry.path();
-        let relative = path.strip_prefix(root).expect("walk stays under root");
-        let name = relative.to_string_lossy();
-        if entry.file_name() == ".git" || ignores.iter().any(|pattern| glob_match(pattern, &name)) {
-            continue;
-        }
-        let kind = entry.file_type()?;
-        if kind.is_symlink() {
-            continue;
-        }
-        if kind.is_dir() {
-            walk(root, &path, ignores, files)?;
-        } else if kind.is_file() {
-            files.push(IndexedFile {
-                path: relative.to_path_buf(),
-                bytes: entry.metadata()?.len(),
-            });
-        }
-    }
     Ok(())
 }
 

@@ -18,6 +18,7 @@ fn settings_error(error: &StoreError) -> SessionRuntimeError {
         StoreError::EmptySessionModel | StoreError::EmptySessionTitle => {
             SessionRuntimeError::EmptyInput
         }
+        StoreError::BypassNeedsConfirmation => SessionRuntimeError::BypassNeedsConfirmation,
         _ => SessionRuntimeError::Unavailable,
     }
 }
@@ -89,10 +90,20 @@ impl SessionRuntime {
     /// # Errors
     /// Returns an error for an absent session or invalid stored usage.
     pub fn session_usage(&self, session_id: &str) -> Result<SessionUsageView, SessionRuntimeError> {
-        self.store()?
-            .session_usage(&SessionId::new(session_id))
-            .map(Into::into)
-            .map_err(|error| settings_error(&error))
+        let store = self.store()?;
+        let id = SessionId::new(session_id);
+        let usage = store
+            .session_usage(&id)
+            .map_err(|error| settings_error(&error))?;
+        let price_known = store
+            .session_price_known(&id)
+            .map_err(|error| settings_error(&error))?;
+        Ok(SessionUsageView {
+            tokens_in: usage.tokens_in,
+            tokens_out: usage.tokens_out,
+            cost_micros: usage.cost_micros,
+            price_known,
+        })
     }
 
     /// Finds sessions in one project by title or live message text.
@@ -155,4 +166,18 @@ pub(super) fn now_ms() -> i64 {
         .map_or(0, |duration| {
             i64::try_from(duration.as_millis()).unwrap_or(i64::MAX)
         })
+}
+
+pub(super) fn map_rewind_error(error: &tether_engine::SessionActorError) -> SessionRuntimeError {
+    use tether_engine::{RewindError, SessionActorError};
+    match error {
+        SessionActorError::Rewind(RewindError::Store(
+            tether_store::StoreError::MissingCheckpoint,
+        )) => SessionRuntimeError::NotFound,
+        SessionActorError::Rewind(RewindError::CorruptSnapshot) => {
+            SessionRuntimeError::CorruptSnapshot
+        }
+        SessionActorError::Rewind(RewindError::InvalidPath) => SessionRuntimeError::InvalidPath,
+        _ => SessionRuntimeError::Unavailable,
+    }
 }

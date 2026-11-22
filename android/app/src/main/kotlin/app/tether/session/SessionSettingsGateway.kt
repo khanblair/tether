@@ -261,6 +261,11 @@ internal fun SessionRuntimeException.failure(): SessionFailure =
         is SessionRuntimeException.InvalidPath -> SessionFailure.INVALID_PATH
         is SessionRuntimeException.MissingKey, is SessionRuntimeException.Unavailable ->
             SessionFailure.UNAVAILABLE
+        // These come from the plan, bypass, and instructions calls, which have no screen yet.
+        is SessionRuntimeException.BypassNeedsConfirmation,
+        is SessionRuntimeException.InstructionsTooLong,
+        is SessionRuntimeException.InvalidWorkingMode,
+        -> SessionFailure.OTHER
     }
 
 private fun RewindScope.toCore(): RewindScopeView =

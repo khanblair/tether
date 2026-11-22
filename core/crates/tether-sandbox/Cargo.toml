@@ -9,9 +9,16 @@ description = "WASM sandbox executor on Wasmtime."
 [dependencies]
 sha2.workspace = true
 wasmtime.workspace = true
+wasmtime-wasi.workspace = true
+ed25519-dalek.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
+wat.workspace = true
 
 [lints]
 workspace = true

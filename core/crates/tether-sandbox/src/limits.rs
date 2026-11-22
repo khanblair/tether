@@ -33,6 +33,7 @@ impl RunLimits {
     pub fn store_limits(self) -> StoreLimits {
         StoreLimitsBuilder::new()
             .memory_size(self.memory_bytes)
+            .trap_on_grow_failure(true)
             .build()
     }
 
@@ -71,6 +72,11 @@ impl<'a> CappedOutput<'a> {
     #[must_use]
     pub fn truncated(&self) -> bool {
         self.truncated
+    }
+
+    /// Records that bytes were dropped before they reached this wrapper.
+    pub fn mark_truncated(&mut self) {
+        self.truncated = true;
     }
 
     /// Number of bytes forwarded.

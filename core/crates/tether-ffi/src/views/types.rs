@@ -1,8 +1,8 @@
 //! View types for messages, session settings, and usage.
 
 use tether_types::{
-    ConnectionStatus, Executor, Message, MessagePart, ModelRef, PermissionMode, Provider, Role,
-    SessionStatus, ToolCallStatus, UsageSnapshot,
+    BudgetScope, ConnectionStatus, Executor, Message, MessagePart, ModelRef, PermissionMode,
+    Provider, Role, SessionStatus, ToolCallStatus, UsageSnapshot,
 };
 
 /// Declares a field-less view enum and its conversion from the engine type.
@@ -85,6 +85,10 @@ mirror_enum!(
     ConnectionStatusView <=> ConnectionStatus {
         Unset, Testing, Ok, BadKey, NetworkError, Blocked
     }
+);
+mirror_enum!(
+    /// FFI view of [`BudgetScope`].
+    BudgetScopeView <=> BudgetScope { Session, Day }
 );
 
 /// FFI view of [`ModelRef`].

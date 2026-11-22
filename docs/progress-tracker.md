@@ -1,6 +1,6 @@
 # Progress tracker
 
-Last updated: 21 Nov 2026.
+Last updated: 22 Nov 2026.
 
 ## How to update this file
 
@@ -25,7 +25,7 @@ Last updated: 21 Nov 2026.
 
 ## Current phase
 
-**P1. Providers and sessions: In progress** (started with P1-01). **P0. Foundations: In progress.** The repo is public at github.com/khanblair/tether. CI is green on `main`, the docs site is live, and the app runs on an arm64 emulator. The first release, `v0.0.1`, is published and downloadable from GitHub Releases, signed with the pinned key. `v0.0.2` follows it with the app name fixed to "Tether" (the `full` flavor label read "Tether full"). Open: the Android smoke test of an APK on a device.
+**P1. Providers and sessions: In progress** (started with P1-01). **P0. Foundations: In progress.** The repo is public at github.com/khanblair/tether. CI is green on `main`, the docs site is live, and the app runs on an arm64 emulator. The first release, `v0.0.1`, is published and downloadable from GitHub Releases, signed with the pinned key. `v0.0.2` follows it with the app name fixed to "Tether" (the `full` flavor label read "Tether full"). Open: the Android smoke test of an APK on a device. On 2026-11-22 the backend baseline for P3 to P5, P7 to P9, and P11 was joined into one draft pull request, #204 (library and runtime code with tests; most of it is not wired to the app, and nothing ran on a device). It replaces #201, #202, and #203. Its description lists what is missing.
 
 ## Phase status
 
@@ -36,14 +36,14 @@ Phases run in numeric order except P11, which runs before P10 (see build-plan.md
 | P0 | Foundations | In progress | 2026-11-18 | |
 | P1 | Providers and sessions | In progress | 2026-11-18 | |
 | P2 | Workspace, tools, diffs | In progress | 2026-11-20 | |
-| P3 | Control | Not started | | |
-| P4 | Git and GitHub | Not started | | |
-| P5 | Sandbox | Not started | | |
+| P3 | Control | In review | 2026-11-21 | |
+| P4 | Git and GitHub | In review | 2026-11-21 | |
+| P5 | Sandbox | In review | 2026-11-21 | |
 | P6 | CI executor | Not started | | |
-| P7 | Linux mode | Not started | | |
-| P8 | Quality gate | Not started | | |
-| P9 | Long runs, context, web, MCP | Not started | | |
-| P11 | Skills, memory, and vault | Not started | | |
+| P7 | Linux mode | In review | 2026-11-21 | |
+| P8 | Quality gate | In review | 2026-11-21 | |
+| P9 | Long runs, context, web, MCP | In review | 2026-11-21 | |
+| P11 | Skills, memory, and vault | In progress | 2026-11-21 | |
 | P10 | Release | Not started | | |
 
 ## Tasks
@@ -52,6 +52,7 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 
 | ID | Task | Owner | Status | PR | Notes |
 |---|---|---|---|---|---|
+| P3 to P5, P7 to P9, P11 | Backend baseline: permissions and tool registry, commands and config, Git and GitHub, sandbox runner, Linux mode library, quality rules, MCP client and web fetch, cost and budgets, context compaction, safe zip archives and ignore rules | Blair with Codex, Haiku, and Claude | In review | #204 | Draft. 701 Rust tests, clippy, deny, and the Android unit tests pass. Not done: wiring of the quality gate, MCP manager, `web_fetch` tool, skills and vault tools, the CI executor (P6, empty crate), the rest of the run tool, and every screen. Nothing ran on a device or against a real provider, GitHub account, runtime pack, or Linux root file system |
 | P1-22 | First usable loop: create a project, start a session, chat | Blair with Codex, Haiku, and Claude | In review | #190, #191 | Issue #189. Core (#190): create, list, and load projects, list sessions, default model, session times. App (#191, stacked on #190): New empty project, real project and session lists in every build, project home with New session, plain chat sessions, messages for a missing key or model list. Not verified without a device: layout, restart persistence, and a streamed reply with a real key |
 | P2-08 | Rewind: files, conversation, or both | Codex | In review | #188 | All three restore modes and serialized actor rewind pass tests; CI pending |
 | P2-07 | Edit batches and checkpoints | Codex | Done | #187 | Merged with automatic capture and BLAKE3/zstd deduplication; cleanup remains |
@@ -119,6 +120,7 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 
 | Date | ID | Decision | Why | Docs affected |
 |---|---|---|---|---|
+| 2026-11-22 | D35 | The backend baseline stays one draft pull request (#204) until the owner says to merge it. Defaults chosen while building it, open to change: the sandbox memory limit is 512 MB; a repository `.tether/config.toml` cannot widen permissions until the user trusts the project; pack verifying keys are function parameters and no key is invented; a Block finding from the quality gate stops a commit in every mode; precompiled `.cwasm` loading is left out because the workspace forbids `unsafe`; MCP OAuth and stdio MCP are not part of round one. Reason: the owner wanted the ground-level code for the whole backend first and reviews after, and merging publishes a release (D34) | Owner's request on 2026-11-21 and 2026-11-22 | architecture, project-structure |
 | 2026-11-21 | D34 | Releases publish automatically on every merge to `main` that changes code. `tools/release-version.sh` picks the version: a Cargo.toml version with no tag is published as it is, otherwise the next patch after the newest tag, and a bot commit tries to record it in `core/Cargo.toml`. Docs-only merges never release; `[skip release]` in a PR title or the repository variable `AUTO_RELEASE=false` stops one or all. This reverses D33. Risk: every merge, including unfinished features, reaches all `full` users at once with no staged rollout (D22), and several quick merges queue (the workflow keeps only the newest waiting run) | Owner's request on 2026-11-21 | development, architecture, project-structure, mobile |
 | 2026-11-20 | D33 | The version number of a release is still chosen by a person: `just bump patch` (or `minor`, `major`, an exact version) edits `core/Cargo.toml` and `core/Cargo.lock`, and merging the bump publishes the release (D21). It is not raised on every merge, because every release reaches all `full` users at once with no staged rollout (D22). Merges with no bump, such as #153, #154, and #156, skip the release job by design | Owner's choice after the merges of #153, #154, and #156 did not release. Task P1-21 follow-up | development |
 | 2026-11-19 | D32 | Home is a dashboard, not the project list. This reverses the earlier pick of Projects as the home. Blair saw the first build and asked for a home with stats, graphs, and a brief analysis. Projects stays as a drawer destination. The drawer gains Home, Projects, Needs attention, Usage and cost, and Runs; its header holds a System, Light, Dark theme toggle. Usage shows tokens, not dollars, until prices are wired (P1-14). Debug builds show sample data; release builds never invent numbers | Owner's request on seeing the P1-21 build. Task P1-21, issue #155 | ui-rules, build-plan |
@@ -176,6 +178,9 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Who | What happened | Next |
 |---|---|---|---|
+| 2026-11-22 | Blair with Claude | Codex reviewed #204 (13 findings, 7 at P1) and all were fixed with tests that fail without the fix: `stage_all` staged ignored files, symlinks were staged as their target file, a branch switch could drop staged changes, a push blocked inside the async runtime (a panic), the approved push branch could differ from the executed one, `optional_string` rejected every supplied optional argument, an Always allow on a run saved the executor label instead of the program, pack argument prefixes dropped user arguments, the vault slice and two diff caps could cut inside a character, compaction summaries were repeated, compaction skipped the budget gate and usage totals, minimal plans did not restore, and sandbox output was kept without a bound. The owner then asked for the pull request to be made ready and merged once CI passes | CI result on #204; then the unfinished sessions (G, W1, Z, J2, F2, R2, C, W2, S1, K2, D2) once the Codex usage limit allows |
+| 2026-11-22 | Blair with Codex, Haiku, and Claude | Joined #201, #202, and #203 into `feat/backend-unified` and opened #204. Building it showed what the parallel Codex sessions had left: engine tests that did not compile (a `&self` held across an await), 22 compile errors in `tether-ffi`, a UniFFI error field named `message` that broke the Kotlin build, ignore rules that honored a symlinked `.gitignore` and skipped the built-in defaults, a reverted `grep` fix, and about 150 clippy findings. Fixed all of them; added tests for the zip rejection rules, the ignore rules against `git check-ignore`, and review parsing; regenerated the bindings. Haiku agents did the mechanical clippy fixes by crate; mutation tests of the archive guards left only equivalent survivors | Wait for `@codex review` on #204 and fix findings; then the unfinished sessions (G, W1, Z follow-ups, J2, F2, R2, C, W2, S1, K2, D2) once the Codex usage limit allows |
+| 2026-11-21 | Blair with Claude, Codex, and Haiku | Wave 2, files: `FilesRuntime` in the core (list, preview, name and text search, all through the path guard; `.git`, symlinks, and ignored files hidden by default), a lazy file browser with search and an ignored-files toggle, a read-only viewer with line numbers, horizontal scroll, and Copy path, and a Files row on project home. 546 Rust tests pass and 26 new Android tests. Not built: Modified badges (no Git data), syntax highlighting, Ask about this file (needs the composer @ mention). Also splits the icon builders into their own file (the file icon pushed `TetherIcons.kt` over the length limit) | Next: the Ornith trial; then cost and usage and the composer sheets |
 | 2026-11-21 | Blair with Claude | The first automatic release (run on the merge of #199) picked the right version, `v0.0.5`, then failed before building: `tools/bump-version.sh` ran `cargo update --workspace --offline`, and a fresh CI runner has no cached crate index. Nothing was tagged or published. Fixed by trying offline first and falling back to online; reproduced the failure with an empty cargo home and checked the fix the same way. Until this merges, merges to `main` that change code fail the release job | Merge this; the merge triggers the release again |
 | 2026-11-21 | Blair with Claude, Codex, and Haiku | Codex's review of the unified PR #199 found 1 P1 and 4 P2 issues, all fixed with tests: the app lock removed the nav host and killed a streaming reply (now an overlay over a live host), memory read errors were hidden as empty content (the core returns the error), the vault list was stale after edits, the default-model picker did not scroll, and links that resolved through the unique-name fallback could not be opened (the core now returns the resolved path). 536 Rust tests pass. Open: a sheet or dialog already open when the lock appears may stay visible above it | Merge #199 if CI passes; no more Codex reviews requested |
 | 2026-11-21 | Blair with Claude and Haiku | Wave 1 area A4 (states): an interrupted turn clears the running state (it did not before), blocks for a rejected key, a rate limit (Retry now resends the last message), and other failures, a stopped block with Dismiss, a thinking label with elapsed seconds, an offline banner, and long-press Copy on a message. 37 new tests. Differences from ui-rules: no Resume after an interruption and no retry time (the core has neither), and the offline text says messages fail instead of promising a resume. Not built: budget reached and context compaction | Wave 1 screens are done; Wave 2 (files and diff, review and ship) needs core work first |
@@ -257,6 +262,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Files | Change | PR |
 |---|---|---|---|
+| 2026-11-22 | `core/crates/tether-{engine,ffi,store,workspace,quality,vcs,sandbox,mcp,connectors,linux,memory,skills}/`, `android/core-bridge/.../generated/tether_core.kt`, `SessionSettingsGateway.kt` | Joined the backend baseline: tool registry and permissions, commands and config, Git and GitHub, sandbox runner, MCP and web fetch libraries, cost and budgets, context compaction, ignore rules and zip archives; migrations 0004 to 0011; regenerated bindings | #204 |
 | 2026-11-21 | `core/crates/tether-{store,ffi}/`, generated Kotlin bindings, architecture, project-structure, progress-tracker | Added project storage and workspace creation, session listing, and saved default model lookup | |
 | 2026-11-21 | `.github/workflows/{release,ci}.yml`, `tools/{release-version,bump-version}.sh`, `justfile` | Automatic release on every merge that changes code, with a version picker and self tests | - |
 | 2026-11-20 | `core/crates/tether-{store,engine,types,ffi}/`, architecture, project-structure, progress-tracker | Added checkpoint listing and three rewind modes with guarded file restore, hidden conversation history, actor command, and FFI views | #188 |
@@ -321,6 +327,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Doc | Change |
 |---|---|---|
+| 2026-11-22 | project-structure, progress-tracker | Described the backend crates and modules that now exist, and recorded the unified backend draft (#204) and its defaults (D35) |
 | 2026-11-21 | architecture, project-structure, progress-tracker | Recorded P1-22 core project and session APIs and their file locations |
 | 2026-11-21 | development, architecture, project-structure, mobile, progress-tracker | Releases publish on every merge that changes code (D34, reverses D33); how to skip one or stop them |
 | 2026-11-20 | project-structure, progress-tracker | Recorded the actor rewind module split after #188 CI found a file-length failure |

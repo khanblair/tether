@@ -25,7 +25,7 @@ Last updated: 22 Nov 2026.
 
 ## Current phase
 
-**P1. Providers and sessions: In progress** (started with P1-01). **P0. Foundations: In progress.** The repo is public at github.com/khanblair/tether. CI is green on `main`, the docs site is live, and the app runs on an arm64 emulator. The first release, `v0.0.1`, is published and downloadable from GitHub Releases, signed with the pinned key. `v0.0.2` follows it with the app name fixed to "Tether" (the `full` flavor label read "Tether full"). Open: the Android smoke test of an APK on a device. On 2026-11-22 the backend baseline for P3 to P5, P7 to P9, and P11 was joined into one draft pull request, #204 (library and runtime code with tests; most of it is not wired to the app, and nothing ran on a device). It replaces #201, #202, and #203. Its description lists what is missing.
+**P1. Providers and sessions: In progress** (started with P1-01). **P0. Foundations: In progress.** The repo is public at github.com/khanblair/tether. CI is green on `main`, the docs site is live, and the app runs on an arm64 emulator. The first release, `v0.0.1`, is published and downloadable from GitHub Releases, signed with the pinned key. `v0.0.2` follows it with the app name fixed to "Tether" (the `full` flavor label read "Tether full"). Open: the Android smoke test of an APK on a device. On 2026-11-22 the backend baseline for P3 to P5, P7 to P9, and P11 was merged as #204 (library and runtime code with tests; most of it is not wired to the app, and nothing ran on a device). It replaced #201, #202, and #203. Its description lists what is missing.
 
 ## Phase status
 
@@ -36,13 +36,13 @@ Phases run in numeric order except P11, which runs before P10 (see build-plan.md
 | P0 | Foundations | In progress | 2026-11-18 | |
 | P1 | Providers and sessions | In progress | 2026-11-18 | |
 | P2 | Workspace, tools, diffs | In progress | 2026-11-20 | |
-| P3 | Control | In review | 2026-11-21 | |
-| P4 | Git and GitHub | In review | 2026-11-21 | |
-| P5 | Sandbox | In review | 2026-11-21 | |
+| P3 | Control | In progress | 2026-11-21 | |
+| P4 | Git and GitHub | In progress | 2026-11-21 | |
+| P5 | Sandbox | In progress | 2026-11-21 | |
 | P6 | CI executor | Not started | | |
-| P7 | Linux mode | In review | 2026-11-21 | |
-| P8 | Quality gate | In review | 2026-11-21 | |
-| P9 | Long runs, context, web, MCP | In review | 2026-11-21 | |
+| P7 | Linux mode | In progress | 2026-11-21 | |
+| P8 | Quality gate | In progress | 2026-11-21 | |
+| P9 | Long runs, context, web, MCP | In progress | 2026-11-21 | |
 | P11 | Skills, memory, and vault | In progress | 2026-11-21 | |
 | P10 | Release | Not started | | |
 
@@ -52,7 +52,7 @@ Current phase in full; later phases are tracked here once their phase starts. Ta
 
 | ID | Task | Owner | Status | PR | Notes |
 |---|---|---|---|---|---|
-| P3 to P5, P7 to P9, P11 | Backend baseline: permissions and tool registry, commands and config, Git and GitHub, sandbox runner, Linux mode library, quality rules, MCP client and web fetch, cost and budgets, context compaction, safe zip archives and ignore rules | Blair with Codex, Haiku, and Claude | In review | #204 | Draft. 701 Rust tests, clippy, deny, and the Android unit tests pass. Not done: wiring of the quality gate, MCP manager, `web_fetch` tool, skills and vault tools, the CI executor (P6, empty crate), the rest of the run tool, and every screen. Nothing ran on a device or against a real provider, GitHub account, runtime pack, or Linux root file system |
+| P3 to P5, P7 to P9, P11 | Backend baseline: permissions and tool registry, commands and config, Git and GitHub, sandbox runner, Linux mode library, quality rules, MCP client and web fetch, cost and budgets, context compaction, safe zip archives and ignore rules | Blair with Codex, Haiku, and Claude | In progress | #204 | Merged on 2026-11-22. 730 Rust tests, clippy, deny, and the Android unit tests pass. Not done: wiring of the quality gate, MCP manager, `web_fetch` tool, skills and vault tools, the CI executor (P6, empty crate), the rest of the run tool, and every screen. Nothing ran on a device or against a real provider, GitHub account, runtime pack, or Linux root file system |
 | P1-22 | First usable loop: create a project, start a session, chat | Blair with Codex, Haiku, and Claude | In review | #190, #191 | Issue #189. Core (#190): create, list, and load projects, list sessions, default model, session times. App (#191, stacked on #190): New empty project, real project and session lists in every build, project home with New session, plain chat sessions, messages for a missing key or model list. Not verified without a device: layout, restart persistence, and a streamed reply with a real key |
 | P2-08 | Rewind: files, conversation, or both | Codex | In review | #188 | All three restore modes and serialized actor rewind pass tests; CI pending |
 | P2-07 | Edit batches and checkpoints | Codex | Done | #187 | Merged with automatic capture and BLAKE3/zstd deduplication; cleanup remains |
@@ -178,6 +178,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Who | What happened | Next |
 |---|---|---|---|
+| 2026-11-22 | Blair with Claude | Merged #204 into `main` with a merge commit, because GitHub could not rebase a history that holds the Wave 2 merge. All five required checks had passed on the pull request, and Release published from the merge. CI on `main` then failed once in `repo_stage_tests`: a renamed file was missing from a stage-all commit. It passed on the pull request and 0 of 100 local reruns failed, so the cause was a timing difference in how gitoxide status reports a rename on Linux. `stage_all` no longer uses status: it walks the worktree and asks git's ignore rules, so a rename cannot drop the new file | Review and merge the stage-all fix; then the unfinished sessions (G, W1, Z, J2, F2, R2, C, W2, S1, K2, D2) once the Codex usage limit allows |
 | 2026-11-22 | Blair with Claude | Codex reviewed #204 (13 findings, 7 at P1) and all were fixed with tests that fail without the fix: `stage_all` staged ignored files, symlinks were staged as their target file, a branch switch could drop staged changes, a push blocked inside the async runtime (a panic), the approved push branch could differ from the executed one, `optional_string` rejected every supplied optional argument, an Always allow on a run saved the executor label instead of the program, pack argument prefixes dropped user arguments, the vault slice and two diff caps could cut inside a character, compaction summaries were repeated, compaction skipped the budget gate and usage totals, minimal plans did not restore, and sandbox output was kept without a bound. The owner then asked for the pull request to be made ready and merged once CI passes | CI result on #204; then the unfinished sessions (G, W1, Z, J2, F2, R2, C, W2, S1, K2, D2) once the Codex usage limit allows |
 | 2026-11-22 | Blair with Codex, Haiku, and Claude | Joined #201, #202, and #203 into `feat/backend-unified` and opened #204. Building it showed what the parallel Codex sessions had left: engine tests that did not compile (a `&self` held across an await), 22 compile errors in `tether-ffi`, a UniFFI error field named `message` that broke the Kotlin build, ignore rules that honored a symlinked `.gitignore` and skipped the built-in defaults, a reverted `grep` fix, and about 150 clippy findings. Fixed all of them; added tests for the zip rejection rules, the ignore rules against `git check-ignore`, and review parsing; regenerated the bindings. Haiku agents did the mechanical clippy fixes by crate; mutation tests of the archive guards left only equivalent survivors | Wait for `@codex review` on #204 and fix findings; then the unfinished sessions (G, W1, Z follow-ups, J2, F2, R2, C, W2, S1, K2, D2) once the Codex usage limit allows |
 | 2026-11-21 | Blair with Claude, Codex, and Haiku | Wave 2, files: `FilesRuntime` in the core (list, preview, name and text search, all through the path guard; `.git`, symlinks, and ignored files hidden by default), a lazy file browser with search and an ignored-files toggle, a read-only viewer with line numbers, horizontal scroll, and Copy path, and a Files row on project home. 546 Rust tests pass and 26 new Android tests. Not built: Modified badges (no Git data), syntax highlighting, Ask about this file (needs the composer @ mention). Also splits the icon builders into their own file (the file icon pushed `TetherIcons.kt` over the length limit) | Next: the Ornith trial; then cost and usage and the composer sheets |

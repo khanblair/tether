@@ -270,7 +270,7 @@ core/
     │       ├── lib.rs         Git and GitHub support
     │       ├── clone.rs       Repository cloning through gitoxide
     │       ├── repo.rs        Local repository operations
-    │       ├── repo/          checkout.rs, diff.rs, helpers.rs (branch names), log.rs, ops.rs (open, init, status, diff)
+    │       ├── repo/          checkout.rs, diff.rs, helpers.rs (branch names, staging), log.rs, ops.rs (open, init, status, diff, stage), stageable.rs (files a stage-all adds)
     │       ├── push/          Smart HTTP receive-pack: mod.rs, http.rs (blocking requests, no credential in the URL), protocol.rs
     │       ├── github/        GitHub REST client (client.rs) and helpers (URL parsing, shallow clone choice)
     │       ├── oauth.rs       GitHub OAuth device flow; the token is wrapped by the secret store

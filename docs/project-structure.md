@@ -65,7 +65,7 @@ tether/
 │       ├── tether-vcs/        Git and GitHub: clone, local repo operations, smart HTTP push, GitHub API, OAuth, PAT check
 │       │   └── src/{lib,clone,repo,push,github,oauth,pat,test_support}.rs; folders repo/, push/, github/, oauth/, pat/; test modules
 │       ├── tether-sandbox/    Wasmtime WASI sandbox: module cache, runner, limits, runtime pack install and verify
-│       │   └── src/{lib,limits,module_cache,pack,pack_catalog,pack_cleanup,pack_install,pack_io,pack_replace,runner,runner_result,runner_support,runner_validation,test_support,wasi_context}.rs; test modules
+│       │   └── src/{lib,limits,module_cache,pack,pack_catalog,pack_cleanup,pack_install,pack_io,pack_replace,output_pipe,runner,runner_result,runner_support,runner_validation,test_support,wasi_context}.rs; test modules
 │       ├── tether-linux/      Linux mode: PRoot runs, Alpine root filesystem, apk packages, PTY shell
 │       │   └── src/{lib,error,extract,manifest,packages,proot,rootfs,runner,shell}.rs; tests/
 │       ├── tether-ci/         Empty library: lib.rs holds one doc comment
@@ -221,7 +221,7 @@ core/
     │   └── src/
     │       ├── lib.rs         Engine entry point: sessions, turn loop, permissions, executor router, checkpoints
     │       ├── session.rs     One actor per session: serializes turns and commits streamed text before emitting it
-    │       ├── session/       Actor parts: dispatch.rs (command routing), handle.rs (command queue), prompt.rs (session constructors), rewind.rs (checkpoint restore), stream.rs (batched provider events), turn.rs (turn loop)
+    │       ├── session/       Actor parts: compact.rs (context compaction with budget and usage accounting), dispatch.rs (command routing), handle.rs (command queue), prompt.rs (session constructors), rewind.rs (checkpoint restore), stream.rs (batched provider events), turn.rs (turn loop)
     │       ├── session_provider.rs  The one provider factory used by a saved session
     │       ├── provider_connection.rs  Low-cost authenticated catalog request that checks each provider key
     │       ├── tool_loop.rs   Bounded provider and tool exchange with saved messages and checkpoints
@@ -287,6 +287,7 @@ core/
     │       ├── runner_validation.rs Checks for support mounts and guest settings
     │       ├── wasi_context.rs      Input contract for the WASI context and its streamed output
     │       ├── limits.rs            Per-run limits and bounded streaming output
+    │       ├── output_pipe.rs       Guest stdout and stderr pipe that keeps at most the output cap in memory
     │       ├── pack.rs              Signed runtime pack manifests and streaming verification
     │       ├── pack_install.rs      Atomic pack installation and on-device integrity checks
     │       ├── pack_replace.rs      Atomic replacement of verified packs

@@ -17,6 +17,7 @@ use crate::{
     tool_loop::ToolLoopContext,
 };
 
+mod compact;
 mod dispatch;
 mod handle;
 mod prompt;
@@ -262,7 +263,7 @@ impl SessionActor {
     }
 
     async fn compact(&mut self, focus: Option<String>) -> Result<(), SessionActorError> {
-        crate::session::turn::compact_session(self, focus)
+        crate::session::compact::compact_session(self, focus)
             .await
             .map_err(|_| SessionActorError::Prompt)
     }

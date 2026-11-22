@@ -37,25 +37,42 @@ tether/
 ├── core/                      Rust workspace
 │   ├── Cargo.toml  Cargo.lock  deny.toml  clippy.toml  rustfmt.toml
 │   ├── fixtures/smells/       Crate with a function over the line limit; clippy must fail on it
-│   ├── fixtures/model-lists/ Provider list responses for catalog tests
+│   ├── fixtures/model-lists/  Provider list responses for catalog tests
+│   ├── fixtures/provider-streams/  Recorded provider SSE streams for adapter tests
 │   └── crates/
 │       ├── tether-types/      ids, message, model catalog, session, text, usage, error, event (CoreEvent); no UniFFI code
-│       ├── tether-store/      migrations/{0001_init,0002_message_fts,0003_checkpoints}.sql; src/{lib,db,error,migrations,models,models_tests,provider_configs,projects,projects_tests,schema_tests,sessions,sessions_tests,session_search,checkpoints,checkpoints/tests}.rs
-│       ├── tether-engine/     VERSION, EventSink, Core, provider_connection.rs (key check), session.rs and session/rewind.rs (actor commands), tool_loop.rs and tool_loop/ (file tool exchanges), checkpoint_capture.rs (guarded snapshots), rewind.rs (restore modes), session_provider.rs (provider factory), session_tests.rs, updates/ (app updates)
+│       ├── tether-store/      SQLite storage: schema, migrations, sessions, projects, checkpoints, approvals, budgets
+│       │   ├── migrations/{0001_init,0002_message_fts,0003_checkpoints,0004_approvals,0005_prompt_snapshot,0006_session_todos,0007_project_trust,0008_project_network,0009_git_identity,0010_budgets,0011_context}.sql
+│       │   └── src/{lib,db,error,migrations,models,projects,sessions,session_load,session_search,session_fts,session_context,session_plans,checkpoints,approvals,permission_rules,project_trust,project_network,prompt_snapshots,provider_configs,todos,usage,budgets,context}.rs; test modules (*_tests.rs, tests.rs)
+│       ├── tether-engine/     Sessions, turn loop, permissions, executors, tool loop, checkpoints, prompts, config, updates
+│       │   └── src/{lib,budget,checkpoint_capture,context,network,notify,provider_connection,rewind,session,session_provider,usage}.rs; folders commands/, config/, executors/, permissions/, prompt/, session/, tool_loop/, updates/; test modules (*_tests.rs, tests.rs)
 │       ├── tether-secrets/    SecretStore, SecretRef, Secret, SecretsPlatform trait, errors (src/{lib,error,platform,reference,secret,store,store_tests}.rs)
 │       ├── tether-providers/  lib.rs (ChatProvider, ModelCatalog), catalog.rs, pricing/ and data/prices/, request.rs, event.rs, error.rs, sse.rs (SseParser), client.rs (shared HTTP client), anthropic/ (adapter), openai/ (adapter), gemini/ (adapter), openai_compat/ (adapter), deepseek.rs, openrouter.rs, transport.rs (shared request and stream code)
 │       ├── tether-ffi/        UniFFI surface, builds libtether_core.so
 │       │   ├── uniffi.toml
-│       │   └── src/{lib.rs, callbacks.rs, provider_settings.rs, projects.rs, projects/tests.rs, sessions.rs, sessions/tests.rs, updater.rs, secrets.rs, views/{mod,event,types,error,checkpoint,project,session}.rs, bin/uniffi-bindgen.rs}
-│       ├── tether-quality/    data/slop_words.txt and slop_patterns.toml (shared with slop-lint)
-│       ├── tether-workspace/   PathGuard and FileIndex: path checks, scan, glob, grep
-│       ├── tether-tools/       src/{lib,fs,fs/tests,edit,edit/tests}.rs; guarded read and edit tools
-│       ├── tether-skills/      SKILL.md scalar frontmatter parser and validator
-│       ├── tether-memory/     src/{lib,files,files/tests,snapshot}.rs, vault/{mod,tests,tools,sync,sync/tests}.rs; capped files, frozen snapshot, Markdown rebuild view, vault file tool operations, and the sync contract
-│       ├── tether-vcs/         src/{lib,oauth,oauth/tests,pat,pat/tests}.rs; GitHub auth core
-│       ├── tether-sandbox/     src/{lib,module_cache,wasi_context,limits}.rs; engine, WASI contract, run limits
-│       └── tether-{linux,ci,connectors,mcp}/
-│                              Empty libraries
+│       │   └── src/{lib,approvals,callbacks,commands,config,context,executors,files,git,git_support,git_types,github,memory,network,notify,projects,provider_settings,questions,resume,secrets,session_control,sessions,skills,updater,usage,vault}.rs; folders sessions/, views/, bin/ (uniffi-bindgen); test modules
+│       ├── tether-quality/    Quality gate: smell and slop rules, prose checks, review parsing, highlighting
+│       │   ├── data/{generic_names.txt,slop_patterns.toml,slop_words.txt} (shared with slop-lint)
+│       │   └── src/{lib,highlight,language,manifest,model,prose,registry,report,review,thresholds}.rs; rules/; tests/
+│       ├── tether-workspace/  Project workspace: path guard, file index, ignore rules, ZIP archives
+│       │   └── src/{lib,file_index,ignore_rules,path_guard}.rs; archive/; test modules (*_tests.rs)
+│       ├── tether-tools/      Agent tools: guarded read and atomic edit
+│       │   └── src/{lib,edit,fs}.rs; test modules in fs/ and edit/
+│       ├── tether-skills/     SKILL.md frontmatter parser and validator
+│       │   └── src/{lib,tests}.rs
+│       ├── tether-memory/     Capped notes, frozen snapshot, Markdown vault view, vault tools, sync contract
+│       │   └── src/{lib,files,snapshot}.rs; vault/{mod,sync,tools}.rs; test modules in files/, vault/
+│       ├── tether-vcs/        Git and GitHub: clone, local repo operations, smart HTTP push, GitHub API, OAuth, PAT check
+│       │   └── src/{lib,clone,repo,push,github,oauth,pat,test_support}.rs; folders repo/, push/, github/, oauth/, pat/; test modules
+│       ├── tether-sandbox/    Wasmtime WASI sandbox: module cache, runner, limits, runtime pack install and verify
+│       │   └── src/{lib,limits,module_cache,pack,pack_catalog,pack_cleanup,pack_install,pack_io,pack_replace,runner,runner_result,runner_support,runner_validation,test_support,wasi_context}.rs; test modules
+│       ├── tether-linux/      Linux mode: PRoot runs, Alpine root filesystem, apk packages, PTY shell
+│       │   └── src/{lib,error,extract,manifest,packages,proot,rootfs,runner,shell}.rs; tests/
+│       ├── tether-ci/         Empty library: lib.rs holds one doc comment
+│       ├── tether-connectors/ Web fetch, HTML to text, and public IP checks for SSRF protection
+│       │   └── src/{lib,backend,content,fetch,html,ip}.rs
+│       └── tether-mcp/        MCP client for Streamable HTTP servers
+│           └── src/{lib,names,protocol,render,session,tests,transport}.rs
 ├── android/
 │   ├── settings.gradle.kts  build.gradle.kts  gradle.properties  gradlew  gradlew.bat
 │   ├── gradle/{libs.versions.toml, wrapper/}
@@ -81,7 +98,7 @@ tether/
     └── pull_request_template.md  CODEOWNERS  dependabot.yml
 ```
 
-Not present yet: `LICENSE` (no license chosen, see Q5), `nightly.yml` (nothing to run until P1), `core/benches/`, the rest of `core/fixtures/` (only `smells/` and `provider-streams/` exist), feature modules, `service`, `platform`, the `full` and `play` Linux mode files, and the real code of every Rust crate except `tether-types`, `tether-engine`, `tether-ffi`, `tether-store`, `tether-secrets`, and `tether-providers`.
+Not present yet: `LICENSE` (no license chosen, see Q5), `nightly.yml` (nothing to run until P1), `core/benches/`, `core/fixtures/repos/`, the `runtimes/` build scripts and manifest (only `runtimes/README.md` exists), the `linux/` PRoot build, rootfs manifest, and package list (only `linux/README.md` exists), feature modules, `service`, `platform`, the `full` and `play` Linux mode files, and the real code of `tether-ci` (its `lib.rs` holds only a doc comment).
 
 ## Top level
 
@@ -149,8 +166,7 @@ core/
 │   └── store.rs               Database write and query timings
 ├── fixtures/
 │   ├── smells/                Crate that must fail clippy (see tools/check-smell-fixtures.sh)
-│   ├── provider-streams/      SSE streams for the parser and adapter tests, written from the providers' documented formats
-│   ├── repos/                 Small sample repos for tests (Python, JS, Rust)
+│   ├── model-lists/           Provider model list responses for catalog tests
 │   └── provider-streams/      Recorded provider SSE streams for adapter tests
 └── crates/
     ├── tether-types/
@@ -170,29 +186,60 @@ core/
     ├── tether-ffi/
     │   ├── Cargo.toml         Builds cdylib libtether_core.so
     │   ├── uniffi.toml        Binding names and package for Kotlin and Swift
-    │   ├── build.rs           UniFFI scaffolding
     │   └── src/
-    │       ├── lib.rs         Exported TetherCore object
-    │       ├── callbacks.rs   EventSink, NotifyPlatform, NetworkPlatform
-    │       ├── secrets.rs     SecretsPlatform callback, SecretVault
-    │       └── views/         Engine types to FFI view types: event.rs, types.rs, error.rs
+    │       ├── lib.rs         UniFFI surface of the core: exported TetherCore object
+    │       ├── approvals.rs   User-facing approval resolution for session actors
+    │       ├── callbacks.rs   Callback interfaces the platform layer implements
+    │       ├── commands.rs    UniFFI views for command and mention outcomes
+    │       ├── config.rs      UniFFI access to global, project, and trust-aware configuration
+    │       ├── context.rs     Context breakdown and compaction controls
+    │       ├── executors.rs   UniFFI configuration for local command executors
+    │       ├── files.rs       Read-only project files for the tree, viewer, and search
+    │       ├── git.rs         UniFFI runtime for local Git repositories and clone operations
+    │       ├── git_support.rs Factories that connect the Git runtime to the engine's Git tools
+    │       ├── git_types.rs   Git views, the error enum, and the progress callback
+    │       ├── github.rs      GitHub sign-in and identity views
+    │       ├── memory.rs      Capped memory files and session snapshot
+    │       ├── network.rs     Network platform controls
+    │       ├── notify.rs      Background notification and foreground-service dispatch
+    │       ├── projects.rs    Project creation and listing
+    │       ├── provider_settings.rs  Provider key management and connection status
+    │       ├── questions.rs   User-facing question resolution for session actors
+    │       ├── resume.rs      Resume and discard controls for sessions recovered after process death
+    │       ├── secrets.rs     Secret store platform callback and vault calls
+    │       ├── session_control.rs    Checklist, plan, and plan execution calls
+    │       ├── sessions.rs    Session creation, transcript reads, plain chat turns
+    │       ├── sessions/      open.rs, prompt.rs (session prompt sections, global instructions), ux.rs (saved settings, model catalog, usage, search)
+    │       ├── skills.rs      Read-only skill discovery
+    │       ├── updater.rs     Check and download full-build updates
+    │       ├── usage.rs       Usage and budget runtime
+    │       ├── vault.rs       Private Markdown vault operations
+    │       ├── views/         Engine types to FFI views: approval, checkpoint, context, error, event, plan, project, question, session, todo, types, usage
+    │       ├── bin/uniffi-bindgen.rs  Binding generator run by tools/gen-bindings.sh
+    │       └── *_tests.rs, tests.rs  Test modules (also projects/ and updater/ folders)
     ├── tether-engine/
     │   └── src/
-    │       ├── lib.rs         Engine entry point
-    │       ├── core.rs        Holds sessions, store, config
-    │       ├── session.rs     Session actor and state machine
-    │       ├── tool_loop.rs   Bounded provider and file tool exchanges
-    │       ├── checkpoint_capture.rs   Guarded pre-edit snapshots
-    │       ├── turn.rs        Turn loop
-    │       ├── prompt.rs      System prompt assembly and ordering for caching
-    │       ├── permissions.rs Mode table and rule matching
-    │       ├── router.rs      Executor routing
-    │       ├── checkpoints.rs Edit batches, snapshots, rewind
-    │       ├── compaction.rs  Summaries and context accounting
-    │       ├── budgets.rs     Cost limits and pause
-    │       ├── config.rs      .tether/config.toml loading and merging
-    │       ├── instructions.rs TETHER.md, AGENTS.md, CLAUDE.md loading
-    │       └── commands.rs    Custom slash command loading
+    │       ├── lib.rs         Engine entry point: sessions, turn loop, permissions, executor router, checkpoints
+    │       ├── session.rs     One actor per session: serializes turns and commits streamed text before emitting it
+    │       ├── session/       Actor parts: dispatch.rs (command routing), handle.rs (command queue), prompt.rs (session constructors), rewind.rs (checkpoint restore), stream.rs (batched provider events), turn.rs (turn loop)
+    │       ├── session_provider.rs  The one provider factory used by a saved session
+    │       ├── provider_connection.rs  Low-cost authenticated catalog request that checks each provider key
+    │       ├── tool_loop.rs   Bounded provider and tool exchange with saved messages and checkpoints
+    │       ├── tool_loop/     file_tools.rs (guarded file handler), git_tools/ (local, remote, validation), session_tools/ (checklist, question, plan), registry.rs (prepared tool calls), stream.rs (one provider response)
+    │       ├── checkpoint_capture.rs  Guarded snapshots of prior file bytes before an edit batch
+    │       ├── rewind.rs      Restore a saved edit checkpoint
+    │       ├── permissions/   Permission modes, conservative project rules, pure decisions
+    │       ├── executors/     run.rs (model-facing run tool), router.rs (shell-aware executor routing)
+    │       ├── prompt/        Stable system prompt assembly: base.rs, builder.rs, instructions.rs, vault.rs (vault slice)
+    │       ├── config/        Project and global TOML config with trust-aware merging: parser.rs, serde_text.rs
+    │       ├── commands/      Built-in and custom slash commands, @mentions, session export
+    │       ├── budget.rs      Budget gates that pause a turn before a provider request
+    │       ├── context.rs     Context accounting and message shaping for long sessions
+    │       ├── network.rs     Network pause state shared by session actors and the platform callback
+    │       ├── notify.rs      Short, redacted notification text for tool progress
+    │       ├── usage.rs       Provider response pricing and UTC day helpers
+    │       ├── updates/       Release check, bounded APK download, SHA256SUMS parsing, version comparison
+    │       └── *_tests.rs, tests.rs  Test modules
     ├── tether-providers/
     │   └── src/
     │       ├── lib.rs         Provider trait and registry
@@ -207,120 +254,161 @@ core/
     │       └── pricing.rs     Cost calculation
     ├── tether-tools/
     │   └── src/
-    │       ├── lib.rs         Tool registry and schema export
-    │       ├── fs.rs          read_file, list_dir, glob, literal grep
-    │       ├── edit.rs        write_file, edit_file, multi_edit, move, delete
-    │       ├── run.rs         run tool (calls the router through the engine)
-    │       ├── git.rs         git tools
-    │       ├── github.rs      pr_create, ci_run, ci_logs
-    │       ├── web.rs         web_fetch, web_search glue
-    │       ├── todo.rs        todo_write
-    │       ├── ask.rs         ask_user
-    │       └── format.rs      Result truncation and formatting
+    │       ├── lib.rs         Agent tool contracts and implementations
+    │       ├── fs.rs          Bounded, workspace-scoped read tools (tests in fs/tests.rs)
+    │       └── edit.rs        Atomic text edits kept inside a project workspace (tests in edit/tests.rs)
     ├── tether-workspace/
     │   └── src/
-    │       ├── lib.rs
-    │       ├── guard.rs       Path guard
-    │       ├── index.rs       File index
-    │       ├── search.rs      Glob and grep with ignore rules
-    │       └── watch.rs       File watcher
+    │       ├── lib.rs           Project workspace: path guard, file index, search, and archives
+    │       ├── path_guard.rs    Canonical workspace boundary for file tools
+    │       ├── file_index.rs    Workspace-relative file index and bounded text search
+    │       ├── ignore_rules.rs  Git-compatible ignore rules for the index and archives
+    │       ├── archive/         Safe, bounded ZIP import and export: create.rs, extract.rs, names.rs (entry name checks)
+    │       └── *_tests.rs       Test modules
     ├── tether-vcs/
     │   └── src/
-    │       ├── lib.rs
-    │       ├── clone.rs       Clone and fetch
-    │       ├── status.rs      Status and diff
-    │       ├── commit.rs      Stage and commit
-    │       ├── branch.rs      Branch operations
-    │       ├── push.rs        Push with guards
-    │       └── auth.rs        Token credentials for HTTPS
+    │       ├── lib.rs         Git and GitHub support
+    │       ├── clone.rs       Repository cloning through gitoxide
+    │       ├── repo.rs        Local repository operations
+    │       ├── repo/          checkout.rs, diff.rs, helpers.rs (branch names), log.rs, ops.rs (open, init, status, diff)
+    │       ├── push/          Smart HTTP receive-pack: mod.rs, http.rs (blocking requests, no credential in the URL), protocol.rs
+    │       ├── github/        GitHub REST client (client.rs) and helpers (URL parsing, shallow clone choice)
+    │       ├── oauth.rs       GitHub OAuth device flow; the token is wrapped by the secret store
+    │       ├── pat.rs         GitHub personal access token check before wrapped storage
+    │       ├── test_support.rs  Temporary directory and Git repository helpers for tests
+    │       └── *_tests.rs, tests.rs, oauth/tests.rs, pat/tests.rs  Test modules
     ├── tether-sandbox/
     │   └── src/
-    │       ├── lib.rs
-    │       ├── engine.rs      Wasmtime engine config and module cache
-    │       ├── packs.rs       Runtime pack install, verify, precompile
-    │       ├── wasi.rs        WASI context: mounts, env, stdio
-    │       ├── limits.rs      Memory, time (epoch), output caps
-    │       └── commands.rs    Map program names to pack modules
+    │       ├── lib.rs               WASM sandbox executor on Wasmtime
+    │       ├── module_cache.rs      One process engine and an in-memory compiled module cache
+    │       ├── runner.rs            Blocking WASI preview 1 command runner
+    │       ├── runner_result.rs     Result classification and output pumping
+    │       ├── runner_support.rs    Runner timing and host-path helpers
+    │       ├── runner_validation.rs Checks for support mounts and guest settings
+    │       ├── wasi_context.rs      Input contract for the WASI context and its streamed output
+    │       ├── limits.rs            Per-run limits and bounded streaming output
+    │       ├── pack.rs              Signed runtime pack manifests and streaming verification
+    │       ├── pack_install.rs      Atomic pack installation and on-device integrity checks
+    │       ├── pack_replace.rs      Atomic replacement of verified packs
+    │       ├── pack_catalog.rs      Queries over verified installed packs
+    │       ├── pack_cleanup.rs      Cleanup helpers for failed pack replacement
+    │       ├── pack_io.rs           Streaming pack file hashing
+    │       ├── test_support.rs      Shared WASI test fixtures
+    │       └── *_tests.rs           Test modules (pack_tests.rs, runner_tests.rs)
     ├── tether-linux/
-    │   └── src/
-    │       ├── lib.rs
-    │       ├── rootfs.rs      Download, verify, extract, repair
-    │       ├── proot.rs       Command line builder for libproot.so
-    │       ├── process.rs     Spawn, stream output, kill
-    │       └── packages.rs    apk package installs
+    │   ├── src/
+    │   │   ├── lib.rs         Linux mode: process execution and Alpine root filesystem management
+    │   │   ├── error.rs       LinuxError
+    │   │   ├── rootfs.rs      Root filesystem manager: cache check, status, progress, install
+    │   │   ├── manifest.rs    Root filesystem manifest, image checks, and the fetcher trait
+    │   │   ├── extract.rs     Extract and repair the root filesystem archive
+    │   │   ├── proot.rs       PRoot command plan, network policy, and session kinds
+    │   │   ├── runner.rs      Runs commands inside the guest and reports outcomes
+    │   │   ├── shell.rs       Interactive shell over a PTY
+    │   │   └── packages.rs    Base package install and setup through apk
+    │   └── tests/             Integration tests (fixtures, manifest and builder, rootfs, runner, shell)
     ├── tether-ci/
     │   └── src/
-    │       ├── lib.rs
-    │       ├── workflow.rs    tether.yml template and checks
-    │       ├── dispatch.rs    Workflow dispatch and run lookup
-    │       ├── poll.rs        Status polling with backoff
-    │       └── logs.rs        Log fetch, trimming, failure parsing
+    │       └── lib.rs         Empty library: the planned GitHub Actions executor has no code yet
     ├── tether-quality/
     │   ├── data/
-    │   │   ├── slop_words.txt     Banned words for writing and identifiers
-    │   │   └── slop_patterns.toml Regex and AST patterns for slop
+    │   │   ├── generic_names.txt   Generic identifier names that the slop rules flag
+    │   │   ├── slop_patterns.toml  Regex and AST patterns for slop
+    │   │   └── slop_words.txt      Banned words for writing and identifiers
+    │   ├── tests/                  Integration tests and fixtures/ (Markdown, Rust, and TOML samples)
     │   └── src/
-    │       ├── lib.rs         Gate entry: run rules on an edit batch
-    │       ├── parse.rs       Tree-sitter grammar loading
-    │       ├── rules/
-    │       │   ├── mod.rs     Rule trait and registry
-    │       │   ├── smells.rs  Length, nesting, params, duplicates, dead code
-    │       │   ├── slop_code.rs  Restating comments, placeholders, fake imports
-    │       │   ├── slop_tests.rs Vacuous asserts, deleted or skipped tests
-    │       │   └── slop_text.rs  Banned words and patterns in prose
-    │       └── report.rs      Findings, severities, summary
+    │       ├── lib.rs         Quality gate parsing, rules, and syntax highlighting
+    │       ├── highlight.rs   Tree-sitter syntax highlighting
+    │       ├── language.rs    Tree-sitter languages and language-specific rule data
+    │       ├── manifest.rs    Project manifest package extraction
+    │       ├── model.rs       Public data types shared by the rules
+    │       ├── prose.rs       Prose checks shared with the slop-lint data files
+    │       ├── registry.rs    Rule registry and batch execution
+    │       ├── report.rs      Quality report construction and rendering
+    │       ├── review.rs      Second-model review prompt and response parsing
+    │       ├── thresholds.rs  Quality thresholds and config parsing
+    │       └── rules/
+    │           ├── mod.rs         Built-in rules
+    │           ├── slop.rs        AI slop rules for source code
+    │           ├── smell.rs       Tree and batch based smell rules
+    │           ├── smell_text.rs  Text-oriented smell rules
+    │           ├── tests_rules.rs Test quality rules
+    │           └── util.rs        Shared helpers for heuristic rules
     ├── tether-store/
     │   ├── migrations/
-    │   │   └── 0001_init.sql  Initial schema
+    │   │   ├── 0001_init.sql            Schema: projects, sessions, messages, provider settings, model catalog, usage
+    │   │   ├── 0002_message_fts.sql     FTS5 text parts; the message row stays the source of truth
+    │   │   ├── 0003_checkpoints.sql     Checkpoints and their files: content before each edit batch
+    │   │   ├── 0004_approvals.sql       Approvals and project permission rules
+    │   │   ├── 0005_prompt_snapshot.sql Frozen prompt blocks per session
+    │   │   ├── 0006_session_todos.sql   Session checklist
+    │   │   ├── 0007_project_trust.sql   Project trust flags
+    │   │   ├── 0008_project_network.sql Per-project Linux network permission
+    │   │   ├── 0009_git_identity.sql    The user's Git commit identity
+    │   │   ├── 0010_budgets.sql         Budget limits and whether session prices were known
+    │   │   └── 0011_context.sql         Context compaction records and the global threshold
     │   └── src/
-    │       ├── lib.rs
-    │       ├── db.rs          Store: open, WAL, foreign keys, run migrations
-    │       ├── error.rs       StoreError
-    │       ├── migrations.rs  Migration list and runner (PRAGMA user_version)
-    │       ├── schema_tests.rs Tests for schema 0001 (test only)
-    │       ├── queries.rs     Typed queries per table (later)
-    │       └── blobs.rs       Blob store and cleanup (later)
+    │       ├── lib.rs               SQLite storage: schema, migrations, queries
+    │       ├── db.rs                Connection: open, set up, migrate
+    │       ├── error.rs             StoreError; the engine converts it to CoreError
+    │       ├── migrations.rs        Numbered migrations and the runner
+    │       ├── projects.rs          Project rows and workspace directory names
+    │       ├── sessions.rs          Session and transcript writes; text is committed before its event is emitted
+    │       ├── session_load.rs      Loads one saved session row
+    │       ├── session_search.rs    Session list, message search, and rename
+    │       ├── session_fts.rs       Exact phrase search over saved transcript text
+    │       ├── session_context.rs   Session context visibility
+    │       ├── session_plans.rs     Latest submitted session plan
+    │       ├── checkpoints.rs       Content-addressed snapshots before an edit batch
+    │       ├── approvals.rs         Stored approval answers
+    │       ├── permission_rules.rs  Project-scoped permission rules
+    │       ├── project_trust.rs     Project trust flags
+    │       ├── project_network.rs   Per-project Linux network permission
+    │       ├── prompt_snapshots.rs  Frozen prompt blocks per session
+    │       ├── provider_configs.rs  Saved provider state; secret bytes stay in the platform vault
+    │       ├── models.rs            Model catalog cache queries
+    │       ├── todos.rs             Session checklist persistence
+    │       ├── budgets.rs           Budget settings and session overrides
+    │       ├── usage.rs             Usage history and budget persistence
+    │       ├── context.rs           Persisted context compaction and interrupted-turn operations
+    │       └── *_tests.rs, tests.rs, checkpoints/tests.rs, session_fts/tests.rs  Test modules (schema_tests.rs covers 0001)
     ├── tether-connectors/
     │   └── src/
-    │       ├── lib.rs         Connector trait
-    │       └── github/
-    │           ├── mod.rs     GitHub connector
-    │           ├── device.rs  OAuth device flow
-    │           └── api.rs     REST and GraphQL calls
+    │       ├── lib.rs         Network connectors used by the core
+    │       ├── backend.rs     Web backend contract and the DNS-filtering reqwest backend
+    │       ├── fetch.rs       Safe web fetching and model rendering
+    │       ├── html.rs        HTML cleanup and readable text conversion
+    │       ├── content.rs     Content type and charset helpers
+    │       └── ip.rs          Public IP address classification for SSRF protection
     ├── tether-mcp/
     │   └── src/
-    │       ├── lib.rs         MCP client
-    │       ├── http.rs        Streamable HTTP transport
-    │       └── stdio.rs       stdio transport through Linux mode
+    │       ├── lib.rs         MCP client for Streamable HTTP servers
+    │       ├── transport.rs   Transport contracts and the production HTTP transport
+    │       ├── protocol.rs    JSON-RPC and SSE response handling
+    │       ├── session.rs     MCP initialization and tool operations
+    │       ├── names.rs       Stable names for tools exposed by remote servers
+    │       ├── render.rs      MCP result rendering
+    │       └── tests.rs       Test module
     ├── tether-secrets/
     │   └── src/
     │       └── lib.rs         Secret refs, wrap and unwrap through the platform callback
     ├── tether-skills/
     │   └── src/
-    │       ├── lib.rs
-    │       ├── format.rs      SKILL.md frontmatter parse and validation
-    │       ├── discover.rs    Bundled, user, and project skill locations and precedence
-    │       ├── disclosure.rs  skills_list and skill_view, prompt index with a size budget
-    │       ├── manage.rs      skill_manage: create, patch, rewrite, delete, support files
-    │       ├── install.rs     Install from GitHub URL or zip through quarantine and a static scan
-    │       └── curator.rs     Prune-only upkeep: stale after 14 days, archived after 30
+    │       ├── lib.rs         Parse and validate open Agent Skills documents (SKILL.md frontmatter)
+    │       └── tests.rs       Test module
     └── tether-memory/
         └── src/
-            ├── lib.rs
-            ├── core_memory.rs MEMORY.md and USER.md with size caps and the memory tool
-            ├── snapshot.rs    Frozen snapshot for the system prompt
-            ├── search.rs      session_search over the FTS5 index in tether-store
-            ├── scan.rs        Prompt-injection and credential scan for memory writes
+            ├── lib.rs         Capped agent and user notes, a frozen snapshot, and an Obsidian-compatible vault
+            ├── files.rs       Writes to the two memory files, validated before persistence (tests in files/tests.rs)
+            ├── snapshot.rs    Session-scoped view of the two memory files
             └── vault/
-                ├── mod.rs     Vault root, notes, append-only entries
-                ├── note.rs    Frontmatter, wikilinks, headings
-                ├── links.rs   Link graph tables, backlinks, orphans, map queries
-                ├── injector.rs Small start-of-session slice from index.md, the project map, and log.md
-                ├── validate.rs Checks on each write: description present, links resolve
-                └── sync.rs    Reconcile with a shared folder through a platform callback
+                ├── mod.rs     Rebuildable view of Markdown notes and wikilinks in a private vault folder
+                ├── tools.rs   File operations and bounded queries over the vault view
+                ├── sync.rs    Copy-based sync contract with a platform shared folder
+                └── tests.rs   Test modules in vault/, vault/sync/, and files/
 ```
 
-Each crate also has `Cargo.toml` and a `tests/` folder (omitted above after the first entries).
+Each crate has a `Cargo.toml`. Integration tests go in the crate's `tests/` folder where it has one.
 
 ## android/
 

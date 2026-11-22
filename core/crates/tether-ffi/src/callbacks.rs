@@ -17,6 +17,7 @@ pub trait EventSink: Send + Sync {
 #[uniffi::export(with_foreign)]
 pub trait NotifyPlatform: Send + Sync {
     /// Shows an approval action.
+    #[expect(clippy::too_many_arguments, reason = "foreign callback signature")]
     fn show_approval(
         &self,
         session_id: String,

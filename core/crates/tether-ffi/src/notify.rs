@@ -59,24 +59,58 @@ impl NotifyState {
 
     fn event(&self, event: &CoreEvent) {
         let session_id = event_session(event);
-        if let CoreEvent::SessionUpdated { status, .. } = event {
-            if matches!(status, tether_types::SessionStatus::Requesting) {
-                if self.running.fetch_add(1, Ordering::AcqRel) == 0
-                    && let Some(service) = self.service()
-                {
-                    service.start_run_service();
-                }
-            } else if matches!(
-                status,
-                tether_types::SessionStatus::Idle
-                    | tether_types::SessionStatus::Failed
-                    | tether_types::SessionStatus::Interrupted
-            ) && self.running.fetch_sub(1, Ordering::AcqRel) == 1
-                && let Some(service) = self.service()
-            {
-                service.stop_run_service();
-            }
+        self.track_run_service(event);
+        self.track_target(event);
+        if self.foreground.load(Ordering::Acquire) {
+            return;
         }
+        let Some(platform) = self.platform() else {
+            return;
+        };
+        self.dispatch(&platform, &session_id, event);
+    }
+
+    fn track_run_service(&self, event: &CoreEvent) {
+        let CoreEvent::SessionUpdated { status, .. } = event else {
+            return;
+        };
+        if matches!(status, tether_types::SessionStatus::Requesting) {
+            self.note_run_started();
+        } else if matches!(
+            status,
+            tether_types::SessionStatus::Idle
+                | tether_types::SessionStatus::Failed
+                | tether_types::SessionStatus::Interrupted
+        ) {
+            self.note_run_finished();
+        }
+    }
+
+    fn note_run_started(&self) {
+        if self.running.fetch_add(1, Ordering::AcqRel) == 0 {
+            self.start_service();
+        }
+    }
+
+    fn note_run_finished(&self) {
+        if self.running.fetch_sub(1, Ordering::AcqRel) == 1 {
+            self.stop_service();
+        }
+    }
+
+    fn start_service(&self) {
+        if let Some(service) = self.service() {
+            service.start_run_service();
+        }
+    }
+
+    fn stop_service(&self) {
+        if let Some(service) = self.service() {
+            service.stop_run_service();
+        }
+    }
+
+    fn track_target(&self, event: &CoreEvent) {
         if let CoreEvent::ToolProposed {
             tool_call_id,
             tool,
@@ -87,12 +121,9 @@ impl NotifyState {
         {
             targets.insert(tool_call_id.clone(), summarize_call(tool, target));
         }
-        if self.foreground.load(Ordering::Acquire) {
-            return;
-        }
-        let Some(platform) = self.platform() else {
-            return;
-        };
+    }
+
+    fn dispatch(&self, platform: &Arc<dyn NotifyPlatform>, session_id: &str, event: &CoreEvent) {
         match event {
             CoreEvent::ApprovalRequired {
                 tool_call_id,
@@ -100,7 +131,7 @@ impl NotifyState {
                 target,
                 ..
             } => platform.show_approval(
-                session_id.clone(),
+                session_id.to_owned(),
                 tool_call_id.to_string(),
                 tool.clone(),
                 target.clone(),
@@ -112,42 +143,32 @@ impl NotifyState {
                 options,
                 ..
             } => platform.show_question(
-                session_id.clone(),
+                session_id.to_owned(),
                 tool_call_id.to_string(),
                 question.clone(),
                 options.clone(),
             ),
             CoreEvent::TurnFinished { .. } => platform.show_turn_finished(
-                session_id.clone(),
-                session_id.clone(),
+                session_id.to_owned(),
+                session_id.to_owned(),
                 true,
                 "Turn finished".into(),
             ),
             CoreEvent::TurnFailed { error, .. } => platform.show_turn_finished(
-                session_id.clone(),
-                session_id.clone(),
+                session_id.to_owned(),
+                session_id.to_owned(),
                 false,
                 error.to_string(),
             ),
             CoreEvent::ToolStarted { tool_call_id, .. } => {
-                self.progress(&platform, &session_id, tool_call_id)
+                self.progress(platform, session_id, tool_call_id);
             }
             _ => {}
         }
     }
 
     fn progress(&self, platform: &Arc<dyn NotifyPlatform>, session_id: &str, id: &ToolCallId) {
-        let now = now_ms();
-        let allowed = self.last_progress.lock().is_ok_and(|mut last| {
-            let previous = last.get(&SessionId::new(session_id)).copied().unwrap_or(0);
-            if now.saturating_sub(previous) < 1_000 {
-                false
-            } else {
-                last.insert(SessionId::new(session_id), now);
-                true
-            }
-        });
-        if !allowed {
+        if !self.claim_progress_slot(session_id) {
             return;
         }
         let step = self
@@ -157,6 +178,21 @@ impl NotifyState {
             .and_then(|targets| targets.get(id).cloned())
             .unwrap_or_else(|| "Running tool".into());
         platform.update_run_progress(session_id.to_owned(), step);
+    }
+
+    /// Returns true when the session may send progress now, and records the send time.
+    fn claim_progress_slot(&self, session_id: &str) -> bool {
+        let now = now_ms();
+        let Ok(mut last) = self.last_progress.lock() else {
+            return false;
+        };
+        let key = SessionId::new(session_id);
+        let previous = last.get(&key).copied().unwrap_or(0);
+        if now.saturating_sub(previous) < 1_000 {
+            return false;
+        }
+        last.insert(key, now);
+        true
     }
 }
 
@@ -239,13 +275,17 @@ impl SessionRuntime {
     /// Records whether the app is visible to the user.
     pub fn set_app_foreground(&self, foreground: bool) {
         self.notify.set_foreground(foreground);
-        if foreground
-            && let Ok(runners) = self.runners.lock()
-            && let Some(platform) = self.notify.platform()
-        {
-            for session_id in runners.keys() {
-                platform.clear(session_id.to_string());
-            }
+        if !foreground {
+            return;
+        }
+        let Ok(runners) = self.runners.lock() else {
+            return;
+        };
+        let Some(platform) = self.notify.platform() else {
+            return;
+        };
+        for session_id in runners.keys() {
+            platform.clear(session_id.to_string());
         }
     }
 }

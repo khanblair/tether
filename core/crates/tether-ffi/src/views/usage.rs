@@ -98,7 +98,9 @@ impl From<DayUsage> for DayUsageView {
     fn from(value: DayUsage) -> Self {
         Self {
             day: value.day,
-            ..value.totals.into()
+            tokens_in: value.totals.tokens_in,
+            tokens_out: value.totals.tokens_out,
+            cost_micros: value.totals.cost_micros,
         }
     }
 }
@@ -108,7 +110,9 @@ impl From<ProjectUsage> for ProjectUsageView {
         Self {
             project_id: value.project_id,
             project_name: value.project_name,
-            ..value.totals.into()
+            tokens_in: value.totals.tokens_in,
+            tokens_out: value.totals.tokens_out,
+            cost_micros: value.totals.cost_micros,
         }
     }
 }
@@ -118,7 +122,9 @@ impl From<ModelUsage> for ModelUsageView {
         Self {
             provider: value.provider.into(),
             model_id: value.model_id,
-            ..value.totals.into()
+            tokens_in: value.totals.tokens_in,
+            tokens_out: value.totals.tokens_out,
+            cost_micros: value.totals.cost_micros,
         }
     }
 }

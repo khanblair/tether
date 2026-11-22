@@ -52,7 +52,7 @@ impl SessionRuntime {
         let runner = self.runner(session_id)?;
         self.runtime
             .block_on(runner.handle.run_plan(mode))
-            .map_err(map_actor_error)
+            .map_err(|error| map_actor_error(&error))
     }
 }
 
@@ -64,7 +64,7 @@ fn require_session(store: &Store, id: &SessionId) -> Result<(), SessionRuntimeEr
         .ok_or(SessionRuntimeError::NotFound)
 }
 
-fn map_actor_error(error: SessionActorError) -> SessionRuntimeError {
+fn map_actor_error(error: &SessionActorError) -> SessionRuntimeError {
     match error {
         SessionActorError::NotFound => SessionRuntimeError::NotFound,
         SessionActorError::Store(tether_store::StoreError::SessionBusy) => {

@@ -4,7 +4,8 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use serde_json::Value;
 
-use crate::git::{GitRuntime, GitRuntimeError};
+use crate::git::GitRuntime;
+use crate::git_types::GitRuntimeError;
 
 /// The public part of a GitHub device grant.
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
@@ -64,8 +65,6 @@ pub struct GithubRepoView {
 
 pub(crate) struct DeviceGrantState {
     pub(crate) device_code: String,
-    pub(crate) user_code: String,
-    pub(crate) verification_uri: String,
     pub(crate) interval_seconds: u64,
     pub(crate) expires_at: Instant,
 }
@@ -73,14 +72,17 @@ pub(crate) struct DeviceGrantState {
 #[uniffi::export]
 impl GitRuntime {
     /// Sets the OAuth application's public client ID.
-    pub fn configure_github(&self, client_id: String) -> Result<(), GitRuntimeError> {
+    ///
+    /// # Errors
+    /// Returns an error when the client ID is empty or the config lock is poisoned.
+    pub fn configure_github(&self, client_id: &str) -> Result<(), GitRuntimeError> {
         if client_id.trim().is_empty() {
             return Err(GitRuntimeError::InvalidInput);
         }
         *self
             .oauth_client_id
             .lock()
-            .map_err(|_| GitRuntimeError::Unavailable)? = Some(client_id);
+            .map_err(|_| GitRuntimeError::Unavailable)? = Some(client_id.to_owned());
         Ok(())
     }
 
@@ -118,8 +120,6 @@ impl GitRuntime {
             .lock()
             .map_err(|_| GitRuntimeError::Unavailable)? = Some(DeviceGrantState {
             device_code,
-            user_code: user_code.clone(),
-            verification_uri: verification_uri.clone(),
             interval_seconds,
             expires_at: Instant::now() + Duration::from_secs(expires_in),
         });
@@ -151,19 +151,7 @@ impl GitRuntime {
             .map_err(|_| GitRuntimeError::Unavailable)?
             .clone()
             .ok_or(GitRuntimeError::GithubNotConfigured)?;
-        let response = self.http_form(
-            "https://github.com/login/oauth/access_token",
-            &[
-                ("client_id", client_id),
-                ("device_code", state.device_code.clone()),
-                (
-                    "grant_type",
-                    "urn:ietf:params:oauth:grant-type:device_code".into(),
-                ),
-            ],
-        )?;
-        let value: Value =
-            serde_json::from_slice(&response).map_err(|_| GitRuntimeError::GithubResponse)?;
+        let value = self.request_device_token(client_id, &state.device_code)?;
         if let Some(token) = value.get("access_token").and_then(Value::as_str) {
             self.save_github_token(token)?;
             self.refresh_identity()?;
@@ -193,11 +181,11 @@ impl GitRuntime {
     ///
     /// # Errors
     /// Returns an error when GitHub rejects the token or it lacks the `repo` scope.
-    pub fn github_sign_in_with_token(&self, token: String) -> Result<(), GitRuntimeError> {
+    pub fn github_sign_in_with_token(&self, token: &str) -> Result<(), GitRuntimeError> {
         if token.trim().is_empty() {
             return Err(GitRuntimeError::InvalidInput);
         }
-        let response = self.http_bearer("https://api.github.com/user", &token)?;
+        let response = self.http_bearer("https://api.github.com/user", token)?;
         if response.0 == 401 {
             return Err(GitRuntimeError::GithubCredentials);
         }
@@ -206,7 +194,7 @@ impl GitRuntime {
         }
         let scopes = response
             .2
-            .get("x-oauth-scopes")
+            .as_deref()
             .map(|text| {
                 text.split(',')
                     .map(str::trim)
@@ -220,7 +208,7 @@ impl GitRuntime {
                 scope: "repo".into(),
             });
         }
-        self.save_github_token(&token)?;
+        self.save_github_token(token)?;
         self.refresh_identity()
     }
 
@@ -261,6 +249,25 @@ impl GitRuntime {
 }
 
 impl GitRuntime {
+    fn request_device_token(
+        &self,
+        client_id: String,
+        device_code: &str,
+    ) -> Result<Value, GitRuntimeError> {
+        let response = self.http_form(
+            "https://github.com/login/oauth/access_token",
+            &[
+                ("client_id", client_id),
+                ("device_code", device_code.to_owned()),
+                (
+                    "grant_type",
+                    "urn:ietf:params:oauth:grant-type:device_code".into(),
+                ),
+            ],
+        )?;
+        serde_json::from_slice(&response).map_err(|_| GitRuntimeError::GithubResponse)
+    }
+
     fn save_github_token(&self, token: &str) -> Result<(), GitRuntimeError> {
         self.vault
             .put("github-oauth", token)
@@ -302,11 +309,7 @@ impl GitRuntime {
             .ok_or(GitRuntimeError::NotSignedIn)
     }
 
-    fn http_form(
-        &self,
-        url: &str,
-        fields: &[(String, String)],
-    ) -> Result<Vec<u8>, GitRuntimeError> {
+    fn http_form(&self, url: &str, fields: &[(&str, String)]) -> Result<Vec<u8>, GitRuntimeError> {
         let client = reqwest::Client::builder()
             .redirect(reqwest::redirect::Policy::none())
             .build()

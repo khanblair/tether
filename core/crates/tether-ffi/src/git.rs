@@ -2,123 +2,23 @@
 
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
-use std::time::{SystemTime, UNIX_EPOCH};
 
-use tether_engine::{
-    GitIdentityReader, GitTools, GitToolsConfig, GithubClientFactory, ToolHandler, TransportFactory,
-};
+use tether_engine::{GitTools, GitToolsConfig, GithubClientFactory, ToolHandler};
 use tether_secrets::{Secret, SecretRef};
 use tether_store::{GitIdentity, Store};
 use tether_types::ProjectId;
-use tether_vcs::{
-    BranchInfo, CloneProgress, CloneRequest, CommitInfo, DiffSpec, Identity, Repo, RepoError,
-    ReqwestHttpClient, ReqwestTransport, StatusEntry, Transport, parse_github_url,
-    should_clone_shallow,
-};
+use tether_vcs::{CloneRequest, DiffSpec, Repo, parse_github_url, should_clone_shallow};
 
 use crate::SecretVault;
+use crate::git_support::{
+    RuntimeGithub, RuntimeIdentity, RuntimeTransport, SilentCloneProgress, branch_view, cap_diff,
+    commit_view, now_ms, repo_error, status_view, validate_identity_field,
+};
+use crate::git_types::{
+    GitBranchView, GitCommitView, GitDiffSpecView, GitRuntimeError, GitStatusView,
+    ShallowChoiceView,
+};
 use crate::github::{DeviceGrantState, GithubRepoView};
-
-/// A choice of clone history depth.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
-pub enum ShallowChoiceView {
-    /// Select shallow or full from repository size.
-    Auto,
-    /// Clone with one history layer.
-    Shallow,
-    /// Clone complete history.
-    Full,
-}
-
-/// One compact Git status row.
-#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
-pub struct GitStatusView {
-    /// Repository-relative path.
-    pub path: String,
-    /// Index state, or empty when unchanged.
-    pub index_state: String,
-    /// Worktree state, or empty when unchanged.
-    pub worktree_state: String,
-}
-
-/// One commit summary.
-#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
-pub struct GitCommitView {
-    /// Full commit id.
-    pub id: String,
-    /// First message line.
-    pub subject: String,
-    /// Author name.
-    pub author_name: String,
-    /// Author email.
-    pub author_email: String,
-    /// Commit time in Unix seconds.
-    pub committer_time: i64,
-}
-
-/// One local branch.
-#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
-pub struct GitBranchView {
-    /// Branch name.
-    pub name: String,
-    /// Commit id, or empty for an unborn branch.
-    pub commit: Option<String>,
-}
-
-/// A diff request for a project repository.
-#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
-pub struct GitDiffSpecView {
-    /// Compare the index with `HEAD`.
-    pub staged: bool,
-    /// Optional repository-relative path.
-    pub path: Option<String>,
-    /// Older revision, paired with `to`.
-    pub from: Option<String>,
-    /// Newer revision, paired with `from`.
-    pub to: Option<String>,
-}
-
-/// Receives clone progress on a platform thread.
-#[uniffi::export(with_foreign)]
-pub trait CloneProgressView: Send + Sync {
-    /// Reports a clone phase and optional byte counts.
-    fn on_progress(&self, phase: String, received: u64, total: Option<u64>);
-}
-
-/// A Git or GitHub runtime failure.
-#[derive(Debug, thiserror::Error, uniffi::Error)]
-pub enum GitRuntimeError {
-    /// A required project or repository was absent.
-    #[error("project or repository not found")]
-    NotFound,
-    /// The input was invalid.
-    #[error("invalid Git input")]
-    InvalidInput,
-    /// Storage or local runtime setup failed.
-    #[error("Git runtime unavailable")]
-    Unavailable,
-    /// GitHub sign-in was not configured.
-    #[error("GitHub sign-in is not configured")]
-    GithubNotConfigured,
-    /// No device grant is active.
-    #[error("GitHub device sign-in is not active")]
-    NoDeviceGrant,
-    /// GitHub rejected credentials.
-    #[error("GitHub credentials were rejected")]
-    GithubCredentials,
-    /// GitHub returned a malformed response.
-    #[error("GitHub response was invalid")]
-    GithubResponse,
-    /// GitHub could not be reached.
-    #[error("GitHub network request failed")]
-    GithubNetwork,
-    /// The token is missing a required scope.
-    #[error("GitHub token is missing scope {scope}")]
-    MissingScope { scope: String },
-    /// The Git repository operation failed.
-    #[error("Git repository operation failed: {detail}")]
-    Repository { detail: String },
-}
 
 /// Owns GitHub credentials, project metadata, and repository operations.
 #[derive(uniffi::Object)]
@@ -131,7 +31,6 @@ pub struct GitRuntime {
     pub(crate) device_grant: Mutex<Option<DeviceGrantState>>,
 }
 
-#[uniffi::export]
 impl GitRuntime {
     pub(crate) fn tool_handler(
         runtime: Arc<Self>,
@@ -147,7 +46,10 @@ impl GitRuntime {
             gates: Vec::new(),
         }))
     }
+}
 
+#[uniffi::export]
+impl GitRuntime {
     /// Opens the Git runtime over the app database, workspace root, and secret vault.
     ///
     /// # Errors
@@ -195,11 +97,11 @@ impl GitRuntime {
     ///
     /// # Errors
     /// Returns an error when the project or repository cannot be read.
-    pub fn git_status(&self, project_id: String) -> Result<Vec<GitStatusView>, GitRuntimeError> {
-        let repo = self.repo(&project_id)?;
+    pub fn git_status(&self, project_id: &str) -> Result<Vec<GitStatusView>, GitRuntimeError> {
+        let repo = self.repo(project_id)?;
         repo.status()
             .map(|rows| rows.into_iter().map(status_view).collect())
-            .map_err(repo_error)
+            .map_err(|error| repo_error(&error))
     }
 
     /// Reads a bounded repository diff for one project.
@@ -208,16 +110,17 @@ impl GitRuntime {
     /// Returns an error when the project or revision cannot be read.
     pub fn git_diff(
         &self,
-        project_id: String,
+        project_id: &str,
         spec: GitDiffSpecView,
     ) -> Result<String, GitRuntimeError> {
-        let repo = self.repo(&project_id)?;
+        let repo = self.repo(project_id)?;
         let diff = match (spec.from, spec.to) {
             (Some(from), Some(to)) => repo.diff(DiffSpec::Revisions { old: from, new: to }),
             (None, None) if spec.staged => repo.diff(DiffSpec::Staged),
             (None, None) => repo.diff(DiffSpec::Worktree),
             _ => return Err(GitRuntimeError::InvalidInput),
-        }?;
+        }
+        .map_err(|error| repo_error(&error))?;
         Ok(cap_diff(diff))
     }
 
@@ -227,50 +130,48 @@ impl GitRuntime {
     /// Returns an error when the project or history cannot be read.
     pub fn git_log(
         &self,
-        project_id: String,
+        project_id: &str,
         limit: u32,
     ) -> Result<Vec<GitCommitView>, GitRuntimeError> {
         if !(1..=50).contains(&limit) {
             return Err(GitRuntimeError::InvalidInput);
         }
-        self.repo(&project_id)?
+        self.repo(project_id)?
             .log(limit as usize, None)
             .map(|rows| rows.into_iter().map(commit_view).collect())
-            .map_err(repo_error)
+            .map_err(|error| repo_error(&error))
     }
 
     /// Lists local branches for one project.
     ///
     /// # Errors
     /// Returns an error when the project or repository cannot be read.
-    pub fn git_branches(&self, project_id: String) -> Result<Vec<GitBranchView>, GitRuntimeError> {
-        self.repo(&project_id)?
+    pub fn git_branches(&self, project_id: &str) -> Result<Vec<GitBranchView>, GitRuntimeError> {
+        self.repo(project_id)?
             .branches()
             .map(|rows| rows.into_iter().map(branch_view).collect())
-            .map_err(repo_error)
+            .map_err(|error| repo_error(&error))
     }
 
     /// Returns the current branch for one project.
     ///
     /// # Errors
     /// Returns an error when the project or repository cannot be read.
-    pub fn current_branch(&self, project_id: String) -> Result<Option<String>, GitRuntimeError> {
-        self.repo(&project_id)?.current_branch().map_err(repo_error)
+    pub fn current_branch(&self, project_id: &str) -> Result<Option<String>, GitRuntimeError> {
+        self.repo(project_id)?
+            .current_branch()
+            .map_err(|error| repo_error(&error))
     }
 
     /// Initializes a repository in an empty project folder.
     ///
     /// # Errors
     /// Returns an error when the project is absent, non-empty, or the branch is invalid.
-    pub fn git_init(
-        &self,
-        project_id: String,
-        default_branch: String,
-    ) -> Result<(), GitRuntimeError> {
-        let path = self.project_root(&project_id)?;
-        Repo::init(path, &default_branch)
+    pub fn git_init(&self, project_id: &str, default_branch: &str) -> Result<(), GitRuntimeError> {
+        let path = self.project_root(project_id)?;
+        Repo::init(path, default_branch)
             .map(|_| ())
-            .map_err(repo_error)
+            .map_err(|error| repo_error(&error))
     }
 
     /// Lists repositories for the authenticated GitHub account.
@@ -306,11 +207,11 @@ impl GitRuntime {
     /// Returns an error when metadata, storage, or cloning fails.
     pub fn clone_repository(
         &self,
-        url: String,
+        url: &str,
         name: Option<String>,
         shallow: ShallowChoiceView,
     ) -> Result<String, GitRuntimeError> {
-        let (default_branch, depth) = self.clone_choice(&url, shallow)?;
+        let (default_branch, depth) = self.clone_choice(url, shallow)?;
         let project_name = name.unwrap_or_else(|| {
             url.rsplit('/')
                 .next()
@@ -325,7 +226,7 @@ impl GitRuntime {
         let destination = Path::new(&self.workspaces_root).join(&project.path);
         let result = tether_vcs::clone(
             CloneRequest {
-                url: url.clone(),
+                url: url.to_owned(),
                 dest: destination.clone(),
                 depth,
                 branch: Some(default_branch.clone()),
@@ -342,7 +243,7 @@ impl GitRuntime {
             });
         }
         store
-            .set_project_remote(&project.id, &url, &default_branch)
+            .set_project_remote(&project.id, url, &default_branch)
             .map_err(|_| GitRuntimeError::Unavailable)?;
         Ok(project.id.to_string())
     }
@@ -406,7 +307,7 @@ impl GitRuntime {
     }
 
     fn repo(&self, project_id: &str) -> Result<Repo, GitRuntimeError> {
-        Repo::open(self.project_root(project_id)?).map_err(repo_error)
+        Repo::open(self.project_root(project_id)?).map_err(|error| repo_error(&error))
     }
 
     pub(crate) fn token(&self) -> Result<Secret, String> {
@@ -418,106 +319,4 @@ impl GitRuntime {
             .map_err(|_| "GitHub token is unavailable".to_owned())?
             .ok_or_else(|| "GitHub is not signed in".to_owned())
     }
-}
-
-pub(crate) struct RuntimeIdentity(Arc<GitRuntime>);
-impl GitIdentityReader for RuntimeIdentity {
-    fn identity(&self) -> Result<Option<Identity>, String> {
-        self.0
-            .store()
-            .map_err(|_| "identity is unavailable".to_owned())?
-            .git_identity()
-            .map_err(|_| "identity is unavailable".to_owned())
-            .map(|value| {
-                value.map(|identity| Identity {
-                    name: identity.name,
-                    email: identity.email,
-                })
-            })
-    }
-}
-
-pub(crate) struct RuntimeTransport(Arc<GitRuntime>);
-impl TransportFactory for RuntimeTransport {
-    fn transport(&self) -> Result<Box<dyn Transport>, String> {
-        Ok(Box::new(ReqwestTransport::new(self.0.token()).map_err(
-            |_| "GitHub transport is unavailable".to_owned(),
-        )?))
-    }
-}
-
-pub(crate) struct RuntimeGithub(Arc<GitRuntime>);
-impl GithubClientFactory for RuntimeGithub {
-    fn client(&self) -> Result<tether_vcs::GithubClient, String> {
-        let http = Arc::new(
-            ReqwestHttpClient::new().map_err(|_| "GitHub HTTP is unavailable".to_owned())?,
-        );
-        Ok(tether_vcs::GithubClient::new(http, self.0.token()?))
-    }
-}
-
-fn validate_identity_field(value: &str) -> Result<(), GitRuntimeError> {
-    if value.trim().is_empty()
-        || value
-            .chars()
-            .any(|ch| ch == '<' || ch == '>' || ch == '\n' || ch == '\r')
-    {
-        Err(GitRuntimeError::InvalidInput)
-    } else {
-        Ok(())
-    }
-}
-
-fn status_view(status: StatusEntry) -> GitStatusView {
-    GitStatusView {
-        path: status.path,
-        index_state: format!("{:?}", status.index_state),
-        worktree_state: format!("{:?}", status.worktree_state),
-    }
-}
-
-fn commit_view(commit: CommitInfo) -> GitCommitView {
-    GitCommitView {
-        id: commit.id,
-        subject: commit.subject,
-        author_name: commit.author_name,
-        author_email: commit.author_email,
-        committer_time: commit.committer_time,
-    }
-}
-
-fn branch_view(branch: BranchInfo) -> GitBranchView {
-    GitBranchView {
-        name: branch.name,
-        commit: branch.commit,
-    }
-}
-
-fn repo_error(error: RepoError) -> GitRuntimeError {
-    GitRuntimeError::Repository {
-        detail: error.to_string(),
-    }
-}
-
-fn cap_diff(mut diff: String) -> String {
-    const LIMIT: usize = 64 * 1024;
-    if diff.len() <= LIMIT {
-        return diff;
-    }
-    diff.truncate(LIMIT);
-    diff.push_str("\n[diff truncated at 64 KiB]\n");
-    diff
-}
-
-fn now_ms() -> i64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_or(0, |duration| {
-            i64::try_from(duration.as_millis()).unwrap_or(i64::MAX)
-        })
-}
-
-struct SilentCloneProgress;
-impl CloneProgress for SilentCloneProgress {
-    fn update(&self, _phase: tether_vcs::ClonePhase, _received: u64, _total: Option<u64>) {}
 }

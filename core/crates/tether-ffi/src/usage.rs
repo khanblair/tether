@@ -60,18 +60,23 @@ impl UsageRuntime {
     ) -> Result<UsageSummaryView, UsageRuntimeError> {
         let store = self.store()?;
         let today = display_today(utc_offset_minutes);
-        let count = days.clamp(1, 90);
-        let from = usage_day_offset(&today, -(count as i32 - 1)).map_err(map_store)?;
-        let windows = store.usage_windows(&today).map_err(map_store)?;
-        let rows = store.usage_by_day(&from, &today).map_err(map_store)?;
+        let count = i32::try_from(days.clamp(1, 90)).map_err(|_| UsageRuntimeError::Unavailable)?;
+        let from = usage_day_offset(&today, -(count - 1)).map_err(|error| map_store(&error))?;
+        let windows = store
+            .usage_windows(&today)
+            .map_err(|error| map_store(&error))?;
+        let rows = store
+            .usage_by_day(&from, &today)
+            .map_err(|error| map_store(&error))?;
         let by_day = (0..count)
             .map(|index| {
-                let day = usage_day_offset(&from, index as i32).map_err(map_store)?;
-                Ok(rows
+                let day = usage_day_offset(&from, index).map_err(|error| map_store(&error))?;
+                let row = rows
                     .iter()
                     .find(|row| row.day == day)
                     .cloned()
-                    .map_or_else(|| zero_day(day), Into::into))
+                    .unwrap_or_else(|| zero_day(day));
+                Ok(DayUsageView::from(row))
             })
             .collect::<Result<Vec<DayUsageView>, UsageRuntimeError>>()?;
         Ok(UsageSummaryView {
@@ -81,13 +86,13 @@ impl UsageRuntime {
             by_day,
             by_project: store
                 .usage_by_project(&from, &today)
-                .map_err(map_store)?
+                .map_err(|error| map_store(&error))?
                 .into_iter()
                 .map(ProjectUsageView::from)
                 .collect(),
             by_model: store
                 .usage_by_model(&from, &today)
-                .map_err(map_store)?
+                .map_err(|error| map_store(&error))?
                 .into_iter()
                 .map(ModelUsageView::from)
                 .collect(),
@@ -99,7 +104,10 @@ impl UsageRuntime {
     /// # Errors
     /// Returns an error when the database cannot be read.
     pub fn budgets(&self) -> Result<BudgetView, UsageRuntimeError> {
-        self.store()?.budgets().map(Into::into).map_err(map_store)
+        self.store()?
+            .budgets()
+            .map(Into::into)
+            .map_err(|error| map_store(&error))
     }
 
     /// Saves the daily and default session budgets.
@@ -119,7 +127,7 @@ impl UsageRuntime {
                 },
                 now_ms(),
             )
-            .map_err(map_store)
+            .map_err(|error| map_store(&error))
     }
 
     /// Sets or removes one session budget override.
@@ -133,7 +141,7 @@ impl UsageRuntime {
     ) -> Result<(), UsageRuntimeError> {
         self.store()?
             .set_session_budget(&SessionId::new(session_id), limit_micros)
-            .map_err(map_store)
+            .map_err(|error| map_store(&error))
     }
 }
 
@@ -161,7 +169,7 @@ impl SessionRuntime {
 
 impl UsageRuntime {
     fn store(&self) -> Result<Store, UsageRuntimeError> {
-        Store::open(Path::new(&self.database_path)).map_err(map_store)
+        Store::open(Path::new(&self.database_path)).map_err(|error| map_store(&error))
     }
 }
 
@@ -205,7 +213,7 @@ fn now_ms() -> i64 {
         })
 }
 
-fn map_store(error: StoreError) -> UsageRuntimeError {
+fn map_store(error: &StoreError) -> UsageRuntimeError {
     match error {
         StoreError::InvalidBudget => UsageRuntimeError::InvalidBudget,
         StoreError::MissingSessionRow => UsageRuntimeError::NotFound,

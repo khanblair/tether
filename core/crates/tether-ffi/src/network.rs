@@ -11,6 +11,7 @@ impl SessionRuntime {
     ///
     /// # Errors
     /// Returns `Unavailable` when the callback cannot be stored.
+    #[expect(clippy::needless_pass_by_value, reason = "UniFFI passes owned values")]
     pub fn set_network_platform(
         &self,
         platform: Arc<dyn NetworkPlatform>,

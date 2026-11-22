@@ -653,6 +653,10 @@ mod tests {
                 allow_free_text: false,
             }
         );
+    }
+
+    #[test]
+    fn plan_event_converts_every_field() {
         let plan = CoreEventView::from(CoreEvent::PlanReady {
             session_id: sid(),
             tool_call_id: cid(),

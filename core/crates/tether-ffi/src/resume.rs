@@ -37,7 +37,7 @@ impl SessionRuntime {
         let runner = self.open_session(session_id)?;
         self.runtime
             .block_on(runner.handle.resume())
-            .map_err(map_resume_error)
+            .map_err(|error| map_resume_error(&error))
     }
 
     /// Repairs an interrupted session and leaves it idle.
@@ -48,11 +48,11 @@ impl SessionRuntime {
         let runner = self.open_session(session_id)?;
         self.runtime
             .block_on(runner.handle.discard_interrupted())
-            .map_err(map_resume_error)
+            .map_err(|error| map_resume_error(&error))
     }
 }
 
-fn map_resume_error(error: tether_engine::SessionActorError) -> SessionRuntimeError {
+fn map_resume_error(error: &tether_engine::SessionActorError) -> SessionRuntimeError {
     match error {
         tether_engine::SessionActorError::NotInterrupted => SessionRuntimeError::Busy,
         tether_engine::SessionActorError::NotFound => SessionRuntimeError::NotFound,

@@ -91,3 +91,24 @@ fn grep_skips_binary_and_keeps_later_text_hits() {
     );
     fs::remove_dir_all(root).unwrap();
 }
+
+#[test]
+fn is_ignored_resolves_folders_against_the_project_root() {
+    let root = std::env::temp_dir().join(format!("tether-index-{}", ulid::Ulid::new()));
+    fs::create_dir_all(root.join("src/nested")).unwrap();
+    fs::create_dir_all(root.join("out/deep")).unwrap();
+    fs::create_dir_all(root.join("empty")).unwrap();
+    fs::write(root.join(".gitignore"), "out/\n").unwrap();
+    fs::write(root.join("src/nested/lib.rs"), "x\n").unwrap();
+    fs::write(root.join("out/deep/a.bin"), "x\n").unwrap();
+    let index = FileIndex::scan(PathGuard::new(&root).unwrap()).unwrap();
+    let ignored = |path: &str| index.is_ignored(std::path::Path::new(path));
+    assert!(!ignored("src"));
+    assert!(!ignored("src/nested"));
+    assert!(!ignored("empty"));
+    assert!(ignored("out"));
+    assert!(ignored("out/deep"));
+    assert!(ignored("out/deep/a.bin"));
+    assert!(!ignored("missing"));
+    fs::remove_dir_all(root).unwrap();
+}

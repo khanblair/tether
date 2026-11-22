@@ -85,11 +85,11 @@ impl Thresholds {
                     set_limit(&mut result.duplicate_lines, key, value, &mut issues);
                 }
                 "max_findings" => {
-                    set_max_findings(&mut result.max_findings, key, value, &mut issues)
+                    set_max_findings(&mut result.max_findings, key, value, &mut issues);
                 }
                 "disable" => parse_disabled(&mut result.disabled_rules, key, value, &mut issues),
                 "severity" => {
-                    parse_severity(&mut result.severity_overrides, key, value, &mut issues)
+                    parse_severity(&mut result.severity_overrides, key, value, &mut issues);
                 }
                 _ => issues.push(issue(key, "unknown quality setting")),
             }
@@ -121,16 +121,20 @@ impl Thresholds {
 
 fn set_limit(target: &mut u32, key: &str, value: &Value, issues: &mut Vec<ConfigIssue>) {
     match value.as_integer() {
-        Some(value) if (1..=10_000).contains(&value) => *target = value as u32,
-        Some(_) => issues.push(issue(key, "must be in the range 1..=10000")),
+        Some(value) => match u32::try_from(value) {
+            Ok(value) if (1..=10_000).contains(&value) => *target = value,
+            _ => issues.push(issue(key, "must be in the range 1..=10000")),
+        },
         None => issues.push(issue(key, "must be an integer")),
     }
 }
 
 fn set_max_findings(target: &mut usize, key: &str, value: &Value, issues: &mut Vec<ConfigIssue>) {
     match value.as_integer() {
-        Some(value) if (1..=10_000).contains(&value) => *target = value as usize,
-        Some(_) => issues.push(issue(key, "must be in the range 1..=10000")),
+        Some(value) => match usize::try_from(value) {
+            Ok(value) if (1..=10_000).contains(&value) => *target = value,
+            _ => issues.push(issue(key, "must be in the range 1..=10000")),
+        },
         None => issues.push(issue(key, "must be an integer")),
     }
 }
@@ -150,10 +154,10 @@ fn parse_disabled(
             issues.push(issue(key, "must contain only rule ids"));
             continue;
         };
-        if !rules::is_known_rule_id(rule_id) {
-            issues.push(issue(key, &format!("unknown rule id: {rule_id}")));
-        } else {
+        if rules::is_known_rule_id(rule_id) {
             target.insert(rule_id.to_owned());
+        } else {
+            issues.push(issue(key, &format!("unknown rule id: {rule_id}")));
         }
     }
 }

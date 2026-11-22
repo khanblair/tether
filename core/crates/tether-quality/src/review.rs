@@ -1,6 +1,9 @@
 //! Second-model review prompt and response parsing.
 
+use std::collections::BTreeSet;
 use std::fmt;
+
+use serde_json::Value;
 
 use crate::{QualityReport, Severity};
 
@@ -64,6 +67,8 @@ impl fmt::Display for ReviewParseError {
 
 impl std::error::Error for ReviewParseError {}
 
+const MAX_FINDINGS: usize = 50;
+
 /// Builds the reviewer messages.
 #[must_use]
 pub fn review_prompt(input: &ReviewInput<'_>) -> ReviewPrompt {
@@ -79,69 +84,69 @@ pub fn review_prompt(input: &ReviewInput<'_>) -> ReviewPrompt {
 }
 
 /// Parses a reviewer response and validates finding locations against a diff.
+///
+/// A finding whose path and line are not in the diff is dropped and counted. At most 50
+/// findings are kept.
+///
+/// # Errors
+/// Returns an error when the reply holds no JSON object or the object is malformed.
 pub fn parse_review(reply: &str, diff: &str) -> Result<ParsedReview, ReviewParseError> {
     let json = extract_object(reply).ok_or_else(|| parse_error("no JSON object found"))?;
-    let value = JsonParser::new(json).parse()?;
-    let JsonValue::Object(object) = value else {
+    let value: Value =
+        serde_json::from_str(json).map_err(|_| parse_error("review response is not valid JSON"))?;
+    let Some(object) = value.as_object() else {
         return Err(parse_error("review response is not an object"));
     };
     let summary = object
         .get("summary")
-        .and_then(|value| value.as_ref().as_string())
+        .and_then(Value::as_str)
         .unwrap_or_default()
         .to_owned();
     let allowed = diff_locations(diff);
+    let items = object
+        .get("findings")
+        .and_then(Value::as_array)
+        .map_or(&[][..], Vec::as_slice);
     let mut dropped = 0;
     let mut findings = Vec::new();
-    if let Some(JsonValue::Array(values)) = object.get("findings").map(Box::as_ref) {
-        for value in values {
-            let JsonValue::Object(item) = value.as_ref() else {
-                dropped += 1;
-                continue;
-            };
-            let Some(path) = item
-                .get("path")
-                .and_then(|value| value.as_ref().as_string())
-            else {
-                dropped += 1;
-                continue;
-            };
-            let Some(line) = item.get("line").and_then(|value| value.as_ref().as_i64()) else {
-                dropped += 1;
-                continue;
-            };
-            let Ok(line) = u32::try_from(line) else {
-                dropped += 1;
-                continue;
-            };
-            if line == 0 || !allowed.contains(&(normalize_path(path), line)) {
-                dropped += 1;
-                continue;
-            }
-            let severity = item
-                .get("severity")
-                .and_then(|value| value.as_ref().as_string())
-                .and_then(parse_severity)
-                .unwrap_or(Severity::Info);
-            let message = item
-                .get("message")
-                .and_then(|value| value.as_ref().as_string())
-                .unwrap_or_default();
-            findings.push(ReviewFinding {
-                path: path.to_owned(),
-                line,
-                severity,
-                message: truncate_chars(message, 500),
-            });
-            if findings.len() == 50 {
-                break;
-            }
+    for item in items {
+        match parse_finding(item, &allowed) {
+            Some(finding) => findings.push(finding),
+            None => dropped += 1,
+        }
+        if findings.len() == MAX_FINDINGS {
+            break;
         }
     }
     Ok(ParsedReview {
         findings,
         summary,
         dropped,
+    })
+}
+
+/// Reads one finding, or gives `None` when it is malformed or points outside the diff.
+fn parse_finding(item: &Value, allowed: &BTreeSet<(String, u32)>) -> Option<ReviewFinding> {
+    let item = item.as_object()?;
+    let path = item.get("path")?.as_str()?;
+    let line = u32::try_from(item.get("line")?.as_i64()?).ok()?;
+    if line == 0 || !allowed.contains(&(normalize_path(path), line)) {
+        return None;
+    }
+    let severity = item
+        .get("severity")
+        .and_then(Value::as_str)
+        .and_then(parse_severity)
+        .unwrap_or(Severity::Info);
+    let message = item
+        .get("message")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    Some(ReviewFinding {
+        path: path.to_owned(),
+        line,
+        severity,
+        message: truncate_chars(message, 500),
     })
 }
 
@@ -159,7 +164,7 @@ fn truncate_diff(diff: &str, max: usize) -> String {
     let cut = prefix
         .rfind("@@")
         .and_then(|start| prefix[..start].rfind('\n'));
-    let prefix = cut.map_or("", |index| &diff[..index + 1]);
+    let prefix = cut.map_or("", |index| &diff[..=index]);
     format!("{prefix}{marker}")
 }
 
@@ -195,8 +200,8 @@ fn extract_object(text: &str) -> Option<&str> {
     None
 }
 
-fn diff_locations(diff: &str) -> std::collections::BTreeSet<(String, u32)> {
-    let mut locations = std::collections::BTreeSet::new();
+fn diff_locations(diff: &str) -> BTreeSet<(String, u32)> {
+    let mut locations = BTreeSet::new();
     let mut path = String::new();
     let mut next_line = None;
     for line in diff.lines() {
@@ -204,14 +209,11 @@ fn diff_locations(diff: &str) -> std::collections::BTreeSet<(String, u32)> {
             path = normalize_path(value.split('\t').next().unwrap_or(value));
         } else if line.starts_with("@@") {
             next_line = parse_hunk_start(line);
-        } else if let Some(line_number) = next_line.as_mut() {
-            if line.starts_with('+') && !line.starts_with("+++") {
-                locations.insert((path.clone(), *line_number));
-                *line_number += 1;
-            } else if !line.starts_with('-') {
-                locations.insert((path.clone(), *line_number));
-                *line_number += 1;
-            }
+        } else if let Some(line_number) = next_line.as_mut()
+            && ((line.starts_with('+') && !line.starts_with("+++")) || !line.starts_with('-'))
+        {
+            locations.insert((path.clone(), *line_number));
+            *line_number += 1;
         }
     }
     locations
@@ -245,189 +247,5 @@ fn truncate_chars(value: &str, max: usize) -> String {
 fn parse_error(message: &str) -> ReviewParseError {
     ReviewParseError {
         message: message.to_owned(),
-    }
-}
-
-#[derive(Clone, Debug)]
-enum JsonValue {
-    Null,
-    Bool,
-    Number(i64),
-    String(String),
-    Array(Vec<Box<JsonValue>>),
-    Object(std::collections::BTreeMap<String, Box<JsonValue>>),
-}
-
-impl JsonValue {
-    fn as_string(&self) -> Option<&str> {
-        match self {
-            Self::String(value) => Some(value),
-            _ => None,
-        }
-    }
-
-    fn as_i64(&self) -> Option<i64> {
-        match self {
-            Self::Number(value) => Some(*value),
-            _ => None,
-        }
-    }
-}
-
-struct JsonParser<'a> {
-    text: &'a [u8],
-    position: usize,
-}
-
-impl<'a> JsonParser<'a> {
-    fn new(text: &'a str) -> Self {
-        Self {
-            text: text.as_bytes(),
-            position: 0,
-        }
-    }
-
-    fn parse(mut self) -> Result<JsonValue, ReviewParseError> {
-        let value = self.value()?;
-        self.space();
-        (self.position == self.text.len())
-            .then_some(value)
-            .ok_or_else(|| parse_error("trailing JSON data"))
-    }
-
-    fn value(&mut self) -> Result<JsonValue, ReviewParseError> {
-        self.space();
-        match self.text.get(self.position) {
-            Some(b'{') => self.object(),
-            Some(b'[') => self.array(),
-            Some(b'"') => self.string().map(JsonValue::String),
-            Some(b'-' | b'0'..=b'9') => self.number(),
-            Some(b't') => self.literal(b"true", JsonValue::Bool),
-            Some(b'f') => self.literal(b"false", JsonValue::Bool),
-            Some(b'n') => self.literal(b"null", JsonValue::Null),
-            _ => Err(parse_error("invalid JSON value")),
-        }
-    }
-
-    fn object(&mut self) -> Result<JsonValue, ReviewParseError> {
-        self.position += 1;
-        let mut result = std::collections::BTreeMap::new();
-        loop {
-            self.space();
-            if self.take(b'}') {
-                return Ok(JsonValue::Object(result));
-            }
-            let key = self.string()?;
-            self.space();
-            if !self.take(b':') {
-                return Err(parse_error("missing JSON colon"));
-            }
-            result.insert(key, Box::new(self.value()?));
-            self.space();
-            if self.take(b'}') {
-                return Ok(JsonValue::Object(result));
-            }
-            if !self.take(b',') {
-                return Err(parse_error("missing JSON separator"));
-            }
-        }
-    }
-
-    fn array(&mut self) -> Result<JsonValue, ReviewParseError> {
-        self.position += 1;
-        let mut result = Vec::new();
-        loop {
-            self.space();
-            if self.take(b']') {
-                return Ok(JsonValue::Array(result));
-            }
-            result.push(Box::new(self.value()?));
-            self.space();
-            if self.take(b']') {
-                return Ok(JsonValue::Array(result));
-            }
-            if !self.take(b',') {
-                return Err(parse_error("missing JSON array separator"));
-            }
-        }
-    }
-
-    fn string(&mut self) -> Result<String, ReviewParseError> {
-        if !self.take(b'"') {
-            return Err(parse_error("invalid JSON string"));
-        }
-        let mut result = String::new();
-        while let Some(byte) = self.text.get(self.position).copied() {
-            self.position += 1;
-            match byte {
-                b'"' => return Ok(result),
-                b'\\' => {
-                    let escaped = self
-                        .text
-                        .get(self.position)
-                        .copied()
-                        .ok_or_else(|| parse_error("invalid JSON escape"))?;
-                    self.position += 1;
-                    result.push(match escaped {
-                        b'"' => '"',
-                        b'\\' => '\\',
-                        b'/' => '/',
-                        b'n' => '\n',
-                        b'r' => '\r',
-                        b't' => '\t',
-                        _ => '?',
-                    });
-                }
-                value if value.is_ascii() && !value.is_ascii_control() => {
-                    result.push(value as char);
-                }
-                _ => return Err(parse_error("invalid JSON string")),
-            }
-        }
-        Err(parse_error("unterminated JSON string"))
-    }
-
-    fn number(&mut self) -> Result<JsonValue, ReviewParseError> {
-        let start = self.position;
-        while self
-            .text
-            .get(self.position)
-            .is_some_and(|byte| byte.is_ascii_digit() || *byte == b'-')
-        {
-            self.position += 1;
-        }
-        let number = std::str::from_utf8(&self.text[start..self.position])
-            .ok()
-            .and_then(|text| text.parse().ok())
-            .ok_or_else(|| parse_error("invalid JSON number"))?;
-        Ok(JsonValue::Number(number))
-    }
-
-    fn literal(&mut self, literal: &[u8], value: JsonValue) -> Result<JsonValue, ReviewParseError> {
-        if self.text.get(self.position..self.position + literal.len()) == Some(literal) {
-            self.position += literal.len();
-            Ok(value)
-        } else {
-            Err(parse_error("invalid JSON literal"))
-        }
-    }
-
-    fn space(&mut self) {
-        while self
-            .text
-            .get(self.position)
-            .is_some_and(u8::is_ascii_whitespace)
-        {
-            self.position += 1;
-        }
-    }
-
-    fn take(&mut self, expected: u8) -> bool {
-        if self.text.get(self.position) == Some(&expected) {
-            self.position += 1;
-            true
-        } else {
-            false
-        }
     }
 }

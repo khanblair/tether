@@ -136,23 +136,14 @@ impl Store {
             .collect::<Vec<_>>();
         let mut result = Vec::new();
         for message in messages {
-            if let Some(compaction) = compactions.iter().find(|item| {
-                let first = positions.get(&item.first_message_id).copied();
-                let last = positions.get(&item.last_message_id).copied();
-                first
-                    .zip(last)
-                    .is_some_and(|(first, last)| (first..=last).contains(&message.seq))
-            }) {
-                if let Some(summary) = summaries
-                    .iter()
-                    .find(|item| item.id == compaction.summary_message_id)
-                    && !result.iter().any(|item: &Message| item.id == summary.id)
-                {
-                    result.push(summary.clone());
-                }
-                continue;
+            let seq = message.seq;
+            match compactions
+                .iter()
+                .find(|item| compaction_covers(item, &positions, seq))
+            {
+                Some(compaction) => push_summary(&mut result, &summaries, compaction),
+                None => result.push(message),
             }
-            result.push(message);
         }
         Ok(result)
     }
@@ -163,19 +154,19 @@ impl Store {
     /// Returns an error when the transcript cannot be read or written.
     pub fn repair_interrupted(&mut self, session_id: &SessionId) -> Result<(), StoreError> {
         let messages = self.messages(session_id)?;
-        let mut calls = Vec::new();
-        let mut results = Vec::new();
-        for message in &messages {
-            for part in &message.parts {
-                match part {
-                    MessagePart::ToolCall { id, .. } => calls.push(id.clone()),
-                    MessagePart::ToolResult { tool_call_id, .. } => {
-                        results.push(tool_call_id.clone())
-                    }
-                    _ => {}
-                }
-            }
-        }
+        let parts = || messages.iter().flat_map(|message| &message.parts);
+        let calls = parts()
+            .filter_map(|part| match part {
+                MessagePart::ToolCall { id, .. } => Some(id.clone()),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        let results = parts()
+            .filter_map(|part| match part {
+                MessagePart::ToolResult { tool_call_id, .. } => Some(tool_call_id.clone()),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
         for call in calls.into_iter().filter(|call| !results.contains(call)) {
             self.append_message(
                 session_id,
@@ -198,25 +189,26 @@ impl Store {
     /// Returns an error when SQLite cannot read the session transcript.
     pub fn interruption_step(&self, session_id: &SessionId) -> Result<Option<String>, StoreError> {
         let messages = self.messages(session_id)?;
-        let mut calls = Vec::new();
-        let mut results = Vec::new();
-        let mut has_assistant = false;
-        for message in messages.iter().rev() {
-            has_assistant |= message.role == Role::Assistant;
-            for part in &message.parts {
-                if let MessagePart::ToolCall {
+        let has_assistant = messages
+            .iter()
+            .any(|message| message.role == Role::Assistant);
+        let parts = || messages.iter().rev().flat_map(|message| &message.parts);
+        let calls = parts()
+            .filter_map(|part| match part {
+                MessagePart::ToolCall {
                     id,
                     tool,
                     args_json,
-                } = part
-                {
-                    calls.push((id.clone(), tool.clone(), args_json.clone()));
-                }
-                if let MessagePart::ToolResult { tool_call_id, .. } = part {
-                    results.push(tool_call_id.clone());
-                }
-            }
-        }
+                } => Some((id.clone(), tool.clone(), args_json.clone())),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        let results = parts()
+            .filter_map(|part| match part {
+                MessagePart::ToolResult { tool_call_id, .. } => Some(tool_call_id.clone()),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
         if let Some((_, tool, args)) = calls.into_iter().find(|(id, _, _)| !results.contains(id)) {
             return Ok(Some(format!("tool: {tool} {args}")));
         }
@@ -240,6 +232,30 @@ impl Store {
             params![session_id.as_str(), message_id.as_str()],
         )?;
         Ok(())
+    }
+}
+
+fn compaction_covers(
+    compaction: &CompactionRecord,
+    positions: &std::collections::HashMap<MessageId, u32>,
+    seq: u32,
+) -> bool {
+    let first = positions.get(&compaction.first_message_id).copied();
+    let last = positions.get(&compaction.last_message_id).copied();
+    first
+        .zip(last)
+        .is_some_and(|(first, last)| (first..=last).contains(&seq))
+}
+
+fn push_summary(result: &mut Vec<Message>, summaries: &[Message], compaction: &CompactionRecord) {
+    let Some(summary) = summaries
+        .iter()
+        .find(|item| item.id == compaction.summary_message_id)
+    else {
+        return;
+    };
+    if !result.iter().any(|item| item.id == summary.id) {
+        result.push(summary.clone());
     }
 }
 

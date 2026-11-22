@@ -43,43 +43,9 @@ pub fn breakdown(
             approx_tokens: section.approx_tokens,
         })
         .collect::<Vec<_>>();
-    let tool_text = tools
-        .iter()
-        .map(|tool| {
-            format!(
-                "{}{}{}",
-                tool.name, tool.description, tool.input_schema_json
-            )
-        })
-        .collect::<String>();
-    sections.push(ContextSection {
-        name: "Tool definitions".into(),
-        approx_tokens: estimate_tokens(&tool_text),
-    });
-    let attached = messages
-        .iter()
-        .flat_map(|message| message.parts.iter())
-        .filter_map(|part| match part {
-            MessagePart::Text { text } if text.contains("Attached file") => Some(text.as_str()),
-            _ => None,
-        })
-        .collect::<String>();
-    sections.push(ContextSection {
-        name: "Attached files".into(),
-        approx_tokens: estimate_tokens(&attached),
-    });
-    for role in [Role::User, Role::Assistant, Role::Tool] {
-        let text = messages
-            .iter()
-            .filter(|message| message.role == role)
-            .flat_map(|message| message.parts.iter())
-            .map(part_text)
-            .collect::<String>();
-        sections.push(ContextSection {
-            name: role.as_str().to_owned(),
-            approx_tokens: estimate_tokens(&text),
-        });
-    }
+    sections.push(tool_section(tools));
+    sections.push(attached_section(messages));
+    sections.extend(role_sections(messages));
     let estimate = sections.iter().map(|section| section.approx_tokens).sum();
     let used_tokens = reported_input_tokens.unwrap_or(estimate);
     let percent = window.map(|window| {
@@ -100,12 +66,62 @@ pub fn breakdown(
     }
 }
 
+fn tool_section(tools: &[ToolSpec]) -> ContextSection {
+    let tool_text = tools
+        .iter()
+        .flat_map(|tool| {
+            [
+                tool.name.as_str(),
+                tool.description.as_str(),
+                tool.input_schema_json.as_str(),
+            ]
+        })
+        .collect::<String>();
+    ContextSection {
+        name: "Tool definitions".into(),
+        approx_tokens: estimate_tokens(&tool_text),
+    }
+}
+
+fn attached_section(messages: &[Message]) -> ContextSection {
+    let attached = messages
+        .iter()
+        .flat_map(|message| message.parts.iter())
+        .filter_map(|part| match part {
+            MessagePart::Text { text } if text.contains("Attached file") => Some(text.as_str()),
+            _ => None,
+        })
+        .collect::<String>();
+    ContextSection {
+        name: "Attached files".into(),
+        approx_tokens: estimate_tokens(&attached),
+    }
+}
+
+fn role_sections(messages: &[Message]) -> Vec<ContextSection> {
+    [Role::User, Role::Assistant, Role::Tool]
+        .into_iter()
+        .map(|role| {
+            let text = messages
+                .iter()
+                .filter(|message| message.role == role)
+                .flat_map(|message| message.parts.iter())
+                .map(part_text)
+                .collect::<String>();
+            ContextSection {
+                name: role.as_str().to_owned(),
+                approx_tokens: estimate_tokens(&text),
+            }
+        })
+        .collect()
+}
+
 fn part_text(part: &MessagePart) -> &str {
     match part {
         MessagePart::Text { text }
         | MessagePart::Thinking { text }
-        | MessagePart::CompactionSummary { text } => text,
-        MessagePart::ToolResult { text, .. } => text,
+        | MessagePart::CompactionSummary { text }
+        | MessagePart::ToolResult { text, .. } => text,
         MessagePart::ImageRef { .. } | MessagePart::ToolCall { .. } => "",
     }
 }

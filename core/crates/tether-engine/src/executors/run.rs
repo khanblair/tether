@@ -24,7 +24,7 @@ const OUTPUT_TAIL: usize = 12_000;
 mod run_support;
 use run_support::{
     append_user_args, executor_name, format_result, guest_cwd, parse_cwd, parse_executor,
-    parse_timeout, run_blocking, string, trim_output,
+    parse_timeout, run_blocking, string,
 };
 
 /// Dependencies used by the `run` tool.
@@ -75,7 +75,7 @@ impl RunTools {
         project_default: Option<Executor>,
         network_allowed: Arc<dyn Fn(&SessionId) -> bool + Send + Sync>,
     ) -> Self {
-        self.linux_off = linux.clone();
+        self.linux_off.clone_from(&linux);
         self.linux_on = linux;
         self.ci = ci;
         self.ci_ready = true;
@@ -88,14 +88,13 @@ impl RunTools {
     #[must_use]
     pub fn with_network_runners(
         mut self,
-        network_off: Option<Arc<LinuxRunner>>,
-        network_on: Option<Arc<LinuxRunner>>,
+        // (network-off runner, network-on runner)
+        runners: (Option<Arc<LinuxRunner>>, Option<Arc<LinuxRunner>>),
         ci: Arc<dyn CiExecutor>,
         project_default: Option<Executor>,
         network_allowed: Arc<dyn Fn(&SessionId) -> bool + Send + Sync>,
     ) -> Self {
-        self.linux_off = network_off;
-        self.linux_on = network_on;
+        (self.linux_off, self.linux_on) = runners;
         self.ci = ci;
         self.ci_ready = true;
         self.project_default = project_default;

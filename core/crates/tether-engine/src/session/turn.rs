@@ -19,43 +19,64 @@ pub(super) async fn compact_session(
         .into_iter()
         .filter(|message| !message.rewound)
         .collect::<Vec<_>>();
+    let Some(cut) = compaction_cut(&messages) else {
+        return Ok(());
+    };
+    let old = &messages[..cut];
+    let (provider, request) = summary_call(actor, old, focus.as_deref())?;
+    let text = summary_request(provider, request).await?;
+    store_compaction(actor, old, &text, focus)
+}
+
+/// Returns how many leading messages to compact, or `None` when the history is too short.
+fn compaction_cut(messages: &[tether_types::Message]) -> Option<usize> {
     let users = messages
         .iter()
         .enumerate()
-        .filter(|(_, message)| message.role == tether_types::Role::User)
+        .filter(|(_, message)| message.role == Role::User)
         .map(|(index, _)| index)
         .collect::<Vec<_>>();
-    let Some(&cut) = users.get(users.len().saturating_sub(2)) else {
-        return Ok(());
-    };
-    if cut < 6 {
-        return Ok(());
-    }
-    let old = &messages[..cut];
-    let first = old.first().ok_or_else(|| CoreError::Internal {
-        message: "compaction range is empty".into(),
-    })?;
-    let last = old.last().ok_or_else(|| CoreError::Internal {
-        message: "compaction range is empty".into(),
-    })?;
-    let summary_input = old.iter().map(shrink_message).collect::<Vec<_>>();
+    let cut = *users.get(users.len().saturating_sub(2))?;
+    (cut >= 6).then_some(cut)
+}
+
+/// Builds the provider and summary request for the messages being compacted.
+fn summary_call(
+    actor: &SessionActor,
+    old: &[tether_types::Message],
+    focus: Option<&str>,
+) -> Result<(Arc<dyn tether_providers::ChatProvider>, ChatRequest), CoreError> {
     let provider = (actor.provider_for_turn)()?;
     let request = ChatRequest {
         model_id: actor.session.model_id.clone(),
-        system: summary_prompt(focus.as_deref()),
-        messages: summary_input,
+        system: summary_prompt(focus),
+        messages: old.iter().map(shrink_message).collect(),
         tools: Vec::new(),
         max_output_tokens: 2048,
         reasoning: None,
     };
-    let text = summary_request(provider, request).await?;
+    Ok((provider, request))
+}
+
+/// Saves the summary as a message, records the compaction, and tells the sink.
+fn store_compaction(
+    actor: &mut SessionActor,
+    old: &[tether_types::Message],
+    text: &str,
+    focus: Option<String>,
+) -> Result<(), CoreError> {
+    let empty_range = || CoreError::Internal {
+        message: "compaction range is empty".into(),
+    };
+    let first = old.first().ok_or_else(empty_range)?;
+    let last = old.last().ok_or_else(empty_range)?;
     let text = format!("[Conversation summary]\n{text}");
     let summary = actor
         .store
         .append_message(
             &actor.session.id,
-            tether_types::Role::Assistant,
-            &[tether_types::MessagePart::CompactionSummary { text }],
+            Role::Assistant,
+            &[MessagePart::CompactionSummary { text }],
             super::now_ms(),
         )
         .map_err(super::store_error)?;
@@ -195,7 +216,8 @@ impl SessionActor {
             today: &today,
         });
         if should_auto_compact(&self.store, &self.session, &prompt, &tool_specs, &messages)? {
-            let _ = compact_session(self, None).await;
+            // Compaction is best effort: when it fails, the turn runs on the full history.
+            drop(compact_session(self, None).await);
             messages = self
                 .store
                 .context_messages(&id)
@@ -216,14 +238,13 @@ impl SessionActor {
         }
         self.emit_status(SessionStatus::Requesting);
         if self.tools.is_none() {
+            let target = crate::budget::CheckTarget {
+                session: &self.session,
+                sink: self.sink.as_ref(),
+                cancel: &cancel,
+            };
             self.budget
-                .check(
-                    &mut self.store,
-                    &self.session,
-                    self.sink.as_ref(),
-                    &cancel,
-                    super::now_ms(),
-                )
+                .check(&mut self.store, target, super::now_ms())
                 .await?;
         }
         let result = if self.tools.is_some() {

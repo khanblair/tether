@@ -1,4 +1,4 @@
-use super::*;
+use super::run_support::trim_output;
 
 #[test]
 fn output_cut_keeps_head_tail_and_exact_omitted_count() {

@@ -38,7 +38,7 @@ pub use session::{
 pub use session_provider::provider_for;
 pub use tool_loop::git_tools::{
     CommitGate, CommitInput, GateFinding, GateSeverity, GitIdentityReader, GitTools,
-    GithubClientFactory, TransportFactory,
+    GitToolsConfig, GithubClientFactory, TransportFactory,
 };
 pub use tool_loop::session_tools::{SESSION_TOOL_SPECS, SessionToolSpec, SessionTools};
 pub use tool_loop::{

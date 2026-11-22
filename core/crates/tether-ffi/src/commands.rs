@@ -48,10 +48,11 @@ pub enum CommandRuntimeError {
         suggestions: Vec<String>,
     },
     /// A command requires a disabled capability.
-    #[error("command is unavailable: {message}")]
+    #[error("command is unavailable: {reason}")]
     Unavailable {
-        /// Plain explanation.
-        message: String,
+        /// Plain explanation. Not named `message`: a UniFFI error field of that name clashes
+        /// with the Kotlin exception's own `message`.
+        reason: String,
     },
 }
 
@@ -172,6 +173,8 @@ fn map_error(error: CommandError) -> CommandRuntimeError {
         CommandError::Unknown { name, suggestions } => {
             CommandRuntimeError::Unknown { name, suggestions }
         }
-        CommandError::Unavailable { message, .. } => CommandRuntimeError::Unavailable { message },
+        CommandError::Unavailable { message, .. } => {
+            CommandRuntimeError::Unavailable { reason: message }
+        }
     }
 }

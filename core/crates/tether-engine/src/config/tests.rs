@@ -5,7 +5,7 @@ fn parses_known_values_and_reports_unknown_keys() {
     let (config, issues) = parse("[executor]\ndefault = \"linux\"\n[quality]\nmax = 3\n");
     assert_eq!(config.executor.default, Executor::Linux);
     assert_eq!(config.quality["max"], ConfigValue::Number(3.0));
-    assert!(issues.is_empty());
+    assert_eq!(issues, Vec::new());
     let (_, issues) = parse("[extra]\nvalue = true\n");
     assert_eq!(issues[0].key, "extra");
 }
@@ -78,8 +78,8 @@ fn untrusted_project_applies_quality_and_only_sandbox_executor() {
 
     let (untrusted, issues) = load_project(directory.path(), false);
     assert_eq!(untrusted.executor.default, Executor::Sandbox);
-    assert!(untrusted.permissions.allowed_commands.is_empty());
-    assert!(untrusted.model == ModelConfig::default());
+    assert_eq!(untrusted.permissions.allowed_commands, Vec::<String>::new());
+    assert_eq!(untrusted.model, ModelConfig::default());
     assert_eq!(untrusted.quality["limit"], ConfigValue::Number(5.0));
     assert_eq!(issues.len(), 3);
 
@@ -87,5 +87,5 @@ fn untrusted_project_applies_quality_and_only_sandbox_executor() {
     assert_eq!(trusted.executor.default, Executor::Linux);
     assert_eq!(trusted.permissions.allowed_commands, vec!["pytest"]);
     assert!(trusted.model.id.is_some());
-    assert!(issues.is_empty());
+    assert_eq!(issues, Vec::new());
 }

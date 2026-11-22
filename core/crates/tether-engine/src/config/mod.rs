@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use tether_store::Store;
 use tether_types::{Executor, PermissionRule, ProjectId, Provider};
 mod parser;
+mod serde_text;
 use parser::parse_value;
 use tether_workspace::PathGuard;
 
@@ -57,7 +58,7 @@ pub type GlobalConfig = ProjectConfig;
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ExecutorConfig {
     /// Default executor.
-    #[serde(with = "executor_text")]
+    #[serde(with = "serde_text::executor_text")]
     pub default: Executor,
 }
 
@@ -72,7 +73,7 @@ pub struct PermissionsConfig {
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct ModelConfig {
     /// Provider name.
-    #[serde(with = "provider_option_text")]
+    #[serde(with = "serde_text::provider_option_text")]
     pub provider: Option<Provider>,
     /// Provider model id.
     pub id: Option<String>,
@@ -256,53 +257,38 @@ pub fn effective_config(
     session: &SessionConfig,
 ) -> EffectiveConfig {
     let mut result = EffectiveConfig::default();
-    if global.executor_set {
-        result.executor_default = global.executor.default;
-        result.executor_origin = ConfigOrigin::Global;
-    }
-    if global.permissions_set {
-        result.allowed_commands = global.permissions.allowed_commands.clone();
-        result.allowed_commands_origin = ConfigOrigin::Global;
-    }
-    if !global.quality.is_empty() {
-        for (key, value) in &global.quality {
-            result.quality.insert(key.clone(), value.clone());
-            result
-                .quality_origins
-                .insert(key.clone(), ConfigOrigin::Global);
-        }
-        result.quality_origin = ConfigOrigin::Global;
-    }
-    if global.model_set {
-        result.model = global.model.clone();
-        result.model_origin = ConfigOrigin::Global;
-    }
-    if project.executor_set {
-        result.executor_default = project.executor.default;
-        result.executor_origin = ConfigOrigin::Project;
-    }
-    if project.permissions_set {
-        result.allowed_commands = project.permissions.allowed_commands.clone();
-        result.allowed_commands_origin = ConfigOrigin::Project;
-    }
-    if !project.quality.is_empty() {
-        for (key, value) in &project.quality {
-            result.quality.insert(key.clone(), value.clone());
-            result
-                .quality_origins
-                .insert(key.clone(), ConfigOrigin::Project);
-        }
-        result.quality_origin = ConfigOrigin::Project;
-    }
-    if project.model_set {
-        result.model = project.model.clone();
-        result.model_origin = ConfigOrigin::Project;
-    }
+    apply_layer(&mut result, global, ConfigOrigin::Global);
+    apply_layer(&mut result, project, ConfigOrigin::Project);
     if let Some(executor) = session.executor_default {
         result.executor_default = executor;
         result.executor_origin = ConfigOrigin::Session;
     }
     result
+}
+
+/// Copies every setting one file set over the result, tagging each with `origin`.
+fn apply_layer(result: &mut EffectiveConfig, layer: &ProjectConfig, origin: ConfigOrigin) {
+    if layer.executor_set {
+        result.executor_default = layer.executor.default;
+        result.executor_origin = origin;
+    }
+    if layer.permissions_set {
+        result
+            .allowed_commands
+            .clone_from(&layer.permissions.allowed_commands);
+        result.allowed_commands_origin = origin;
+    }
+    if !layer.quality.is_empty() {
+        for (key, value) in &layer.quality {
+            result.quality.insert(key.clone(), value.clone());
+            result.quality_origins.insert(key.clone(), origin);
+        }
+        result.quality_origin = origin;
+    }
+    if layer.model_set {
+        result.model = layer.model.clone();
+        result.model_origin = origin;
+    }
 }
 
 /// Converts trusted allowed programs to in-memory sandbox and Linux rules.
@@ -355,46 +341,5 @@ fn issue(key: &str, message: &str) -> ConfigIssue {
     }
 }
 
-mod executor_text {
-    use serde::{Deserialize, Deserializer, Serializer};
-    use tether_types::Executor;
-
-    pub(super) fn serialize<S>(value: &Executor, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_str(value.as_str())
-    }
-
-    pub(super) fn deserialize<'de, D>(deserializer: D) -> Result<Executor, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let value = String::deserialize(deserializer)?;
-        value.parse().map_err(serde::de::Error::custom)
-    }
-}
-mod provider_option_text {
-    use serde::{Deserialize, Deserializer, Serialize, Serializer};
-    use tether_types::Provider;
-
-    pub(super) fn serialize<S>(value: &Option<Provider>, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        value
-            .map(|provider| provider.as_str())
-            .serialize(serializer)
-    }
-
-    pub(super) fn deserialize<'de, D>(deserializer: D) -> Result<Option<Provider>, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        Option::<String>::deserialize(deserializer)?
-            .map(|value| value.parse().map_err(serde::de::Error::custom))
-            .transpose()
-    }
-}
 #[cfg(test)]
 mod tests;

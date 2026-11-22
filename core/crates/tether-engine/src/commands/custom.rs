@@ -52,8 +52,27 @@ pub fn load_custom_commands(root: &Path) -> (Vec<CustomCommand>, Vec<CustomComma
     let Ok(entries) = fs::read_dir(&directory) else {
         return (Vec::new(), Vec::new());
     };
-    let mut files = Vec::new();
     let mut issues = Vec::new();
+    let files = scan_directory(entries, &mut issues);
+    let mut commands = Vec::new();
+    let builtins = CommandRegistry::builtin();
+    for (relative, name) in files {
+        match load_command(&guard, &builtins, &relative, name) {
+            Ok(command) => commands.push(command),
+            Err(problem) => issues.push(issue(&relative, problem)),
+        }
+    }
+    (commands, issues)
+}
+
+/// Lists the Markdown files in the command directory, sorted by path.
+///
+/// Files that are not Markdown, and files past the cap, become issues.
+fn scan_directory(
+    entries: fs::ReadDir,
+    issues: &mut Vec<CustomCommandIssue>,
+) -> Vec<(String, String)> {
+    let mut files = Vec::new();
     let mut skipped_after_cap = false;
     for entry in entries.flatten() {
         let path = entry.path();
@@ -76,55 +95,49 @@ pub fn load_custom_commands(root: &Path) -> (Vec<CustomCommand>, Vec<CustomComma
             .file_stem()
             .and_then(|value| value.to_str())
             .unwrap_or("");
-        let relative = format!(".tether/commands/{}.md", name);
-        files.push((relative, name.to_owned()));
+        files.push((format!(".tether/commands/{name}.md"), name.to_owned()));
     }
     files.sort();
-    let mut commands = Vec::new();
     if skipped_after_cap {
         issues.push(issue(
             ".tether/commands",
             "more than 100 files were skipped",
         ));
     }
-    let builtins = CommandRegistry::builtin();
-    for (relative, name) in files {
-        if !valid_name(&name) {
-            issues.push(issue(&relative, "invalid command name"));
-            continue;
-        }
-        if builtins
-            .commands()
-            .iter()
-            .any(|command| command.name == name)
-        {
-            issues.push(issue(&relative, "built-in command wins"));
-            continue;
-        }
-        let Ok(path) = guard.resolve(&relative) else {
-            issues.push(issue(&relative, "unsafe or symlinked file"));
-            continue;
-        };
-        let Ok(bytes) = fs::read(&path) else {
-            issues.push(issue(&relative, "file could not be read"));
-            continue;
-        };
-        if bytes.len() > MAX_FILE_BYTES {
-            issues.push(issue(&relative, "file exceeds 16 KiB"));
-            continue;
-        }
-        let Ok(text) = String::from_utf8(bytes) else {
-            issues.push(issue(&relative, "file is not UTF-8"));
-            continue;
-        };
-        let (description, template) = frontmatter(&text);
-        commands.push(CustomCommand {
-            name,
-            description,
-            template,
-        });
+    files
+}
+
+/// Reads one command file, or returns the reason it was skipped.
+fn load_command(
+    guard: &PathGuard,
+    builtins: &CommandRegistry,
+    relative: &str,
+    name: String,
+) -> Result<CustomCommand, &'static str> {
+    if !valid_name(&name) {
+        return Err("invalid command name");
     }
-    (commands, issues)
+    if builtins
+        .commands()
+        .iter()
+        .any(|command| command.name == name)
+    {
+        return Err("built-in command wins");
+    }
+    let path = guard
+        .resolve(relative)
+        .map_err(|_| "unsafe or symlinked file")?;
+    let bytes = fs::read(&path).map_err(|_| "file could not be read")?;
+    if bytes.len() > MAX_FILE_BYTES {
+        return Err("file exceeds 16 KiB");
+    }
+    let text = String::from_utf8(bytes).map_err(|_| "file is not UTF-8")?;
+    let (description, template) = frontmatter(&text);
+    Ok(CustomCommand {
+        name,
+        description,
+        template,
+    })
 }
 
 fn frontmatter(text: &str) -> (String, String) {

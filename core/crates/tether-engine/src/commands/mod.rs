@@ -272,13 +272,12 @@ impl CommandRegistry {
         let mut unavailable = Vec::new();
         for command in &self.commands {
             let line = help_line(command);
-            if command
+            let missing = command
                 .requires
-                .is_none_or(|feature| capabilities.contains(feature))
-            {
-                available.push(line);
-            } else if let Some(feature) = command.requires {
-                unavailable.push(format!("{line} ({feature} is not set up yet)"));
+                .filter(|feature| !capabilities.contains(*feature));
+            match missing {
+                Some(feature) => unavailable.push(format!("{line} ({feature} is not set up yet)")),
+                None => available.push(line),
             }
         }
         for custom_command in custom {

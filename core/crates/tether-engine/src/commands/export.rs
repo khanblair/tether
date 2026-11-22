@@ -33,7 +33,9 @@ pub fn export_session_messages_markdown(title: &str, model: &str, messages: &[Me
             Role::Tool => "Tool",
             Role::SystemNote => "System note",
         };
-        output.push_str(&format!("\n## {heading}\n"));
+        output.push_str("\n## ");
+        output.push_str(heading);
+        output.push('\n');
         for part in &message.parts {
             render_part(&mut output, part, &results);
         }

@@ -68,25 +68,17 @@ pub fn parse_mentions(text: &str) -> Vec<MentionSpan> {
         }
         if !fence
             && !inline
-            && bytes[index] == b'@'
-            && (index == 0 || bytes[index - 1].is_ascii_whitespace())
+            && let Some(end) = mention_end(bytes, index)
         {
-            if index + 1 < bytes.len() && bytes[index + 1] != b'@' {
-                let end = path_end(bytes, index + 1);
-                if end > index + 1 {
-                    let path = &text[index + 1..end];
-                    if safe_mention_path(path) {
-                        spans.push(MentionSpan {
-                            start: index,
-                            end,
-                            path: path.to_owned(),
-                        });
-                    }
-                    index = end;
-                    line_start = false;
-                    continue;
-                }
-            }
+            let path = &text[index + 1..end];
+            spans.extend(safe_mention_path(path).then(|| MentionSpan {
+                start: index,
+                end,
+                path: path.to_owned(),
+            }));
+            index = end;
+            line_start = false;
+            continue;
         }
         line_start = bytes[index] == b'\n';
         index += 1;
@@ -103,70 +95,51 @@ pub fn resolve_mentions(guard: &PathGuard, text: &str) -> MentionResolution {
         if result.attached.len() >= FILE_COUNT_CAP || !seen.insert(mention.path.clone()) {
             continue;
         }
-        if result
-            .attached
-            .iter()
-            .map(|file| file.text.len())
-            .sum::<usize>()
-            >= TOTAL_CAP
-        {
-            result
-                .skipped
-                .push(skip(&mention.path, "message file limit reached"));
-            continue;
+        match attach_mention(guard, &mention.path, attached_bytes(&result)) {
+            Ok(attachment) => result.attached.push(attachment),
+            Err(reason) => result.skipped.push(skip(&mention.path, reason)),
         }
-        let Ok(path) = guard.resolve(&mention.path) else {
-            result.skipped.push(skip(
-                &mention.path,
-                "path is outside the workspace or is a symlink",
-            ));
-            continue;
-        };
-        let Ok(metadata) = fs::symlink_metadata(&path) else {
-            result
-                .skipped
-                .push(skip(&mention.path, "file does not exist"));
-            continue;
-        };
-        if !metadata.is_file() {
-            result
-                .skipped
-                .push(skip(&mention.path, "path is not a file"));
-            continue;
-        }
-        let Ok(bytes) = fs::read(&path) else {
-            result
-                .skipped
-                .push(skip(&mention.path, "file could not be read"));
-            continue;
-        };
-        let Ok(text) = String::from_utf8(bytes) else {
-            result
-                .skipped
-                .push(skip(&mention.path, "file is not UTF-8"));
-            continue;
-        };
-        let available = TOTAL_CAP.saturating_sub(
-            result
-                .attached
-                .iter()
-                .map(|file| file.text.len())
-                .sum::<usize>(),
-        );
-        let cap = FILE_CAP.min(available);
-        let text = truncate_text(&text, cap);
-        if cap == 0 {
-            result
-                .skipped
-                .push(skip(&mention.path, "file content limit reached"));
-            continue;
-        }
-        result.attached.push(MentionAttachment {
-            path: mention.path,
-            text,
-        });
     }
     result
+}
+
+/// Reads one mention and caps it to the room left in the message.
+///
+/// `used` is the byte count already attached to the message.
+fn attach_mention(
+    guard: &PathGuard,
+    path: &str,
+    used: usize,
+) -> Result<MentionAttachment, &'static str> {
+    if used >= TOTAL_CAP {
+        return Err("message file limit reached");
+    }
+    let text = read_mention(guard, path)?;
+    let cap = FILE_CAP.min(TOTAL_CAP.saturating_sub(used));
+    if cap == 0 {
+        return Err("file content limit reached");
+    }
+    Ok(MentionAttachment {
+        path: path.to_owned(),
+        text: truncate_text(&text, cap),
+    })
+}
+
+/// Reads a mentioned file as UTF-8, or returns the reason it cannot be read.
+fn read_mention(guard: &PathGuard, path: &str) -> Result<String, &'static str> {
+    let resolved = guard
+        .resolve(path)
+        .map_err(|_| "path is outside the workspace or is a symlink")?;
+    let metadata = fs::symlink_metadata(&resolved).map_err(|_| "file does not exist")?;
+    if !metadata.is_file() {
+        return Err("path is not a file");
+    }
+    let bytes = fs::read(&resolved).map_err(|_| "file could not be read")?;
+    String::from_utf8(bytes).map_err(|_| "file is not UTF-8")
+}
+
+fn attached_bytes(result: &MentionResolution) -> usize {
+    result.attached.iter().map(|file| file.text.len()).sum()
 }
 
 /// Adds the attachments to a request-only context block.
@@ -185,6 +158,22 @@ pub fn context_block(files: &[MentionAttachment]) -> String {
     }
     block.push_str("</mentioned_files>");
     block
+}
+
+/// Returns the end of the mention that starts with `@` at `index`, if any.
+///
+/// The `@` must start a word and must not be doubled. The path must be non-empty.
+fn mention_end(bytes: &[u8], index: usize) -> Option<usize> {
+    let starts_word = index == 0 || bytes[index - 1].is_ascii_whitespace();
+    if bytes[index] != b'@' || !starts_word {
+        return None;
+    }
+    let next = *bytes.get(index + 1)?;
+    if next == b'@' {
+        return None;
+    }
+    let end = path_end(bytes, index + 1);
+    (end > index + 1).then_some(end)
 }
 
 fn path_end(bytes: &[u8], mut index: usize) -> usize {

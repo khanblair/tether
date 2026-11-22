@@ -13,6 +13,7 @@ use wasmtime::{Linker, Store, UpdateDeadline};
 use wasmtime_wasi::p1::{self, WasiP1Ctx};
 use wasmtime_wasi::{FsPerms, WasiCtxBuilder};
 
+use crate::output_pipe::BoundedPipe;
 use crate::runner_result::{classify_error, pump, report};
 use crate::runner_support::{
     STOP_CANCELLED, STOP_NONE, STOP_TIMEOUT, create_run_tmp, spawn_epoch_thread,
@@ -124,8 +125,8 @@ impl SandboxRunner {
         cancel: &CancellationToken,
         started: Instant,
     ) -> Result<RunReport, SandboxError> {
-        let stdout = wasmtime_wasi::p2::pipe::MemoryOutputPipe::new(usize::MAX);
-        let stderr = wasmtime_wasi::p2::pipe::MemoryOutputPipe::new(usize::MAX);
+        let stdout = BoundedPipe::new(spec.limits.output_bytes);
+        let stderr = BoundedPipe::new(spec.limits.output_bytes);
         let stdout_view = stdout.clone();
         let stderr_view = stderr.clone();
         let (result_tx, result_rx) = mpsc::channel();
@@ -185,8 +186,8 @@ struct ExecutionInput {
     extra_mounts: Vec<ExtraMount>,
     extra_env: BTreeMap<String, String>,
     limits: RunLimits,
-    stdout: wasmtime_wasi::p2::pipe::MemoryOutputPipe,
-    stderr: wasmtime_wasi::p2::pipe::MemoryOutputPipe,
+    stdout: BoundedPipe,
+    stderr: BoundedPipe,
     reason: Arc<AtomicU8>,
     result_tx: mpsc::Sender<Result<RunOutcome, SandboxError>>,
 }
@@ -211,8 +212,8 @@ fn spawn_execution(input: ExecutionInput) -> thread::JoinHandle<()> {
 }
 
 fn collect_output(
-    stdout: &wasmtime_wasi::p2::pipe::MemoryOutputPipe,
-    stderr: &wasmtime_wasi::p2::pipe::MemoryOutputPipe,
+    stdout: &BoundedPipe,
+    stderr: &BoundedPipe,
     result_rx: &mpsc::Receiver<Result<RunOutcome, SandboxError>>,
     output: &mut CappedOutput<'_>,
 ) -> (Result<RunOutcome, SandboxError>, usize, usize) {
@@ -245,8 +246,8 @@ struct InvokeArgs<'a> {
     extra_mounts: &'a [ExtraMount],
     extra_env: &'a BTreeMap<String, String>,
     limits: RunLimits,
-    stdout: wasmtime_wasi::p2::pipe::MemoryOutputPipe,
-    stderr: wasmtime_wasi::p2::pipe::MemoryOutputPipe,
+    stdout: BoundedPipe,
+    stderr: BoundedPipe,
     reason: &'a Arc<AtomicU8>,
 }
 
@@ -294,8 +295,8 @@ struct WasiInputs<'a> {
     workspace: &'a WasiContextSpec,
     tmp: &'a Path,
     cwd: &'a str,
-    stdout: wasmtime_wasi::p2::pipe::MemoryOutputPipe,
-    stderr: wasmtime_wasi::p2::pipe::MemoryOutputPipe,
+    stdout: BoundedPipe,
+    stderr: BoundedPipe,
     extra_mounts: &'a [ExtraMount],
     extra_env: &'a BTreeMap<String, String>,
 }

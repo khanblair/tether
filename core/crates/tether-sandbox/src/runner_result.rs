@@ -3,6 +3,7 @@
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::time::Instant;
 
+use crate::output_pipe::BoundedPipe;
 use crate::runner_support::{STOP_CANCELLED, STOP_TIMEOUT, sanitize_message};
 use crate::{CappedOutput, OutputSink, RunOutcome, RunReport};
 
@@ -25,21 +26,24 @@ pub(crate) fn classify_error(error: &wasmtime::Error, reason: &AtomicU8) -> RunO
 }
 
 pub(crate) fn pump(
-    stdout: &wasmtime_wasi::p2::pipe::MemoryOutputPipe,
-    stderr: &wasmtime_wasi::p2::pipe::MemoryOutputPipe,
+    stdout: &BoundedPipe,
+    stderr: &BoundedPipe,
     stdout_len: &mut usize,
     stderr_len: &mut usize,
     output: &mut CappedOutput<'_>,
 ) {
-    let stdout_bytes = stdout.contents();
-    if stdout_bytes.len() > *stdout_len {
-        output.stdout(&stdout_bytes[*stdout_len..]);
-        *stdout_len = stdout_bytes.len();
+    let fresh = stdout.since(*stdout_len);
+    if !fresh.is_empty() {
+        output.stdout(&fresh);
+        *stdout_len += fresh.len();
     }
-    let stderr_bytes = stderr.contents();
-    if stderr_bytes.len() > *stderr_len {
-        output.stderr(&stderr_bytes[*stderr_len..]);
-        *stderr_len = stderr_bytes.len();
+    let fresh = stderr.since(*stderr_len);
+    if !fresh.is_empty() {
+        output.stderr(&fresh);
+        *stderr_len += fresh.len();
+    }
+    if stdout.discarded() || stderr.discarded() {
+        output.mark_truncated();
     }
 }
 

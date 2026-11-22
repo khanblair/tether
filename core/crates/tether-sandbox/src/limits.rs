@@ -74,6 +74,11 @@ impl<'a> CappedOutput<'a> {
         self.truncated
     }
 
+    /// Records that bytes were dropped before they reached this wrapper.
+    pub fn mark_truncated(&mut self) {
+        self.truncated = true;
+    }
+
     /// Number of bytes forwarded.
     #[must_use]
     pub fn sent(&self) -> usize {

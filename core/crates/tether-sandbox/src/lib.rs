@@ -2,6 +2,7 @@
 
 mod limits;
 mod module_cache;
+mod output_pipe;
 mod pack;
 mod pack_catalog;
 mod pack_cleanup;

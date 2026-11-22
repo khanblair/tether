@@ -13,6 +13,7 @@ wasmtime-wasi.workspace = true
 ed25519-dalek.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+tokio.workspace = true
 tokio-util.workspace = true
 
 [dev-dependencies]

@@ -2,11 +2,11 @@ use super::checkout::checkout_tree;
 use super::diff::{tree_diff, tree_entry};
 use super::helpers::{
     add_tree_change, add_worktree_change, commit_info, index_tree, index_tree_from,
-    remove_from_index, stage_one, tree_for, unstage_one, validate_branch_name, validate_relative,
+    remove_from_index, tree_for, unstage_one, validate_branch_name, validate_relative,
     worktree_diff,
 };
 use super::log::log_order;
-use super::stageable::stageable_files;
+use super::stageable::{stage_one, stage_paths, stageable_files};
 use super::{
     BTreeMap, BranchInfo, ByteSlice, CommitId, CommitInfo, DiffSpec, Identity, Path, PathBuf,
     PreviousValue, Repo, RepoError, StatusEntry, StatusItem, fs,
@@ -284,9 +284,7 @@ impl Repo {
     /// Returns an error when the worktree or index cannot be read.
     pub fn stage_all(&self) -> Result<(), RepoError> {
         let repo = self.git()?;
-        stageable_files(&repo, &self.root)?
-            .iter()
-            .try_for_each(|path| stage_one(&repo, path))?;
+        stage_paths(&repo, &stageable_files(&repo, &self.root)?)?;
         self.drop_missing_tracked(&repo)
     }
 

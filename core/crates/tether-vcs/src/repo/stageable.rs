@@ -1,4 +1,8 @@
-//! Lists the files a stage-all would add, without relying on status classification.
+//! Staging: which files a stage-all adds, and how paths are written to the index.
+//!
+//! The index is read from disk once and written once per call. Reading it through the
+//! repository's cached copy between writes can serve a stale index when the index file's
+//! timestamp has not changed yet, which drops the entry the previous write added.
 
 use std::collections::BTreeSet;
 use std::fs;
@@ -7,6 +11,7 @@ use std::path::Path;
 use gix::worktree::stack::state::ignore::Source;
 
 use super::RepoError;
+use super::helpers::{executable, remove_index_entry, update_index};
 
 type Excludes<'repo> = gix::AttributeStack<'repo>;
 
@@ -114,4 +119,87 @@ fn is_excluded(
     excludes
         .at_path(relative, mode)
         .map_or(true, |platform| platform.is_excluded())
+}
+
+/// Stages one path. See [`stage_paths`].
+pub(super) fn stage_one(repo: &gix::Repository, path: &str) -> Result<(), RepoError> {
+    stage_paths(repo, &[path.to_owned()])
+}
+
+/// Stages many paths with one index read and one index write.
+///
+/// A regular file is stored as its content, a symlink as its link text (never the file it
+/// points to), and a missing path is removed from the index. A path that passes through a
+/// symlink is refused.
+pub(super) fn stage_paths(repo: &gix::Repository, paths: &[String]) -> Result<(), RepoError> {
+    let workdir = repo.workdir().ok_or(RepoError::Git)?;
+    let mut index = read_index(repo)?;
+    for path in paths {
+        reject_symlinked_ancestors(workdir, path)?;
+        stage_into(repo, &mut index, workdir, path)?;
+    }
+    index
+        .write(gix::index::write::Options::default())
+        .map_err(|_| RepoError::Git)
+}
+
+/// The index as it is on disk now, or the `HEAD` tree (or nothing) when no index file exists.
+fn read_index(repo: &gix::Repository) -> Result<gix::index::File, RepoError> {
+    match repo.open_index() {
+        Ok(index) => Ok(index),
+        Err(_) => repo
+            .index_or_load_from_head_or_empty()
+            .map(gix::worktree::IndexPersistedOrInMemory::into_owned)
+            .map_err(|_| RepoError::Git),
+    }
+}
+
+fn stage_into(
+    repo: &gix::Repository,
+    index: &mut gix::index::File,
+    workdir: &Path,
+    path: &str,
+) -> Result<(), RepoError> {
+    let full = workdir.join(path);
+    match fs::symlink_metadata(&full) {
+        Ok(meta) if meta.file_type().is_symlink() => {
+            let target = fs::read_link(&full).map_err(|_| RepoError::Io)?;
+            let id = repo
+                .write_blob(target.as_os_str().as_encoded_bytes())
+                .map_err(|_| RepoError::Git)?
+                .detach();
+            update_index(index, path, id, gix::index::entry::Mode::SYMLINK);
+        }
+        Ok(meta) if meta.is_file() => {
+            let bytes = fs::read(&full).map_err(|_| RepoError::Io)?;
+            let id = repo.write_blob(bytes).map_err(|_| RepoError::Git)?.detach();
+            let mode = if executable(&full) {
+                gix::index::entry::Mode::FILE_EXECUTABLE
+            } else {
+                gix::index::entry::Mode::FILE
+            };
+            update_index(index, path, id, mode);
+        }
+        Ok(_) => remove_index_entry(index, path),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            remove_index_entry(index, path);
+        }
+        Err(_) => return Err(RepoError::Io),
+    }
+    Ok(())
+}
+
+/// Refuses a path that passes through a symlink, so staging never reads outside the repository.
+fn reject_symlinked_ancestors(workdir: &Path, path: &str) -> Result<(), RepoError> {
+    let mut current = workdir.to_path_buf();
+    let parts: Vec<_> = Path::new(path).components().collect();
+    for part in &parts[..parts.len().saturating_sub(1)] {
+        current.push(part);
+        match fs::symlink_metadata(&current) {
+            Ok(meta) if meta.file_type().is_symlink() => return Err(RepoError::InvalidName),
+            Ok(_) => {}
+            Err(_) => return Ok(()),
+        }
+    }
+    Ok(())
 }

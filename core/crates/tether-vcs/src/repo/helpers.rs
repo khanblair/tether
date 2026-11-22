@@ -169,59 +169,6 @@ pub fn unique_branch_name(repo: &Repo, base: &str) -> Result<String, RepoError> 
     Err(RepoError::Git)
 }
 
-/// Refuses a path that passes through a symlink, so staging never reads outside the repository.
-fn reject_symlinked_ancestors(workdir: &Path, path: &str) -> Result<(), RepoError> {
-    let mut current = workdir.to_path_buf();
-    let parts: Vec<_> = Path::new(path).components().collect();
-    for part in &parts[..parts.len().saturating_sub(1)] {
-        current.push(part);
-        match fs::symlink_metadata(&current) {
-            Ok(meta) if meta.file_type().is_symlink() => return Err(RepoError::InvalidName),
-            Ok(_) => {}
-            Err(_) => return Ok(()),
-        }
-    }
-    Ok(())
-}
-
-pub(super) fn stage_one(repo: &gix::Repository, path: &str) -> Result<(), RepoError> {
-    let workdir = repo.workdir().ok_or(RepoError::Git)?;
-    reject_symlinked_ancestors(workdir, path)?;
-    let full = workdir.join(path);
-    let mut index = repo
-        .index_or_load_from_head_or_empty()
-        .map_err(|_| RepoError::Git)?
-        .into_owned();
-    match fs::symlink_metadata(&full) {
-        Ok(meta) if meta.file_type().is_symlink() => {
-            // A link is stored as its target text, never as the file it points to.
-            let target = fs::read_link(&full).map_err(|_| RepoError::Io)?;
-            let id = repo
-                .write_blob(target.as_os_str().as_encoded_bytes())
-                .map_err(|_| RepoError::Git)?
-                .detach();
-            update_index(&mut index, path, id, gix::index::entry::Mode::SYMLINK);
-        }
-        Ok(meta) if meta.is_file() => {
-            let bytes = fs::read(&full).map_err(|_| RepoError::Io)?;
-            let id = repo.write_blob(bytes).map_err(|_| RepoError::Git)?.detach();
-            let mode = if executable(&full) {
-                gix::index::entry::Mode::FILE_EXECUTABLE
-            } else {
-                gix::index::entry::Mode::FILE
-            };
-            update_index(&mut index, path, id, mode);
-        }
-        Ok(_) => remove_index_entry(&mut index, path),
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-            remove_index_entry(&mut index, path);
-        }
-        Err(_) => return Err(RepoError::Io),
-    }
-    index
-        .write(gix::index::write::Options::default())
-        .map_err(|_| RepoError::Git)
-}
 pub(super) fn update_index(
     index: &mut gix::index::File,
     path: &str,

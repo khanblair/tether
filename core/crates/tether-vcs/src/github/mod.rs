@@ -250,6 +250,8 @@ pub struct PullRequestInfo {
     pub state: String,
     /// Head SHA.
     pub head_sha: String,
+    /// Head branch name.
+    pub head_ref: String,
     /// Base branch.
     pub base: String,
 }

@@ -14,6 +14,8 @@ mod github_tests;
 mod push_tests;
 mod repo;
 #[cfg(test)]
+mod repo_stage_tests;
+#[cfg(test)]
 mod repo_tests;
 #[cfg(test)]
 mod test_support;

@@ -68,7 +68,7 @@ fn repo_json(default_branch: &str, private: bool, size: u64) -> String {
 
 fn pr_json(number: u64) -> String {
     format!(
-        r#"{{"number":{number},"html_url":"https://github.com/acme/repo/pull/{number}","title":"Improve it","body":"Details","state":"open","head":{{"sha":"head-sha"}},"base":{{"ref":"main"}}}}"#
+        r#"{{"number":{number},"html_url":"https://github.com/acme/repo/pull/{number}","title":"Improve it","body":"Details","state":"open","head":{{"sha":"head-sha","ref":"feature"}},"base":{{"ref":"main"}}}}"#
     )
 }
 
@@ -141,10 +141,11 @@ fn github_client_parses_success_fixtures_and_sends_safe_requests() {
             .number,
         8
     );
-    assert_eq!(
-        block_on(api.list_pull_requests("acme", "repo", "open")).expect("list")[0].number,
-        9
-    );
+    let listed = block_on(api.list_pull_requests("acme", "repo", "open")).expect("list");
+    assert_eq!(listed[0].number, 9);
+    assert_eq!(listed[0].head_ref, "feature");
+    assert_eq!(listed[0].head_sha, "head-sha");
+    assert_eq!(listed[0].base, "main");
     assert_eq!(
         block_on(api.pull_request_checks("acme", "repo", "sha")).expect("checks"),
         vec![CheckRun {

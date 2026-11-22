@@ -1,7 +1,7 @@
 use super::checkout::checkout_tree;
 use super::diff::{tree_diff, tree_entry};
 use super::helpers::{
-    add_tree_change, add_worktree_change, collect_files, commit_info, index_tree, index_tree_from,
+    add_tree_change, add_worktree_change, commit_info, index_tree, index_tree_from,
     remove_from_index, stage_one, tree_for, unstage_one, validate_branch_name, validate_relative,
     worktree_diff,
 };
@@ -122,10 +122,7 @@ impl Repo {
             (Some(old), Some(new)) => tree_diff(&repo, old, new),
             (old, new) => worktree_diff(&repo, old, new)?,
         };
-        if out.len() > 1024 * 1024 {
-            out.truncate(1024 * 1024);
-            out.push_str("\n[diff truncated at 1 MiB]\n");
-        }
+        cap_diff_text(&mut out);
         Ok(out)
     }
 
@@ -223,13 +220,16 @@ impl Repo {
     /// Switches to a local branch after checking for overwrite risks.
     ///
     /// # Errors
-    /// Returns [`RepoError::WouldOverwrite`] when dirty paths would be replaced.
+    /// Returns [`RepoError::WouldOverwrite`] when changed, staged, or untracked paths would be
+    /// replaced or lost.
     pub fn switch_branch(&self, name: &str) -> Result<(), RepoError> {
         validate_branch_name(name)?;
         let dirty: Vec<_> = self
             .status()?
             .into_iter()
-            .filter_map(|e| (e.worktree_state.is_some()).then_some(e.path))
+            .filter_map(|e| {
+                (e.worktree_state.is_some() || e.index_state.is_some()).then_some(e.path)
+            })
             .collect();
         if !dirty.is_empty() {
             return Err(RepoError::WouldOverwrite(dirty.join(", ")));
@@ -275,21 +275,22 @@ impl Repo {
         Ok(())
     }
 
-    /// Stages all non-ignored files and tracked deletions.
+    /// Stages every change git reports: modified and new files that are not ignored, and
+    /// tracked files that were deleted. Ignored files are never staged.
     ///
     /// # Errors
     /// Returns an error when the worktree or index cannot be read.
-    #[expect(
-        clippy::excessive_nesting,
-        reason = "index and filesystem cleanup are one operation"
-    )]
     pub fn stage_all(&self) -> Result<(), RepoError> {
         let repo = self.git()?;
-        let mut paths = Vec::new();
-        collect_files(&self.root, &self.root, &mut paths)?;
-        for path in paths {
-            stage_one(&repo, &path)?;
-        }
+        self.status()?
+            .into_iter()
+            .filter(|entry| entry.worktree_state.is_some())
+            .try_for_each(|entry| stage_one(&repo, &entry.path))?;
+        self.drop_missing_tracked(&repo)
+    }
+
+    /// Removes index entries whose file is gone, such as the source of a rename.
+    fn drop_missing_tracked(&self, repo: &gix::Repository) -> Result<(), RepoError> {
         let index = repo.open_index().map_err(|_| RepoError::Git)?;
         let tracked: Vec<String> = index
             .entries_with_paths_by_filter_map(|_p, e| {
@@ -297,12 +298,10 @@ impl Repo {
             })
             .map(|(p, ())| p.to_string())
             .collect();
-        for path in tracked {
-            if !self.root.join(&path).exists() {
-                remove_from_index(&repo, &path)?;
-            }
-        }
-        Ok(())
+        tracked
+            .into_iter()
+            .filter(|path| fs::symlink_metadata(self.root.join(path)).is_err())
+            .try_for_each(|path| remove_from_index(repo, &path))
     }
 
     /// Restores the selected index paths from `HEAD`.
@@ -373,4 +372,18 @@ fn commit_changed_path(
         }
     }
     Ok(false)
+}
+
+/// Cuts a diff to 1 MiB on a character boundary and says so.
+fn cap_diff_text(out: &mut String) {
+    const LIMIT: usize = 1024 * 1024;
+    if out.len() <= LIMIT {
+        return;
+    }
+    let mut end = LIMIT;
+    while !out.is_char_boundary(end) {
+        end -= 1;
+    }
+    out.truncate(end);
+    out.push_str("\n[diff truncated at 1 MiB]\n");
 }

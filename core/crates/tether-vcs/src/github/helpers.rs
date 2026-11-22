@@ -126,6 +126,12 @@ pub(super) fn parse_pr(v: &serde_json::Value) -> Result<PullRequestInfo, GithubE
             .and_then(|v| v.as_str())
             .ok_or(GithubError::InvalidResponse)?
             .to_owned(),
+        head_ref: v
+            .get("head")
+            .and_then(|v| v.get("ref"))
+            .and_then(|v| v.as_str())
+            .ok_or(GithubError::InvalidResponse)?
+            .to_owned(),
         base: v
             .get("base")
             .and_then(|v| v.get("ref"))

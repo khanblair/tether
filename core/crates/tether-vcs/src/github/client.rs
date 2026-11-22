@@ -145,7 +145,9 @@ impl GithubClient {
         state: &str,
     ) -> Result<Vec<PullRequestInfo>, GithubError> {
         let value = self
-            .get(&format!("/repos/{owner}/{repo}/pulls?state={state}"))
+            .get(&format!(
+                "/repos/{owner}/{repo}/pulls?state={state}&per_page=100"
+            ))
             .await?;
         value
             .as_array()

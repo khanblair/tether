@@ -90,9 +90,9 @@ fn bounded_list(values: &[String], key: &str, min: usize, max: usize) -> Result<
 }
 
 pub(super) fn prepare_todos(
-    object: serde_json::Map<String, Value>,
+    object: &serde_json::Map<String, Value>,
 ) -> Result<(String, Value), String> {
-    check_fields(&object, &["todos"])?;
+    check_fields(object, &["todos"])?;
     let todos = object
         .get("todos")
         .and_then(Value::as_array)
@@ -136,14 +136,14 @@ pub(super) fn prepare_todos(
 }
 
 pub(super) fn prepare_question(
-    object: serde_json::Map<String, Value>,
+    object: &serde_json::Map<String, Value>,
 ) -> Result<(String, Value), String> {
-    check_fields(&object, &["question", "options", "allow_free_text"])?;
-    let question = required_string(&object, "question")?;
+    check_fields(object, &["question", "options", "allow_free_text"])?;
+    let question = required_string(object, "question")?;
     bounded(question, "question", 1, 500)?;
     let options = object
         .get("options")
-        .map_or(Ok(Vec::new()), |_| strings(&object, "options"))?;
+        .map_or(Ok(Vec::new()), |_| strings(object, "options"))?;
     if options.len() > 6 {
         return Err("options must contain 0 to 6 items".into());
     }
@@ -161,21 +161,21 @@ pub(super) fn prepare_question(
 }
 
 pub(super) fn prepare_plan(
-    object: serde_json::Map<String, Value>,
+    object: &serde_json::Map<String, Value>,
     context: &PrepareContext<'_>,
 ) -> Result<(String, Value), String> {
     check_fields(
-        &object,
+        object,
         &["summary", "steps", "files", "commands", "open_questions"],
     )?;
-    let summary = required_string(&object, "summary")?;
+    let summary = required_string(object, "summary")?;
     bounded(summary, "summary", 1, 400)?;
-    let steps = strings(&object, "steps")?;
+    let steps = strings(object, "steps")?;
     bounded_list(&steps, "steps", 1, 30)?;
     for step in &steps {
         bounded(step, "step", 1, 300)?;
     }
-    let files = optional_strings(&object, "files")?;
+    let files = optional_strings(object, "files")?;
     if files.len() > 50 {
         return Err("files must contain 0 to 50 items".into());
     }
@@ -183,11 +183,11 @@ pub(super) fn prepare_plan(
         .into_iter()
         .map(|file| guarded_path(context, &file))
         .collect::<Result<Vec<_>, _>>()?;
-    let commands = optional_strings(&object, "commands")?;
+    let commands = optional_strings(object, "commands")?;
     if commands.len() > 20 {
         return Err("commands must contain 0 to 20 items".into());
     }
-    let questions = optional_strings(&object, "open_questions")?;
+    let questions = optional_strings(object, "open_questions")?;
     if questions.len() > 10 {
         return Err("open_questions must contain 0 to 10 items".into());
     }

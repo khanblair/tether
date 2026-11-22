@@ -96,9 +96,9 @@ impl ToolHandler for SessionTools {
     ) -> Result<PreparedCall, String> {
         let value = object(args_json)?;
         let (target, payload) = match name {
-            TODO_TOOL => prepare_todos(value)?,
-            ASK_TOOL => prepare_question(value)?,
-            PLAN_TOOL => prepare_plan(value, context)?,
+            TODO_TOOL => prepare_todos(&value)?,
+            ASK_TOOL => prepare_question(&value)?,
+            PLAN_TOOL => prepare_plan(&value, context)?,
             _ => return Err("unknown tool".into()),
         };
         Ok(PreparedCall {

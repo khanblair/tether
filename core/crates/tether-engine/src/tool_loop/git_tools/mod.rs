@@ -1,5 +1,6 @@
 //! Git and GitHub tools bound to one project workspace.
 
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use serde_json::{Value, json};
@@ -60,18 +61,27 @@ pub trait CommitGate: Send + Sync {
 /// Reads the identity used for Git commits.
 pub trait GitIdentityReader: Send + Sync {
     /// Returns the saved identity, if one exists.
+    ///
+    /// # Errors
+    /// Returns a message when the saved identity cannot be read.
     fn identity(&self) -> Result<Option<Identity>, String>;
 }
 
 /// Builds a fresh push transport for one call.
 pub trait TransportFactory: Send + Sync {
     /// Creates a transport without retaining a token in the handler.
+    ///
+    /// # Errors
+    /// Returns a message when the transport cannot be created.
     fn transport(&self) -> Result<Box<dyn Transport>, String>;
 }
 
 /// Builds a fresh GitHub client for one call.
 pub trait GithubClientFactory: Send + Sync {
     /// Creates a client whose token is held only for the call.
+    ///
+    /// # Errors
+    /// Returns a message when no token is available or the client cannot be built.
     fn client(&self) -> Result<GithubClient, String>;
 }
 
@@ -135,36 +145,41 @@ impl GitTools {
     ) -> Result<ToolOutput, String> {
         let root = context.guard.root().to_owned();
         let cancel = context.cancel.clone();
-        let identity = Arc::clone(&self.config.identity);
-        let gates = self.config.gates.clone();
-        let remote_url = self.config.remote_url.clone();
-        let default_branch = self.config.default_branch.clone();
         match call.tool.as_str() {
             "git_status" | "git_diff" | "git_log" | "git_branch" | "git_commit" => {
-                let payload = call.payload;
-                let result = tokio::task::spawn_blocking(move || {
-                    local::execute(&root, &call.tool, &payload, identity, gates, cancel)
-                })
-                .await
-                .map_err(|_| "git operation stopped".to_owned())??;
+                let deps = local::LocalDeps {
+                    identity: Arc::clone(&self.config.identity),
+                    gates: self.config.gates.clone(),
+                    cancel,
+                };
+                let result = run_local(root, call, deps).await?;
                 Ok(ToolOutput { text: result })
             }
             "git_push" | "pr_create" | "pr_status" => {
-                let result = remote::execute(
-                    &call,
-                    &root,
-                    remote_url.as_deref(),
-                    default_branch.as_deref(),
-                    &self.config.transport,
-                    &self.config.github,
-                    cancel,
-                )
-                .await?;
+                let setup = remote::RemoteSetup {
+                    root: &root,
+                    remote_url: self.config.remote_url.as_deref(),
+                    default_branch: self.config.default_branch.as_deref(),
+                    transport: &self.config.transport,
+                    github: &self.config.github,
+                };
+                let result = remote::execute(&call, &setup, &cancel).await?;
                 Ok(ToolOutput { text: result })
             }
             _ => Err("unknown git tool".to_owned()),
         }
     }
+}
+
+/// Runs a local Git action on a blocking thread.
+async fn run_local(
+    root: PathBuf,
+    call: PreparedCall,
+    deps: local::LocalDeps,
+) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || local::execute(&root, &call.tool, &call.payload, &deps))
+        .await
+        .map_err(|_| "git operation stopped".to_owned())?
 }
 
 fn specs() -> Vec<ToolSpec> {

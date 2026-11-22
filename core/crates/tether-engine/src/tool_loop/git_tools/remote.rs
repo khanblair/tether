@@ -2,41 +2,48 @@ use std::sync::Arc;
 
 use serde_json::Value;
 use tether_vcs::{
-    GithubError, PullRequestDraft, PushRequest, RefUpdate, Repo, classify_push, parse_github_url,
-    push,
+    CheckRun, GithubError, PullRequestComment, PullRequestDraft, PullRequestInfo, PushRequest,
+    RefUpdate, Repo, classify_push, parse_github_url, push,
 };
 use tokio_util::sync::CancellationToken;
 
 use super::{GithubClientFactory, TransportFactory, optional_bool, optional_string, string};
 use crate::tool_loop::PreparedCall;
 
+/// Project settings and factories that the remote actions need.
+pub(super) struct RemoteSetup<'a> {
+    /// Workspace root that holds the repository.
+    pub(super) root: &'a std::path::Path,
+    /// Saved project remote URL, if any.
+    pub(super) remote_url: Option<&'a str>,
+    /// Saved project default branch, if any.
+    pub(super) default_branch: Option<&'a str>,
+    /// Creates push transports.
+    pub(super) transport: &'a Arc<dyn TransportFactory>,
+    /// Creates GitHub clients.
+    pub(super) github: &'a Arc<dyn GithubClientFactory>,
+}
+
 pub(super) async fn execute(
     call: &PreparedCall,
-    root: &std::path::Path,
-    remote_url: Option<&str>,
-    default_branch: Option<&str>,
-    transport: &Arc<dyn TransportFactory>,
-    github: &Arc<dyn GithubClientFactory>,
-    cancel: CancellationToken,
+    setup: &RemoteSetup<'_>,
+    cancel: &CancellationToken,
 ) -> Result<String, String> {
     match call.tool.as_str() {
-        "git_push" => push_call(call, root, remote_url, default_branch, transport, cancel),
-        "pr_create" => create_pr(call, root, remote_url, default_branch, github).await,
-        "pr_status" => status_pr(call, root, remote_url, github).await,
+        "git_push" => push_call(call, setup, cancel),
+        "pr_create" => create_pr(call, setup).await,
+        "pr_status" => status_pr(call, setup).await,
         _ => Err("unknown git tool".into()),
     }
 }
 
 fn push_call(
     call: &PreparedCall,
-    root: &std::path::Path,
-    remote_url: Option<&str>,
-    default_branch: Option<&str>,
-    transport: &Arc<dyn TransportFactory>,
-    cancel: CancellationToken,
+    setup: &RemoteSetup<'_>,
+    cancel: &CancellationToken,
 ) -> Result<String, String> {
-    let remote_url = remote_url.ok_or("project has no GitHub remote")?;
-    let repo = Repo::open(root).map_err(|error| error.to_string())?;
+    let remote_url = setup.remote_url.ok_or("project has no GitHub remote")?;
+    let repo = Repo::open(setup.root).map_err(|error| error.to_string())?;
     let branch = optional_string(&call.payload, "branch")?
         .map(str::to_owned)
         .or(repo.current_branch().map_err(|error| error.to_string())?)
@@ -51,8 +58,8 @@ fn push_call(
             force,
         }],
     };
-    let _risks = classify_push(&repo, &request, default_branch.unwrap_or("main"));
-    let transport = transport.transport()?;
+    let _risks = classify_push(&repo, &request, setup.default_branch.unwrap_or("main"));
+    let transport = setup.transport.transport()?;
     let vcs_cancel = tether_vcs::CancellationToken::new();
     if cancel.is_cancelled() {
         vcs_cancel.cancel();
@@ -83,28 +90,22 @@ fn push_call(
         .join("\n"))
 }
 
-async fn create_pr(
-    call: &PreparedCall,
-    root: &std::path::Path,
-    remote_url: Option<&str>,
-    default_branch: Option<&str>,
-    github: &Arc<dyn GithubClientFactory>,
-) -> Result<String, String> {
-    let (owner, repo_name) = parse_remote(remote_url)?;
-    let repo = Repo::open(root).map_err(|error| error.to_string())?;
+async fn create_pr(call: &PreparedCall, setup: &RemoteSetup<'_>) -> Result<String, String> {
+    let (owner, repo_name) = parse_remote(setup.remote_url)?;
+    let repo = Repo::open(setup.root).map_err(|error| error.to_string())?;
     let head = repo
         .current_branch()
         .map_err(|error| error.to_string())?
         .ok_or("current branch is unavailable")?;
     let base = optional_string(&call.payload, "base")?
-        .unwrap_or(default_branch.unwrap_or("main"))
+        .unwrap_or(setup.default_branch.unwrap_or("main"))
         .to_owned();
     let title = string(&call.payload, "title")?.to_owned();
     let body = optional_string(&call.payload, "body")?
         .unwrap_or_default()
         .to_owned();
     let draft = optional_bool(&call.payload, "draft", false)?;
-    let client = github.client()?;
+    let client = setup.github.client()?;
     let pr = client
         .create_pull_request(
             &owner,
@@ -122,30 +123,19 @@ async fn create_pr(
     Ok(format!("PR #{}: {}", pr.number, pr.url))
 }
 
-async fn status_pr(
-    call: &PreparedCall,
-    root: &std::path::Path,
-    remote_url: Option<&str>,
-    github: &Arc<dyn GithubClientFactory>,
-) -> Result<String, String> {
-    let (owner, repo_name) = parse_remote(remote_url)?;
-    let repo = Repo::open(root).map_err(|error| error.to_string())?;
-    let client = github.client()?;
+async fn status_pr(call: &PreparedCall, setup: &RemoteSetup<'_>) -> Result<String, String> {
+    let (owner, repo_name) = parse_remote(setup.remote_url)?;
+    let repo = Repo::open(setup.root).map_err(|error| error.to_string())?;
+    let client = setup.github.client()?;
     let number = if let Some(number) = call.payload.get("number").and_then(Value::as_u64) {
         number
     } else {
-        let branch = repo
-            .current_branch()
-            .map_err(|error| error.to_string())?
-            .ok_or("current branch is unavailable")?;
-        client
+        let branch = current_branch(&repo)?;
+        let open = client
             .list_pull_requests(&owner, &repo_name, "open")
             .await
-            .map_err(|error| error.to_string())?
-            .into_iter()
-            .find(|pr| pr.head_sha == branch || pr.base == branch)
-            .map(|pr| pr.number)
-            .ok_or("pull request not found for the current branch")?
+            .map_err(|error| error.to_string())?;
+        find_pr_number(&open, &branch)?
     };
     let pr = client
         .get_pull_request(&owner, &repo_name, number)
@@ -159,6 +149,23 @@ async fn status_pr(
         .pull_request_comments(&owner, &repo_name, number)
         .await
         .map_err(|error| error.to_string())?;
+    Ok(status_text(&pr, checks, comments))
+}
+
+/// Finds the number of the open pull request whose head or base is the branch.
+fn find_pr_number(open: &[PullRequestInfo], branch: &str) -> Result<u64, String> {
+    open.iter()
+        .find(|pr| pr.head_sha == branch || pr.base == branch)
+        .map(|pr| pr.number)
+        .ok_or_else(|| "pull request not found for the current branch".to_owned())
+}
+
+/// Formats the pull request header, its checks, and its first comments.
+fn status_text(
+    pr: &PullRequestInfo,
+    checks: Vec<CheckRun>,
+    comments: Vec<PullRequestComment>,
+) -> String {
     let mut lines = vec![format!("PR #{}: {}", pr.number, pr.url)];
     lines.extend(checks.into_iter().map(|check| {
         format!(
@@ -179,7 +186,13 @@ async fn status_pr(
             ))
         )
     }));
-    Ok(lines.join("\n"))
+    lines.join("\n")
+}
+
+fn current_branch(repo: &Repo) -> Result<String, String> {
+    repo.current_branch()
+        .map_err(|error| error.to_string())?
+        .ok_or_else(|| "current branch is unavailable".to_owned())
 }
 
 fn parse_remote(remote_url: Option<&str>) -> Result<(String, String), String> {

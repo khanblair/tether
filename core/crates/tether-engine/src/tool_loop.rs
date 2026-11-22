@@ -14,7 +14,7 @@ use tether_workspace::PathGuard;
 use tokio_util::sync::CancellationToken;
 
 mod file_tools;
-pub mod git_tools;
+pub(crate) mod git_tools;
 mod registry;
 pub(crate) mod session_tools;
 mod stream;
@@ -161,9 +161,12 @@ impl ToolLoop {
                     .map_err(|_| storage_error())?
                     .ok_or_else(storage_error)?;
                 let sink = context.sink.ok_or_else(storage_error)?;
-                budget
-                    .check(context.store, &session, sink, &context.cancel, now_ms())
-                    .await?;
+                let target = crate::budget::CheckTarget {
+                    session: &session,
+                    sink,
+                    cancel: &context.cancel,
+                };
+                budget.check(context.store, target, now_ms()).await?;
             }
             let response = response(Arc::clone(&provider), request.clone(), context).await?;
             usage.tokens_in = usage.tokens_in.saturating_add(response.usage.tokens_in);

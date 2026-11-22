@@ -15,6 +15,9 @@ mod local;
 mod remote;
 mod validation;
 
+#[cfg(test)]
+mod tests;
+
 const MAX_TEXT: usize = 20_000;
 const MAX_PATH: usize = 400;
 const DIFF_LIMIT: usize = 64 * 1024;
@@ -123,9 +126,14 @@ impl ToolHandler for GitTools {
         &self,
         name: &str,
         args_json: &str,
-        _context: &PrepareContext<'_>,
+        context: &PrepareContext<'_>,
     ) -> Result<PreparedCall, String> {
-        validation::prepare(name, args_json, self.config.default_branch.as_deref())
+        validation::prepare(
+            name,
+            args_json,
+            self.config.default_branch.as_deref(),
+            context.guard.root(),
+        )
     }
 
     fn execute<'a>(
@@ -239,7 +247,11 @@ pub(crate) fn cap_diff(mut value: String) -> String {
     if value.len() <= DIFF_LIMIT {
         return value;
     }
-    value.truncate(DIFF_LIMIT);
+    let mut end = DIFF_LIMIT;
+    while !value.is_char_boundary(end) {
+        end -= 1;
+    }
+    value.truncate(end);
     value.push_str("\n[diff truncated at 64 KiB]\n");
     value
 }
@@ -252,9 +264,11 @@ pub(crate) fn string<'a>(value: &'a Value, key: &str) -> Result<&'a str, String>
 }
 
 pub(crate) fn optional_string<'a>(value: &'a Value, key: &str) -> Result<Option<&'a str>, String> {
-    value
-        .get(key)
-        .map_or(Ok(None), |item| string(item, key).map(Some))
+    value.get(key).map_or(Ok(None), |item| {
+        item.as_str()
+            .map(Some)
+            .ok_or_else(|| format!("{key} must be a string"))
+    })
 }
 
 pub(crate) fn optional_bool(value: &Value, key: &str, default: bool) -> Result<bool, String> {

@@ -30,26 +30,53 @@ pub(super) async fn execute(
     cancel: &CancellationToken,
 ) -> Result<String, String> {
     match call.tool.as_str() {
-        "git_push" => push_call(call, setup, cancel),
+        "git_push" => push_blocking(call, setup, cancel).await,
         "pr_create" => create_pr(call, setup).await,
         "pr_status" => status_pr(call, setup).await,
         _ => Err("unknown git tool".into()),
     }
 }
 
-fn push_call(
+/// Everything a push needs, owned so it can move to a blocking thread.
+struct PushJob {
+    call: PreparedCall,
+    root: std::path::PathBuf,
+    remote_url: Option<String>,
+    default_branch: Option<String>,
+    transport: Arc<dyn TransportFactory>,
+    cancel: CancellationToken,
+}
+
+/// Runs the push on a blocking thread: the production transport blocks on its own runtime,
+/// which must not happen on a thread that drives async tasks.
+async fn push_blocking(
     call: &PreparedCall,
     setup: &RemoteSetup<'_>,
     cancel: &CancellationToken,
 ) -> Result<String, String> {
-    let remote_url = setup.remote_url.ok_or("project has no GitHub remote")?;
-    let repo = Repo::open(setup.root).map_err(|error| error.to_string())?;
-    let branch = optional_string(&call.payload, "branch")?
-        .map(str::to_owned)
-        .or(repo.current_branch().map_err(|error| error.to_string())?)
-        .ok_or("current branch is unavailable")?;
-    let force = optional_bool(&call.payload, "force", false)?;
-    let delete = optional_bool(&call.payload, "delete", false)?;
+    let job = PushJob {
+        call: call.clone(),
+        root: setup.root.to_owned(),
+        remote_url: setup.remote_url.map(str::to_owned),
+        default_branch: setup.default_branch.map(str::to_owned),
+        transport: Arc::clone(setup.transport),
+        cancel: cancel.clone(),
+    };
+    tokio::task::spawn_blocking(move || push_call(&job))
+        .await
+        .map_err(|_| "push stopped".to_owned())?
+}
+
+fn push_call(job: &PushJob) -> Result<String, String> {
+    let remote_url = job
+        .remote_url
+        .as_deref()
+        .ok_or("project has no GitHub remote")?;
+    let repo = Repo::open(&job.root).map_err(|error| error.to_string())?;
+    // Preparation resolved and froze the branch, so this is the branch the user approved.
+    let branch = string(&job.call.payload, "branch")?.to_owned();
+    let force = optional_bool(&job.call.payload, "force", false)?;
+    let delete = optional_bool(&job.call.payload, "delete", false)?;
     let request = PushRequest {
         remote_url: remote_url.to_owned(),
         updates: vec![RefUpdate {
@@ -58,10 +85,14 @@ fn push_call(
             force,
         }],
     };
-    let _risks = classify_push(&repo, &request, setup.default_branch.unwrap_or("main"));
-    let transport = setup.transport.transport()?;
+    let _risks = classify_push(
+        &repo,
+        &request,
+        job.default_branch.as_deref().unwrap_or("main"),
+    );
+    let transport = job.transport.transport()?;
     let vcs_cancel = tether_vcs::CancellationToken::new();
-    if cancel.is_cancelled() {
+    if job.cancel.is_cancelled() {
         vcs_cancel.cancel();
     }
     let report = push(
@@ -92,11 +123,8 @@ fn push_call(
 
 async fn create_pr(call: &PreparedCall, setup: &RemoteSetup<'_>) -> Result<String, String> {
     let (owner, repo_name) = parse_remote(setup.remote_url)?;
-    let repo = Repo::open(setup.root).map_err(|error| error.to_string())?;
-    let head = repo
-        .current_branch()
-        .map_err(|error| error.to_string())?
-        .ok_or("current branch is unavailable")?;
+    // Preparation resolved and froze the head branch that the approval named.
+    let head = string(&call.payload, "head")?.to_owned();
     let base = optional_string(&call.payload, "base")?
         .unwrap_or(setup.default_branch.unwrap_or("main"))
         .to_owned();
@@ -152,10 +180,10 @@ async fn status_pr(call: &PreparedCall, setup: &RemoteSetup<'_>) -> Result<Strin
     Ok(status_text(&pr, checks, comments))
 }
 
-/// Finds the number of the open pull request whose head or base is the branch.
-fn find_pr_number(open: &[PullRequestInfo], branch: &str) -> Result<u64, String> {
+/// Finds the number of the open pull request whose head branch is `branch`.
+pub(super) fn find_pr_number(open: &[PullRequestInfo], branch: &str) -> Result<u64, String> {
     open.iter()
-        .find(|pr| pr.head_sha == branch || pr.base == branch)
+        .find(|pr| pr.head_ref == branch)
         .map(|pr| pr.number)
         .ok_or_else(|| "pull request not found for the current branch".to_owned())
 }

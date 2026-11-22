@@ -260,7 +260,7 @@ impl ToolLoop {
                         session_id: context.session_id.clone(),
                         tool_call_id: call.id.clone(),
                         tool: call.name.clone(),
-                        target: prepared.target.clone(),
+                        target: prepared.display_target(),
                     });
                 }
                 if context.cancel.is_cancelled() {
@@ -364,7 +364,7 @@ impl ToolLoop {
             session_id: context.session_id.clone(),
             tool_call_id: id.clone(),
             tool: call.tool.clone(),
-            target: call.target.clone(),
+            target: call.display_target(),
         };
         let answer = context
             .approver
@@ -405,7 +405,7 @@ fn emit_approval_required(
             session_id: context.session_id.clone(),
             tool_call_id: id.clone(),
             tool: call.tool.clone(),
-            target: call.target.clone(),
+            target: call.display_target(),
         });
     }
 }
@@ -565,7 +565,7 @@ fn record_approval(
             session_id: context.session_id.clone(),
             tool_call_id: id.clone(),
             tool: call.tool.clone(),
-            target: call.target.clone(),
+            target: call.display_target(),
             decision: decision.into(),
             reason,
             decided_at: now_ms(),

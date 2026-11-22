@@ -46,9 +46,10 @@ pub(super) fn parse_timeout(
     Ok(Some(timeout))
 }
 
+/// Joins a pack's launch prefix (the program name plus the pack's own arguments) with the
+/// arguments the user typed after the program name.
 pub(super) fn append_user_args(mut prefix: Vec<String>, prepared: &[String]) -> Vec<String> {
-    let skip = prefix.len().min(prepared.len());
-    prefix.extend(prepared.iter().skip(skip).cloned());
+    prefix.extend(prepared.iter().skip(1).cloned());
     prefix
 }
 

@@ -23,8 +23,8 @@ const OUTPUT_TAIL: usize = 12_000;
 
 mod run_support;
 use run_support::{
-    append_user_args, executor_name, format_result, guest_cwd, parse_cwd, parse_executor,
-    parse_timeout, run_blocking, string,
+    append_user_args, format_result, guest_cwd, parse_cwd, parse_executor, parse_timeout,
+    run_blocking, string,
 };
 
 /// Dependencies used by the `run` tool.
@@ -161,7 +161,7 @@ impl ToolHandler for RunTools {
             } else {
                 Effect::RunHost
             },
-            target: format!("[{}] {target_command}", executor_name(route.executor)),
+            target: target_command,
             executor: Some(route.executor),
             payload,
         })

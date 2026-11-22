@@ -77,14 +77,49 @@ fn recent_lines(source: &str, count: usize) -> String {
     lines[start..].join("\n")
 }
 
+const TRUNCATION_MARKER: &str = "\n[truncated]";
+
+/// Cuts a vault slice to at most `VAULT_CAP` bytes including the marker, on a character boundary.
 fn cap_slice(source: &str) -> String {
-    let mut end = source.len().min(VAULT_CAP);
+    if source.len() <= VAULT_CAP {
+        return source.to_owned();
+    }
+    let mut end = VAULT_CAP - TRUNCATION_MARKER.len();
     while !source.is_char_boundary(end) {
         end -= 1;
     }
-    if end == source.len() {
-        source.to_owned()
-    } else {
-        format!("{}\n[truncated]", &source[..end.saturating_sub(12)])
+    format!("{}{TRUNCATION_MARKER}", &source[..end])
+}
+
+#[cfg(test)]
+mod cap_tests {
+    use super::{TRUNCATION_MARKER, VAULT_CAP, cap_slice};
+
+    #[test]
+    fn a_short_slice_is_unchanged() {
+        assert_eq!(cap_slice("hello"), "hello");
+        let exact = "a".repeat(VAULT_CAP);
+        assert_eq!(cap_slice(&exact), exact);
+    }
+
+    #[test]
+    fn a_long_slice_is_cut_with_a_marker_within_the_cap() {
+        let long = "a".repeat(VAULT_CAP + 500);
+        let cut = cap_slice(&long);
+        assert_eq!(cut.len(), VAULT_CAP);
+        assert!(cut.ends_with(TRUNCATION_MARKER));
+    }
+
+    #[test]
+    fn a_multibyte_character_at_the_cut_never_panics() {
+        let keep = VAULT_CAP - TRUNCATION_MARKER.len();
+        for offset in 0..4 {
+            let text = format!("{}é{}", "a".repeat(keep - offset), "b".repeat(100));
+            let cut = cap_slice(&text);
+            assert!(cut.len() <= VAULT_CAP, "offset {offset}");
+            assert!(cut.ends_with(TRUNCATION_MARKER));
+        }
+        let wide = "漢".repeat(VAULT_CAP);
+        assert!(cap_slice(&wide).len() <= VAULT_CAP);
     }
 }

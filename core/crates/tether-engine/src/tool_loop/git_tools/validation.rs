@@ -1,4 +1,7 @@
-use serde_json::Value;
+use std::path::Path;
+
+use serde_json::{Value, json};
+use tether_vcs::Repo;
 
 use super::{
     MAX_PATH, MAX_TEXT, optional_bool, optional_string, optional_usize, require_object, string,
@@ -25,6 +28,7 @@ pub(super) fn prepare(
     name: &str,
     args_json: &str,
     default_branch: Option<&str>,
+    root: &Path,
 ) -> Result<PreparedCall, String> {
     let value = require_object(name, args_json)?;
     match name {
@@ -38,8 +42,8 @@ pub(super) fn prepare(
         "git_log" => log(value),
         "git_branch" => branch(value),
         "git_commit" => commit(value),
-        "git_push" => push(value, default_branch),
-        "pr_create" => pr_create(value, default_branch),
+        "git_push" => push(value, default_branch, root),
+        "pr_create" => pr_create(value, default_branch, root),
         "pr_status" => pr_status(value),
         _ => Err("unknown tool".into()),
     }
@@ -123,7 +127,27 @@ fn commit(value: Value) -> Result<PreparedCall, String> {
     ))
 }
 
-fn push(value: Value, default_branch: Option<&str>) -> Result<PreparedCall, String> {
+/// Reads the branch that is checked out now, so an approved target names a real branch.
+fn checked_out_branch(root: &Path) -> Result<String, String> {
+    Repo::open(root)
+        .map_err(|error| error.to_string())?
+        .current_branch()
+        .map_err(|error| error.to_string())?
+        .ok_or_else(|| "current branch is unavailable".to_owned())
+}
+
+/// Stores a resolved value in the call payload so execution uses exactly what was approved.
+fn freeze(value: &mut Value, key: &str, resolved: &str) {
+    if let Some(object) = value.as_object_mut() {
+        object.insert(key.to_owned(), json!(resolved));
+    }
+}
+
+fn push(
+    mut value: Value,
+    default_branch: Option<&str>,
+    root: &Path,
+) -> Result<PreparedCall, String> {
     if let Some(branch) = optional_string(&value, "branch")? {
         bounded(branch, 100, "branch")?;
     }
@@ -132,12 +156,16 @@ fn push(value: Value, default_branch: Option<&str>) -> Result<PreparedCall, Stri
     if force && delete {
         return Err("force and delete cannot be combined".into());
     }
-    let branch = optional_string(&value, "branch")?.unwrap_or(default_branch.unwrap_or("current"));
+    let branch = match optional_string(&value, "branch")? {
+        Some(branch) => branch.to_owned(),
+        None => checked_out_branch(root)?,
+    };
+    freeze(&mut value, "branch", &branch);
     let target = if delete {
         format!("delete branch {branch} on origin")
     } else if force {
         format!("FORCE push {branch} to origin (rewrites history)")
-    } else if default_branch == Some(branch) {
+    } else if default_branch == Some(branch.as_str()) {
         format!("push to the default branch {branch} on origin")
     } else {
         format!("push {branch} to origin")
@@ -154,21 +182,30 @@ fn push(value: Value, default_branch: Option<&str>) -> Result<PreparedCall, Stri
     ))
 }
 
-fn pr_create(value: Value, default_branch: Option<&str>) -> Result<PreparedCall, String> {
-    let title = string(&value, "title")?;
-    bounded(title, 200, "title")?;
+fn pr_create(
+    mut value: Value,
+    default_branch: Option<&str>,
+    root: &Path,
+) -> Result<PreparedCall, String> {
+    let title = string(&value, "title")?.to_owned();
+    bounded(&title, 200, "title")?;
     if title.trim().is_empty() {
         return Err("title must not be empty".into());
     }
     if let Some(body) = optional_string(&value, "body")? {
         bounded(body, MAX_TEXT, "body")?;
     }
-    let base = optional_string(&value, "base")?.unwrap_or(default_branch.unwrap_or("main"));
-    bounded(base, 100, "base")?;
+    let base = optional_string(&value, "base")?
+        .unwrap_or(default_branch.unwrap_or("main"))
+        .to_owned();
+    bounded(&base, 100, "base")?;
+    let head = checked_out_branch(root)?;
+    freeze(&mut value, "head", &head);
+    let target = format!("open pull request \"{title}\" from {head} into {base}");
     Ok(target_tool(
         "pr_create",
         PermissionEffect::Push,
-        format!("open pull request \"{title}\" into {base}"),
+        target,
         value,
     ))
 }

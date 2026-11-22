@@ -26,12 +26,28 @@ pub struct PreparedCall {
     pub tool: String,
     /// Effect reported by the handler.
     pub effect: Effect,
-    /// Guarded workspace-relative display target.
+    /// What the call acts on: a guarded workspace-relative path, the bare command of a `run`,
+    /// or a Git target. Permission rules are made from and matched against this value, so it
+    /// carries no display label.
     pub target: String,
     /// Executor selected by the handler, if any.
     pub executor: Option<Executor>,
     /// Already-parsed arguments. Execution never parses raw provider text.
     pub payload: Value,
+}
+
+impl PreparedCall {
+    /// The text shown to the user: a `run` target gets its executor as a label, such as
+    /// `[linux] ls -la`. Never use it for permission rules.
+    #[must_use]
+    pub fn display_target(&self) -> String {
+        match self.executor {
+            Some(Executor::Sandbox) if self.tool == "run" => format!("[sandbox] {}", self.target),
+            Some(Executor::Linux) if self.tool == "run" => format!("[linux] {}", self.target),
+            Some(Executor::Ci) if self.tool == "run" => format!("[ci] {}", self.target),
+            _ => self.target.clone(),
+        }
+    }
 }
 
 /// The final result returned by a tool handler.

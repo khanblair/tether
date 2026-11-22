@@ -106,6 +106,7 @@ fun TetherNavHost(module: AppModule) {
                 )
                 placeholderRoutes(nav = nav)
                 memoryRoutes(gateways = module.memoryArea, nav = nav)
+                filesRoutes(gateway = module.filesGateway, messages = module.messages, nav = nav)
                 composable("share-project") {
                     val projects by produceState(emptyList<ProjectSummary>()) {
                         value = withContext(Dispatchers.IO) { module.home.projects.projects() }

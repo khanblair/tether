@@ -6,6 +6,7 @@ mod commands;
 mod config;
 mod context;
 mod executors;
+mod files;
 mod git;
 mod github;
 mod memory;
@@ -32,6 +33,10 @@ pub use callbacks::{EventSink, NetworkPlatform, NotifyPlatform, RunServicePlatfo
 pub use commands::{CommandResolutionView, CommandRuntimeError, CommandView, SendOutcomeView};
 pub use config::{ConfigIssueView, EffectiveConfigView};
 pub use executors::{ExecutorAvailabilityView, ExecutorPathsView, ExecutorRuntimeError};
+pub use files::{
+    DirListingView, FileEntryView, FilePreviewView, FileTextHitView, FilesRuntime,
+    FilesRuntimeError,
+};
 pub use git::{
     GitBranchView, GitCommitView, GitDiffSpecView, GitRuntime, GitRuntimeError, GitStatusView,
     ShallowChoiceView,

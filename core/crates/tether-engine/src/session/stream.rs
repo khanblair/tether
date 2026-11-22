@@ -25,14 +25,28 @@ impl SessionActor {
                 && network.enabled()
                 && !network.is_online()
             {
-                let _ = self.store.set_session_status(&self.session.id, SessionStatus::Paused, now_ms());
-                self.sink.on_event(CoreEvent::NetworkPaused { session_id: self.session.id.clone() });
+                let _ = self.store.set_session_status(
+                    &self.session.id,
+                    SessionStatus::Paused,
+                    now_ms(),
+                );
+                self.sink.on_event(CoreEvent::NetworkPaused {
+                    session_id: self.session.id.clone(),
+                });
                 match self.wait_for_network(network, &cancel).await {
                     Ok(()) => {
-                        let _ = self.store.set_session_status(&self.session.id, SessionStatus::Requesting, now_ms());
-                        self.sink.on_event(CoreEvent::NetworkResumed { session_id: self.session.id.clone() });
+                        let _ = self.store.set_session_status(
+                            &self.session.id,
+                            SessionStatus::Requesting,
+                            now_ms(),
+                        );
+                        self.sink.on_event(CoreEvent::NetworkResumed {
+                            session_id: self.session.id.clone(),
+                        });
                     }
-                    Err(error) => return self.finish_usage(model_id.as_str(), output.usage, Err(error)),
+                    Err(error) => {
+                        return self.finish_usage(model_id.as_str(), output.usage, Err(error));
+                    }
                 }
             }
             let (tx, mut rx) = mpsc::channel(32);

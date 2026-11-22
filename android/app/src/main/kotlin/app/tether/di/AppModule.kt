@@ -7,6 +7,8 @@ import app.tether.core.generated.ProviderSettings
 import app.tether.core.generated.Updater
 import app.tether.core.keystoreSecretVault
 import app.tether.design.ThemeMode
+import app.tether.files.FilesGateway
+import app.tether.files.createFilesGateway
 import app.tether.home.CoreProjectGateway
 import app.tether.home.HomeSources
 import app.tether.home.ProjectGateway
@@ -66,6 +68,9 @@ class AppModule(
 
     /** Memory, skills, and vault for the Skills and memory screens. */
     val memoryArea: MemoryAreaGateways = createMemoryAreaGateways(context.filesDir)
+
+    /** Browsing, previewing, and searching a project's files. */
+    val filesGateway: FilesGateway by lazy { createFilesGateway(databasePath, workspacesRoot) }
 
     /** Model, mode, rename, usage, rewind, and message search for the session screens. */
     val sessionSettings: SessionSettingsGateway by lazy {

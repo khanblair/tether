@@ -13,6 +13,9 @@ fn scan_glob_and_grep_respect_root_ignore() {
     fs::write(root.join(".git/config"), "needle\n").unwrap();
     let index = FileIndex::scan(PathGuard::new(&root).unwrap()).unwrap();
     assert_eq!(index.glob("*.rs").len(), 1);
+    assert!(index.is_ignored(std::path::Path::new("debug.log")));
+    assert!(index.is_ignored(std::path::Path::new(".git/config")));
+    assert!(!index.is_ignored(std::path::Path::new("src/main.rs")));
     let hits = index.grep("needle", 1).unwrap();
     assert_eq!(hits.len(), 1);
     assert_eq!(hits[0].path.to_string_lossy(), "src/main.rs");

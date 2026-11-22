@@ -14,13 +14,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import app.tether.R
+import app.tether.design.TetherIcons
 import app.tether.design.TetherTheme
 import app.tether.design.components.BannerTone
 import app.tether.design.components.InlineBanner
 import app.tether.design.components.ListGroup
+import app.tether.design.components.ListRow
 import app.tether.design.components.PrimaryButton
 import app.tether.design.components.SessionRow
 import app.tether.design.components.SessionState
+import app.tether.design.components.TetherIcon
 import app.tether.design.components.TetherTopBar
 import app.tether.design.tokens.TetherBorder
 import app.tether.design.tokens.TetherSpace
@@ -37,6 +40,7 @@ fun ProjectHomeScreen(
     onOpenSession: (String) -> Unit,
     onNewSession: () -> Unit,
     onOpenProviders: () -> Unit,
+    onOpenFiles: () -> Unit = {},
 ) {
     Scaffold(
         containerColor = TetherTheme.colors.bg,
@@ -66,6 +70,7 @@ fun ProjectHomeScreen(
         ProjectHomeBody(
             state = state,
             onOpenSession = onOpenSession,
+            onOpenFiles = onOpenFiles,
             modifier = Modifier.fillMaxSize().padding(padding).padding(TetherSpace.space4),
         )
     }
@@ -75,6 +80,7 @@ fun ProjectHomeScreen(
 private fun ProjectHomeBody(
     state: ProjectHomeUiState,
     onOpenSession: (String) -> Unit,
+    onOpenFiles: () -> Unit,
     modifier: Modifier,
 ) {
     val project = state.project
@@ -109,7 +115,34 @@ private fun ProjectHomeBody(
             label = stringResource(R.string.project_home_executor),
             value = executorName(project.executor),
         )
+        FilesRow(onOpenFiles = onOpenFiles)
         SessionList(sessions = state.sessions, onOpenSession = onOpenSession)
+    }
+}
+
+/** The row that opens the project's files. The agent reads the same files. */
+@Composable
+private fun FilesRow(onOpenFiles: () -> Unit) {
+    ListGroup {
+        ListRow(
+            title = stringResource(R.string.files_home_title),
+            subtitle = stringResource(R.string.files_home_body),
+            leading = {
+                TetherIcon(
+                    icon = TetherIcons.Folder,
+                    contentDescription = null,
+                    tint = TetherTheme.colors.text2,
+                )
+            },
+            trailing = {
+                TetherIcon(
+                    icon = TetherIcons.ChevronRight,
+                    contentDescription = null,
+                    tint = TetherTheme.colors.text3,
+                )
+            },
+            onClick = onOpenFiles,
+        )
     }
 }
 

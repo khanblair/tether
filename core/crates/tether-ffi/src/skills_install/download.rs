@@ -27,16 +27,16 @@ impl SkillDownloader for GithubDownloader {
     }
 }
 
-/// Builds the HTTP client. Redirects are followed only between GitHub hosts.
+/// Builds the HTTP client. Redirects are followed only between GitHub hosts and only over HTTPS.
 fn github_client() -> Result<Client, SkillsRuntimeError> {
     Client::builder()
         .timeout(Duration::from_secs(20))
         .redirect(reqwest::redirect::Policy::custom(|attempt| {
-            if attempt
-                .url()
+            let target = attempt.url();
+            let github_host = target
                 .host_str()
-                .is_some_and(|host| host == "github.com" || host == "codeload.github.com")
-            {
+                .is_some_and(|host| host == "github.com" || host == "codeload.github.com");
+            if github_host && target.scheme() == "https" {
                 attempt.follow()
             } else {
                 attempt.stop()

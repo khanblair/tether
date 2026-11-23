@@ -323,9 +323,9 @@ impl CiClient {
         if response.status != 302 {
             return bounded_log(response.body, &self.token);
         }
-        let location = response
-            .headers
-            .get("location")
+        // The signed log address is fetched without credentials, and only over HTTPS.
+        let location = (response.headers.get("location"))
+            .filter(|location| location.starts_with("https://"))
             .ok_or(CiError::InvalidResponse)?;
         let redirected = self
             .http

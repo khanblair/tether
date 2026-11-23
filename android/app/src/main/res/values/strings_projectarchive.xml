@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="archive_import_title">Import a ZIP</string>
+    <string name="archive_import_explain">Unpacks a ZIP into a new project. Symbolic links are skipped. Nothing leaves this phone.</string>
+    <string name="archive_choose_zip">Choose a ZIP file</string>
+    <string name="archive_change_file">Choose a different file</string>
+    <string name="archive_size_kb">%1$s KB</string>
+    <string name="archive_size_mb">%1$s MB</string>
+    <string name="archive_too_large">This ZIP is %1$s. Tether refuses ZIPs over 200 MB because it copies the whole file to this phone first.</string>
+    <string name="archive_project_name_label">Project name</string>
+    <string name="archive_name_helper">Stored on this phone, in a private folder.</string>
+    <string name="archive_name_too_long">Use 80 characters or fewer.</string>
+    <string name="archive_name_control">Use letters and numbers, not control characters.</string>
+    <string name="archive_import_button">Import</string>
+    <string name="archive_try_again">Try again</string>
+    <string name="archive_cancel">Cancel</string>
+    <string name="archive_importing">Unpacking the ZIP into a new project. Keep the app open until it finishes.</string>
+    <string name="archive_import_done">Imported. Opening the project.</string>
+    <string name="archive_reason_invalid_name">The project name is not usable. Use 1 to 80 characters with no control characters.</string>
+    <string name="archive_reason_invalid_entry">The ZIP holds a file path that would leave the project folder, so Tether refused it.</string>
+    <string name="archive_reason_too_many_entries">The ZIP has more files than Tether allows.</string>
+    <string name="archive_reason_too_large">The ZIP unpacks to more than Tether allows.</string>
+    <string name="archive_reason_unsafe_ratio">The ZIP compresses too much to be safe, so Tether refused it.</string>
+    <string name="archive_reason_not_zip">This file is not a ZIP archive. Choose a .zip file.</string>
+    <string name="archive_reason_invalid_destination">The ZIP could not be written to that place. Choose another place.</string>
+    <string name="archive_reason_storage">Storage for archives is unavailable. Free some space and try again.</string>
+    <string name="archive_reason_cancelled">The operation was cancelled. Nothing was saved.</string>
+    <string name="archive_reason_project_not_found">That project no longer exists.</string>
+    <string name="archive_reason_unavailable">Tether could not reach the project storage. Try again.</string>
+    <string name="archive_reason_read">Tether could not read the file. Choose it again.</string>
+    <string name="archive_reason_write">Tether could not save the ZIP to that place. Choose another place.</string>
+    <string name="archive_reason_unexpected">Tether could not finish the ZIP. Try again.</string>
+    <string name="archive_reason_unknown">The ZIP could not be used.</string>
+    <string name="archive_export_title">Export project</string>
+    <string name="archive_export_explain">Saves this project as a ZIP file. You choose where it goes.</string>
+    <string name="archive_include_ignored">Include ignored files</string>
+    <string name="archive_include_ignored_help">Folders such as node_modules and build output are left out unless you turn this on.</string>
+    <string name="archive_export_button">Export</string>
+    <string name="archive_exporting">Writing the ZIP. Keep this sheet open until it finishes.</string>
+    <string name="archive_export_done">Exported.</string>
+    <string name="archive_home_export_title">Export as ZIP</string>
+    <string name="archive_home_export_body">Save the project files to a ZIP file you choose.</string>
+</resources>

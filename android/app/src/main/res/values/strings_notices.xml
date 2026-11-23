@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Context meter in the status line. -->
+    <string name="notices_context_label">%1$d%%</string>
+    <string name="notices_context_danger_label">%1$d%% almost full</string>
+    <string name="notices_context_description">Context used: %1$d percent. Open the breakdown.</string>
+
+    <!-- Cost meter in the status line. -->
+    <string name="notices_cost_under_cent">less than $0.01</string>
+    <string name="notices_cost_no_price">No price</string>
+    <string name="notices_cost_budget">%1$s of %2$s</string>
+    <string name="notices_cost_near">%1$s of %2$s, near the limit</string>
+    <string name="notices_cost_reached">%1$s of %2$s, limit reached</string>
+
+    <!-- Network notice. -->
+    <string name="notices_network_offline">You are offline. The turn waits and continues when the connection returns.</string>
+
+    <!-- Budget notices. Scope is session or day. -->
+    <string name="notices_budget_warning_session">You have used %1$d percent of the session budget</string>
+    <string name="notices_budget_warning_day">You have used %1$d percent of the day budget</string>
+    <string name="notices_budget_warning_spent">%1$s of %2$s spent.</string>
+    <string name="notices_budget_reached_session">The session budget of %1$s is reached. The turn is paused.</string>
+    <string name="notices_budget_reached_day">The day budget of %1$s is reached. The turn is paused.</string>
+    <string name="notices_budget_continue">Continue</string>
+    <string name="notices_budget_open">Open budgets</string>
+    <string name="notices_budget_continue_failed">Could not continue the turn. Try again.</string>
+
+    <!-- Interrupted turn. -->
+    <string name="notices_interrupted_title">Interrupted while running</string>
+    <string name="notices_resume">Resume</string>
+    <string name="notices_discard">Discard</string>
+    <string name="notices_resuming">Resuming the turn.</string>
+    <string name="notices_discarding">Discarding the turn.</string>
+    <string name="notices_resume_failed">Could not resume the turn. Try again.</string>
+    <string name="notices_discard_failed">Could not discard the turn. Try again.</string>
+    <string name="notices_try_again">Try again</string>
+</resources>

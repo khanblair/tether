@@ -27,6 +27,8 @@ import app.tether.session.SessionSettingsGateway
 import app.tether.session.SessionStarter
 import app.tether.session.createSessionSettingsGateway
 import app.tether.settings.PrefsSettingsStore
+import app.tether.settings.budgets.BudgetsGateway
+import app.tether.settings.budgets.createBudgetsGateway
 import app.tether.settings.createProjectDefaultsGateway
 import app.tether.settings.executors.CoreExecutorsGateway
 import app.tether.settings.executors.ExecutorsGateway
@@ -90,6 +92,9 @@ class AppModule(
             ciRuntime = lazy { CiRuntime(databasePath, workspacesRoot, vault) },
         )
     }
+
+    /** Budget limits and the cost summary. The runtime opens on the first call. */
+    val budgetsGateway: BudgetsGateway by lazy { createBudgetsGateway(databasePath) }
 
     /** MCP servers: the list, a server's tools, and adding one. */
     val mcpGateway: McpGateway by lazy { createMcpGateway(databasePath, vault) }

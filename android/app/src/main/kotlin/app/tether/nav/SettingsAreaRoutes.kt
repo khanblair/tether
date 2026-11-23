@@ -143,13 +143,6 @@ private fun NavGraphBuilder.notAvailableRoutes(nav: TetherNav) {
             R.string.settings_area_quality_na_body,
         )
     }
-    composable(SETTINGS_BUDGETS_ROUTE) {
-        NotAvailable(
-            nav,
-            R.string.settings_area_budgets_title,
-            R.string.settings_area_budgets_na_body,
-        )
-    }
 }
 
 /** The notifications, privacy, and data screens. */

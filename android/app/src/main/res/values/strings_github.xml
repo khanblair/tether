@@ -9,6 +9,7 @@
     <string name="github_account_scopes">Scopes: %1$s</string>
     <string name="github_account_sign_in">Sign in with GitHub</string>
     <string name="github_account_sign_out">Sign out</string>
+    <string name="github_account_edit_identity">Edit Git identity</string>
     <string name="github_account_token_toggle">Use a personal access token instead</string>
     <string name="github_account_token_title">Personal access token</string>
     <string name="github_account_token_label">Token</string>

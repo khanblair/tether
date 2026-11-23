@@ -105,22 +105,7 @@
     <string name="settings_area_cache_failed">Some update files could not be deleted. Try again.</string>
     <string name="settings_area_size_unknown">Unknown</string>
 
-    <!-- Executors. -->
-    <string name="settings_area_executors_title">Executors</string>
-    <string name="settings_area_executor_default">Default</string>
-    <string name="settings_area_sandbox">Sandbox</string>
-    <string name="settings_area_sandbox_body">Runs commands in the built-in sandbox.</string>
-    <string name="settings_area_executor_other">Other executors</string>
-    <string name="settings_area_linux_mode">Linux mode</string>
-    <string name="settings_area_linux_mode_na">Not available yet. Needs Linux mode, which ships in phase P7.</string>
-    <string name="settings_area_ci">CI</string>
-    <string name="settings_area_ci_na">Not available yet. Needs CI runs, which ship in phase P6.</string>
-
     <!-- Screens the app cannot show yet. -->
-    <string name="settings_area_github_title">GitHub</string>
-    <string name="settings_area_github_na_body">Not available yet. Needs GitHub sign-in, which ships in phase P4.</string>
-    <string name="settings_area_mcp_title">MCP servers</string>
-    <string name="settings_area_mcp_na_body">Not available yet. Needs MCP servers, which ship in phase P9.</string>
     <string name="settings_area_skills_title">Skills and memory</string>
     <string name="settings_area_quality_title">Quality gate</string>
     <string name="settings_area_quality_na_body">Not available yet. Needs the quality gate, which ships in phase P8.</string>

@@ -48,13 +48,6 @@ internal fun NavGraphBuilder.onboardingRoutes(
             onOpenArchive = { nav.open(ONBOARDING_ARCHIVE_ROUTE) },
         )
     }
-    composable(ONBOARDING_GITHUB_ROUTE) {
-        PlaceholderScreen(
-            title = stringResource(R.string.onboarding_github_title),
-            explanation = stringResource(R.string.onboarding_github_body),
-            onBack = nav::back,
-        )
-    }
     composable(ONBOARDING_ARCHIVE_ROUTE) {
         PlaceholderScreen(
             title = stringResource(R.string.onboarding_archive_title),

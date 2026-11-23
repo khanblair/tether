@@ -44,6 +44,7 @@ internal fun AccountSignedOutPreview() {
             onTokenChange = {},
             onSignInWithToken = {},
             onSignOut = {},
+            onOpenIdentity = {},
         )
     }
 }
@@ -69,6 +70,7 @@ internal fun AccountDeviceCodePreview() {
             onTokenChange = {},
             onSignInWithToken = {},
             onSignOut = {},
+            onOpenIdentity = {},
         )
     }
 }
@@ -97,6 +99,7 @@ internal fun AccountSignedInPreview() {
             onTokenChange = {},
             onSignInWithToken = {},
             onSignOut = {},
+            onOpenIdentity = {},
         )
     }
 }
@@ -119,6 +122,7 @@ internal fun AccountTokenMissingScopePreview() {
             onTokenChange = {},
             onSignInWithToken = {},
             onSignOut = {},
+            onOpenIdentity = {},
         )
     }
 }

@@ -34,6 +34,9 @@ internal fun NavGraphBuilder.settingsRoutes(
     }
     aboutRoute(module, nav)
     settingsAreaRoutes(module = module, nav = nav)
+    githubRoutes(module = module, nav = nav)
+    mcpRoutes(module = module, nav = nav)
+    executorsRoutes(module = module, nav = nav)
     composable(Route.Providers.path) {
         ProvidersScreen(
             viewModel = viewModel(factory = ProvidersViewModel.factory(module.providerGateway)),

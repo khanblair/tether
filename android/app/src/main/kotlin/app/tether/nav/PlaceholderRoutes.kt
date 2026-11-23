@@ -12,6 +12,7 @@ internal fun NavGraphBuilder.placeholderRoutes(nav: TetherNav) {
             Route.Projects,
             Route.ProjectHome,
             Route.NewProject,
+            Route.CloneProject,
             Route.Attention,
             Route.Settings,
             Route.Providers,

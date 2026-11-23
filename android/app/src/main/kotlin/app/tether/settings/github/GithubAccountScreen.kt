@@ -12,13 +12,15 @@ import app.tether.design.TetherTheme
 import app.tether.design.components.BannerTone
 import app.tether.design.components.InlineBanner
 import app.tether.design.components.PrimaryButton
+import app.tether.design.components.TetherTextButton
 import app.tether.design.tokens.TetherSpace
 import app.tether.settings.SettingsPage
 
 /**
  * The GitHub account screen. Signed out: the device flow (or one sentence and the token path when
  * the build has no client ID), then the token alternative. Signed in: the account card with Sign
- * out. Leaving the screen stops the device poll. [onOpenUrl] receives the exact URL to open.
+ * out. Leaving the screen stops the device poll. [onOpenIdentity] opens the Git identity form.
+ * [onOpenUrl] receives the exact URL to open.
  */
 @Composable
 fun GithubAccountScreen(
@@ -30,6 +32,7 @@ fun GithubAccountScreen(
     onTokenChange: (String) -> Unit,
     onSignInWithToken: () -> Unit,
     onSignOut: () -> Unit,
+    onOpenIdentity: () -> Unit,
 ) {
     DisposableEffect(Unit) {
         onDispose { onStopPolling() }
@@ -40,6 +43,10 @@ fun GithubAccountScreen(
     ) {
         if (state.loading) return@SettingsPage
         GitHubAccountCard(status = state.status, onSignOut = onSignOut)
+        TetherTextButton(
+            label = stringResource(R.string.github_account_edit_identity),
+            onClick = onOpenIdentity,
+        )
         if (!state.status.signedIn) {
             DeviceSection(
                 state = state,

@@ -323,3 +323,32 @@ pub(super) fn executable(path: &Path) -> bool {
         }
     })
 }
+
+/// The name and email that sign a reflog entry when the repository has no committer.
+const FALLBACK_NAME: &str = "Tether";
+const FALLBACK_EMAIL: &str = "tether@localhost.invalid";
+
+/// Creates `refs/heads/{name}` at `start_point` in `repo`.
+///
+/// Creating a reference writes a reflog entry, and that needs a committer. A phone has no Git
+/// configuration, so a repository without a committer gets a fixed fallback for this call.
+pub(crate) fn create_branch_in(
+    mut repo: gix::Repository,
+    name: &str,
+    start_point: &str,
+) -> Result<(), RepoError> {
+    repo.committer_or_set_fallback(FALLBACK_NAME, FALLBACK_EMAIL)
+        .map_err(|_| RepoError::Git)?;
+    let id = repo
+        .rev_parse_single(start_point)
+        .map_err(|_| RepoError::RefNotFound)?
+        .detach();
+    repo.reference(
+        format!("refs/heads/{name}"),
+        id,
+        gix::refs::transaction::PreviousValue::MustNotExist,
+        "branch: Created",
+    )
+    .map_err(|_| RepoError::Git)
+    .map(|_| ())
+}

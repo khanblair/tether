@@ -10,7 +10,6 @@ use std::sync::{
 
 use gix::bstr::ByteSlice;
 use gix::hash::ObjectId;
-use gix::refs::transaction::PreviousValue;
 use gix::status::Item as StatusItem;
 use gix::status::index_worktree::Item as WorktreeItem;
 use thiserror::Error;
@@ -173,4 +172,6 @@ mod log;
 mod ops;
 mod stageable;
 
+#[cfg(test)]
+pub(crate) use helpers::create_branch_in;
 pub use helpers::{branch_name_for_task, unique_branch_name, validate_branch_name};

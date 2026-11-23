@@ -33,13 +33,17 @@ import app.tether.R
 import app.tether.design.tokens.TetherRatio
 import app.tether.design.tokens.TetherSpace
 
-/** The session input. The field grows with text, capped at 40% of the display height. */
+/**
+ * The session input. The field grows with text, capped at 40% of the display height. While
+ * [sendBlocked] is true, Send is off: a message cannot go out while an approval waits.
+ */
 @Composable
 fun Composer(
     modelId: String,
     running: Boolean,
     onSend: (String) -> Unit,
     onStop: () -> Unit,
+    sendBlocked: Boolean = false,
 ) {
     var input by rememberSaveable { mutableStateOf("") }
     var image by rememberSaveable { mutableStateOf<String?>(null) }
@@ -68,7 +72,7 @@ fun Composer(
         ComposerActions(
             modelId = modelId,
             running = running,
-            canSend = input.isNotBlank() && image == null,
+            canSend = composerCanSend(input, image, sendBlocked),
             onAttach = { picker.launch("image/*") },
             onVoice = { if (!startVoice()) speechUnavailable = true },
             onStop = onStop,
@@ -82,6 +86,16 @@ fun Composer(
         )
     }
 }
+
+/**
+ * True when Send may go out: the field has text, no image is staged, and nothing blocks the send.
+ * A staged image is not sent yet, so it keeps Send off.
+ */
+internal fun composerCanSend(
+    input: String,
+    image: String?,
+    sendBlocked: Boolean,
+): Boolean = input.isNotBlank() && image == null && !sendBlocked
 
 /** The row under the field: attach, model name, voice, and send or stop. */
 @Composable

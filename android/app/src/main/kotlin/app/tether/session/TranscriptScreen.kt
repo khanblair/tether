@@ -13,6 +13,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
@@ -28,6 +29,17 @@ import app.tether.design.components.TetherTextButton
 import app.tether.design.components.TetherTopBar
 import app.tether.design.tokens.TetherSpace
 import app.tether.messages.AppMessages
+import app.tether.session.agent.AgentApprovalSlot
+import app.tether.session.agent.AgentScreenUi
+import app.tether.session.agent.AgentTopBlock
+import app.tether.session.agent.ExpandedCards
+import app.tether.session.agent.ToolCardState
+import app.tether.session.agent.expandedCardsSaver
+import app.tether.session.agent.isToolResultOnly
+import app.tether.session.agent.liveSection
+import app.tether.session.agent.rememberAgentLoop
+import app.tether.session.agent.rememberAgentScreen
+import app.tether.session.agent.toolCallsFromMessages
 import app.tether.shell.BackButton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
@@ -63,6 +75,7 @@ fun TranscriptScreen(
     connection: SessionConnection?,
     onBack: () -> Unit,
     sheets: SessionSheetEnv? = null,
+    onOpenBudgets: (() -> Unit)? = null,
 ) {
     var snapshot by remember(connection) { mutableStateOf<TranscriptSnapshot?>(null) }
     var failed by remember(connection) { mutableStateOf(false) }
@@ -72,16 +85,40 @@ fun TranscriptScreen(
     val scope = rememberCoroutineScope()
     val offline = rememberOffline()
     val messages = snapshot?.messages.orEmpty()
+    val agent = rememberAgentLoop(connection)
+    val agentUi = rememberAgentScreen(agent)
+
+    /** A turn starts: the last turn's cards clear, and the send shows as running. */
+    fun startTurn() {
+        agent?.onNewTurn()
+        turn = turn.onSendStarted()
+    }
 
     fun retryLast() {
         val active = connection ?: return
+        if (agentUi?.approvalsWaiting == true) return
         scope.resendLastMessage(
             active,
             messages,
-            onStart = { turn = turn.onSendStarted() },
+            onStart = { startTurn() },
             onFailed = { turn = turn.onSendFailed() },
         )
     }
+
+    /** Sends the plan back as a message. The plan card closes first. */
+    fun sendPlanEdit(
+        active: SessionConnection,
+        text: String,
+    ) {
+        if (agentUi?.approvalsWaiting == true) return
+        agent?.onPlanSent()
+        scope.sendTurn(active, text, onStart = { startTurn() }, onFailed = {
+            turn =
+                turn.onSendFailed()
+        })
+    }
+
+    LaunchedEffect(agent) { agent?.hydrate() }
     SnapshotReload(
         connection = connection,
         reloads = sheetControl.reloads,
@@ -90,7 +127,10 @@ fun TranscriptScreen(
     )
     CoreEvents(
         connection = connection,
-        onEvent = { event -> turn = turn.onEvent(event, System.currentTimeMillis()) },
+        onEvent = { event ->
+            agent?.onEvent(event)
+            turn = turn.onEvent(event, System.currentTimeMillis())
+        },
         onLoaded = { snapshot = it },
         onFailed = { failed = true },
     )
@@ -111,6 +151,12 @@ fun TranscriptScreen(
         onOpenProviders = sheets?.openProviders,
         onDismissStopped = { turn = turn.onDismissStopped() },
         onLongPress = { actionsFor = it },
+        agent = agentUi,
+        onSendPlanEdit =
+            connection?.let { active ->
+                { text: String -> sendPlanEdit(active, text) }
+            },
+        onOpenBudgets = onOpenBudgets ?: {},
         composer =
             connection?.let { active ->
                 {
@@ -118,8 +164,9 @@ fun TranscriptScreen(
                         connection = active,
                         modelId = snapshot?.details?.modelId.orEmpty(),
                         running = turn.running,
-                        onSendStart = { turn = turn.onSendStarted() },
+                        onSendStart = { startTurn() },
                         onSendFailed = { turn = turn.onSendFailed() },
+                        sendBlocked = agentUi?.approvalsWaiting == true,
                     )
                 }
             },
@@ -234,9 +281,28 @@ fun TranscriptContent(
     onDismissStopped: () -> Unit = {},
     onLongPress: ((MessageView) -> Unit)? = null,
     composer: (@Composable () -> Unit)? = null,
+    agent: AgentScreenUi? = null,
+    onSendPlanEdit: ((String) -> Unit)? = null,
+    onOpenBudgets: () -> Unit = {},
 ) {
     val listState = rememberLazyListState()
-    FollowTail(listState, messages, turn.hasFooter)
+    val visible = remember(messages) { messages.filterNot { it.isToolResultOnly() } }
+    val live = agent?.liveSection().orEmpty()
+    val footerRows = if (turn.hasFooter) 1 else 0
+    FollowTail(listState, visible, footerRows + live.size, liveKey = agent?.state?.calls)
+    val expanded = rememberSaveable(saver = expandedCardsSaver) { ExpandedCards() }
+    val liveIds =
+        agent
+            ?.state
+            ?.calls
+            .orEmpty()
+            .map { it.id }
+            .toSet()
+    val persisted =
+        remember(messages, liveIds) {
+            toolCallsFromMessages(messages).filterKeys { id -> id !in liveIds }
+        }
+    val tools = ToolCardState(persisted, expanded.ids, expanded::toggle)
     Scaffold(
         containerColor = TetherTheme.colors.bg,
         topBar = {
@@ -255,9 +321,10 @@ fun TranscriptContent(
         },
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            agent?.let { AgentTopBlock(ui = it, onOpenBudgets = onOpenBudgets) }
             Box(modifier = Modifier.weight(1f)) {
                 TranscriptList(
-                    messages = messages,
+                    messages = visible,
                     failed = failed,
                     turn = turn,
                     provider = provider,
@@ -266,6 +333,9 @@ fun TranscriptContent(
                     onOpenProviders = onOpenProviders,
                     onDismissStopped = onDismissStopped,
                     onLongPress = onLongPress,
+                    agent = agent,
+                    tools = tools,
+                    onSendPlanEdit = onSendPlanEdit ?: {},
                 )
             }
             turn.proposedTool?.let { (tool, target) -> ProposedToolBar(tool, target) }
@@ -277,30 +347,38 @@ fun TranscriptContent(
                     modifier = Modifier.padding(horizontal = TetherSpace.space4),
                 )
             }
+            agent?.let {
+                AgentApprovalSlot(
+                    ui = it,
+                    modifier = Modifier.padding(top = TetherSpace.space2),
+                )
+            }
             composer?.invoke()
         }
     }
 }
 
 /**
- * Keeps the newest item in view while the reader is at the bottom. [footer] adds the turn footer
- * as the last item, so it scrolls into view when it appears. The flag changes only when the
- * scroll position changes, so a streamed reply that grows below the viewport does not count as
- * the reader leaving the bottom.
+ * Keeps the newest item in view while the reader is at the bottom. [trailing] counts the items
+ * after the messages: the live section and the turn footer. [liveKey] changes with each live
+ * update, so a streaming tool card keeps the tail in view. The flag changes only when the scroll
+ * position changes, so a streamed reply that grows below the viewport does not count as the
+ * reader leaving the bottom.
  */
 @Composable
 private fun FollowTail(
     listState: LazyListState,
     messages: List<MessageView>,
-    footer: Boolean,
+    trailing: Int,
+    liveKey: Any?,
 ) {
     var followTail by remember { mutableStateOf(true) }
     LaunchedEffect(listState) {
         snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
             .collect { followTail = listState.isAtBottom() }
     }
-    LaunchedEffect(messages, footer) {
-        val lastItem = messages.size + (if (footer) 1 else 0) - 1
+    LaunchedEffect(messages, trailing, liveKey) {
+        val lastItem = messages.size + trailing - 1
         if (lastItem >= 0 && shouldFollow(followTail, hasNewContent = true)) {
             // A large offset clamps to the list end, so a growing reply stays in view.
             listState.scrollToItem(lastItem, Int.MAX_VALUE)

@@ -81,11 +81,33 @@ class SessionConnection(
         runtime.close()
     }
 
-    /** Opens the runner. With a workspace root, it also turns interactive approvals on. */
+    /**
+     * Opens the runner. With a workspace root, it also turns interactive approvals on. When the
+     * workspace is unavailable, such as a missing project folder, it opens plain chat instead.
+     */
     private fun openRunner(): SessionRunner {
         val root = workspacesRoot ?: return runtime.openSession(sessionId)
-        val opened = runtime.openSessionWithWorkspace(sessionId, root)
-        runtime.setInteractiveApprovals(true)
-        return opened
+        return openWithFallback(
+            workspace = {
+                runtime.openSessionWithWorkspace(sessionId, root).also {
+                    runtime.setInteractiveApprovals(true)
+                }
+            },
+            plain = { runtime.openSession(sessionId) },
+        )
     }
 }
+
+/**
+ * Runs [workspace]. Only [SessionRuntimeException.Unavailable] falls back to [plain]; every other
+ * error reaches the caller unchanged.
+ */
+internal fun <T> openWithFallback(
+    workspace: () -> T,
+    plain: () -> T,
+): T =
+    try {
+        workspace()
+    } catch (_: SessionRuntimeException.Unavailable) {
+        plain()
+    }

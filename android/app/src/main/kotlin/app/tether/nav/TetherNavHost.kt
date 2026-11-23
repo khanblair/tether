@@ -179,7 +179,12 @@ private fun SessionRoute(
             try {
                 connection =
                     withContext(Dispatchers.IO) {
-                        SessionConnection(module.databasePath, module.vault, sessionId)
+                        SessionConnection(
+                            module.databasePath,
+                            module.vault,
+                            sessionId,
+                            workspacesRoot = module.workspacesRoot,
+                        )
                     }
             } catch (_: SessionRuntimeException) {
                 unavailable = true
@@ -201,6 +206,7 @@ private fun SessionRoute(
                     messages = module.messages,
                     openProviders = { nav.go(Route.Providers) },
                 ),
+            onOpenBudgets = { nav.open(SETTINGS_BUDGETS_ROUTE) },
         )
     }
 }

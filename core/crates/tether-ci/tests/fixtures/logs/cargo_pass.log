@@ -1,0 +1,6 @@
+2026-11-21T10:00:00.1234567Z    Compiling widget v0.1.0
+2026-11-21T10:00:01.1234567Z     Finished `test` profile
+2026-11-21T10:00:01.1234567Z running 2 tests
+2026-11-21T10:00:01.1234567Z test tests::accepts ... ok
+2026-11-21T10:00:01.1234567Z test tests::rejects ... ok
+2026-11-21T10:00:01.1234567Z test result: ok. 2 passed; 0 failed

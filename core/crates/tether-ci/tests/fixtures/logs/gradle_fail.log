@@ -1,0 +1,4 @@
+2026-11-21T10:00:00.1234567Z > Task :test
+2026-11-21T10:00:01.1234567Z Test > rejects invalid input FAILED
+2026-11-21T10:00:01.1234567Z     at src/test/kotlin/ApiTest.kt:42
+2026-11-21T10:00:01.1234567Z BUILD FAILED in 2s

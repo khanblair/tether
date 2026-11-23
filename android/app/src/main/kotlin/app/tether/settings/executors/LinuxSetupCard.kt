@@ -31,8 +31,8 @@ fun LinuxSetupCard(
     state: LinuxState,
     onInstall: () -> Unit,
     onRepair: (() -> Unit)?,
-    source: String? = null,
     modifier: Modifier = Modifier,
+    source: String? = null,
     onRemove: (() -> Unit)? = null,
 ) {
     val colors = TetherTheme.colors

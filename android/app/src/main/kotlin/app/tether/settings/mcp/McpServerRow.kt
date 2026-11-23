@@ -17,7 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -166,12 +166,12 @@ private fun TestOutcome(
 /** "1 tool" or "3 tools", from the plural resource. */
 @Composable
 internal fun toolCountText(count: Int): String =
-    LocalContext.current.resources.getQuantityString(R.plurals.mcp_tool_count, count, count)
+    pluralStringResource(R.plurals.mcp_tool_count, count, count)
 
 /** "Connected. 3 tools found.", from the plural resource. */
 @Composable
 internal fun testPassedText(count: Int): String =
-    LocalContext.current.resources.getQuantityString(R.plurals.mcp_test_passed, count, count)
+    pluralStringResource(R.plurals.mcp_test_passed, count, count)
 
 /** The badge label of a status. */
 internal fun McpStatus.labelRes(): Int =

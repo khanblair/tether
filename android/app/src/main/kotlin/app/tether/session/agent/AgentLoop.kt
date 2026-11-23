@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
 import app.tether.core.generated.CoreEventView
 import app.tether.session.SessionConnection
@@ -153,12 +154,18 @@ class AgentLoop(
         bannerSlot.value = next.banners
     }
 
+    /** Puts [model] in the store through the public provider, so [close] clears it. */
     private fun <T : ViewModel> keep(
         key: String,
         model: T,
     ): T {
-        store.put(key, model)
-        return model
+        val factory =
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <V : ViewModel> create(modelClass: Class<V>): V = model as V
+            }
+        @Suppress("UNCHECKED_CAST")
+        return ViewModelProvider(store, factory)[key, model.javaClass as Class<T>]
     }
 
     /** What [hydrate] reads from the core before it applies the result. */

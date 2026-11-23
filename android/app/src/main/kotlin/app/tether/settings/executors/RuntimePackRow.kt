@@ -29,8 +29,8 @@ fun RuntimePackRow(
     pack: PackRow,
     onInstall: () -> Unit,
     onCancel: () -> Unit,
-    source: String? = null,
     modifier: Modifier = Modifier,
+    source: String? = null,
 ) {
     Column(
         modifier =

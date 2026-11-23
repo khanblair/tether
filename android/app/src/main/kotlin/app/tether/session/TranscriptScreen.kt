@@ -42,33 +42,6 @@ import app.tether.session.agent.rememberAgentScreen
 import app.tether.session.agent.toolCallsFromMessages
 import app.tether.session.compose.commandHooksOf
 import app.tether.shell.BackButton
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-
-/**
- * The session's messages and status, as the core saved them. Every core event reloads it, so a
- * streamed reply grows in place and a finished turn shows its saved text.
- */
-private data class TranscriptSnapshot(
-    val messages: List<MessageView>,
-    val status: SessionStatus,
-    val details: SessionDetails,
-    val usage: SessionUsage,
-)
-
-private suspend fun SessionConnection.snapshot(): TranscriptSnapshot =
-    withContext(Dispatchers.IO) {
-        TranscriptSnapshot(
-            messages = transcript().filterNot(MessageView::rewound).sortedBy(MessageView::seq),
-            status = status(),
-            details = settings.details(sessionId),
-            usage = settings.usage(sessionId),
-        )
-    }
 
 /** Persisted messages are read off the main thread when the session route opens. */
 @Composable
@@ -186,57 +159,6 @@ fun TranscriptScreen(
         control = sheetControl,
         isRunning = { turn.running },
     )
-}
-
-/** Applies each core event and reloads the snapshot. A failed reload marks the screen failed. */
-@Composable
-private fun CoreEvents(
-    connection: SessionConnection?,
-    onEvent: (CoreEventView) -> Unit,
-    onLoaded: (TranscriptSnapshot) -> Unit,
-    onFailed: () -> Unit,
-) {
-    LaunchedEffect(connection) {
-        if (connection != null) {
-            try {
-                coroutineScope {
-                    // Listen before the first read, so an event sent during the read is not lost.
-                    launch(start = CoroutineStart.UNDISPATCHED) {
-                        connection.changes.collect { event ->
-                            onEvent(event)
-                            onLoaded(connection.snapshot())
-                        }
-                    }
-                    onLoaded(connection.snapshot())
-                }
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (_: Exception) {
-                onFailed()
-            }
-        }
-    }
-}
-
-/** Reloads the transcript after a sheet changed the session. The first load is in the screen. */
-@Composable
-private fun SnapshotReload(
-    connection: SessionConnection?,
-    reloads: Int,
-    onLoaded: (TranscriptSnapshot) -> Unit,
-    onFailed: () -> Unit,
-) {
-    LaunchedEffect(connection, reloads) {
-        if (connection != null && reloads > 0) {
-            try {
-                onLoaded(connection.snapshot())
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (_: Exception) {
-                onFailed()
-            }
-        }
-    }
 }
 
 /** The sheet for the message a long press chose. It is hidden while [message] is null. */

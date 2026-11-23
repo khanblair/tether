@@ -4,6 +4,7 @@ import android.content.Context
 import android.database.Cursor
 import android.net.Uri
 import android.provider.OpenableColumns
+import androidx.core.net.toUri
 import java.io.File
 import java.io.IOException
 import java.util.UUID
@@ -61,7 +62,7 @@ class ContentResolverArchiveFiles(
         val target = newCacheFile(IMPORT_FOLDER)
         try {
             val input =
-                resolver.openInputStream(Uri.parse(uri.raw))
+                resolver.openInputStream(uri.raw.toUri())
                     ?: throw IOException("The provider returned no stream.")
             input.use { source -> target.outputStream().use { source.copyTo(it) } }
         } catch (error: IOException) {
@@ -78,7 +79,7 @@ class ContentResolverArchiveFiles(
         uri: ArchiveUri,
     ) {
         val output =
-            resolver.openOutputStream(Uri.parse(uri.raw), "wt")
+            resolver.openOutputStream(uri.raw.toUri(), "wt")
                 ?: throw IOException("The provider returned no stream.")
         output.use { sink -> File(temp.path).inputStream().use { it.copyTo(sink) } }
     }
@@ -103,7 +104,7 @@ class ContentResolverArchiveFiles(
         column: String,
         read: (Cursor, Int) -> T?,
     ): T? {
-        val query = resolver.query(Uri.parse(uri.raw), arrayOf(column), null, null, null)
+        val query = resolver.query(uri.raw.toUri(), arrayOf(column), null, null, null)
         val cursor = query ?: return null
         return cursor.use {
             val index = it.getColumnIndex(column)

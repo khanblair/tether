@@ -166,7 +166,6 @@ class GithubAccountViewModel(
 
     override fun onCleared() {
         stopPolling()
-        super.onCleared()
     }
 
     private fun startPolling(

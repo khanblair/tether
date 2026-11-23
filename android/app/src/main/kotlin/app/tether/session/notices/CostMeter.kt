@@ -17,8 +17,8 @@ import app.tether.design.TetherTheme
 @Composable
 fun CostMeter(
     costMicros: Long?,
-    budgetMicros: Long? = null,
     modifier: Modifier = Modifier,
+    budgetMicros: Long? = null,
 ) {
     if (costMicros == null) {
         Text(

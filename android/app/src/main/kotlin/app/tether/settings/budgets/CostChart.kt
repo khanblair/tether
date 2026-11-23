@@ -9,13 +9,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import app.tether.R
 import app.tether.design.TetherTheme
 import app.tether.design.components.UsageBarChart
 import app.tether.design.tokens.TetherSpace
-import java.util.Locale
 
 /**
  * Daily spend as bars, oldest day first, with the first and last dates under the plot. The
@@ -27,7 +27,7 @@ internal fun CostChart(
     days: List<CostDay>,
     modifier: Modifier = Modifier,
 ) {
-    val locale = Locale.getDefault()
+    val locale = LocalConfiguration.current.locales[0]
     val peak = days.maxBy { it.costMicros }
     val span = pluralStringResource(R.plurals.budgets_days, days.size, days.size)
     val description =

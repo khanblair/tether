@@ -15,6 +15,7 @@ import app.tether.R
 import app.tether.files.FilesGateway
 import app.tether.messages.AppMessages
 import app.tether.providers.ProviderGateway
+import app.tether.session.compose.CommandScreen
 
 /** The sheets a session screen can open. */
 enum class SessionSheetKind { Model, Mode, Menu, Rename, Rewind }
@@ -57,7 +58,8 @@ class SessionSheetControl {
 
 /**
  * What the session sheets need from the app: the saved keys, the snackbar host, and the way to
- * the Providers screen, and the project files the composer's `@` picker searches. The session
+ * the Providers screen, the project files the composer's `@` picker searches, and the screens
+ * and new session a slash command opens. The session
  * screen builds it from the app module.
  */
 class SessionSheetEnv(
@@ -65,6 +67,8 @@ class SessionSheetEnv(
     val messages: AppMessages,
     val openProviders: () -> Unit,
     val files: FilesGateway? = null,
+    val openScreen: (CommandScreen, String) -> Unit = { _, _ -> },
+    val newSession: () -> Unit = {},
 )
 
 /**

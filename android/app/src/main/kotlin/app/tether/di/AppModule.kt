@@ -11,6 +11,8 @@ import app.tether.core.keystoreSecretVault
 import app.tether.design.ThemeMode
 import app.tether.files.FilesGateway
 import app.tether.files.createFilesGateway
+import app.tether.git.GitGateway
+import app.tether.git.createGitGateway
 import app.tether.home.CoreProjectGateway
 import app.tether.home.HomeSources
 import app.tether.home.ProjectGateway
@@ -18,6 +20,8 @@ import app.tether.home.createHomeSources
 import app.tether.memory.MemoryAreaGateways
 import app.tether.memory.createMemoryAreaGateways
 import app.tether.messages.AppMessages
+import app.tether.projectarchive.ProjectArchiveGateway
+import app.tether.projectarchive.createProjectArchiveGateway
 import app.tether.providers.CoreProviderGateway
 import app.tether.providers.ProviderGateway
 import app.tether.session.CoreSessionGateway
@@ -95,6 +99,14 @@ class AppModule(
 
     /** Budget limits and the cost summary. The runtime opens on the first call. */
     val budgetsGateway: BudgetsGateway by lazy { createBudgetsGateway(databasePath) }
+
+    /** Importing a project from a ZIP and exporting one. The runtime opens on the first call. */
+    val projectArchiveGateway: ProjectArchiveGateway by lazy {
+        createProjectArchiveGateway(databasePath, workspacesRoot)
+    }
+
+    /** Git status, branches, history, and diffs of a project. The runtime opens on first use. */
+    val gitGateway: GitGateway by lazy { createGitGateway(databasePath, workspacesRoot, vault) }
 
     /** MCP servers: the list, a server's tools, and adding one. */
     val mcpGateway: McpGateway by lazy { createMcpGateway(databasePath, vault) }

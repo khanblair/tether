@@ -80,6 +80,14 @@ class SessionConnection(
         return outcome.skippedPaths.zip(outcome.skippedReasons, ::SkippedMention)
     }
 
+    /** Hides earlier messages from future context. The transcript keeps them. */
+    fun clearContext() {
+        runner.clearContext()
+    }
+
+    /** The whole session as Markdown, for saving to a file. */
+    fun exportMarkdown(): String = runtime.exportSession(sessionId)
+
     fun stop() {
         runner.interrupt()
     }

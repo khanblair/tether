@@ -40,6 +40,7 @@ import app.tether.session.agent.liveSection
 import app.tether.session.agent.rememberAgentLoop
 import app.tether.session.agent.rememberAgentScreen
 import app.tether.session.agent.toolCallsFromMessages
+import app.tether.session.compose.commandHooksOf
 import app.tether.shell.BackButton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
@@ -169,6 +170,7 @@ fun TranscriptScreen(
                         sendBlocked = agentUi?.approvalsWaiting == true,
                         files = sheets?.files,
                         messages = sheets?.messages,
+                        commands = sheets?.let { commandHooksOf(it, sheetControl) },
                     )
                 }
             },

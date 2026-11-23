@@ -37,8 +37,10 @@ import app.tether.session.agent.ToolCardState
 import app.tether.session.agent.agentLiveItems
 import app.tether.session.agent.liveSection
 import app.tether.session.agent.segmentParts
+import app.tether.session.compose.CommandHooks
 import app.tether.session.compose.ComposeAssistDeps
 import app.tether.session.compose.SkippedMention
+import app.tether.session.compose.rememberCommandSend
 import app.tether.session.compose.skippedMentionsLine
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -93,6 +95,7 @@ internal fun ComposerControls(
     sendBlocked: Boolean = false,
     files: FilesGateway? = null,
     messages: AppMessages? = null,
+    commands: CommandHooks? = null,
 ) {
     val scope = rememberCoroutineScope()
     val skippedText = stringResource(R.string.compose_skipped_files)
@@ -100,14 +103,15 @@ internal fun ComposerControls(
         remember(connection, files) {
             files?.let { ComposeAssistDeps(connection.commands, it, connection.projectId) }
         }
+    val sendPlain: (String) -> Unit = { text ->
+        scope.sendTurn(connection, text, onSendStart, onSendFailed) { skipped ->
+            messages?.show(skippedText.format(skippedMentionsLine(skipped)))
+        }
+    }
     Composer(
         modelId = modelId,
         running = running,
-        onSend = { text ->
-            scope.sendTurn(connection, text, onSendStart, onSendFailed) { skipped ->
-                messages?.show(skippedText.format(skippedMentionsLine(skipped)))
-            }
-        },
+        onSend = rememberCommandSend(connection, commands, messages, sendPlain),
         onStop = { scope.launch(Dispatchers.IO) { connection.stop() } },
         sendBlocked = sendBlocked,
         assist = assist,

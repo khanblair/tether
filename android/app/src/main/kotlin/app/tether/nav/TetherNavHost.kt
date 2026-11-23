@@ -27,12 +27,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import app.tether.R
 import app.tether.core.generated.SessionRuntimeException
 import app.tether.design.components.TetherSnackbarHost
 import app.tether.di.AppModule
@@ -99,6 +101,8 @@ fun TetherNavHost(module: AppModule) {
                 onboardingRoutes(module = module, nav = nav)
                 homeRoutes(module = module, nav = nav, attentionItems = attention)
                 settingsRoutes(module = module, nav = nav)
+                projectArchiveRoutes(module = module, nav = nav)
+                gitRoutes(module = module, nav = nav)
                 sessionSheetRoutes(
                     settings = module.sessionSettings,
                     onBack = nav::back,
@@ -172,6 +176,9 @@ private fun SessionRoute(
     sessionId: String?,
 ) {
     val onBack: () -> Unit = nav::back
+    val scope = rememberCoroutineScope()
+    val screenMissing = stringResource(R.string.compose_command_screen_missing)
+    val newSessionFailed = stringResource(R.string.compose_command_new_failed)
     var connection by remember(sessionId) { mutableStateOf<SessionConnection?>(null) }
     var unavailable by remember(sessionId) { mutableStateOf(sessionId == null) }
     LaunchedEffect(sessionId) {
@@ -194,6 +201,7 @@ private fun SessionRoute(
     DisposableEffect(connection) {
         onDispose { connection?.close() }
     }
+    val projectId = connection?.projectId
     if (unavailable) {
         SessionUnavailableScreen(onBack = onBack)
     } else {
@@ -206,6 +214,16 @@ private fun SessionRoute(
                     messages = module.messages,
                     openProviders = { nav.go(Route.Providers) },
                     files = module.filesGateway,
+                    openScreen = { target, arguments ->
+                        openCommandScreen(nav, projectId, target, arguments) {
+                            module.messages.show(screenMissing)
+                        }
+                    },
+                    newSession = {
+                        startNewSession(module, nav, projectId, scope) {
+                            module.messages.show(newSessionFailed)
+                        }
+                    },
                 ),
             onOpenBudgets = { nav.open(SETTINGS_BUDGETS_ROUTE) },
         )

@@ -17,4 +17,15 @@
     <!-- Mention chips: one per file mentioned in the draft. %1$s is the path. -->
     <string name="compose_mention_remove">Remove %1$s</string>
     <string name="compose_skipped_files">Not attached: %1$s</string>
+
+    <!-- Slash commands: what sending a command says when nothing runs. %1$s is the name without the slash. -->
+    <string name="compose_command_unknown">Unknown command /%1$s.</string>
+    <string name="compose_command_unknown_suggestion">Unknown command /%1$s. Did you mean /%2$s?</string>
+    <string name="compose_command_not_yet">That command is not available yet.</string>
+    <string name="compose_command_failed">Could not run that command.</string>
+    <string name="compose_command_cleared">Context cleared. The transcript stays.</string>
+    <string name="compose_command_plan_on">Plan mode is on.</string>
+    <string name="compose_command_export_done">Session saved.</string>
+    <string name="compose_command_new_failed">Could not start a new session. Check your provider key and model.</string>
+    <string name="compose_command_screen_missing">That screen is not available yet.</string>
 </resources>

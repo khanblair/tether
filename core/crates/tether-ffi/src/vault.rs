@@ -1,11 +1,72 @@
 //! Private Markdown vault operations for the platform.
 
 use std::fs;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use tether_memory::vault::{NoteLinks, VaultError, VaultLink, VaultNote, VaultStore};
 
 use crate::memory::checked_directory;
+use crate::{vault_archive, vault_sync};
+
+/// Controls whether vault import merges into or replaces an empty vault.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum ImportMode {
+    /// Keep existing files and save changed incoming notes as conflict copies.
+    Merge,
+    /// Import only when the vault contains no notes or attachments.
+    ReplaceEmpty,
+}
+
+/// Counts the files handled by a vault import.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, uniffi::Record)]
+pub struct VaultImportReportView {
+    /// Number of new files written.
+    pub imported: u64,
+    /// Number of identical or unsupported files skipped.
+    pub skipped: u64,
+    /// Number of changed files saved beside an existing file.
+    pub conflicts: u64,
+}
+
+/// A shared-folder platform operation failed.
+#[derive(Debug, thiserror::Error, uniffi::Error)]
+pub enum VaultFolderPlatformError {
+    /// The platform could not complete the operation.
+    #[error("vault folder operation failed")]
+    Failed,
+}
+
+/// Provides access to a user-selected shared vault folder.
+#[uniffi::export(with_foreign)]
+pub trait VaultFolderPlatform: Send + Sync {
+    /// Lists relative Markdown paths in the shared folder.
+    ///
+    /// # Errors
+    /// Returns a platform error when listing fails.
+    fn list(&self) -> Result<Vec<String>, VaultFolderPlatformError>;
+    /// Reads a shared Markdown file, or returns `None` when it is absent.
+    ///
+    /// # Errors
+    /// Returns a platform error when reading fails.
+    fn read(&self, path: String) -> Result<Option<Vec<u8>>, VaultFolderPlatformError>;
+    /// Writes one complete shared Markdown file.
+    ///
+    /// # Errors
+    /// Returns a platform error when writing fails.
+    fn write(&self, path: String, bytes: Vec<u8>) -> Result<(), VaultFolderPlatformError>;
+}
+
+/// Changes made by a shared-folder sync.
+#[derive(Debug, Clone, Default, PartialEq, Eq, uniffi::Record)]
+pub struct VaultSyncReportView {
+    /// Paths copied into the private vault.
+    pub copied_to_private: Vec<String>,
+    /// Paths copied into the shared folder.
+    pub copied_to_shared: Vec<String>,
+    /// Original paths with two different edits.
+    pub conflicts: Vec<String>,
+}
 
 /// A parsed vault note and its original Markdown.
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
@@ -76,11 +137,21 @@ pub enum VaultRuntimeError {
     /// Vault storage cannot be read or written.
     #[error("vault is unavailable")]
     Unavailable,
+    /// The archive is invalid or violates the vault archive rules.
+    #[error("invalid vault archive")]
+    Archive,
+    /// The archive operation was cancelled.
+    #[error("vault archive operation cancelled")]
+    Cancelled,
+    /// Replace mode was requested for a non-empty vault.
+    #[error("vault is not empty")]
+    VaultNotEmpty,
 }
 
 /// Reads and writes notes inside one private vault directory.
 #[derive(uniffi::Object)]
 pub struct VaultRuntime {
+    root: PathBuf,
     store: VaultStore,
 }
 
@@ -95,6 +166,7 @@ impl VaultRuntime {
         let root = checked_directory(vault_dir).ok_or(VaultRuntimeError::InvalidPath)?;
         fs::create_dir_all(root).map_err(|_| VaultRuntimeError::Unavailable)?;
         Ok(Arc::new(Self {
+            root: root.to_path_buf(),
             store: VaultStore::new(root),
         }))
     }
@@ -176,6 +248,48 @@ impl VaultRuntime {
         self.store
             .map(start, depth as usize, token_budget as usize)
             .map_err(|error| map_error(&error))
+    }
+
+    /// Exports Markdown notes and supported attachments as a ZIP.
+    ///
+    /// # Errors
+    /// Returns an invalid destination or storage error.
+    pub fn export_zip(&self, dest_path: String) -> Result<(), VaultRuntimeError> {
+        vault_archive::export(&self.root, &PathBuf::from(dest_path))
+    }
+
+    /// Imports Markdown notes and supported attachments from a ZIP.
+    ///
+    /// # Errors
+    /// Returns an invalid archive, invalid note, non-empty-vault, or storage error.
+    pub fn import_zip(
+        &self,
+        zip_path: String,
+        mode: ImportMode,
+    ) -> Result<VaultImportReportView, VaultRuntimeError> {
+        self.import_zip_at_date(zip_path, mode, &vault_archive::import_zip_date())
+    }
+
+    /// Syncs the private vault with a platform-owned shared folder.
+    ///
+    /// # Errors
+    /// Returns a platform, path, manifest, or filesystem error.
+    pub fn sync_with_platform(
+        &self,
+        folder: Arc<dyn VaultFolderPlatform>,
+    ) -> Result<VaultSyncReportView, VaultRuntimeError> {
+        vault_sync::sync(&self.root, folder)
+    }
+}
+
+impl VaultRuntime {
+    pub(crate) fn import_zip_at_date(
+        &self,
+        zip_path: String,
+        mode: ImportMode,
+        date: &str,
+    ) -> Result<VaultImportReportView, VaultRuntimeError> {
+        vault_archive::import(&self.root, &PathBuf::from(zip_path), mode, date)
     }
 }
 

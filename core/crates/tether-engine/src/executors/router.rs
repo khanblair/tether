@@ -1,9 +1,11 @@
 //! Shell-aware routing for the three command executors.
 
 use std::collections::BTreeSet;
-use std::fmt;
 
 use tether_types::Executor;
+
+mod tokenizer;
+pub use tokenizer::{ShellFeature, tokenize};
 
 /// Executor availability discovered by the platform runtime.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -38,55 +40,6 @@ pub struct Route {
     pub argv: Option<Vec<String>>,
     /// One-sentence explanation of the selection.
     pub reason: String,
-}
-
-/// An unquoted shell feature that WASI argv cannot represent.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ShellFeature {
-    /// A pipe character.
-    Pipe,
-    /// A redirection operator.
-    Redirect,
-    /// The `&&` operator.
-    And,
-    /// The `||` operator.
-    Or,
-    /// A command separator.
-    Semicolon,
-    /// A background operator.
-    Background,
-    /// A subshell delimiter.
-    Subshell,
-    /// A glob pattern.
-    Glob,
-    /// Variable expansion syntax.
-    Variable,
-    /// An environment assignment before the command.
-    EnvironmentAssignment,
-    /// A here-document operator.
-    HereDoc,
-    /// An unterminated quote or escape.
-    InvalidSyntax,
-}
-
-impl fmt::Display for ShellFeature {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let name = match self {
-            Self::Pipe => "pipe",
-            Self::Redirect => "redirect",
-            Self::And => "&&",
-            Self::Or => "||",
-            Self::Semicolon => ";",
-            Self::Background => "background",
-            Self::Subshell => "subshell",
-            Self::Glob => "glob",
-            Self::Variable => "variable",
-            Self::EnvironmentAssignment => "environment assignment prefix",
-            Self::HereDoc => "here-doc",
-            Self::InvalidSyntax => "invalid shell syntax",
-        };
-        formatter.write_str(name)
-    }
 }
 
 /// Router errors that name the unavailable or unsupported path.
@@ -145,6 +98,29 @@ impl Router {
 }
 
 fn explicit_route(executor: Executor, input: &RouteInput) -> Result<Route, RouteError> {
+    if executor == Executor::Sandbox {
+        let tokens =
+            tokenize(&input.command).map_err(|feature| RouteError::ExplicitUnavailable {
+                executor,
+                reason: format!("sandbox cannot run {feature}"),
+            })?;
+        let program = tokens.first().ok_or(RouteError::InvalidCommand)?;
+        if !sandbox_provides(program, &input.availability.sandbox_programs) {
+            return Err(RouteError::ExplicitUnavailable {
+                executor,
+                reason: format!("no verified runtime pack provides {program}"),
+            });
+        }
+        return Ok(Route {
+            executor,
+            argv: Some(sandbox_argv(
+                &tokens,
+                program,
+                &input.availability.sandbox_programs,
+            )),
+            reason: "uses the explicitly requested executor".into(),
+        });
+    }
     if is_available(executor, &input.availability) {
         return Ok(route_for(
             executor,
@@ -172,7 +148,7 @@ fn builtin_route(input: &RouteInput) -> Result<Route, RouteError> {
     if is_host_tool(program) {
         return host_fallback(input, &format!("{program} requires Linux mode"));
     }
-    if input.availability.sandbox_programs.contains(program) {
+    if sandbox_provides(program, &input.availability.sandbox_programs) {
         let argv = sandbox_argv(&tokens, program, &input.availability.sandbox_programs);
         let reason = format!("{program} is provided by the installed runtime pack");
         return Ok(Route {
@@ -250,13 +226,17 @@ fn host_fallback(input: &RouteInput, detail: &str) -> Result<Route, RouteError> 
 }
 
 fn route_for(executor: Executor, input: &RouteInput, reason: &str) -> Route {
+    let argv = if executor == Executor::Sandbox {
+        tokenize(&input.command).ok().map(|tokens| {
+            let program = tokens.first().map(String::as_str).unwrap_or_default();
+            sandbox_argv(&tokens, program, &input.availability.sandbox_programs)
+        })
+    } else {
+        None
+    };
     Route {
         executor,
-        argv: if executor == Executor::Sandbox {
-            tokenize(&input.command).ok()
-        } else {
-            None
-        },
+        argv,
         reason: reason.to_owned(),
     }
 }
@@ -269,6 +249,10 @@ fn sandbox_argv(tokens: &[String], program: &str, available: &BTreeSet<String>) 
     } else {
         tokens.to_vec()
     }
+}
+
+fn sandbox_provides(program: &str, available: &BTreeSet<String>) -> bool {
+    available.contains(program) || (program == "pytest" && available.contains("python"))
 }
 
 fn is_available(executor: Executor, availability: &Availability) -> bool {
@@ -291,100 +275,10 @@ fn validate_command(command: &str) -> Result<(), RouteError> {
     if command.is_empty() || command.chars().count() > 2_000 || command.contains('\0') {
         return Err(RouteError::InvalidCommand);
     }
+    if matches!(tokenize(command), Err(ShellFeature::InvalidSyntax)) {
+        return Err(RouteError::InvalidCommand);
+    }
     Ok(())
-}
-
-/// Tokenizes simple POSIX-style words and rejects shell syntax.
-///
-/// # Errors
-/// Returns the first unquoted shell feature or invalid quote syntax.
-#[expect(
-    clippy::excessive_nesting,
-    clippy::too_many_lines,
-    reason = "The tokenizer keeps quote and escape state in one small parser."
-)]
-pub fn tokenize(command: &str) -> Result<Vec<String>, ShellFeature> {
-    if command.chars().count() > 2_000 || command.contains('\0') {
-        return Err(ShellFeature::InvalidSyntax);
-    }
-    let mut tokens = Vec::new();
-    let mut word = String::new();
-    let mut quote = None;
-    let mut escaped = false;
-    let mut first_word = true;
-    let chars: Vec<char> = command.chars().collect();
-    let mut index = 0;
-    while index < chars.len() {
-        let ch = chars[index];
-        if escaped {
-            word.push(ch);
-            escaped = false;
-            index += 1;
-            continue;
-        }
-        if quote == Some('\'') {
-            if ch == '\'' {
-                quote = None;
-            } else {
-                word.push(ch);
-            }
-            index += 1;
-            continue;
-        }
-        if quote == Some('"') {
-            match ch {
-                '"' => quote = None,
-                '\\' if chars.get(index + 1).is_some() => {
-                    index += 1;
-                    word.push(chars[index]);
-                }
-                _ => word.push(ch),
-            }
-            index += 1;
-            continue;
-        }
-        match ch {
-            '\'' | '"' => quote = Some(ch),
-            '\\' => escaped = true,
-            ' ' | '\t' | '\r' => flush_word(&mut tokens, &mut word, &mut first_word),
-            '\n' => return Err(ShellFeature::InvalidSyntax),
-            '|' if chars.get(index + 1) == Some(&'|') => return Err(ShellFeature::Or),
-            '|' => return Err(ShellFeature::Pipe),
-            '&' if chars.get(index + 1) == Some(&'&') => return Err(ShellFeature::And),
-            '&' => return Err(ShellFeature::Background),
-            ';' => return Err(ShellFeature::Semicolon),
-            '<' if chars.get(index + 1) == Some(&'<') => return Err(ShellFeature::HereDoc),
-            '<' | '>' => return Err(ShellFeature::Redirect),
-            '(' | ')' => return Err(ShellFeature::Subshell),
-            '*' | '?' | '[' => return Err(ShellFeature::Glob),
-            '$' => return Err(ShellFeature::Variable),
-            _ => word.push(ch),
-        }
-        if first_word && word.contains('=') && word.split('=').next().is_some_and(valid_env_name) {
-            return Err(ShellFeature::EnvironmentAssignment);
-        }
-        index += 1;
-    }
-    if escaped || quote.is_some() {
-        return Err(ShellFeature::InvalidSyntax);
-    }
-    flush_word(&mut tokens, &mut word, &mut first_word);
-    Ok(tokens)
-}
-
-fn flush_word(tokens: &mut Vec<String>, word: &mut String, first_word: &mut bool) {
-    if !word.is_empty() {
-        tokens.push(std::mem::take(word));
-        *first_word = false;
-    }
-}
-
-fn valid_env_name(name: &str) -> bool {
-    let mut bytes = name.bytes();
-    bytes
-        .next()
-        .is_some_and(|byte| byte.is_ascii_alphabetic() || byte == b'_')
-        && bytes.all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
 }
 
 #[cfg(test)]

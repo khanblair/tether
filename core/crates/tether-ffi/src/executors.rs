@@ -2,13 +2,21 @@
 
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use tether_linux::{RootfsManager, RootfsStatus};
+use tether_engine::config;
+use tether_engine::executors::{CiExecutor, NotConfigured, RunTools};
+use tether_linux::{LinuxRunner, NetworkPolicy, ProotConfig, RootfsManager, RootfsStatus};
 use tether_sandbox::installed_programs;
-use tether_types::ProjectId;
+use tether_store::Store;
+use tether_types::{ProjectId, SessionId};
 
 use crate::SessionRuntime;
+
+#[path = "executors_download.rs"]
+mod downloads;
+pub use downloads::{ExecutorProgress, RuntimePackView};
 
 /// Platform paths and verifying keys for the local executors.
 #[derive(Debug, Clone, uniffi::Record)]
@@ -100,10 +108,11 @@ impl SessionRuntime {
                 RootfsManager::new(paths.linux_root).status(),
                 Ok(RootfsStatus::Ready { .. })
             );
+        let ci_ready = ci_executor().is_configured();
         Ok(ExecutorAvailabilityView {
             sandbox_programs,
             linux_ready,
-            ci_ready: false,
+            ci_ready,
         })
     }
 
@@ -145,6 +154,96 @@ struct ExecutorPaths {
     packs_root: PathBuf,
     linux_root: PathBuf,
     proot_path: Option<PathBuf>,
+    loader_path: Option<PathBuf>,
+    pack_key: Option<String>,
+    rootfs_key: Option<String>,
+}
+
+/// Returns the CI seam used by session tool wiring.
+pub(crate) fn ci_executor() -> Arc<dyn CiExecutor> {
+    Arc::new(NotConfigured)
+}
+
+/// Builds the run handler for one project workspace.
+pub(crate) fn session_run_tools(
+    database_path: &Path,
+    project_root: &Path,
+    project_id: &ProjectId,
+) -> Result<RunTools, String> {
+    let files_root = files_root(database_path);
+    let Ok(paths) = read_paths(&files_root) else {
+        return RunTools::new(files_root.join("runtimes"));
+    };
+    let runners = linux_runners(&paths, project_root);
+    let database = database_path.to_owned();
+    let project = project_id.clone();
+    let network = Arc::new(move |_session: &SessionId| {
+        Store::open(&database)
+            .and_then(|store| store.project_network(&project))
+            .unwrap_or(false)
+    });
+    let project_default = project_default(database_path, project_root, project_id);
+    let remote_project = project_id.clone();
+    RunTools::new(paths.packs_root).map(|tools| {
+        tools
+            .with_network_runners(runners, ci_executor(), project_default, network)
+            .with_project_id(Arc::new(move |_| remote_project.clone()))
+    })
+}
+
+fn project_default(
+    database_path: &Path,
+    project_root: &Path,
+    project_id: &ProjectId,
+) -> Option<tether_types::Executor> {
+    let store = Store::open(database_path).ok()?;
+    let trusted = store.is_project_trusted(project_id).ok()?;
+    let (project, _) = config::load_project(project_root, trusted);
+    let global_path = files_root(database_path).join("config/global.toml");
+    let (global, _) = config::load_global(&global_path);
+    Some(
+        config::effective_config(&global, &project, &config::SessionConfig::default())
+            .executor_default,
+    )
+}
+
+fn linux_runners(
+    paths: &ExecutorPaths,
+    project_root: &Path,
+) -> (Option<Arc<LinuxRunner>>, Option<Arc<LinuxRunner>>) {
+    let Some(proot_path) = paths.proot_path.as_ref() else {
+        return (None, None);
+    };
+    let ready = proot_path.is_file()
+        && matches!(
+            RootfsManager::new(&paths.linux_root).status(),
+            Ok(RootfsStatus::Ready { .. })
+        );
+    if !ready {
+        return (None, None);
+    }
+    let make = |network| {
+        Arc::new(LinuxRunner::new(ProotConfig {
+            proot_path: proot_path.clone(),
+            loader_path: paths.loader_path.clone(),
+            linux_root: paths.linux_root.clone(),
+            workspace: Some(project_root.to_owned()),
+            network,
+        }))
+    };
+    (
+        Some(make(NetworkPolicy::Off)),
+        Some(make(NetworkPolicy::On)),
+    )
+}
+
+fn files_root(database_path: &Path) -> PathBuf {
+    let database_dir = database_path.parent().unwrap_or_else(|| Path::new("."));
+    if database_dir.file_name().and_then(|name| name.to_str()) == Some("db") {
+        database_dir.parent().unwrap_or(database_dir).to_owned()
+    } else {
+        database_dir.to_owned()
+    }
 }
 
 fn validate_paths(paths: &ExecutorPathsView) -> Result<(), ExecutorRuntimeError> {
@@ -161,6 +260,16 @@ fn validate_paths(paths: &ExecutorPathsView) -> Result<(), ExecutorRuntimeError>
     }) {
         return Err(ExecutorRuntimeError::InvalidConfiguration);
     }
+    if [
+        paths.pack_verifying_key_hex.as_deref(),
+        paths.rootfs_verifying_key_hex.as_deref(),
+    ]
+    .into_iter()
+    .flatten()
+    .any(|key| key.len() != 64 || !key.bytes().all(|byte| byte.is_ascii_hexdigit()))
+    {
+        return Err(ExecutorRuntimeError::InvalidConfiguration);
+    }
     Ok(())
 }
 
@@ -170,6 +279,9 @@ fn read_paths(files_root: &Path) -> Result<ExecutorPaths, ExecutorRuntimeError> 
     let mut packs_root = None;
     let mut linux_root = None;
     let mut proot_path = None;
+    let mut loader_path = None;
+    let mut pack_key = None;
+    let mut rootfs_key = None;
     for line in text.lines() {
         let Some((name, value)) = line.split_once('=') else {
             continue;
@@ -178,6 +290,9 @@ fn read_paths(files_root: &Path) -> Result<ExecutorPaths, ExecutorRuntimeError> 
             "packs_root" => packs_root = Some(PathBuf::from(value)),
             "linux_root" => linux_root = Some(PathBuf::from(value)),
             "proot_path" => proot_path = Some(PathBuf::from(value)),
+            "loader_path" => loader_path = Some(PathBuf::from(value)),
+            "pack_key" => pack_key = Some(value.to_owned()),
+            "rootfs_key" => rootfs_key = Some(value.to_owned()),
             _ => {}
         }
     }
@@ -185,6 +300,9 @@ fn read_paths(files_root: &Path) -> Result<ExecutorPaths, ExecutorRuntimeError> 
         packs_root: packs_root.ok_or(ExecutorRuntimeError::Unavailable)?,
         linux_root: linux_root.ok_or(ExecutorRuntimeError::Unavailable)?,
         proot_path,
+        loader_path,
+        pack_key,
+        rootfs_key,
     })
 }
 

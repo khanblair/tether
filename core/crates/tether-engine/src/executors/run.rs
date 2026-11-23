@@ -37,6 +37,7 @@ pub struct RunTools {
     ci_ready: bool,
     project_default: Option<Executor>,
     network_allowed: Arc<dyn Fn(&SessionId) -> bool + Send + Sync>,
+    project_id: Arc<dyn Fn(&SessionId) -> ProjectId + Send + Sync>,
 }
 
 struct RunContext<'a> {
@@ -63,6 +64,7 @@ impl RunTools {
             ci_ready: false,
             project_default: None,
             network_allowed: Arc::new(|_| false),
+            project_id: Arc::new(|session| ProjectId::new(session.as_str())),
         })
     }
 
@@ -77,8 +79,8 @@ impl RunTools {
     ) -> Self {
         self.linux_off.clone_from(&linux);
         self.linux_on = linux;
+        self.ci_ready = ci.is_configured();
         self.ci = ci;
-        self.ci_ready = true;
         self.project_default = project_default;
         self.network_allowed = network_allowed;
         self
@@ -95,10 +97,20 @@ impl RunTools {
         network_allowed: Arc<dyn Fn(&SessionId) -> bool + Send + Sync>,
     ) -> Self {
         (self.linux_off, self.linux_on) = runners;
+        self.ci_ready = ci.is_configured();
         self.ci = ci;
-        self.ci_ready = true;
         self.project_default = project_default;
         self.network_allowed = network_allowed;
+        self
+    }
+
+    /// Supplies the project lookup used by remote executor requests.
+    #[must_use]
+    pub fn with_project_id(
+        mut self,
+        project_id: Arc<dyn Fn(&SessionId) -> ProjectId + Send + Sync>,
+    ) -> Self {
+        self.project_id = project_id;
         self
     }
 
@@ -329,7 +341,7 @@ impl RunTools {
     async fn run_ci(&self, command: &str, context: &RunContext<'_>) -> Result<RunReport, String> {
         let request = CiRunRequest {
             command: command.into(),
-            project_id: ProjectId::new(context.session_id.as_str()),
+            project_id: (self.project_id)(&context.session_id),
             cancel: context.cancel.clone(),
         };
         self.ci

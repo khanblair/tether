@@ -141,6 +141,32 @@ fn tokenizer_rejects_newline_and_unterminated_quote() {
 }
 
 #[test]
+fn router_rejects_invalid_shell_syntax_for_explicit_linux() {
+    let mut request = input("echo\nnext", availability(&[], true, false));
+    request.requested = Some(Executor::Linux);
+    assert_eq!(Router::route(&request), Err(RouteError::InvalidCommand));
+}
+
+#[test]
+fn tokenizer_keeps_empty_quoted_arguments() {
+    assert_eq!(
+        tokenize("echo \"\""),
+        Ok(vec!["echo".into(), String::new()])
+    );
+}
+
+#[test]
+fn explicit_sandbox_requires_the_requested_program() {
+    let mut request = input("sqlite3 app.db", availability(&["python"], true, true));
+    request.requested = Some(Executor::Sandbox);
+    let error = Router::route(&request).unwrap_err();
+    assert_eq!(
+        error.to_string(),
+        "requested Sandbox executor is unavailable: no verified runtime pack provides sqlite3"
+    );
+}
+
+#[test]
 fn availability_keeps_program_names_sorted() {
     let value = availability(&["node", "python"], false, false);
     assert_eq!(

@@ -62,6 +62,12 @@ pub enum ExecutorError {
 
 /// Runs commands through the CI backend owned by another task.
 pub trait CiExecutor: Send + Sync {
+    /// Returns whether this implementation can accept a run.
+    #[must_use]
+    fn is_configured(&self) -> bool {
+        true
+    }
+
     /// Starts one remote command and streams its output through `sink`.
     fn run<'a>(
         &'a self,
@@ -75,6 +81,10 @@ pub trait CiExecutor: Send + Sync {
 pub struct NotConfigured;
 
 impl CiExecutor for NotConfigured {
+    fn is_configured(&self) -> bool {
+        false
+    }
+
     fn run<'a>(
         &'a self,
         _request: CiRunRequest,

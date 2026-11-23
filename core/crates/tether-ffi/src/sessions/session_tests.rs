@@ -3,7 +3,7 @@ use super::ux::map_rewind_error;
 use super::*;
 use crate::SecretsPlatform;
 use crate::SessionStatusView;
-use tether_engine::{ApprovalAnswer, ApprovalRequest, Approver};
+use tether_engine::{ApprovalAnswer, ApprovalRequest, Approver, ToolLoop};
 use tether_store::BlobStore;
 use tether_types::{ModelRef, SessionStatus};
 
@@ -251,14 +251,17 @@ fn workspace_session_requires_a_saved_project_folder() {
         .unwrap();
     let store = Store::open(&db).unwrap();
     let saved = store.load_session(&session_id).unwrap().unwrap();
+    let mcp_manager = crate::mcp::manager_from_store(&store, &vault).unwrap();
     let tools = session_tool_runtime(
         &store,
         &saved,
         ToolWiring {
             root: &root,
+            files_root: &root,
             database_path: &db,
             approver: Arc::new(ApprovalBroker::new()),
             vault,
+            mcp_manager,
         },
     )
     .unwrap();
@@ -267,6 +270,42 @@ fn workspace_session_requires_a_saved_project_folder() {
         runtime
             .open_session_with_workspace(session_id.as_str(), root.to_str().unwrap())
             .is_ok()
+    );
+}
+
+#[test]
+fn plain_project_sessions_do_not_advertise_git_tools() {
+    let dir = tempfile::tempdir().unwrap();
+    let db = dir.path().join("tether.db");
+    let session_id = seeded_session(&db);
+    let root = dir.path().join("workspaces");
+    std::fs::create_dir_all(root.join("test")).unwrap();
+    let store = Store::open(&db).unwrap();
+    let session = store.load_session(&session_id).unwrap().unwrap();
+    let vault = SecretVault::new(
+        dir.path().join("secrets").to_string_lossy().into_owned(),
+        Arc::new(PlainPlatform),
+    );
+    let mcp_manager = crate::mcp::manager_from_store(&store, &vault).unwrap();
+    let tools = session_tool_runtime(
+        &store,
+        &session,
+        ToolWiring {
+            root: &root,
+            files_root: &root,
+            database_path: &db,
+            approver: Arc::new(ApprovalBroker::new()),
+            vault,
+            mcp_manager,
+        },
+    )
+    .unwrap();
+    let registry = ToolLoop::with_handlers(tools.guard, tools.handlers).unwrap();
+    assert!(
+        registry
+            .specs()
+            .iter()
+            .all(|spec| !spec.name.starts_with("git_") && !spec.name.starts_with("pr_"))
     );
 }
 
@@ -383,13 +422,15 @@ fn interactive_approval_answers_once_and_unknown_ids_are_not_found() {
             runtime.pending_approvals(session.as_str()).unwrap().len(),
             1
         );
-        runtime.approve(session.as_str(), "call-1", true).unwrap();
+        runtime
+            .approve_from_notification(session.as_str(), "call-1")
+            .unwrap();
         assert_eq!(
             waiting.await.unwrap(),
-            ApprovalAnswer::Allow { always: true }
+            ApprovalAnswer::AllowFromNotification { always: false }
         );
         assert!(matches!(
-            runtime.approve(session.as_str(), "call-1", false),
+            runtime.deny_from_notification(session.as_str(), "call-1"),
             Err(SessionRuntimeError::NotFound)
         ));
     });

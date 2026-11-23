@@ -1,7 +1,9 @@
 //! UniFFI surface of the core, built as `libtether_core.so`.
 
 mod approvals;
+mod archive;
 mod callbacks;
+mod ci;
 mod commands;
 mod config;
 mod context;
@@ -11,20 +13,28 @@ mod git;
 mod git_support;
 mod git_types;
 mod github;
+mod knowledge;
+mod mcp;
+mod mcp_types;
 mod memory;
 mod network;
 mod notify;
 mod projects;
 mod provider_settings;
+mod quality;
 mod questions;
 mod resume;
 mod secrets;
 mod session_control;
 mod sessions;
 mod skills;
+mod skills_install;
 mod updater;
 mod usage;
 mod vault;
+mod vault_archive;
+mod vault_manifest;
+mod vault_sync;
 mod views;
 
 use std::sync::Arc;
@@ -32,9 +42,16 @@ use std::sync::Arc;
 use tether_engine::Core;
 
 pub use callbacks::{EventSink, NetworkPlatform, NotifyPlatform, RunServicePlatform};
+pub use ci::{
+    CiFailureView, CiLogView, CiRunView, CiRuntime, CiRuntimeError, CiStatusView,
+    WorkflowProposalView,
+};
 pub use commands::{CommandResolutionView, CommandRuntimeError, CommandView, SendOutcomeView};
 pub use config::{ConfigIssueView, EffectiveConfigView};
-pub use executors::{ExecutorAvailabilityView, ExecutorPathsView, ExecutorRuntimeError};
+pub use executors::{
+    ExecutorAvailabilityView, ExecutorPathsView, ExecutorProgress, ExecutorRuntimeError,
+    RuntimePackView,
+};
 pub use files::{
     DirListingView, FileEntryView, FilePreviewView, FileTextHitView, FilesRuntime,
     FilesRuntimeError,
@@ -45,26 +62,39 @@ pub use git_types::{
     GitStatusView, ShallowChoiceView,
 };
 pub use github::{DeviceGrantView, GithubRepoView, GithubStatusView, SignInStateView};
+pub use mcp::McpRuntime;
+pub use mcp_types::{McpHeaderInput, McpRuntimeError, McpServerView, McpToolView};
 pub use memory::{
     MemoryActionView, MemoryResultView, MemoryRuntime, MemoryRuntimeError, MemoryTargetView,
 };
 pub use projects::{ProjectRuntime, ProjectRuntimeError};
 pub use provider_settings::{ProviderSettings, ProviderSettingsError, ProviderStatusView};
+pub use quality::{
+    QualityConfigView, QualityRuleView, QualityRuntime, QualityRuntimeError, ThresholdView,
+};
 pub use secrets::{SecretVault, SecretVaultError, SecretsPlatform, SecretsPlatformFailure};
 pub use sessions::{SessionRunner, SessionRuntime, SessionRuntimeError};
 pub use skills::{SkillDetailView, SkillView, SkillsRuntime, SkillsRuntimeError};
+pub use skills_install::{
+    InstalledSkillView, QuarantineFileView, QuarantineView, ScanFindingView, ScanReportView,
+    ScanSeverityView, ScanVerdictView, SkillScopeView, SkillStateView, UpkeepActionView,
+};
 pub use updater::{DownloadProgress, ReleaseView, UpdateCheckView, Updater, UpdaterError};
 pub use usage::{UsageRuntime, UsageRuntimeError};
-pub use vault::{VaultLinkView, VaultLinksView, VaultNoteView, VaultRuntime, VaultRuntimeError};
+pub use vault::{
+    ImportMode, VaultFolderPlatform, VaultFolderPlatformError, VaultImportReportView,
+    VaultLinkView, VaultLinksView, VaultNoteView, VaultRuntime, VaultRuntimeError,
+    VaultSyncReportView,
+};
 pub use views::{
     BudgetScopeView, BudgetView, CheckpointView, CompactionView, ConnectionStatusView,
     ContextBreakdownView, ContextSectionView, CoreErrorView, CoreEventView, DayUsageView,
     ErrorKindView, ExecutorView, InterruptionView, MessagePartView, MessageView, ModelRefView,
     ModelUsageView, ModelView, PendingApprovalView, PendingQuestionView, PermissionModeView,
     PermissionRuleView, PlanView, ProjectUsageView, ProjectView, PromptSectionView, ProviderView,
-    RewindScopeView, RoleView, SessionRecordView, SessionStatusView, SessionUsageView, SupportView,
-    TodoItemView, TodoStatusView, ToolCallStatusView, TranscriptHitView, UsageSnapshotView,
-    UsageSummaryView, UsageTotalsView,
+    QualityCountsView, QualityFindingRecordView, RewindScopeView, RoleView, SessionRecordView,
+    SessionStatusView, SessionUsageView, SupportView, TodoItemView, TodoStatusView,
+    ToolCallStatusView, TranscriptHitView, UsageSnapshotView, UsageSummaryView, UsageTotalsView,
 };
 
 uniffi::setup_scaffolding!();

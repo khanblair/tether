@@ -5,11 +5,12 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
+use tether_engine::SessionHandle;
 use tether_engine::prompt::PromptSources;
-use tether_engine::{ProviderFactory, SessionHandle, provider_for};
-use tether_secrets::SecretRef;
 use tether_store::Store;
-use tether_types::{CoreError, ModelRef, PermissionMode, ProjectId, Provider, SessionId};
+#[cfg(test)]
+use tether_types::Provider;
+use tether_types::{ModelRef, PermissionMode, ProjectId, SessionId};
 
 use crate::approvals::ApprovalBroker;
 use crate::{
@@ -17,10 +18,15 @@ use crate::{
     SendOutcomeView, SessionRecordView,
 };
 
+#[path = "sessions/provider.rs"]
+mod provider;
+use provider::{provider_key, session_provider_factory};
 #[path = "sessions/open.rs"]
 mod open;
 #[path = "sessions/prompt.rs"]
 mod prompt;
+#[path = "sessions/user_runs.rs"]
+mod user_runs;
 #[path = "sessions/ux.rs"]
 mod ux;
 use ux::now_ms;
@@ -73,6 +79,7 @@ pub struct SessionRuntime {
     pub(crate) files_root: PathBuf,
     pub(crate) network: Arc<tether_engine::network::NetworkControl>,
     pub(crate) notify: Arc<crate::notify::NotifyState>,
+    pub(crate) mcp_manager: Arc<tether_engine::McpManager>,
 }
 
 #[uniffi::export]
@@ -92,6 +99,8 @@ impl SessionRuntime {
         store
             .recover_active_sessions()
             .map_err(|_| SessionRuntimeError::Unavailable)?;
+        let mcp_manager = crate::mcp::manager_from_store(&store, &vault)
+            .map_err(|_| SessionRuntimeError::Unavailable)?;
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .enable_all()
             .build()
@@ -108,6 +117,7 @@ impl SessionRuntime {
             files_root,
             network: Arc::new(tether_engine::network::NetworkControl::new()),
             notify: Arc::new(crate::notify::NotifyState::new()),
+            mcp_manager,
         }))
     }
 
@@ -271,46 +281,22 @@ impl SessionRuntime {
         self.files_root.join("instructions").join("GLOBAL.md")
     }
 
-    fn prompt_sources(&self, project_name: &str, project_root: Option<PathBuf>) -> PromptSources {
+    fn prompt_sources(
+        &self,
+        project_name: &str,
+        project_root: Option<PathBuf>,
+        skills_index: Option<String>,
+    ) -> PromptSources {
         PromptSources {
             project_name: project_name.to_owned(),
             project_root,
             memory_root: Some(self.files_root.join("memory")),
             vault_root: Some(self.files_root.join("memory").join("vault")),
             global_instructions_path: Some(self.global_instructions_path()),
+            skills_index,
             ..PromptSources::default()
         }
     }
-}
-
-fn provider_key(
-    vault: &SecretVault,
-    provider: Provider,
-) -> Result<tether_secrets::Secret, SessionRuntimeError> {
-    let reference = SecretRef::new(&format!("provider-{}", provider.as_str()))
-        .map_err(|_| SessionRuntimeError::Unavailable)?;
-    vault
-        .store
-        .get(&reference)
-        .map_err(|_| SessionRuntimeError::Unavailable)?
-        .ok_or(SessionRuntimeError::MissingKey)
-}
-
-fn session_provider_factory(vault: Arc<SecretVault>, provider: Provider) -> ProviderFactory {
-    Arc::new(move || {
-        let key = provider_key(&vault, provider).map_err(|error| match error {
-            SessionRuntimeError::MissingKey => CoreError::Auth {
-                message: "provider key is not saved".into(),
-            },
-            _ => CoreError::Internal {
-                message: "provider key is unavailable".into(),
-            },
-        })?;
-        let key_text = key.expose_text().map_err(|_| CoreError::Internal {
-            message: "provider key is unavailable".into(),
-        })?;
-        provider_for(provider, key_text).map_err(CoreError::from)
-    })
 }
 
 /// A running actor for one session.

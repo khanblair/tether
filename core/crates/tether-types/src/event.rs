@@ -14,6 +14,45 @@ pub enum BudgetScope {
     Day,
 }
 
+/// The severity of one quality finding.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum QualitySeverity {
+    /// An informational finding.
+    Info,
+    /// A warning finding.
+    Warn,
+    /// A blocking finding.
+    Block,
+}
+
+/// Counts of quality findings by severity.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct QualityCounts {
+    /// Informational findings.
+    pub info: u32,
+    /// Warning findings.
+    pub warn: u32,
+    /// Blocking findings.
+    pub block: u32,
+}
+
+/// One finding included in a quality report event.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct QualityFindingRecord {
+    /// Stable rule identifier.
+    pub rule_id: String,
+    /// Finding severity.
+    pub severity: QualitySeverity,
+    /// Repository-relative path.
+    pub path: String,
+    /// First affected line, one based.
+    pub line: u32,
+    /// Short explanation.
+    pub message: String,
+    /// Suggested action.
+    pub advice: String,
+}
+
 /// One event emitted by the core. Changing this enum changes the FFI surface;
 /// regenerate the Kotlin bindings with `just bindings`.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -209,6 +248,19 @@ pub enum CoreEvent {
         tokens_before: u32,
         /// Estimated tokens after compaction.
         tokens_after: u32,
+    },
+    /// The quality gate finished an edit batch.
+    QualityReport {
+        /// The session that owns the batch.
+        session_id: SessionId,
+        /// The last tool result in the batch.
+        tool_call_id: ToolCallId,
+        /// Finding counts by severity.
+        counts: QualityCounts,
+        /// Findings included in the diff card.
+        findings: Vec<QualityFindingRecord>,
+        /// Changed files skipped by the gate.
+        skipped: u32,
     },
 }
 

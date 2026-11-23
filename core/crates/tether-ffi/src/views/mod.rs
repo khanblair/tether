@@ -20,7 +20,7 @@ pub use approval::{PendingApprovalView, PermissionRuleView};
 pub use checkpoint::{CheckpointView, RewindScopeView};
 pub use context::{CompactionView, ContextBreakdownView, ContextSectionView, InterruptionView};
 pub use error::{CoreErrorView, ErrorKindView};
-pub use event::CoreEventView;
+pub use event::{CoreEventView, QualityCountsView, QualityFindingRecordView};
 pub use plan::PlanView;
 pub use project::ProjectView;
 pub use question::PendingQuestionView;

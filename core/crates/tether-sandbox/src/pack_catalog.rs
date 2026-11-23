@@ -18,6 +18,12 @@ pub fn installed_programs(packs_root: &Path) -> std::collections::BTreeSet<Strin
         if validate_name(&id).is_err() {
             continue;
         }
+        let Ok(metadata) = fs::symlink_metadata(id_entry.path()) else {
+            continue;
+        };
+        if metadata.file_type().is_symlink() || !metadata.is_dir() {
+            continue;
+        }
         let Ok(versions) = fs::read_dir(id_entry.path()) else {
             continue;
         };

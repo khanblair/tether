@@ -57,6 +57,17 @@ internal fun SkillsRuntimeException.problem(): AreaProblem =
         is SkillsRuntimeException.NotFound -> AreaProblem.NotFound
         is SkillsRuntimeException.InvalidSkill -> AreaProblem.InvalidSkill
         is SkillsRuntimeException.Unavailable -> AreaProblem.Unavailable
+        // The install calls have no screen yet; they map to the nearest existing explanation.
+        is SkillsRuntimeException.InvalidUrl -> AreaProblem.InvalidPath
+        is SkillsRuntimeException.NotASkill,
+        is SkillsRuntimeException.SeveralSkills,
+        is SkillsRuntimeException.TooLarge,
+        is SkillsRuntimeException.AlreadyInstalled,
+        -> AreaProblem.InvalidSkill
+        is SkillsRuntimeException.Blocked -> AreaProblem.UnsafeContent
+        is SkillsRuntimeException.Download,
+        is SkillsRuntimeException.NotTrusted,
+        -> AreaProblem.Unavailable
     }
 
 internal fun VaultRuntimeException.problem(): AreaProblem =
@@ -66,4 +77,9 @@ internal fun VaultRuntimeException.problem(): AreaProblem =
         is VaultRuntimeException.NotFound -> AreaProblem.NotFound
         is VaultRuntimeException.OverCap -> AreaProblem.OverCap
         is VaultRuntimeException.Unavailable -> AreaProblem.Unavailable
+        // Export, import, and sync have no screen yet.
+        is VaultRuntimeException.Archive,
+        is VaultRuntimeException.Cancelled,
+        is VaultRuntimeException.VaultNotEmpty,
+        -> AreaProblem.Unavailable
     }

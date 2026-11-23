@@ -1,12 +1,16 @@
 //! Project creation and listing for the platform.
 
-use std::path::Path;
-use std::sync::Arc;
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use tether_store::{Store, StoreError};
 use tether_types::{ModelRef, PermissionMode, ProjectId};
+use tether_workspace::archive::{ArchiveError, CreateOptions, create_zip, extract_zip};
+use tokio_util::sync::CancellationToken;
 
+use crate::archive::{archive_detail, extract_limits, is_archive_input_error};
 use crate::{PermissionModeView, ProjectView, ProviderView};
 
 /// A project operation failed.
@@ -21,6 +25,15 @@ pub enum ProjectRuntimeError {
     /// Bypass needs an in-memory app confirmation.
     #[error("bypass needs confirmation")]
     BypassNeedsConfirmation,
+    /// The archive input or output is invalid.
+    #[error("invalid project archive: {detail}")]
+    Archive {
+        /// Short archive failure detail.
+        detail: String,
+    },
+    /// The archive operation was cancelled.
+    #[error("project archive operation cancelled")]
+    Cancelled,
     /// The requested project does not exist.
     #[error("project not found")]
     NotFound,
@@ -34,6 +47,7 @@ pub enum ProjectRuntimeError {
 pub struct ProjectRuntime {
     pub(crate) database_path: String,
     pub(crate) workspaces_root: String,
+    active_import: Mutex<Option<Arc<CancellationToken>>>,
 }
 
 #[uniffi::export]
@@ -51,6 +65,7 @@ impl ProjectRuntime {
         Ok(Arc::new(Self {
             database_path: database_path.into(),
             workspaces_root: workspaces_root.into(),
+            active_import: Mutex::new(None),
         }))
     }
 
@@ -77,6 +92,64 @@ impl ProjectRuntime {
             return Err(ProjectRuntimeError::Unavailable);
         }
         Ok(project.into())
+    }
+
+    /// Imports a ZIP into a new project workspace and returns its project id.
+    ///
+    /// # Errors
+    /// Returns an archive, name, storage, or cancellation error. Failed imports remove both the
+    /// workspace folder and its database row.
+    #[expect(
+        clippy::needless_pass_by_value,
+        reason = "UniFFI archive input is owned"
+    )]
+    pub fn import_project_zip(
+        &self,
+        zip_path: String,
+        name: Option<String>,
+    ) -> Result<String, ProjectRuntimeError> {
+        let cancel = Arc::new(CancellationToken::new());
+        *self
+            .active_import
+            .lock()
+            .map_err(|_| ProjectRuntimeError::Unavailable)? = Some(Arc::clone(&cancel));
+        let result = self.import_with_cancel(&zip_path, name, &|| cancel.is_cancelled());
+        self.clear_import(&cancel)?;
+        result
+    }
+
+    /// Cancels the project import currently in flight, if any.
+    pub fn cancel_import(&self) {
+        if let Ok(active) = self.active_import.lock()
+            && let Some(token) = active.as_ref()
+        {
+            token.cancel();
+        }
+    }
+
+    /// Exports one project workspace to a ZIP file.
+    ///
+    /// # Errors
+    /// Returns an unknown-project, destination, archive, or storage error.
+    pub fn export_project_zip(
+        &self,
+        project_id: String,
+        dest_path: String,
+        include_ignored: bool,
+    ) -> Result<(), ProjectRuntimeError> {
+        let store = self.store()?;
+        let relative = store
+            .project_path(&ProjectId::new(project_id))
+            .map_err(|_| ProjectRuntimeError::Unavailable)?
+            .ok_or(ProjectRuntimeError::NotFound)?;
+        let root = Path::new(&self.workspaces_root).join(relative);
+        let options = CreateOptions {
+            include_ignored,
+            ..CreateOptions::default()
+        };
+        create_zip(root, dest_path, &options, &|| false)
+            .map(|_| ())
+            .map_err(|error| map_project_archive_error(&error))
     }
 
     /// Lists projects by newest activity.
@@ -149,6 +222,95 @@ impl ProjectRuntime {
     pub(crate) fn store(&self) -> Result<Store, ProjectRuntimeError> {
         Store::open(Path::new(&self.database_path)).map_err(|_| ProjectRuntimeError::Unavailable)
     }
+
+    /// Imports a ZIP into a new project, stopping when `cancelled` says so. A failed or
+    /// cancelled import removes both the workspace folder and its database row.
+    pub(crate) fn import_with_cancel(
+        &self,
+        zip_path: &str,
+        name: Option<String>,
+        cancelled: &dyn Fn() -> bool,
+    ) -> Result<String, ProjectRuntimeError> {
+        let project_name = name.unwrap_or_else(|| archive_project_name(zip_path));
+        let mut store = self.store()?;
+        let project = store
+            .create_project(&project_name, now_ms()?)
+            .map_err(|error| map_store_error(&error))?;
+        let destination = Path::new(&self.workspaces_root).join(&project.path);
+        if fs::create_dir_all(&destination).is_err() {
+            return import_cleanup(
+                &mut store,
+                &project.id,
+                &destination,
+                ProjectRuntimeError::Unavailable,
+            );
+        }
+        let result = extract_zip(zip_path, &destination, &extract_limits(), cancelled, true);
+        match result {
+            Ok(_) => Ok(project.id.to_string()),
+            Err(error) => import_cleanup(
+                &mut store,
+                &project.id,
+                &destination,
+                map_project_archive_error(&error),
+            ),
+        }
+    }
+
+    fn clear_import(&self, token: &Arc<CancellationToken>) -> Result<(), ProjectRuntimeError> {
+        let mut active = self
+            .active_import
+            .lock()
+            .map_err(|_| ProjectRuntimeError::Unavailable)?;
+        if active
+            .as_ref()
+            .is_some_and(|current| Arc::ptr_eq(current, token))
+        {
+            *active = None;
+        }
+        Ok(())
+    }
+}
+
+fn import_cleanup(
+    store: &mut Store,
+    project_id: &ProjectId,
+    destination: &Path,
+    error: ProjectRuntimeError,
+) -> Result<String, ProjectRuntimeError> {
+    drop(fs::remove_dir_all(destination));
+    store
+        .delete_project(project_id)
+        .map_err(|_| ProjectRuntimeError::Unavailable)?;
+    Err(error)
+}
+
+fn map_store_error(error: &StoreError) -> ProjectRuntimeError {
+    match error {
+        StoreError::InvalidProjectName => ProjectRuntimeError::InvalidName,
+        _ => ProjectRuntimeError::Unavailable,
+    }
+}
+
+fn map_project_archive_error(error: &ArchiveError) -> ProjectRuntimeError {
+    if matches!(error, ArchiveError::Cancelled) {
+        return ProjectRuntimeError::Cancelled;
+    }
+    if is_archive_input_error(error) || matches!(error, ArchiveError::InvalidDestination) {
+        return ProjectRuntimeError::Archive {
+            detail: archive_detail(error).to_owned(),
+        };
+    }
+    ProjectRuntimeError::Unavailable
+}
+
+fn archive_project_name(zip_path: &str) -> String {
+    PathBuf::from(zip_path)
+        .file_stem()
+        .and_then(|stem| stem.to_str())
+        .filter(|stem| !stem.is_empty())
+        .unwrap_or("project")
+        .to_owned()
 }
 
 fn now_ms() -> Result<i64, ProjectRuntimeError> {

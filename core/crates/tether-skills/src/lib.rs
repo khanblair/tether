@@ -2,6 +2,19 @@
 
 use std::collections::BTreeMap;
 
+mod discovery;
+mod index;
+mod scan;
+mod scan_rules;
+mod upkeep;
+
+pub use discovery::{
+    BundledSkill, DiscoverInput, Skill, SkillIssue, SkillSource, SkillView, SkillsCatalog,
+};
+pub use index::skills_index;
+pub use scan::{ScanFinding, ScanReport, ScanSeverity, ScanVerdict, SkillFile, scan_skill};
+pub use upkeep::{SkillScope, SkillState, SkillUsage, UpkeepAction, plan_upkeep};
+
 /// A validated `SKILL.md` file.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SkillDocument {
@@ -34,6 +47,18 @@ pub enum SkillError {
     DescriptionTooLong,
     /// A line cannot be read as a scalar frontmatter field.
     InvalidFrontmatter,
+    /// The requested skill file path is outside an allowed folder.
+    InvalidPath,
+    /// A skill file is a symbolic link.
+    Symlink,
+    /// A skill file is larger than the supported limit.
+    FileTooLarge,
+    /// A skill file is not valid UTF-8.
+    InvalidUtf8,
+    /// A skill file could not be read.
+    Io(String),
+    /// The requested skill or file does not exist.
+    NotFound,
 }
 
 struct Frontmatter {
@@ -143,4 +168,8 @@ fn scalar(value: &str) -> String {
 }
 
 #[cfg(test)]
+mod scan_tests;
+#[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod upkeep_tests;

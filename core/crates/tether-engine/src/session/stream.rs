@@ -121,10 +121,19 @@ impl SessionActor {
         if !matches!(error, CoreError::Network { .. }) || !network.enabled() {
             return Ok(false);
         }
+        network.mark_offline();
+        drop(
+            self.store
+                .set_session_status(&self.session.id, SessionStatus::Paused, now_ms()),
+        );
         self.sink.on_event(CoreEvent::NetworkPaused {
             session_id: self.session.id.clone(),
         });
         Self::wait_for_network(network, cancel).await?;
+        drop(
+            self.store
+                .set_session_status(&self.session.id, SessionStatus::Requesting, now_ms()),
+        );
         self.sink.on_event(CoreEvent::NetworkResumed {
             session_id: self.session.id.clone(),
         });

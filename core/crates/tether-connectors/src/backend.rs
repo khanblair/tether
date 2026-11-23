@@ -195,3 +195,26 @@ fn public_addresses(
 fn boxed(message: String) -> Box<dyn std::error::Error + Send + Sync> {
     message.into()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::net::{IpAddr, SocketAddr};
+
+    #[test]
+    fn resolver_keeps_only_public_addresses() {
+        let addresses = public_addresses(
+            [
+                SocketAddr::new("127.0.0.1".parse::<IpAddr>().unwrap(), 443),
+                SocketAddr::new("8.8.8.8".parse::<IpAddr>().unwrap(), 443),
+                SocketAddr::new("::ffff:10.0.0.1".parse::<IpAddr>().unwrap(), 443),
+            ]
+            .into_iter(),
+        );
+
+        assert_eq!(
+            addresses,
+            vec![SocketAddr::new("8.8.8.8".parse().unwrap(), 443)]
+        );
+    }
+}

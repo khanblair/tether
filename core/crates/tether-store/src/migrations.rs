@@ -57,6 +57,14 @@ pub(crate) const MIGRATIONS: &[Migration] = &[
         version: 11,
         sql: include_str!("../migrations/0011_context.sql"),
     },
+    Migration {
+        version: 12,
+        sql: include_str!("../migrations/0012_mcp_servers.sql"),
+    },
+    Migration {
+        version: 13,
+        sql: include_str!("../migrations/0013_skills_memory.sql"),
+    },
 ];
 
 /// The schema version kept in `PRAGMA user_version`. A new database reports 0.

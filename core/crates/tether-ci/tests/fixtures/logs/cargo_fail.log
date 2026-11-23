@@ -1,0 +1,7 @@
+2026-11-21T10:00:00.1234567Z running 1 test
+2026-11-21T10:00:00.1234567Z test tests::auth ... FAILED
+2026-11-21T10:00:00.1234567Z 
+2026-11-21T10:00:00.1234567Z ---- tests::auth stdout ----
+2026-11-21T10:00:00.1234567Z thread 'tests::auth' panicked at src/lib.rs:8:3:
+2026-11-21T10:00:00.1234567Z assertion failed: left == right
+2026-11-21T10:00:00.1234567Z test result: FAILED. 0 passed; 1 failed

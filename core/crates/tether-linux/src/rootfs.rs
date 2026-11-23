@@ -1,4 +1,4 @@
-use std::fs::{self, File, OpenOptions};
+use std::fs::{self, File};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
@@ -8,7 +8,10 @@ use tokio_util::sync::CancellationToken;
 use crate::LinuxError;
 use crate::error::io_error;
 use crate::extract::{ExtractReport, IndexedFile, extract_archive, repair_archive};
-use crate::manifest::{RootfsFetcher, RootfsImage, hex_digest, is_lower_hex, sha256_file};
+use crate::manifest::{RootfsFetcher, RootfsImage, hex_digest};
+use crate::rootfs_io::{
+    check_index, error_to_io, file_missing_or_changed, is_cached, remove_path, touch,
+};
 
 /// The observable state of the Alpine root filesystem.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -87,14 +90,20 @@ impl RootfsManager {
         let partial = self.partial_path();
         remove_path(&partial)?;
         fs::create_dir(&partial).map_err(|_| io_error("create root filesystem staging"))?;
-        let report = match extract_archive(&archive, &partial, image.max_extracted_bytes, cancel) {
+        let report = match extract_archive(
+            &archive,
+            &partial,
+            image.max_extracted_bytes,
+            cancel,
+            progress,
+        ) {
             Ok(report) => report,
             Err(error) => {
                 remove_path(&partial)?;
+                remove_path(&archive)?;
                 return Err(error);
             }
         };
-        progress.extracting(report.entries);
         self.replace_rootfs(&partial)?;
         self.write_state(&InstallState::from_image(image, report, false))?;
         progress.done();
@@ -107,7 +116,10 @@ impl RootfsManager {
     /// Returns a storage error when the state cannot be read.
     pub fn status(&self) -> Result<RootfsStatus, LinuxError> {
         let rootfs = self.rootfs_path();
-        if !rootfs.is_dir() {
+        let Ok(metadata) = fs::symlink_metadata(&rootfs) else {
+            return Ok(RootfsStatus::NotInstalled);
+        };
+        if metadata.file_type().is_symlink() || !metadata.is_dir() {
             return Ok(RootfsStatus::NotInstalled);
         }
         let Ok(state) = self.read_state() else {
@@ -179,9 +191,16 @@ impl RootfsManager {
             .map_err(|_| io_error("create Linux network storage"))?;
         touch(&self.linux_root.join("etc/resolv.empty"))?;
         let resolv = self.linux_root.join("etc/resolv.conf");
-        if !resolv.exists() {
-            fs::write(resolv, b"nameserver 1.1.1.1\nnameserver 8.8.8.8\n")
-                .map_err(|_| io_error("write Linux resolver"))?;
+        match fs::symlink_metadata(&resolv) {
+            Ok(metadata) if metadata.file_type().is_symlink() => {
+                return Err(LinuxError::Path("Linux resolver is a symlink".into()));
+            }
+            Ok(_) => {}
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                fs::write(resolv, b"nameserver 1.1.1.1\nnameserver 8.8.8.8\n")
+                    .map_err(|_| io_error("write Linux resolver"))?;
+            }
+            Err(_) => return Err(io_error("inspect Linux resolver")),
         }
         Ok(())
     }
@@ -207,10 +226,17 @@ impl RootfsManager {
             written: 0,
             limit: image.size_bytes,
             progress,
+            cancel,
         };
-        fetcher
-            .fetch(image, &mut writer, cancel)
-            .inspect_err(|_| drop(remove_path(&part)))?;
+        let fetch_result = fetcher.fetch(image, &mut writer, cancel);
+        if cancel.is_cancelled() {
+            remove_path(&part)?;
+            return Err(LinuxError::Cancelled);
+        }
+        if let Err(error) = fetch_result {
+            remove_path(&part)?;
+            return Err(error);
+        }
         if cancel.is_cancelled() {
             remove_path(&part)?;
             return Err(LinuxError::Cancelled);
@@ -244,6 +270,16 @@ impl RootfsManager {
     }
 
     fn read_state(&self) -> Result<InstallState, LinuxError> {
+        let rootfs = fs::symlink_metadata(self.rootfs_path())
+            .map_err(|_| io_error("inspect root filesystem"))?;
+        if rootfs.file_type().is_symlink() || !rootfs.is_dir() {
+            return Err(io_error("root filesystem is not a real directory"));
+        }
+        let metadata = fs::symlink_metadata(self.state_path())
+            .map_err(|_| io_error("inspect root filesystem state"))?;
+        if metadata.file_type().is_symlink() || !metadata.is_file() {
+            return Err(io_error("root filesystem state is not regular"));
+        }
         let bytes =
             fs::read(self.state_path()).map_err(|_| io_error("read root filesystem state"))?;
         serde_json::from_slice(&bytes)
@@ -291,10 +327,17 @@ struct DownloadWriter<'a> {
     written: u64,
     limit: u64,
     progress: &'a mut dyn RootfsProgress,
+    cancel: &'a CancellationToken,
 }
 
 impl Write for DownloadWriter<'_> {
     fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        if self.cancel.is_cancelled() {
+            return Err(io::Error::new(
+                io::ErrorKind::Interrupted,
+                "download cancelled",
+            ));
+        }
         let remaining = self.limit.saturating_sub(self.written);
         if bytes.len() as u64 > remaining {
             return Err(io::Error::new(
@@ -326,75 +369,4 @@ impl DownloadWriter<'_> {
         }
         Ok(())
     }
-}
-
-fn is_cached(path: &Path, image: &RootfsImage) -> Result<bool, LinuxError> {
-    if !path.is_file() {
-        return Ok(false);
-    }
-    let size = fs::metadata(path)
-        .map_err(|_| io_error("inspect root filesystem cache"))?
-        .len();
-    if size != image.size_bytes || !is_lower_hex(&image.sha256, 64) {
-        return Ok(false);
-    }
-    Ok(sha256_file(path)? == image.sha256)
-}
-
-fn check_index(rootfs: &Path, files: &[IndexedFile]) -> Result<(usize, usize), LinuxError> {
-    let mut missing = 0;
-    let mut changed = 0;
-    for file in files {
-        match fs::symlink_metadata(rootfs.join(&file.path)) {
-            Ok(metadata) if metadata.is_file() => {
-                changed += usize::from(file_changed(rootfs, file)?);
-            }
-            _ => missing += 1,
-        }
-    }
-    Ok((missing, changed))
-}
-
-fn file_changed(rootfs: &Path, file: &IndexedFile) -> Result<bool, LinuxError> {
-    let path = rootfs.join(&file.path);
-    let digest = sha256_file(&path)?;
-    let size = fs::metadata(path)
-        .map_err(|_| io_error("inspect root filesystem file"))?
-        .len();
-    Ok(size != file.size || digest != file.sha256)
-}
-
-fn file_missing_or_changed(rootfs: &Path, file: &IndexedFile) -> bool {
-    match fs::symlink_metadata(rootfs.join(&file.path)) {
-        Ok(metadata) if metadata.is_file() => {
-            metadata.len() != file.size
-                || sha256_file(&rootfs.join(&file.path)).map_or(true, |hash| hash != file.sha256)
-        }
-        _ => true,
-    }
-}
-
-fn touch(path: &Path) -> Result<(), LinuxError> {
-    OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(path)
-        .map(|_| ())
-        .map_err(|_| io_error("create Linux resolver file"))
-}
-
-fn remove_path(path: &Path) -> Result<(), LinuxError> {
-    match fs::symlink_metadata(path) {
-        Ok(metadata) if metadata.is_dir() && !metadata.file_type().is_symlink() => {
-            fs::remove_dir_all(path)
-        }
-        Ok(_) => fs::remove_file(path),
-        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
-        Err(error) => Err(error),
-    }
-    .map_err(|_| io_error("remove Linux staging path"))
-}
-
-fn error_to_io(_error: io::Error, message: &str) -> LinuxError {
-    io_error(message)
 }

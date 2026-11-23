@@ -132,3 +132,81 @@ fn repair_adds_one_synthetic_result_per_open_call() {
         .count();
     assert_eq!(results, 1);
 }
+
+#[test]
+fn interruption_step_names_the_open_call_target() {
+    let mut store = Store::open_in_memory().unwrap();
+    let id = session(&mut store);
+    store
+        .append_message(
+            &id,
+            Role::Assistant,
+            &[MessagePart::ToolCall {
+                id: ToolCallId::new("call-1"),
+                tool: "read_file".into(),
+                args_json: r#"{"path":"src/main.rs"}"#.into(),
+            }],
+            2,
+        )
+        .unwrap();
+
+    assert_eq!(
+        store.interruption_step(&id).unwrap(),
+        Some("tool: read_file src/main.rs".into())
+    );
+}
+
+#[test]
+fn rewinding_past_a_compaction_removes_its_marker() {
+    let mut store = Store::open_in_memory().unwrap();
+    let id = session(&mut store);
+    let first = add(&mut store, &id, Role::User, "one");
+    let last = add(&mut store, &id, Role::Assistant, "two");
+    let summary = add(&mut store, &id, Role::Assistant, "summary");
+    store
+        .insert_compaction(&record(&id, &summary, &first, &last))
+        .unwrap();
+
+    store.rewind_conversation(&id, &first.id).unwrap();
+
+    assert_eq!(store.compactions(&id).unwrap(), Vec::new());
+}
+
+#[test]
+fn repair_keeps_synthetic_results_in_open_call_order() {
+    let mut store = Store::open_in_memory().unwrap();
+    let id = session(&mut store);
+    store
+        .append_message(
+            &id,
+            Role::Assistant,
+            &[
+                MessagePart::ToolCall {
+                    id: ToolCallId::new("call-1"),
+                    tool: "read_file".into(),
+                    args_json: r#"{"path":"a.rs"}"#.into(),
+                },
+                MessagePart::ToolCall {
+                    id: ToolCallId::new("call-2"),
+                    tool: "read_file".into(),
+                    args_json: r#"{"path":"b.rs"}"#.into(),
+                },
+            ],
+            2,
+        )
+        .unwrap();
+
+    store.repair_interrupted(&id).unwrap();
+
+    let ids = store
+        .messages(&id)
+        .unwrap()
+        .into_iter()
+        .flat_map(|message| message.parts)
+        .filter_map(|part| match part {
+            MessagePart::ToolResult { tool_call_id, .. } => Some(tool_call_id.to_string()),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(ids, ["call-1", "call-2"]);
+}

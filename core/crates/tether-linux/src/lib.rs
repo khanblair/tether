@@ -6,6 +6,7 @@ mod manifest;
 mod packages;
 mod proot;
 mod rootfs;
+mod rootfs_io;
 mod runner;
 mod shell;
 

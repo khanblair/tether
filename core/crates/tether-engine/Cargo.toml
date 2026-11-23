@@ -24,6 +24,10 @@ tokio.workspace = true
 tokio-util.workspace = true
 
 tether-sandbox = { path = "../tether-sandbox" }
+tether-quality = { path = "../tether-quality" }
+tether-mcp = { path = "../tether-mcp" }
+tether-connectors = { path = "../tether-connectors" }
+tether-ci = { path = "../tether-ci" }
 tether-linux = { path = "../tether-linux" }
 tether-vcs = { path = "../tether-vcs" }
 

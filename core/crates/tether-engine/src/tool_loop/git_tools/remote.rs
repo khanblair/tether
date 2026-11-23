@@ -242,6 +242,20 @@ fn create_error(error: GithubError) -> String {
     }
 }
 
+#[cfg(test)]
+pub(super) fn test_status_text(
+    pr: &PullRequestInfo,
+    checks: Vec<CheckRun>,
+    comments: Vec<PullRequestComment>,
+) -> String {
+    status_text(pr, checks, comments)
+}
+
+#[cfg(test)]
+pub(super) fn test_create_error(error: GithubError) -> String {
+    create_error(error)
+}
+
 struct NoProgress;
 
 impl tether_vcs::PushProgress for NoProgress {

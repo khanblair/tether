@@ -4,9 +4,22 @@ use tether_workspace::PathGuard;
 
 use super::RunTools;
 use super::run_support::{append_user_args, trim_output};
-use crate::executors::NotConfigured;
+use crate::executors::{CiExecutor, CiRunRequest, ExecutorError, RunReport};
 use crate::permissions::rule_for;
 use crate::tool_loop::{PrepareContext, ToolHandler};
+use tether_providers::BoxFuture;
+
+struct TestCi;
+
+impl CiExecutor for TestCi {
+    fn run<'a>(
+        &'a self,
+        _request: CiRunRequest,
+        _sink: Option<&'a dyn crate::EventSink>,
+    ) -> BoxFuture<'a, Result<RunReport, ExecutorError>> {
+        Box::pin(std::future::ready(Err(ExecutorError::NotConfigured)))
+    }
+}
 
 #[test]
 fn output_cut_keeps_head_tail_and_exact_omitted_count() {
@@ -55,7 +68,7 @@ fn a_run_target_is_the_bare_command_so_a_saved_rule_names_the_program() {
     let guard = PathGuard::new(&root).unwrap();
     let tools = RunTools::new(root.join("packs")).unwrap().with_executors(
         None,
-        Arc::new(NotConfigured),
+        Arc::new(TestCi),
         None,
         Arc::new(|_| false),
     );

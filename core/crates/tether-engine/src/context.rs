@@ -151,3 +151,67 @@ pub fn estimate_messages(messages: &[Message]) -> u32 {
         .map(estimate_tokens)
         .sum()
 }
+
+#[cfg(test)]
+mod tests {
+    use tether_types::{MessageId, SessionId};
+
+    use super::*;
+
+    fn message(role: Role, text: &str) -> Message {
+        Message {
+            id: MessageId::new(text),
+            session_id: SessionId::new("session"),
+            role,
+            seq: 0,
+            created_at_ms: 0,
+            rewound: false,
+            parts: vec![MessagePart::Text { text: text.into() }],
+        }
+    }
+
+    #[test]
+    fn breakdown_uses_the_estimate_without_reported_usage() {
+        let result = breakdown(
+            Some(100),
+            &[PromptSection {
+                name: "Instructions".into(),
+                chars: 4,
+                approx_tokens: 1,
+            }],
+            &[],
+            &[message(Role::User, "12345678")],
+            None,
+        );
+
+        assert_eq!(result.used_tokens, 3);
+        assert_eq!(result.percent, Some(3));
+        assert_eq!(result.sections[0].name, "Instructions");
+        assert_eq!(result.sections[3].name, "user");
+    }
+
+    #[test]
+    fn breakdown_distributes_reported_usage_over_estimated_sections() {
+        let result = breakdown(
+            None,
+            &[PromptSection {
+                name: "Instructions".into(),
+                chars: 4,
+                approx_tokens: 1,
+            }],
+            &[],
+            &[message(Role::User, "12345678")],
+            Some(20),
+        );
+
+        assert_eq!(result.used_tokens, 20);
+        assert_eq!(
+            result
+                .sections
+                .iter()
+                .map(|section| section.approx_tokens)
+                .collect::<Vec<_>>(),
+            vec![6, 0, 0, 13, 0, 1]
+        );
+    }
+}

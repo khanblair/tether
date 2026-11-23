@@ -44,14 +44,12 @@ impl SessionRuntime {
                 skills_index: None,
                 today: "",
             });
-        let used = u32::try_from(
-            store
-                .session_usage(&id)
-                .map_err(|_| SessionRuntimeError::Unavailable)?
-                .tokens_in,
-        )
-        .unwrap_or(u32::MAX);
-        Ok(context::breakdown(window, &prompt.sections, &[], &messages, Some(used)).into())
+        let usage = store
+            .session_usage(&id)
+            .map_err(|_| SessionRuntimeError::Unavailable)?;
+        let reported =
+            (usage.tokens_in > 0).then(|| u32::try_from(usage.tokens_in).unwrap_or(u32::MAX));
+        Ok(context::breakdown(window, &prompt.sections, &[], &messages, reported).into())
     }
 
     /// Lists context compaction markers for a session.

@@ -60,12 +60,40 @@ pub enum SkillsRuntimeError {
     /// Storage could not be read.
     #[error("skills are unavailable")]
     Unavailable,
+    /// The install source URL is not an allowed GitHub URL.
+    #[error("invalid skill URL")]
+    InvalidUrl,
+    /// The install source could not be downloaded.
+    #[error("skill download failed")]
+    Download,
+    /// The install archive exceeds a configured limit.
+    #[error("skill archive is too large")]
+    TooLarge,
+    /// The source does not contain one valid skill.
+    #[error("source is not a skill")]
+    NotASkill,
+    /// The source contains more than one skill.
+    #[error("source contains several skills")]
+    SeveralSkills {
+        /// Skill names found in the source.
+        names: Vec<String>,
+    },
+    /// The static scan blocked installation.
+    #[error("skill scan blocked installation")]
+    Blocked,
+    /// The project is not trusted for project-scoped installation.
+    #[error("project is not trusted")]
+    NotTrusted,
+    /// A skill with the same name is already installed.
+    #[error("skill is already installed")]
+    AlreadyInstalled,
 }
 
 /// Reads `SKILL.md` files beneath one skill directory.
 #[derive(uniffi::Object)]
 pub struct SkillsRuntime {
-    root: std::path::PathBuf,
+    pub(crate) root: std::path::PathBuf,
+    pub(crate) clock: Arc<dyn Fn() -> i64 + Send + Sync>,
 }
 
 #[uniffi::export]
@@ -80,6 +108,7 @@ impl SkillsRuntime {
         fs::create_dir_all(root).map_err(|_| SkillsRuntimeError::Unavailable)?;
         Ok(Arc::new(Self {
             root: root.to_path_buf(),
+            clock: Arc::new(crate::skills_install::system_now_ms),
         }))
     }
 
@@ -173,6 +202,12 @@ fn skill_error(error: &SkillError) -> &'static str {
         SkillError::InvalidName => "invalid skill name",
         SkillError::DescriptionTooLong => "description is too long",
         SkillError::InvalidFrontmatter => "invalid frontmatter",
+        SkillError::InvalidPath => "invalid skill path",
+        SkillError::Symlink => "symlinked skill path",
+        SkillError::FileTooLarge => "skill file is too large",
+        SkillError::InvalidUtf8 => "skill file is not UTF-8",
+        SkillError::Io(_) => "skill file could not be read",
+        SkillError::NotFound => "skill file was not found",
     }
 }
 

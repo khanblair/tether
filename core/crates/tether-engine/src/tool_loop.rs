@@ -13,12 +13,16 @@ use tether_types::{
 use tether_workspace::PathGuard;
 use tokio_util::sync::CancellationToken;
 
+pub(crate) mod ci_tools;
 mod file_tools;
 pub(crate) mod git_tools;
+pub(crate) mod knowledge_tools;
+pub(crate) mod mcp_tools;
 mod registry;
 pub(crate) mod session_tools;
 mod stream;
 use crate::permissions::{self, Decision, PermissionRequest};
+use crate::quality::{self, GateReport, PendingChange, QualityGate};
 use crate::{ApprovalAnswer, ApprovalRequest};
 pub use registry::{
     ExecuteContext, PrepareContext, PreparedCall, RegistryError, ToolHandler, ToolOutput,
@@ -54,6 +58,7 @@ pub struct ToolLoopResult {
 pub struct ToolLoop {
     guard: PathGuard,
     registry: ToolRegistry,
+    quality: Arc<QualityGate>,
 }
 
 /// Data and policy shared by one tool turn.
@@ -86,6 +91,7 @@ impl ToolLoop {
     pub fn new(guard: PathGuard) -> Self {
         Self {
             registry: registry::default_registry(guard.clone()),
+            quality: Arc::new(QualityGate::new(guard.clone())),
             guard,
         }
     }
@@ -101,6 +107,7 @@ impl ToolLoop {
     ) -> Result<Self, registry::RegistryError> {
         Ok(Self {
             registry: registry::registry_with(guard.clone(), extra)?,
+            quality: Arc::new(QualityGate::new(guard.clone())),
             guard,
         })
     }
@@ -238,6 +245,7 @@ impl ToolLoop {
             if response.calls.is_empty() {
                 return Err(invalid("provider requested tools without a call"));
             }
+            let mut exchange_changes = Vec::new();
             for (index, call) in response.calls.iter().enumerate() {
                 if context.cancel.is_cancelled() {
                     save_cancelled_calls(context, &response.calls[index..])?;
@@ -286,16 +294,45 @@ impl ToolLoop {
                     )
                     .map_err(|_| storage_error())?,
                 );
-                let decision = permissions::decide(
-                    (context.mode)(),
-                    prepared.effect,
-                    &rules,
-                    PermissionRequest {
-                        tool: &prepared.tool,
-                        target: &prepared.target,
-                        executor: prepared.executor,
-                    },
-                );
+                let mode = (context.mode)();
+                let staged_skill = prepared.tool == "skill_manage"
+                    && prepared.effect == crate::permissions::Effect::Edit;
+                if staged_skill {
+                    let change = crate::tool_loop::knowledge_tools::staged_skill_change(
+                        context.session_id,
+                        &call.id,
+                        &prepared,
+                    );
+                    context
+                        .store
+                        .stage_skill_change(&change)
+                        .map_err(|_| storage_error())?;
+                }
+                let decision =
+                    if mode == PermissionMode::Plan && self.registry.blocks_in_plan(&prepared) {
+                        Decision::Block {
+                            reason: "Plan mode blocks network tools".to_owned(),
+                        }
+                    } else {
+                        if self.registry.auto_approves(&prepared) {
+                            rules.push(tether_types::PermissionRule {
+                                id: "mcp-auto".to_owned(),
+                                tool: prepared.tool.clone(),
+                                pattern: "*".to_owned(),
+                                executor: None,
+                            });
+                        }
+                        permissions::decide(
+                            mode,
+                            prepared.effect,
+                            &rules,
+                            PermissionRequest {
+                                tool: &prepared.tool,
+                                target: &prepared.target,
+                                executor: prepared.executor,
+                            },
+                        )
+                    };
                 let result = match decision {
                     Decision::Allow => {
                         set_status(context, SessionStatus::RunningTool)?;
@@ -316,7 +353,10 @@ impl ToolLoop {
                     }
                 };
                 let (is_error, text, status) = match result {
-                    Ok(text) => (false, truncate(&text), ToolCallStatus::Succeeded),
+                    Ok(execution) => {
+                        exchange_changes.extend(execution.changes);
+                        (false, truncate(&execution.text), ToolCallStatus::Succeeded)
+                    }
                     Err(error)
                         if error == "denied by the user"
                             || error.starts_with("denied by the user:") =>
@@ -325,6 +365,12 @@ impl ToolLoop {
                     }
                     Err(error) => (true, truncate(&error), ToolCallStatus::Blocked),
                 };
+                if staged_skill {
+                    context
+                        .store
+                        .delete_skill_change(context.session_id, &call.id)
+                        .map_err(|_| storage_error())?;
+                }
                 append_tool_result(context, &mut request, &call.id, is_error, &text)?;
                 if let Some(sink) = context.sink {
                     sink.on_event(CoreEvent::ToolFinished {
@@ -342,18 +388,42 @@ impl ToolLoop {
                     });
                 }
             }
+            if !exchange_changes.is_empty() && !context.cancel.is_cancelled() {
+                let last_call_id = response.calls.last().map(|call| &call.id);
+                if let Some(last_call_id) = last_call_id {
+                    self.finish_quality(context, &mut request, exchange_changes, last_call_id)
+                        .await;
+                }
+            }
         }
         Err(invalid("tool exchange limit reached"))
     }
 }
 
 impl ToolLoop {
+    async fn finish_quality(
+        &self,
+        context: &mut ToolLoopContext<'_>,
+        request: &mut tether_providers::ChatRequest,
+        changes: Vec<PendingChange>,
+        last_call_id: &tether_types::ToolCallId,
+    ) {
+        let result = Arc::clone(&self.quality).run(changes).await;
+        let Ok(report) = result else {
+            return;
+        };
+        if !report.report.findings.is_empty() {
+            append_quality_text(context, request, &report);
+        }
+        emit_quality_event(context, last_call_id, &report);
+    }
+
     async fn ask(
         &self,
         call: PreparedCall,
         input: AskInput<'_>,
         context: &mut ToolLoopContext<'_>,
-    ) -> Result<String, String> {
+    ) -> Result<ToolExecution, String> {
         let id = input.id;
         if context.approver.interactive() {
             set_status(context, SessionStatus::AwaitingApproval)
@@ -393,6 +463,11 @@ impl ToolLoop {
             }
         }
     }
+}
+
+struct ToolExecution {
+    text: String,
+    changes: Vec<PendingChange>,
 }
 
 fn emit_approval_required(
@@ -441,19 +516,16 @@ async fn execute_call(
     id: &tether_types::ToolCallId,
     context: &mut ToolLoopContext<'_>,
     anchor: &tether_types::MessageId,
-) -> Result<String, String> {
-    if let Some(sink) = context.sink {
-        sink.on_event(CoreEvent::ToolStarted {
-            session_id: context.session_id.clone(),
-            tool_call_id: id.clone(),
-        });
-    }
+) -> Result<ToolExecution, String> {
+    emit_tool_started(context, id);
     let session_id = context.session_id;
     let blobs = context.blobs;
     let sink = context.sink;
     let cancel = context.cancel.clone();
     let store = &mut *context.store;
     let guard = &loop_runner.guard;
+    let call_tool_name = call.tool.clone();
+    let mut old_texts = Vec::new();
     let mut before_edit = |paths: &[PathBuf]| {
         crate::capture_checkpoint(
             store,
@@ -465,7 +537,13 @@ async fn execute_call(
             now_ms(),
         )
         .map(|_| ())
-        .map_err(|_| "could not save checkpoint".to_owned())
+        .map_err(|_| "could not save checkpoint".to_owned())?;
+        old_texts.extend(
+            paths
+                .iter()
+                .map(|path| quality::pending_change(path.clone(), quality::old_text(guard, path))),
+        );
+        Ok(())
     };
     let output = loop_runner
         .registry
@@ -481,7 +559,83 @@ async fn execute_call(
             },
         )
         .await?;
-    Ok(output.text)
+    Ok(ToolExecution {
+        text: output.text,
+        changes: changes_for_tool(&call_tool_name, old_texts),
+    })
+}
+
+fn emit_tool_started(context: &ToolLoopContext<'_>, id: &tether_types::ToolCallId) {
+    if let Some(sink) = context.sink {
+        sink.on_event(CoreEvent::ToolStarted {
+            session_id: context.session_id.clone(),
+            tool_call_id: id.clone(),
+        });
+    }
+}
+
+/// Keeps the prior file texts only for native file-edit tools.
+fn changes_for_tool(tool: &str, old_texts: Vec<PendingChange>) -> Vec<PendingChange> {
+    if is_native_file_edit(tool) {
+        old_texts
+    } else {
+        Vec::new()
+    }
+}
+
+fn is_native_file_edit(tool: &str) -> bool {
+    matches!(
+        tool,
+        "write_file" | "edit_file" | "multi_edit" | "move_file" | "delete_file"
+    )
+}
+
+fn append_quality_text(
+    context: &mut ToolLoopContext<'_>,
+    request: &mut tether_providers::ChatRequest,
+    report: &GateReport,
+) {
+    let Some(message) = request.messages.last_mut() else {
+        return;
+    };
+    let text = format!(
+        "Quality report ({}):\n{}\nFix block findings before you commit.",
+        report.report.render_summary(),
+        report.report.render_for_model(20)
+    );
+    message.parts.push(MessagePart::Text { text });
+    // Ignoring a failed save is safe: the report is already in this exchange's
+    // request, and only its stored copy is lost.
+    drop(
+        context
+            .store
+            .replace_message_parts(&message.id, &message.parts),
+    );
+}
+
+fn emit_quality_event(
+    context: &ToolLoopContext<'_>,
+    tool_call_id: &tether_types::ToolCallId,
+    report: &GateReport,
+) {
+    let Some(sink) = context.sink else {
+        return;
+    };
+    sink.on_event(CoreEvent::QualityReport {
+        session_id: context.session_id.clone(),
+        tool_call_id: tool_call_id.clone(),
+        counts: tether_types::QualityCounts {
+            info: count_u32(report.report.counts.info),
+            warn: count_u32(report.report.counts.warn),
+            block: count_u32(report.report.counts.block),
+        },
+        findings: quality::findings_to_records(&report.report.findings),
+        skipped: report.skipped,
+    });
+}
+
+fn count_u32(value: usize) -> u32 {
+    u32::try_from(value).unwrap_or(u32::MAX)
 }
 
 fn save_cancelled_calls(
@@ -600,7 +754,8 @@ fn truncate(value: &str) -> String {
         return value.to_owned();
     }
     let mut output: String = value.chars().take(MAX_RESULT_CHARS).collect();
-    output.push_str("\n[output truncated]");
+    output.push_str(
+        "\n[output truncated; use read_file with start_line and end_line, or grep with a narrower pattern]");
     output
 }
 

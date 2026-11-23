@@ -68,7 +68,7 @@ impl SessionRuntime {
             .map_err(|_| SessionRuntimeError::Unavailable)?
             .ok_or(SessionRuntimeError::Unavailable)?;
         let project_root = project_root_of(self, &id)?;
-        let sources = self.prompt_sources(&project.name, project_root.clone());
+        let sources = self.prompt_sources(&project.name, project_root.clone(), None);
         let snapshot = snapshot_for(&store, &id, &sources)?;
         let instructions = load_instructions(
             sources.global_instructions_path.as_deref(),
@@ -92,7 +92,7 @@ impl SessionRuntime {
             project_instructions: &instructions.project,
             memory_block: &snapshot.memory_block,
             vault_block: &snapshot.vault_block,
-            skills_index: sources.skills_index.as_deref(),
+            skills_index: Some(snapshot.skills_block.as_str()),
             today: &today,
         });
         Ok(prompt
@@ -146,6 +146,7 @@ fn snapshot_for(
             id,
             &snapshot.memory_block,
             &snapshot.vault_block,
+            &snapshot.skills_block,
             snapshot.created_at,
         )
         .map_err(|_| SessionRuntimeError::Unavailable)?;

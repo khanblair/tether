@@ -1,0 +1,7 @@
+2026-11-21T10:00:00.1234567Z FAIL tests/api.test.ts
+2026-11-21T10:00:00.1234567Z   ● API › rejects an invalid token
+2026-11-21T10:00:00.1234567Z 
+2026-11-21T10:00:00.1234567Z     expect(received).toBe(401)
+2026-11-21T10:00:00.1234567Z 
+2026-11-21T10:00:00.1234567Z     at rejects an invalid token (tests/api.test.ts:27:11)
+2026-11-21T10:00:00.1234567Z Tests:       1 failed, 1 total

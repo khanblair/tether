@@ -141,6 +141,11 @@ pub(crate) fn is_lower_hex(value: &str, length: usize) -> bool {
 }
 
 pub(crate) fn sha256_file(path: &std::path::Path) -> Result<String, LinuxError> {
+    let metadata = std::fs::symlink_metadata(path)
+        .map_err(|_| crate::error::io_error("inspect archive file"))?;
+    if metadata.file_type().is_symlink() || !metadata.is_file() {
+        return Err(crate::error::io_error("archive file is not regular"));
+    }
     let mut file = std::fs::File::open(path).map_err(|_| crate::error::io_error("open archive"))?;
     let mut hash = Sha256::new();
     let mut buffer = vec![0_u8; 64 * 1024].into_boxed_slice();

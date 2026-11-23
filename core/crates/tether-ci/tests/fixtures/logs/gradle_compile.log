@@ -1,0 +1,3 @@
+2026-11-21T10:00:00.1234567Z > Task :compileKotlin FAILED
+2026-11-21T10:00:00.1234567Z e: file:///home/runner/work/app/app/src/main/kotlin/Main.kt:4:2 Type mismatch: inferred type is String but Int was expected
+2026-11-21T10:00:00.1234567Z BUILD FAILED in 1s

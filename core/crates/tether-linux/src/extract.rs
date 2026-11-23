@@ -1,7 +1,10 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Write};
-use std::os::unix::fs::{PermissionsExt, symlink};
+use std::os::unix::{
+    ffi::OsStrExt,
+    fs::{PermissionsExt, symlink},
+};
 use std::path::{Component, Path, PathBuf};
 
 use flate2::read::GzDecoder;
@@ -12,6 +15,7 @@ use tokio_util::sync::CancellationToken;
 use crate::LinuxError;
 use crate::error::io_error;
 use crate::manifest::hex_digest;
+use crate::rootfs::RootfsProgress;
 
 pub(crate) const ENTRY_LIMIT: usize = 50_000;
 pub(crate) const FILE_LIMIT: u64 = 200 * 1024 * 1024;
@@ -35,6 +39,7 @@ pub(crate) fn extract_archive(
     destination: &Path,
     max_bytes: u64,
     cancel: &CancellationToken,
+    progress: &mut dyn RootfsProgress,
 ) -> Result<ExtractReport, LinuxError> {
     let file = File::open(archive_path).map_err(|_| io_error("open root filesystem archive"))?;
     let decoder = GzDecoder::new(file);
@@ -52,7 +57,9 @@ pub(crate) fn extract_archive(
         if cancel.is_cancelled() {
             return Err(LinuxError::Cancelled);
         }
+        validate_header_path(&entry)?;
         extract_entry(&mut entry, &mut context, cancel)?;
+        progress.extracting(context.entries);
     }
     Ok(context.report)
 }
@@ -72,6 +79,7 @@ pub(crate) fn repair_archive(
         .map_err(|_| archive_error("read archive entries"))?
     {
         let mut entry = item.map_err(|_| archive_error("read archive entry"))?;
+        validate_header_path(&entry)?;
         let path = safe_entry_path(entry.path_bytes().as_ref())?;
         if !wanted.contains(&path) {
             continue;
@@ -80,6 +88,7 @@ pub(crate) fn repair_archive(
             return Err(LinuxError::Cancelled);
         }
         let target = context.destination.join(&path);
+        ensure_parents(context.destination, &path)?;
         refuse_symlink(&target)?;
         remove_existing_file(&target)?;
         let mode = entry
@@ -99,6 +108,7 @@ struct ExtractContext<'a> {
     entries: usize,
     report: ExtractReport,
     hard_links: BTreeMap<String, PathBuf>,
+    paths: BTreeSet<String>,
 }
 
 impl<'a> ExtractContext<'a> {
@@ -110,6 +120,7 @@ impl<'a> ExtractContext<'a> {
             entries: 0,
             report: ExtractReport::default(),
             hard_links: BTreeMap::new(),
+            paths: BTreeSet::new(),
         }
     }
 }
@@ -124,6 +135,9 @@ fn extract_entry(
     cancel: &CancellationToken,
 ) -> Result<(), LinuxError> {
     let path = safe_entry_path(entry.path_bytes().as_ref())?;
+    if !context.paths.insert(path.clone()) {
+        return Err(archive_error("duplicate archive path"));
+    }
     let target = context.destination.join(&path);
     ensure_parents(context.destination, &path)?;
     let entry_type = entry.header().entry_type();
@@ -213,7 +227,8 @@ fn create_hard_link(
         .link_name()
         .map_err(|_| archive_error("read hard link"))?
         .ok_or_else(|| archive_error("missing hard link target"))?;
-    let name = safe_entry_path(link.as_os_str().to_string_lossy().as_bytes())?;
+    validate_link_name(&link)?;
+    let name = safe_entry_path(link.as_os_str().as_bytes())?;
     let source = context
         .hard_links
         .get(&name)
@@ -235,7 +250,30 @@ fn create_symlink(
         .link_name()
         .map_err(|_| archive_error("read symlink"))?
         .ok_or_else(|| archive_error("missing symlink target"))?;
+    validate_link_name(&link)?;
     symlink(link, target).map_err(|_| io_error("create root filesystem symlink"))
+}
+
+fn validate_header_path(entry: &tar::Entry<'_, GzDecoder<File>>) -> Result<(), LinuxError> {
+    validate_raw_name(&entry.header().as_bytes()[..100])
+}
+
+fn validate_link_name(link: &Path) -> Result<(), LinuxError> {
+    if link.as_os_str().as_bytes().contains(&0) {
+        Err(archive_error("archive link path rejected"))
+    } else {
+        Ok(())
+    }
+}
+
+fn validate_raw_name(bytes: &[u8]) -> Result<(), LinuxError> {
+    let Some(index) = bytes.iter().position(|byte| *byte == 0) else {
+        return Ok(());
+    };
+    if bytes[index + 1..].iter().any(|byte| *byte != 0) {
+        return Err(archive_error("archive path contains NUL"));
+    }
+    Ok(())
 }
 
 fn create_directory(target: &Path, mode: u32) -> Result<(), LinuxError> {

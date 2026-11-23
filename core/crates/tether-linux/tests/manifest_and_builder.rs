@@ -87,6 +87,50 @@ fn network_failure_classifier_uses_tool_messages() {
 }
 
 #[test]
+fn classifies_apk_network_failures() {
+    for output in [
+        "apk: temporary error (try again later)",
+        "temporary failure in name resolution",
+        "unable to select packages: fetch https://dl-cdn.alpinelinux.org failed",
+    ] {
+        assert!(classify_network_failure(output), "{output}");
+    }
+}
+
+#[test]
+fn classifies_npm_network_failures() {
+    for output in [
+        "npm ERR! code ENOTFOUND",
+        "npm ERR! max retries exceeded",
+        "npm ERR! network is unreachable",
+    ] {
+        assert!(classify_network_failure(output), "{output}");
+    }
+}
+
+#[test]
+fn classifies_cargo_network_failures() {
+    for output in [
+        "warning: spurious network error: Could not resolve host",
+        "failed to resolve: registry.example.invalid",
+        "failed to establish a new connection",
+    ] {
+        assert!(classify_network_failure(output), "{output}");
+    }
+}
+
+#[test]
+fn does_not_classify_non_network_failures() {
+    for output in [
+        "error: permission denied",
+        "checksum mismatch for package",
+        "tests failed: assertion failed",
+    ] {
+        assert!(!classify_network_failure(output), "{output}");
+    }
+}
+
+#[test]
 fn command_builder_rejects_relative_cwd_and_reserved_environment() {
     let directory = tempdir().unwrap();
     let config = ProotConfig {

@@ -1,12 +1,11 @@
 //! Background notification and foreground-service dispatch.
 
-use std::collections::HashMap;
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::collections::{HashMap, HashSet};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use tether_engine::EventSink as EngineSink;
-use tether_engine::notify::summarize_call;
 use tether_types::{CoreEvent, SessionId, ToolCallId};
 
 use crate::callbacks::{EventSink, NotifyPlatform, RunServicePlatform};
@@ -16,9 +15,22 @@ pub(crate) struct NotifyState {
     platform: Mutex<Option<Arc<dyn NotifyPlatform>>>,
     service: Mutex<Option<Arc<dyn RunServicePlatform>>>,
     foreground: AtomicBool,
-    running: AtomicUsize,
+    running: Mutex<HashSet<SessionId>>,
     targets: Mutex<HashMap<ToolCallId, String>>,
     last_progress: Mutex<HashMap<SessionId, i64>>,
+    clock: Arc<dyn NotifyClock>,
+}
+
+pub(crate) trait NotifyClock: Send + Sync {
+    fn now_ms(&self) -> i64;
+}
+
+struct WallClock;
+
+impl NotifyClock for WallClock {
+    fn now_ms(&self) -> i64 {
+        now_ms()
+    }
 }
 
 impl NotifyState {
@@ -27,9 +39,23 @@ impl NotifyState {
             platform: Mutex::new(None),
             service: Mutex::new(None),
             foreground: AtomicBool::new(true),
-            running: AtomicUsize::new(0),
+            running: Mutex::new(HashSet::new()),
             targets: Mutex::new(HashMap::new()),
             last_progress: Mutex::new(HashMap::new()),
+            clock: Arc::new(WallClock),
+        }
+    }
+
+    #[cfg(test)]
+    fn with_clock(clock: Arc<dyn NotifyClock>) -> Self {
+        Self {
+            platform: Mutex::new(None),
+            service: Mutex::new(None),
+            foreground: AtomicBool::new(true),
+            running: Mutex::new(HashSet::new()),
+            targets: Mutex::new(HashMap::new()),
+            last_progress: Mutex::new(HashMap::new()),
+            clock,
         }
     }
 
@@ -71,29 +97,42 @@ impl NotifyState {
     }
 
     fn track_run_service(&self, event: &CoreEvent) {
-        let CoreEvent::SessionUpdated { status, .. } = event else {
+        let CoreEvent::SessionUpdated {
+            session_id, status, ..
+        } = event
+        else {
             return;
         };
         if matches!(status, tether_types::SessionStatus::Requesting) {
-            self.note_run_started();
+            self.note_run_started(session_id);
         } else if matches!(
             status,
             tether_types::SessionStatus::Idle
                 | tether_types::SessionStatus::Failed
                 | tether_types::SessionStatus::Interrupted
         ) {
-            self.note_run_finished();
+            self.note_run_finished(session_id);
         }
     }
 
-    fn note_run_started(&self) {
-        if self.running.fetch_add(1, Ordering::AcqRel) == 0 {
+    fn note_run_started(&self, session_id: &SessionId) {
+        let Ok(mut running) = self.running.lock() else {
+            return;
+        };
+        let start = running.insert(session_id.clone()) && running.len() == 1;
+        drop(running);
+        if start {
             self.start_service();
         }
     }
 
-    fn note_run_finished(&self) {
-        if self.running.fetch_sub(1, Ordering::AcqRel) == 1 {
+    fn note_run_finished(&self, session_id: &SessionId) {
+        let Ok(mut running) = self.running.lock() else {
+            return;
+        };
+        let stop = running.remove(session_id) && running.is_empty();
+        drop(running);
+        if stop {
             self.stop_service();
         }
     }
@@ -111,16 +150,30 @@ impl NotifyState {
     }
 
     fn track_target(&self, event: &CoreEvent) {
-        if let CoreEvent::ToolProposed {
-            tool_call_id,
-            tool,
-            target,
-            ..
-        } = event
-            && let Ok(mut targets) = self.targets.lock()
-        {
-            targets.insert(tool_call_id.clone(), summarize_call(tool, target));
+        match event {
+            CoreEvent::ToolProposed {
+                tool_call_id,
+                tool,
+                target,
+                ..
+            } => self.remember_target(tool_call_id, summarize_target(tool, target)),
+            CoreEvent::ToolFinished { tool_call_id, .. } => self.forget_target(tool_call_id),
+            _ => {}
         }
+    }
+
+    fn remember_target(&self, tool_call_id: &ToolCallId, target: String) {
+        let Ok(mut targets) = self.targets.lock() else {
+            return;
+        };
+        targets.insert(tool_call_id.clone(), target);
+    }
+
+    fn forget_target(&self, tool_call_id: &ToolCallId) {
+        let Ok(mut targets) = self.targets.lock() else {
+            return;
+        };
+        targets.remove(tool_call_id);
     }
 
     fn dispatch(&self, platform: &Arc<dyn NotifyPlatform>, session_id: &str, event: &CoreEvent) {
@@ -130,13 +183,21 @@ impl NotifyState {
                 tool,
                 target,
                 ..
-            } => platform.show_approval(
-                session_id.to_owned(),
-                tool_call_id.to_string(),
-                tool.clone(),
-                target.clone(),
-                target.clone(),
-            ),
+            } => {
+                let summary = self
+                    .targets
+                    .lock()
+                    .ok()
+                    .and_then(|targets| targets.get(tool_call_id).cloned())
+                    .unwrap_or_else(|| summarize_target(tool, target));
+                platform.show_approval(
+                    session_id.to_owned(),
+                    tool_call_id.to_string(),
+                    tool.clone(),
+                    target.clone(),
+                    summary,
+                );
+            }
             CoreEvent::QuestionAsked {
                 tool_call_id,
                 question,
@@ -182,18 +243,31 @@ impl NotifyState {
 
     /// Returns true when the session may send progress now, and records the send time.
     fn claim_progress_slot(&self, session_id: &str) -> bool {
-        let now = now_ms();
+        let now = self.clock.now_ms();
         let Ok(mut last) = self.last_progress.lock() else {
             return false;
         };
         let key = SessionId::new(session_id);
-        let previous = last.get(&key).copied().unwrap_or(0);
-        if now.saturating_sub(previous) < 1_000 {
+        if last
+            .get(&key)
+            .is_some_and(|previous| now.saturating_sub(*previous) < 1_000)
+        {
             return false;
         }
         last.insert(key, now);
         true
     }
+}
+
+fn summarize_target(tool: &str, target: &str) -> String {
+    let summary = match tool {
+        "edit" | "edit_file" => format!("edit {target}"),
+        "write" | "write_file" => format!("write {target}"),
+        "delete" | "delete_file" => format!("delete {target}"),
+        "run" | "run_command" => format!("run: {target}"),
+        _ => target.to_owned(),
+    };
+    summary.chars().take(120).collect()
 }
 
 pub(crate) struct SessionSink {
@@ -231,7 +305,8 @@ fn event_session(event: &CoreEvent) -> String {
         | CoreEvent::NetworkResumed { session_id }
         | CoreEvent::BudgetWarning { session_id, .. }
         | CoreEvent::BudgetReached { session_id, .. }
-        | CoreEvent::ContextCompacted { session_id, .. } => session_id.to_string(),
+        | CoreEvent::ContextCompacted { session_id, .. }
+        | CoreEvent::QualityReport { session_id, .. } => session_id.to_string(),
         CoreEvent::Ready { .. } | CoreEvent::Test { .. } | CoreEvent::ProviderStatus { .. } => {
             String::new()
         }
@@ -289,3 +364,7 @@ impl SessionRuntime {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "notify_tests.rs"]
+mod notify_tests;

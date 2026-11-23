@@ -27,16 +27,22 @@ fn public_v4(ip: Ipv4Addr) -> bool {
     if first == 172 && (16..=31).contains(&second) {
         return false;
     }
-    if first == 192 && (second == 0 || second == 168) {
+    if first == 192 && second == 168 {
         return false;
     }
-    if first == 198 && second == 51 {
+    if first == 192 && second == 0 && octets[2] == 0 {
+        return false;
+    }
+    if first == 192 && second == 0 && octets[2] == 2 {
+        return false;
+    }
+    if first == 198 && second == 51 && octets[2] == 100 {
         return false;
     }
     if first == 198 && (18..=19).contains(&second) {
         return false;
     }
-    if first == 203 && second == 0 {
+    if first == 203 && second == 0 && octets[2] == 113 {
         return false;
     }
     true

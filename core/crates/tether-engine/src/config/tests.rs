@@ -51,6 +51,17 @@ fn quality_values_merge_by_name_and_keep_their_origins() {
 }
 
 #[test]
+fn quality_config_retains_rule_lists_and_severity_tables() {
+    let (config, issues) = parse(
+        "[quality]\ndisable = [\"smell.magic_number\"]\n[quality.severity]\nsmell.function_length = \"block\"\n",
+    );
+
+    assert_eq!(issues, Vec::new());
+    assert!(matches!(config.quality["disable"], ConfigValue::Array(_)));
+    assert!(matches!(config.quality["severity"], ConfigValue::Table(_)));
+}
+
+#[test]
 fn allowed_commands_make_only_sandbox_and_linux_rules() {
     let config = EffectiveConfig {
         allowed_commands: vec!["pytest".into()],

@@ -134,7 +134,10 @@ impl LinuxRunner {
         if !self.config.proot_path.is_file() {
             return Err(LinuxError::NotReady("PRoot is unavailable".into()));
         }
-        if !self.config.linux_root.join("rootfs/alpine").is_dir() {
+        let rootfs = self.config.linux_root.join("rootfs/alpine");
+        let usable = std::fs::symlink_metadata(rootfs)
+            .is_ok_and(|metadata| !metadata.file_type().is_symlink() && metadata.is_dir());
+        if !usable {
             return Err(LinuxError::NotReady(
                 "the Alpine root filesystem is unavailable".into(),
             ));

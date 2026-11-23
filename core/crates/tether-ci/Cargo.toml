@@ -6,5 +6,15 @@ rust-version.workspace = true
 publish.workspace = true
 description = "GitHub Actions executor: dispatch, poll, logs."
 
+[dependencies]
+tether-secrets.workspace = true
+tether-vcs = { path = "../tether-vcs" }
+serde.workspace = true
+serde_json.workspace = true
+similar.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
+
 [lints]
 workspace = true

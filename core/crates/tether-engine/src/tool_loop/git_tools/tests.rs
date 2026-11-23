@@ -3,8 +3,11 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::Arc;
 
-use tether_types::{SessionId, ToolCallId};
-use tether_vcs::{GithubClient, Identity, PullRequestInfo, Transport, TransportError};
+use tether_types::{PermissionMode, PermissionRule, SessionId, ToolCallId};
+use tether_vcs::{
+    CheckRun, GithubClient, GithubError, Identity, PullRequestComment, PullRequestInfo, Transport,
+    TransportError,
+};
 use tether_workspace::PathGuard;
 use tokio_util::sync::CancellationToken;
 
@@ -43,6 +46,18 @@ impl Repo {
             .status()
             .unwrap();
         assert!(status.success(), "git {args:?}");
+    }
+
+    fn output(&self, args: &[&str]) -> String {
+        let output = Command::new("git")
+            .args(args)
+            .current_dir(&self.0)
+            .env("GIT_CONFIG_GLOBAL", "/dev/null")
+            .env("GIT_CONFIG_NOSYSTEM", "1")
+            .output()
+            .unwrap();
+        assert!(output.status.success(), "git {args:?}");
+        String::from_utf8(output.stdout).unwrap()
     }
 
     fn path(&self) -> &Path {
@@ -120,7 +135,10 @@ fn a_push_without_a_branch_names_and_freezes_the_checked_out_branch() {
     assert_eq!(delete.target, "delete branch feature/work on origin");
     assert_eq!(delete.payload["branch"], "feature/work");
     let force = prepare(&repo, "git_push", r#"{"force":true}"#).unwrap();
-    assert!(force.target.starts_with("FORCE push feature/work"));
+    assert_eq!(
+        force.target,
+        "FORCE push feature/work to origin (rewrites history)"
+    );
 }
 
 #[test]
@@ -226,3 +244,7 @@ fn optional_text_arguments_that_are_supplied_validate() {
         assert!(prepare(&repo, tool, args).is_err(), "{tool} {args}");
     }
 }
+
+#[cfg(test)]
+#[path = "git_regression_tests.rs"]
+mod regression;

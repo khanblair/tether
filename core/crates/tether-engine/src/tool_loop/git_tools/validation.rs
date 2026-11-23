@@ -56,6 +56,12 @@ fn diff(value: Value) -> Result<PreparedCall, String> {
     if from.is_some() != to.is_some() {
         return Err("from and to must be supplied together".into());
     }
+    if let Some(from) = from {
+        bounded(from, 200, "from")?;
+    }
+    if let Some(to) = to {
+        bounded(to, 200, "to")?;
+    }
     let path = optional_string(&value, "path")?
         .map(validate_path)
         .transpose()?;
@@ -211,7 +217,11 @@ fn pr_create(
 }
 
 fn pr_status(value: Value) -> Result<PreparedCall, String> {
-    if value.get("number").is_some() && value.get("number").and_then(Value::as_u64).is_none() {
+    if let Some(number) = value.get("number").and_then(Value::as_u64) {
+        if number == 0 {
+            return Err("number must be a positive integer".into());
+        }
+    } else if value.get("number").is_some() {
         return Err("number must be a positive integer".into());
     }
     Ok(target_tool(

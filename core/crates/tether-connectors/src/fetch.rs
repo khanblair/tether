@@ -1,7 +1,6 @@
 //! Safe web fetching and model rendering.
 
 use std::net::IpAddr;
-use std::net::ToSocketAddrs;
 
 use thiserror::Error;
 use tokio_util::sync::CancellationToken;
@@ -127,7 +126,7 @@ impl WebFetcher {
         let mut redirects = 0;
         let mut seen = std::collections::HashSet::new();
         loop {
-            validate_url(&current).await?;
+            validate_url(&current)?;
             ensure_new_url(&mut seen, &current)?;
             check_cancel(cancel)?;
             let reply = tokio::select! { biased; () = cancel.cancelled() => return Err(FetchError::Cancelled), reply = self.backend.get(current.to_string(), vec![], MAX_BODY_BYTES) => reply? };
@@ -192,7 +191,7 @@ fn redirect_target(
     Ok(Some(next))
 }
 
-async fn validate_url(url: &reqwest::Url) -> Result<(), FetchError> {
+fn validate_url(url: &reqwest::Url) -> Result<(), FetchError> {
     if !matches!(url.scheme(), "http" | "https")
         || !url.username().is_empty()
         || url.password().is_some()
@@ -206,23 +205,16 @@ async fn validate_url(url: &reqwest::Url) -> Result<(), FetchError> {
             message: "URL".to_owned(),
         });
     };
-    if host.is_empty() || host.eq_ignore_ascii_case("localhost") || host.parse::<IpAddr>().is_ok() {
+    if host.is_empty() || host.eq_ignore_ascii_case("localhost") {
         return Err(FetchError::InvalidUrl {
             message: "host".to_owned(),
         });
     }
-    let port = url.port_or_known_default().ok_or(FetchError::InvalidUrl {
+    url.port_or_known_default().ok_or(FetchError::InvalidUrl {
         message: "port".to_owned(),
     })?;
-    let host_owned = host.to_owned();
-    let addresses =
-        tokio::task::spawn_blocking(move || (host_owned.as_str(), port).to_socket_addrs())
-            .await
-            .map_err(|_| FetchError::Dns)?
-            .map_err(|_| FetchError::Dns)?;
-    if addresses
-        .into_iter()
-        .any(|address| !is_public_ip(address.ip()))
+    if let Ok(address) = host.parse::<IpAddr>()
+        && !is_public_ip(address)
     {
         return Err(FetchError::InvalidUrl {
             message: "host".to_owned(),

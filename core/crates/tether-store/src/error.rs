@@ -143,10 +143,16 @@ pub enum StoreError {
     /// A usage query used an invalid UTC date.
     #[error("usage day is invalid")]
     InvalidDay,
+    /// An MCP server id did not name an existing row.
+    #[error("MCP server not found")]
+    MissingMcpServer,
     /// A transient screen state was offered for storage. Only a finished test result is saved.
     #[error("provider status {status} is screen state and is not stored")]
     TransientStatus {
         /// The status text that was refused.
         status: &'static str,
     },
+    /// A skill setting key is not one of the supported approval switches.
+    #[error("unknown skill setting")]
+    InvalidSkillSetting,
 }

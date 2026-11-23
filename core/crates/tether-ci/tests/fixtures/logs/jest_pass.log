@@ -1,0 +1,4 @@
+2026-11-21T10:00:00.1234567Z PASS tests/api.test.ts
+2026-11-21T10:00:00.1234567Z   API
+2026-11-21T10:00:00.1234567Z     ✓ accepts a valid token (4 ms)
+2026-11-21T10:00:00.1234567Z Tests:       1 passed, 1 total

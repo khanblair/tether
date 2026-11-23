@@ -1,0 +1,6 @@
+2026-11-21T10:00:00.1234567Z RUN  v2.0.0 /home/runner/work/app/app
+2026-11-21T10:00:01.1234567Z ❯ tests/math.test.ts (1 test | 1 failed)
+2026-11-21T10:00:01.1234567Z  ❯ math > adds
+2026-11-21T10:00:01.1234567Z    AssertionError: expected 2 to be 3
+2026-11-21T10:00:01.1234567Z    at adds (tests/math.test.ts:9:5)
+2026-11-21T10:00:01.1234567Z Test Files  1 failed (1)

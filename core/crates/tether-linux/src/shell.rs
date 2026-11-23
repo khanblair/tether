@@ -25,7 +25,10 @@ impl LinuxShell {
         if !config.proot_path.is_file() {
             return Err(LinuxError::NotReady("PRoot is unavailable".into()));
         }
-        if !config.linux_root.join("rootfs/alpine").is_dir() {
+        let rootfs = config.linux_root.join("rootfs/alpine");
+        let usable = std::fs::symlink_metadata(rootfs)
+            .is_ok_and(|metadata| !metadata.file_type().is_symlink() && metadata.is_dir());
+        if !usable {
             return Err(LinuxError::NotReady(
                 "the Alpine root filesystem is unavailable".into(),
             ));
@@ -104,6 +107,7 @@ impl LinuxShell {
     /// # Errors
     /// Returns a process termination error.
     pub fn kill(&mut self) -> Result<(), LinuxError> {
+        drop(self.writer.write_all(b"\x03"));
         self.child
             .kill()
             .map_err(|_| LinuxError::Process("could not kill Linux shell".into()))
@@ -124,6 +128,7 @@ impl LinuxShell {
 
 impl Drop for LinuxShell {
     fn drop(&mut self) {
+        drop(self.writer.write_all(b"\x03"));
         drop(self.child.kill());
     }
 }

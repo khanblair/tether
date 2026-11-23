@@ -79,9 +79,10 @@ impl ProotConfig {
         let tmp = self.linux_root.join("tmp");
         let empty_resolv = self.linux_root.join("etc/resolv.empty");
         let network_resolv = self.linux_root.join("etc/resolv.conf");
-        for path in [&rootfs, &tmp, &empty_resolv, &network_resolv] {
-            validate_host_path(path, "Linux bind")?;
-        }
+        validate_bind_target(&rootfs, true)?;
+        validate_bind_target(&tmp, true)?;
+        validate_bind_target(&empty_resolv, false)?;
+        validate_bind_target(&network_resolv, false)?;
         let mut arguments = vec![
             "-r".into(),
             rootfs.to_string_lossy().into_owned(),
@@ -212,6 +213,19 @@ fn validate_workspace(path: &Path) -> Result<(), LinuxError> {
         return Err(LinuxError::Path(
             "workspace must be a real directory".into(),
         ));
+    }
+    Ok(())
+}
+
+fn validate_bind_target(path: &Path, directory: bool) -> Result<(), LinuxError> {
+    validate_host_path(path, "Linux bind")?;
+    let metadata = std::fs::symlink_metadata(path)
+        .map_err(|_| LinuxError::Path("Linux bind is unavailable".into()))?;
+    if metadata.file_type().is_symlink()
+        || (directory && !metadata.is_dir())
+        || (!directory && !metadata.is_file())
+    {
+        return Err(LinuxError::Path("Linux bind target is not real".into()));
     }
     Ok(())
 }

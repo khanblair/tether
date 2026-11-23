@@ -93,6 +93,16 @@ pub trait ToolHandler: Send + Sync {
         call: PreparedCall,
         context: ExecuteContext<'a>,
     ) -> BoxFuture<'a, Result<ToolOutput, String>>;
+
+    /// Returns whether this call must be blocked in Plan mode.
+    fn blocks_in_plan(&self, _call: &PreparedCall) -> bool {
+        false
+    }
+
+    /// Returns whether this call supplies an in-memory approval rule.
+    fn auto_approves(&self, _call: &PreparedCall) -> bool {
+        false
+    }
 }
 
 /// A duplicate tool name was offered by more than one handler.
@@ -177,6 +187,18 @@ impl ToolRegistry {
             return unknown_tool();
         };
         self.handlers[index].execute(call, context)
+    }
+
+    pub(crate) fn blocks_in_plan(&self, call: &PreparedCall) -> bool {
+        self.owners
+            .get(&call.tool)
+            .is_some_and(|index| self.handlers[*index].blocks_in_plan(call))
+    }
+
+    pub(crate) fn auto_approves(&self, call: &PreparedCall) -> bool {
+        self.owners
+            .get(&call.tool)
+            .is_some_and(|index| self.handlers[*index].auto_approves(call))
     }
 }
 

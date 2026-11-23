@@ -21,6 +21,10 @@ pub enum ConfigValue {
     Number(f64),
     /// A named severity or setting.
     String(String),
+    /// A list retained for a downstream settings parser.
+    Array(Vec<Self>),
+    /// A table retained for a downstream settings parser.
+    Table(BTreeMap<String, Self>),
 }
 
 impl fmt::Display for ConfigValue {
@@ -28,6 +32,8 @@ impl fmt::Display for ConfigValue {
         match self {
             Self::Number(value) => write!(formatter, "{value}"),
             Self::String(value) => formatter.write_str(value),
+            Self::Array(values) => write!(formatter, "{values:?}"),
+            Self::Table(values) => write!(formatter, "{values:?}"),
         }
     }
 }

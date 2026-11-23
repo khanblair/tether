@@ -147,6 +147,7 @@ pub fn capture_snapshot(sources: &PromptSources) -> Result<PromptSnapshot, Promp
     Ok(PromptSnapshot {
         memory_block,
         vault_block,
+        skills_block: sources.skills_index.clone().unwrap_or_default(),
         created_at: 0,
     })
 }

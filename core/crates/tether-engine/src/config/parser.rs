@@ -86,15 +86,21 @@ fn parse_quality(table: &toml::Table, config: &mut ProjectConfig, issues: &mut V
 }
 
 fn quality_value(value: &toml::Value) -> Option<ConfigValue> {
-    value
-        .as_float()
-        .or_else(|| value.as_integer().and_then(integer_as_f64))
-        .map(ConfigValue::Number)
-        .or_else(|| {
-            value
-                .as_str()
-                .map(|text| ConfigValue::String(text.to_owned()))
-        })
+    match value {
+        toml::Value::Float(number) => Some(ConfigValue::Number(*number)),
+        toml::Value::Integer(number) => integer_as_f64(*number).map(ConfigValue::Number),
+        toml::Value::String(text) => Some(ConfigValue::String(text.clone())),
+        toml::Value::Array(values) => Some(ConfigValue::Array(
+            values.iter().filter_map(quality_value).collect(),
+        )),
+        toml::Value::Table(values) => Some(ConfigValue::Table(
+            values
+                .iter()
+                .filter_map(|(key, value)| quality_value(value).map(|value| (key.clone(), value)))
+                .collect(),
+        )),
+        toml::Value::Boolean(_) | toml::Value::Datetime(_) => None,
+    }
 }
 
 /// Converts an integer to the nearest `f64` without a lossy `as` cast.

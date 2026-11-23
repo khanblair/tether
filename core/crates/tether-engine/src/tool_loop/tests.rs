@@ -260,3 +260,11 @@ fn invalid_arguments_and_denial_do_not_mutate() {
         "old"
     );
 }
+
+#[test]
+fn truncated_tool_output_tells_the_model_how_to_read_more() {
+    let text = super::truncate(&"x".repeat(super::MAX_RESULT_CHARS + 1));
+
+    assert!(text.contains("read_file with start_line and end_line"));
+    assert!(text.contains("grep with a narrower pattern"));
+}

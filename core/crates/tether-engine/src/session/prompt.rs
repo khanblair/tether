@@ -93,6 +93,7 @@ impl SessionActor {
                 prompt_snapshot,
                 project_name,
                 network: options.network,
+                announced_skills: std::collections::HashSet::new(),
             },
             handle,
         ))
@@ -137,6 +138,7 @@ fn load_snapshot(
         id,
         &snapshot.memory_block,
         &snapshot.vault_block,
+        &snapshot.skills_block,
         snapshot.created_at,
     )?;
     Ok(Some(snapshot))

@@ -1,6 +1,8 @@
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use tether_providers::{ChatRequest, ToolSpec};
+use tether_skills::{DiscoverInput, SkillsCatalog};
 use tether_types::{CoreError, CoreEvent, MessagePart, Role, SessionStatus, UsageSnapshot};
 use tokio_util::sync::CancellationToken;
 
@@ -39,6 +41,7 @@ impl SessionActor {
         if !text.is_empty() {
             append_mention_context(&mut messages, &mentions);
         }
+        self.append_new_skill_note(&mut messages)?;
         let tool_specs = self.prompt_tool_specs()?;
         let instructions = load_instructions(
             self.prompt_sources.global_instructions_path.as_deref(),
@@ -60,12 +63,11 @@ impl SessionActor {
             project_instructions: &instructions.project,
             memory_block: snapshot.map_or("", |value| value.memory_block.as_str()),
             vault_block: snapshot.map_or("", |value| value.vault_block.as_str()),
-            skills_index: self.prompt_sources.skills_index.as_deref(),
+            skills_index: snapshot.map(|value| value.skills_block.as_str()),
             today: &today,
         });
         if should_auto_compact(&self.store, &self.session, &prompt, &tool_specs, &messages)? {
-            // Compaction is best effort: when it fails, the turn runs on the full history.
-            drop(compact_session(self, None).await);
+            self.auto_compact().await?;
             messages = self
                 .store
                 .context_messages(&id)
@@ -144,6 +146,28 @@ impl SessionActor {
             })
     }
 
+    async fn auto_compact(&mut self) -> Result<(), CoreError> {
+        let result = compact_session(self, None).await;
+        if let Err(error) = result {
+            self.record_compaction_failure(&error)?;
+        }
+        Ok(())
+    }
+
+    fn record_compaction_failure(&mut self, error: &CoreError) -> Result<(), CoreError> {
+        self.store
+            .append_message(
+                &self.session.id,
+                Role::SystemNote,
+                &[MessagePart::Text {
+                    text: format!("Context compaction failed: {}", error.message()),
+                }],
+                super::now_ms(),
+            )
+            .map_err(super::store_error)?;
+        Ok(())
+    }
+
     async fn run_tools(
         &mut self,
         provider: Arc<dyn tether_providers::ChatProvider>,
@@ -183,6 +207,84 @@ impl SessionActor {
             .await;
         (UsageSnapshot::default(), true, result.map(|_| ()))
     }
+}
+
+impl SessionActor {
+    fn append_new_skill_note(
+        &mut self,
+        messages: &mut [tether_types::Message],
+    ) -> Result<(), CoreError> {
+        let Some(catalog) = self.live_skill_catalog()? else {
+            return Ok(());
+        };
+        let snapshot_names = self.snapshot_skill_names();
+        let Some(skill) = catalog.skills.iter().find(|skill| {
+            !snapshot_names.contains(&skill.name)
+                && self.announced_skills.insert(skill.name.clone())
+        }) else {
+            return Ok(());
+        };
+        let Some(message) = messages
+            .iter_mut()
+            .rev()
+            .find(|message| message.role == Role::User)
+        else {
+            return Ok(());
+        };
+        message.parts.push(MessagePart::Text {
+            text: format!(
+                "\n\nNew skill available: {}: {}. Use skill_view to load it.",
+                skill.name, skill.description
+            ),
+        });
+        Ok(())
+    }
+
+    fn live_skill_catalog(&self) -> Result<Option<SkillsCatalog>, CoreError> {
+        let user_dir = self
+            .prompt_sources
+            .memory_root
+            .as_deref()
+            .and_then(std::path::Path::parent)
+            .map(|path| path.join("skills"))
+            .or_else(|| {
+                self.prompt_sources
+                    .project_root
+                    .as_deref()
+                    .map(|path| path.join("skills"))
+            });
+        let Some(user_dir) = user_dir else {
+            return Ok(None);
+        };
+        let trusted = self
+            .store
+            .is_project_trusted(&self.session.project_id)
+            .map_err(super::store_error)?;
+        Ok(Some(SkillsCatalog::discover(DiscoverInput {
+            project_root: self.prompt_sources.project_root.as_deref(),
+            project_trusted: trusted,
+            user_dir: &user_dir,
+            bundled: &[],
+        })))
+    }
+
+    fn snapshot_skill_names(&self) -> HashSet<String> {
+        self.prompt_snapshot
+            .as_ref()
+            .map_or_else(HashSet::new, |snapshot| {
+                snapshot
+                    .skills_block
+                    .lines()
+                    .filter_map(skill_name)
+                    .collect::<HashSet<_>>()
+            })
+    }
+}
+
+fn skill_name(line: &str) -> Option<String> {
+    let text = line.strip_prefix("- ")?;
+    let name = text.split_once(':').map_or(text, |(name, _)| name).trim();
+    (!name.is_empty()).then(|| name.to_owned())
 }
 
 fn append_mention_context(messages: &mut [tether_types::Message], mentions: &MentionResolution) {

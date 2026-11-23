@@ -65,7 +65,7 @@ pub fn decide(
     if matches!(
         effect,
         Effect::Edit | Effect::RunSandbox | Effect::RunHost | Effect::Network
-    ) && rules.iter().any(|rule| rule_matches(rule, request))
+    ) && rules.iter().any(|rule| rule_matches(rule, effect, request))
     {
         Decision::Allow
     } else {
@@ -159,7 +159,7 @@ fn mode_name(mode: PermissionMode) -> &'static str {
     }
 }
 
-fn rule_matches(rule: &PermissionRule, request: PermissionRequest<'_>) -> bool {
+fn rule_matches(rule: &PermissionRule, effect: Effect, request: PermissionRequest<'_>) -> bool {
     rule.tool == request.tool
         && rule
             .executor
@@ -167,6 +167,8 @@ fn rule_matches(rule: &PermissionRule, request: PermissionRequest<'_>) -> bool {
         && if request.tool == "run" {
             !has_shell_character(request.target)
                 && request.target.split_whitespace().next() == Some(rule.pattern.as_str())
+        } else if effect == Effect::Network && rule.pattern == "*" {
+            true
         } else {
             pattern_matches(&rule.pattern, request.target)
         }

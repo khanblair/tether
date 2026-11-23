@@ -13,6 +13,7 @@ pub mod notify;
 pub mod permissions;
 pub mod prompt;
 mod provider_connection;
+mod quality;
 mod rewind;
 mod session;
 mod session_provider;
@@ -36,9 +37,15 @@ pub use session::{
     ToolRuntime,
 };
 pub use session_provider::provider_for;
+pub use tool_loop::ci_tools::{CiLogResult, CiLogsRequest, CiRunService, CiTools};
 pub use tool_loop::git_tools::{
     CommitGate, CommitInput, GateFinding, GateSeverity, GitIdentityReader, GitTools,
     GitToolsConfig, GithubClientFactory, TransportFactory,
+};
+pub use tool_loop::knowledge_tools::{KnowledgeTools, staged_skill_change};
+pub use tool_loop::mcp_tools::{
+    McpApproval, McpManager, McpServerDefinition, McpServerSnapshot, McpServerStatus,
+    McpToolSetting, McpToolsHandler, McpTransportFactory, WebTools,
 };
 pub use tool_loop::session_tools::{SESSION_TOOL_SPECS, SessionToolSpec, SessionTools};
 pub use tool_loop::{

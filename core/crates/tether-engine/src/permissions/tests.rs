@@ -262,6 +262,43 @@ fn rule_for_returns_only_safe_exact_patterns() {
     assert_eq!(rule_for(Effect::Edit, "move_file", "a -> b", None), None);
 }
 
+#[test]
+fn network_star_rules_match_only_their_network_tool() {
+    let rule = PermissionRule {
+        id: "r1".into(),
+        tool: "web_fetch".into(),
+        pattern: "*".into(),
+        executor: None,
+    };
+    assert_eq!(
+        decide(
+            PermissionMode::Ask,
+            Effect::Network,
+            std::slice::from_ref(&rule),
+            request("web_fetch", "https://example.test/docs")
+        ),
+        Decision::Allow
+    );
+    assert_eq!(
+        decide(
+            PermissionMode::Ask,
+            Effect::Network,
+            std::slice::from_ref(&rule),
+            request("mcp__docs__read", "docs: read {}")
+        ),
+        Decision::Ask
+    );
+    assert_eq!(
+        decide(
+            PermissionMode::Ask,
+            Effect::Edit,
+            std::slice::from_ref(&rule),
+            request("write_file", "file.txt")
+        ),
+        Decision::Ask
+    );
+}
+
 fn request<'a>(tool: &'a str, target: &'a str) -> PermissionRequest<'a> {
     request_with_executor(tool, target, None)
 }

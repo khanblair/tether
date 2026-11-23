@@ -1,5 +1,6 @@
 //! One actor per session serializes turns and commits streamed text before emitting it.
 
+use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -106,6 +107,7 @@ pub struct SessionActor {
     prompt_snapshot: Option<tether_store::PromptSnapshot>,
     project_name: String,
     network: Option<Arc<crate::network::NetworkControl>>,
+    announced_skills: HashSet<String>,
 }
 
 impl SessionActor {

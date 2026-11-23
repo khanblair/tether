@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Context meter in the status line. -->
     <string name="notices_context_label">%1$d%%</string>
     <string name="notices_context_danger_label">%1$d%% almost full</string>
-    <string name="notices_context_description">Context used: %1$d percent. Open the breakdown.</string>
+    <string name="notices_context_description" tools:ignore="PluralsCandidate">Context used: %1$d percent. Open the breakdown.</string>
 
     <!-- Cost meter in the status line. -->
     <string name="notices_cost_under_cent">less than $0.01</string>
@@ -16,8 +16,8 @@
     <string name="notices_network_offline">You are offline. The turn waits and continues when the connection returns.</string>
 
     <!-- Budget notices. Scope is session or day. -->
-    <string name="notices_budget_warning_session">You have used %1$d percent of the session budget</string>
-    <string name="notices_budget_warning_day">You have used %1$d percent of the day budget</string>
+    <string name="notices_budget_warning_session" tools:ignore="PluralsCandidate">You have used %1$d percent of the session budget</string>
+    <string name="notices_budget_warning_day" tools:ignore="PluralsCandidate">You have used %1$d percent of the day budget</string>
     <string name="notices_budget_warning_spent">%1$s of %2$s spent.</string>
     <string name="notices_budget_reached_session">The session budget of %1$s is reached. The turn is paused.</string>
     <string name="notices_budget_reached_day">The day budget of %1$s is reached. The turn is paused.</string>

@@ -10,7 +10,6 @@
     <string name="github_account_sign_in">Sign in with GitHub</string>
     <string name="github_account_sign_out">Sign out</string>
     <string name="github_account_edit_identity">Edit Git identity</string>
-    <string name="github_account_token_toggle">Use a personal access token instead</string>
     <string name="github_account_token_title">Personal access token</string>
     <string name="github_account_token_label">Token</string>
     <string name="github_account_token_placeholder">Paste a token</string>
@@ -108,5 +107,4 @@
     <string name="github_clone_received_total">%1$s MB of %2$s MB</string>
     <string name="github_clone_received_only">%1$s MB received</string>
     <string name="github_clone_canceled">Clone canceled. Nothing was kept.</string>
-    <string name="github_clone_empty_url">Paste a repository URL to clone.</string>
 </resources>

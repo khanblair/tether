@@ -12,7 +12,6 @@
     <string name="approval_kind_other">Use a tool</string>
 
     <!-- Approval bar: the position in the waiting list, the buttons, and the expanded detail. -->
-    <string name="approval_bar_description">Approval needed: %1$s</string>
     <string name="approval_position">%1$d of %2$d</string>
     <string name="approval_allow">Allow</string>
     <string name="approval_deny">Deny</string>

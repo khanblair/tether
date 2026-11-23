@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Pinned checklist: one line when collapsed, every item when expanded. -->
-    <string name="cards_checklist_progress">%1$d of %2$d done</string>
+    <string name="cards_checklist_progress" tools:ignore="PluralsCandidate">%1$d of %2$d done</string>
     <string name="cards_checklist_all_done">All done</string>
     <string name="cards_checklist_expand">Show checklist</string>
     <string name="cards_checklist_collapse">Hide checklist</string>
@@ -15,7 +15,7 @@
     <string name="cards_ask_hint">Type your answer</string>
     <string name="cards_ask_send">Send</string>
     <string name="cards_ask_answered">Your answer</string>
-    <string name="cards_ask_counter">%1$d of %2$d characters</string>
+    <string name="cards_ask_counter" tools:ignore="PluralsCandidate">%1$d of %2$d characters</string>
 
     <!-- Plan card: the plan from Plan mode, and what to do with it. -->
     <string name="cards_plan_title">Plan</string>

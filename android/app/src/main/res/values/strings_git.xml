@@ -2,7 +2,6 @@
 <resources>
     <!-- Git screen: top bar and tabs -->
     <string name="git_title">Git</string>
-    <string name="git_back">Back</string>
     <string name="git_tab_changes">Changes</string>
     <string name="git_tab_branches">Branches</string>
     <string name="git_tab_history">History</string>

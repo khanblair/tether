@@ -34,13 +34,10 @@
     <string name="mcp_detail_address">Address</string>
     <string name="mcp_detail_tools_title">Tools</string>
     <string name="mcp_detail_no_tools">No tools yet. Refresh tools to read them from the server.</string>
-    <string name="mcp_detail_missing">This server no longer exists. Go back to the list.</string>
     <string name="mcp_tool_no_description">The server gave no description.</string>
     <string name="mcp_tool_enabled">Offer %1$s to the agent</string>
-    <string name="mcp_approval_label">Approval</string>
     <string name="mcp_approval_ask">Ask</string>
     <string name="mcp_approval_auto">Auto</string>
-    <string name="mcp_approval_selected">Selected</string>
     <string name="mcp_approval_note">Auto skips the question in Ask and Accept edits modes. It never skips it in Plan mode.</string>
     <string name="mcp_refresh_tools">Refresh tools</string>
     <string name="mcp_remove_server">Remove server</string>

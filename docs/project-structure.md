@@ -85,6 +85,20 @@ tether/
 │   ├── smell-fixtures/        Module with a function over the line limit; detekt must fail on it (built only with -Ptether.smellFixtures)
 │   ├── app/                   build.gradle.kts (flavors play and full; app version read from core/Cargo.toml), proguard-rules.pro
 │   │   └── src/{main, debug, release, full, play, androidTest}   TetherApp, MainActivity, di/AppModule, nav/, home/ (Projects home, project detail, drawer, Needs attention; sample sources in debug, empty sources in release), share/ (text intake and project picker), shell/ (settings and placeholder screens)
+│   │       └── main/kotlin/app/tether/
+│   │           ├── session/agent/                  Agent loop state and gateway, agent screen, agent tool cards in the transcript
+│   │           ├── session/approval/               Approval bar, always-allow menu, deny reason sheet, approval view model
+│   │           ├── session/cards/                  Ask-user card, plan card, checklist pin
+│   │           ├── session/tools/                  Tool call and group cards, run card, quality report, system notes, tool titles and icons
+│   │           ├── session/notices/                Budget, context, cost, network, and interrupted-turn notices
+│   │           ├── session/compose/                Slash commands and their sheet, @mentions and chips, compose assist panel
+│   │           ├── git/                            Git screen, changes and branches tabs, diff screen and view, unified diff parser
+│   │           ├── projectarchive/                 Project ZIP import and export screens, export sheet, view models
+│   │           ├── settings/github/                GitHub account, clone, and Git identity screens, device code panel
+│   │           ├── settings/mcp/                   MCP server list, server detail, add sheet, tool rows, MCP gateway
+│   │           ├── settings/executors/             Executors screen, Linux setup card, runtime packs, CI runs screen
+│   │           ├── settings/budgets/               Budgets and cost screens, budget editor, cost chart, money formatting
+│   │           └── workspace/                      ProjectArchive.kt: ZIP project folders
 │   ├── core-bridge/           CoreClient, EventBus, KeystoreSecretsPlatform, consumer-rules.pro, (gen) generated/tether_core.kt
 │   │   └── src/main/kotlin/app/tether/workspace/ProjectArchive.kt  ZIP project folders
 │   └── designsystem/          TetherTheme, TetherIcons, PrimaryButton, TetherTopBar, ListRow, ProviderRow, SecretField, InlineBanner, TestConnectionButton, TetherTextButton, TetherIconButton, NotificationBell, StatusBadge, StatusMark, ProjectRow, SessionRow, SectionTitle, ListGroup, TetherSearchField, TetherSheet, FONTS-LICENSE.txt, (gen) tokens/Tokens.kt and token colors, Plex fonts

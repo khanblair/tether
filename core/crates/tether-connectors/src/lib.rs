@@ -9,3 +9,6 @@ mod ip;
 pub use backend::{ReqwestWebBackend, WebBackend, WebBody, WebFuture, WebReply};
 pub use fetch::{FetchError, FetchOptions, FetchedPage, WebFetcher};
 pub use ip::is_public_ip;
+
+#[cfg(test)]
+mod hardening_tests;

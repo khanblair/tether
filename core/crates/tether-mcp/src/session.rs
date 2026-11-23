@@ -159,7 +159,7 @@ impl McpSession {
     /// # Errors
     /// Returns a transport or HTTP error other than 405.
     pub async fn close(&mut self) -> Result<(), McpError> {
-        if self.session_id.take().is_none() {
+        if self.session_id.is_none() {
             return Ok(());
         }
         let headers = self.request_headers(true)?;
@@ -177,6 +177,7 @@ impl McpSession {
                 status: reply.status,
             });
         }
+        self.session_id = None;
         Ok(())
     }
 

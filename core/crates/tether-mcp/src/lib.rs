@@ -16,3 +16,6 @@ pub use transport::{
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod hardening_tests;

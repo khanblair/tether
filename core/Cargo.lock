@@ -3924,6 +3924,16 @@ dependencies = [
 [[package]]
 name = "tether-ci"
 version = "0.0.4"
+dependencies = [
+ "serde",
+ "serde_json",
+ "similar",
+ "tether-secrets",
+ "tether-vcs",
+ "thiserror 2.0.21",
+ "tokio",
+ "tokio-util",
+]
 
 [[package]]
 name = "tether-connectors"
@@ -3947,7 +3957,10 @@ dependencies = [
  "serde_json",
  "sha2 0.10.9",
  "tempfile",
+ "tether-ci",
+ "tether-connectors",
  "tether-linux",
+ "tether-mcp",
  "tether-memory",
  "tether-providers",
  "tether-sandbox",
@@ -3971,8 +3984,11 @@ dependencies = [
  "rusqlite",
  "serde_json",
  "tempfile",
+ "tether-ci",
+ "tether-connectors",
  "tether-engine",
  "tether-linux",
+ "tether-mcp",
  "tether-memory",
  "tether-sandbox",
  "tether-secrets",

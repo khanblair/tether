@@ -205,6 +205,7 @@ private fun SessionRoute(
                     providers = module.providerGateway,
                     messages = module.messages,
                     openProviders = { nav.go(Route.Providers) },
+                    files = module.filesGateway,
                 ),
             onOpenBudgets = { nav.open(SETTINGS_BUDGETS_ROUTE) },
         )

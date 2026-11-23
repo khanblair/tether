@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,6 +27,8 @@ import app.tether.core.generated.RoleView
 import app.tether.design.TetherTheme
 import app.tether.design.tokens.TetherSize
 import app.tether.design.tokens.TetherSpace
+import app.tether.files.FilesGateway
+import app.tether.messages.AppMessages
 import app.tether.providers.providerNameRes
 import app.tether.session.agent.AgentScreenUi
 import app.tether.session.agent.PartSegment
@@ -34,6 +37,9 @@ import app.tether.session.agent.ToolCardState
 import app.tether.session.agent.agentLiveItems
 import app.tether.session.agent.liveSection
 import app.tether.session.agent.segmentParts
+import app.tether.session.compose.ComposeAssistDeps
+import app.tether.session.compose.SkippedMention
+import app.tether.session.compose.skippedMentionsLine
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -51,11 +57,13 @@ internal fun CoroutineScope.sendTurn(
     text: String,
     onStart: () -> Unit,
     onFailed: () -> Unit,
+    onSkipped: (List<SkippedMention>) -> Unit = {},
 ) {
     onStart()
     launch {
         try {
-            withContext(Dispatchers.IO) { connection.send(text) }
+            val skipped = withContext(Dispatchers.IO) { connection.send(text) }
+            if (skipped.isNotEmpty()) onSkipped(skipped)
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: Exception) {
@@ -83,14 +91,26 @@ internal fun ComposerControls(
     onSendStart: () -> Unit,
     onSendFailed: () -> Unit,
     sendBlocked: Boolean = false,
+    files: FilesGateway? = null,
+    messages: AppMessages? = null,
 ) {
     val scope = rememberCoroutineScope()
+    val skippedText = stringResource(R.string.compose_skipped_files)
+    val assist =
+        remember(connection, files) {
+            files?.let { ComposeAssistDeps(connection.commands, it, connection.projectId) }
+        }
     Composer(
         modelId = modelId,
         running = running,
-        onSend = { text -> scope.sendTurn(connection, text, onSendStart, onSendFailed) },
+        onSend = { text ->
+            scope.sendTurn(connection, text, onSendStart, onSendFailed) { skipped ->
+                messages?.show(skippedText.format(skippedMentionsLine(skipped)))
+            }
+        },
         onStop = { scope.launch(Dispatchers.IO) { connection.stop() } },
         sendBlocked = sendBlocked,
+        assist = assist,
     )
 }
 

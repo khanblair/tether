@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Command sheet: the list of slash commands above the composer. -->
+    <string name="compose_commands_title">Commands</string>
+    <string name="compose_commands_loading">Loading commands</string>
+    <string name="compose_commands_failed">Commands are not available right now.</string>
+    <string name="compose_command_empty">No command matches</string>
+    <string name="compose_command_unavailable_default">Not available right now.</string>
+    <string name="compose_command_needs">Needs %1$s</string>
+
+    <!-- Mention sheet: the file picker above the composer. -->
+    <string name="compose_mention_title">Mention a file</string>
+    <string name="compose_mention_loading">Searching files</string>
+    <string name="compose_mention_empty">No file matches</string>
+    <string name="compose_mention_failed">Files cannot be searched right now.</string>
+
+    <!-- Mention chips: one per file mentioned in the draft. %1$s is the path. -->
+    <string name="compose_mention_remove">Remove %1$s</string>
+    <string name="compose_skipped_files">Not attached: %1$s</string>
+</resources>

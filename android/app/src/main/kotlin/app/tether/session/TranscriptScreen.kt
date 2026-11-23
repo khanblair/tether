@@ -167,6 +167,8 @@ fun TranscriptScreen(
                         onSendStart = { startTurn() },
                         onSendFailed = { turn = turn.onSendFailed() },
                         sendBlocked = agentUi?.approvalsWaiting == true,
+                        files = sheets?.files,
+                        messages = sheets?.messages,
                     )
                 }
             },

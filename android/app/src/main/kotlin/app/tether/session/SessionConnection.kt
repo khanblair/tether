@@ -9,6 +9,9 @@ import app.tether.core.generated.SessionRuntime
 import app.tether.core.generated.SessionRuntimeException
 import app.tether.session.agent.AgentLoopGateway
 import app.tether.session.agent.CoreAgentLoopGateway
+import app.tether.session.compose.CommandsGateway
+import app.tether.session.compose.CoreCommandsGateway
+import app.tether.session.compose.SkippedMention
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 
@@ -42,11 +45,24 @@ class SessionConnection(
             throw error
         }
 
+    /** The project this session belongs to. */
+    val projectId: String =
+        try {
+            runtime.loadSession(sessionId).projectId
+        } catch (error: SessionRuntimeException) {
+            runner.close()
+            runtime.close()
+            throw error
+        }
+
     /**
      * Model, mode, rename, and usage calls. They use this runtime, not a second one, because the
      * core drops a session's runner from the runtime that changed it.
      */
     val settings: SessionSettingsGateway = CoreSessionSettingsGateway(lazyOf(runtime))
+
+    /** The composer's slash commands: the command sheet and command resolution. */
+    val commands: CommandsGateway = CoreCommandsGateway(lazyOf(runtime))
 
     /** The agent-loop calls: approvals, questions, checklist, plan, budget, and interruptions. */
     val agent: AgentLoopGateway = CoreAgentLoopGateway(lazyOf(runtime))
@@ -58,8 +74,10 @@ class SessionConnection(
 
     fun status(): SessionStatus = readSessionStatus(databasePath, sessionId)
 
-    fun send(text: String) {
-        runner.sendMessage(text)
+    /** Sends a turn and returns the `@` mentions the core could not attach, with the reasons. */
+    fun send(text: String): List<SkippedMention> {
+        val outcome = runner.sendMessageWithOutcome(text)
+        return outcome.skippedPaths.zip(outcome.skippedReasons, ::SkippedMention)
     }
 
     fun stop() {

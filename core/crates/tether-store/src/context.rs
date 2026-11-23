@@ -216,7 +216,7 @@ impl Store {
             })
             .collect::<Vec<_>>();
         if let Some((_, tool, args)) = calls.into_iter().find(|(id, _, _)| !results.contains(id)) {
-            return Ok(Some(format!("tool: {tool} {args}")));
+            return Ok(Some(format!("tool: {tool} {}", interruption_target(&args))));
         }
         Ok(has_assistant.then(|| "waiting for the model".into()))
     }
@@ -269,6 +269,16 @@ fn read_u32(value: i64) -> Result<u32, rusqlite::Error> {
     u32::try_from(value).map_err(|_| rusqlite::Error::IntegralValueOutOfRange(0, value))
 }
 
+fn interruption_target(args: &str) -> String {
+    let Ok(value) = serde_json::from_str::<serde_json::Value>(args) else {
+        return args.to_owned();
+    };
+    ["path", "command", "target", "url"]
+        .into_iter()
+        .find_map(|key| value.get(key).and_then(serde_json::Value::as_str))
+        .map_or_else(|| args.to_owned(), ToOwned::to_owned)
+}
+
 /// Makes a new compaction marker id.
 #[must_use]
 pub fn new_compaction_id() -> String {
@@ -285,6 +295,10 @@ mod tests {
         assert_eq!(store.compaction_threshold().unwrap(), 80);
         assert!(matches!(
             store.set_compaction_threshold(49),
+            Err(StoreError::InvalidContextThreshold)
+        ));
+        assert!(matches!(
+            store.set_compaction_threshold(96),
             Err(StoreError::InvalidContextThreshold)
         ));
         store.set_compaction_threshold(95).unwrap();

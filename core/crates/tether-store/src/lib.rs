@@ -11,6 +11,7 @@ mod context;
 mod context_tests;
 mod db;
 mod error;
+mod mcp_servers;
 mod migrations;
 mod models;
 #[cfg(test)]
@@ -41,6 +42,7 @@ mod sessions;
 mod sessions_rules_tests;
 #[cfg(test)]
 mod sessions_tests;
+mod skill_settings;
 mod todos;
 #[cfg(test)]
 mod todos_tests;
@@ -54,11 +56,13 @@ pub use checkpoints::{BlobStore, Checkpoint, CheckpointFile, SnapshotInput};
 pub use context::{CompactionRecord, new_compaction_id};
 pub use db::Store;
 pub use error::StoreError;
+pub use mcp_servers::{McpServerHeaderRecord, McpServerRecord, McpToolSettingRecord};
 pub use models::{CATALOG_TTL_MS, catalog_is_fresh};
 pub use projects::{GitIdentity, ProjectDefaults, ProjectRecord, ProjectRemote};
 pub use prompt_snapshots::PromptSnapshot;
 pub use session_fts::SessionSearchHit;
 pub use sessions::SessionRecord;
+pub use skill_settings::SkillChange;
 pub use usage::{
     DayUsage, ModelUsage, ProjectUsage, ResponseUsageRecord, UsageTotals, UsageWindows,
     usage_day_offset,

@@ -1,6 +1,6 @@
 use tether_types::{ModelRef, PermissionMode, ProjectId, Provider};
 
-use crate::{Store, StoreError};
+use crate::{GitIdentity, Store, StoreError};
 
 fn model() -> ModelRef {
     ModelRef {
@@ -161,4 +161,40 @@ fn unknown_project_has_no_defaults_to_update_or_read() {
         store.session_defaults(&missing),
         Err(StoreError::MissingProject)
     ));
+}
+
+#[test]
+fn git_identity_round_trips_on_a_fresh_database_and_can_be_cleared() {
+    let store = Store::open_in_memory().unwrap();
+    let identity = GitIdentity {
+        login: Some("blair".into()),
+        name: "Blair Khan".into(),
+        email: "blair@example.test".into(),
+        source: "github".into(),
+        updated_at: 42,
+    };
+    store.set_git_identity(&identity).unwrap();
+    assert_eq!(store.git_identity().unwrap(), Some(identity));
+    store.clear_git_identity().unwrap();
+    assert_eq!(store.git_identity().unwrap(), None);
+}
+
+#[test]
+fn git_identity_migration_applies_to_a_0008_database() {
+    let mut connection = rusqlite::Connection::open_in_memory().unwrap();
+    crate::migrations::apply(&mut connection, &crate::migrations::MIGRATIONS[..8]).unwrap();
+    assert_eq!(
+        crate::migrations::apply(&mut connection, crate::migrations::MIGRATIONS).unwrap(),
+        crate::migrations::latest(crate::migrations::MIGRATIONS)
+    );
+    assert_eq!(
+        connection
+            .query_row(
+                "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'git_identity'",
+                [],
+                |row| row.get::<_, String>(0),
+            )
+            .unwrap(),
+        "git_identity"
+    );
 }

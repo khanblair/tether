@@ -250,6 +250,7 @@ impl Store {
             return Err(StoreError::MissingCheckpointMessage);
         }
         tx.commit()?;
+        self.remove_compactions_after(session_id, message_id)?;
         Ok(())
     }
 

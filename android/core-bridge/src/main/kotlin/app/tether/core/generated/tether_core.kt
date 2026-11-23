@@ -677,6 +677,9 @@ internal interface UniffiCallbackInterfaceRunServicePlatformMethod0 : com.sun.jn
 internal interface UniffiCallbackInterfaceRunServicePlatformMethod1 : com.sun.jna.Callback {
     fun callback(`uniffiHandle`: Long,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,)
 }
+internal interface UniffiCallbackInterfaceExecutorProgressMethod0 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`downloaded`: Long,`total`: Long,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,)
+}
 internal interface UniffiCallbackInterfaceCloneProgressViewMethod0 : com.sun.jna.Callback {
     fun callback(`uniffiHandle`: Long,`phase`: RustBuffer.ByValue,`received`: Long,`total`: RustBuffer.ByValue,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,)
 }
@@ -688,6 +691,15 @@ internal interface UniffiCallbackInterfaceSecretsPlatformMethod1 : com.sun.jna.C
 }
 internal interface UniffiCallbackInterfaceDownloadProgressMethod0 : com.sun.jna.Callback {
     fun callback(`uniffiHandle`: Long,`downloaded`: Long,`total`: Long,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,)
+}
+internal interface UniffiCallbackInterfaceVaultFolderPlatformMethod0 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`uniffiOutReturn`: RustBuffer,uniffiCallStatus: UniffiRustCallStatus,)
+}
+internal interface UniffiCallbackInterfaceVaultFolderPlatformMethod1 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`path`: RustBuffer.ByValue,`uniffiOutReturn`: RustBuffer,uniffiCallStatus: UniffiRustCallStatus,)
+}
+internal interface UniffiCallbackInterfaceVaultFolderPlatformMethod2 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`path`: RustBuffer.ByValue,`bytes`: RustBuffer.ByValue,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,)
 }
 @Structure.FieldOrder("uniffiFree", "uniffiClone", "onEvent")
 internal open class UniffiVTableCallbackInterfaceEventSink(
@@ -781,6 +793,25 @@ internal open class UniffiVTableCallbackInterfaceRunServicePlatform(
 
 }
 @Structure.FieldOrder("uniffiFree", "uniffiClone", "onProgress")
+internal open class UniffiVTableCallbackInterfaceExecutorProgress(
+    @JvmField internal var `uniffiFree`: UniffiCallbackInterfaceFree? = null,
+    @JvmField internal var `uniffiClone`: UniffiCallbackInterfaceClone? = null,
+    @JvmField internal var `onProgress`: UniffiCallbackInterfaceExecutorProgressMethod0? = null,
+) : Structure() {
+    class UniffiByValue(
+        `uniffiFree`: UniffiCallbackInterfaceFree? = null,
+        `uniffiClone`: UniffiCallbackInterfaceClone? = null,
+        `onProgress`: UniffiCallbackInterfaceExecutorProgressMethod0? = null,
+    ): UniffiVTableCallbackInterfaceExecutorProgress(`uniffiFree`,`uniffiClone`,`onProgress`,), Structure.ByValue
+
+   internal fun uniffiSetValue(other: UniffiVTableCallbackInterfaceExecutorProgress) {
+        `uniffiFree` = other.`uniffiFree`
+        `uniffiClone` = other.`uniffiClone`
+        `onProgress` = other.`onProgress`
+    }
+
+}
+@Structure.FieldOrder("uniffiFree", "uniffiClone", "onProgress")
 internal open class UniffiVTableCallbackInterfaceCloneProgressView(
     @JvmField internal var `uniffiFree`: UniffiCallbackInterfaceFree? = null,
     @JvmField internal var `uniffiClone`: UniffiCallbackInterfaceClone? = null,
@@ -840,6 +871,31 @@ internal open class UniffiVTableCallbackInterfaceDownloadProgress(
     }
 
 }
+@Structure.FieldOrder("uniffiFree", "uniffiClone", "list", "read", "write")
+internal open class UniffiVTableCallbackInterfaceVaultFolderPlatform(
+    @JvmField internal var `uniffiFree`: UniffiCallbackInterfaceFree? = null,
+    @JvmField internal var `uniffiClone`: UniffiCallbackInterfaceClone? = null,
+    @JvmField internal var `list`: UniffiCallbackInterfaceVaultFolderPlatformMethod0? = null,
+    @JvmField internal var `read`: UniffiCallbackInterfaceVaultFolderPlatformMethod1? = null,
+    @JvmField internal var `write`: UniffiCallbackInterfaceVaultFolderPlatformMethod2? = null,
+) : Structure() {
+    class UniffiByValue(
+        `uniffiFree`: UniffiCallbackInterfaceFree? = null,
+        `uniffiClone`: UniffiCallbackInterfaceClone? = null,
+        `list`: UniffiCallbackInterfaceVaultFolderPlatformMethod0? = null,
+        `read`: UniffiCallbackInterfaceVaultFolderPlatformMethod1? = null,
+        `write`: UniffiCallbackInterfaceVaultFolderPlatformMethod2? = null,
+    ): UniffiVTableCallbackInterfaceVaultFolderPlatform(`uniffiFree`,`uniffiClone`,`list`,`read`,`write`,), Structure.ByValue
+
+   internal fun uniffiSetValue(other: UniffiVTableCallbackInterfaceVaultFolderPlatform) {
+        `uniffiFree` = other.`uniffiFree`
+        `uniffiClone` = other.`uniffiClone`
+        `list` = other.`list`
+        `read` = other.`read`
+        `write` = other.`write`
+    }
+
+}
 
 // A JNA Library to expose the extern-C FFI definitions.
 // This is an implementation detail which will be called internally by the public API.
@@ -887,6 +943,18 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_tether_core_checksum_method_runserviceplatform_stop_run_service(
     ): Int
+    external fun uniffi_tether_core_checksum_method_ciruntime_cancel_ci_run(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_ciruntime_ci_run_logs(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_ciruntime_ci_status(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_ciruntime_list_ci_runs(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_ciruntime_workflow_proposal(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_executorprogress_on_progress(
+    ): Int
     external fun uniffi_tether_core_checksum_method_filesruntime_list_dir(
     ): Int
     external fun uniffi_tether_core_checksum_method_filesruntime_read_file(
@@ -894,6 +962,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_tether_core_checksum_method_filesruntime_search_file_names(
     ): Int
     external fun uniffi_tether_core_checksum_method_filesruntime_search_file_text(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_gitruntime_cancel_clone(
     ): Int
     external fun uniffi_tether_core_checksum_method_gitruntime_clone_repository(
     ): Int
@@ -927,6 +997,20 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_tether_core_checksum_method_cloneprogressview_on_progress(
     ): Int
+    external fun uniffi_tether_core_checksum_method_mcpruntime_add_mcp_server(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_mcpruntime_list_mcp_servers(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_mcpruntime_refresh_mcp_tools(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_mcpruntime_remove_mcp_server(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_mcpruntime_set_mcp_server_enabled(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_mcpruntime_set_mcp_tool(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_mcpruntime_test_mcp_server(
+    ): Int
     external fun uniffi_tether_core_checksum_method_memoryruntime_apply(
     ): Int
     external fun uniffi_tether_core_checksum_method_memoryruntime_frozen_block(
@@ -947,7 +1031,13 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_tether_core_checksum_method_projectruntime_trust_project(
     ): Int
+    external fun uniffi_tether_core_checksum_method_projectruntime_cancel_import(
+    ): Int
     external fun uniffi_tether_core_checksum_method_projectruntime_create_project(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_projectruntime_export_project_zip(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_projectruntime_import_project_zip(
     ): Int
     external fun uniffi_tether_core_checksum_method_projectruntime_list_projects(
     ): Int
@@ -968,6 +1058,10 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_tether_core_checksum_method_providersettings_test_connection(
     ): Int
     external fun uniffi_tether_core_checksum_method_providersettings_test_target(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_qualityruntime_effective_quality(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_qualityruntime_list_quality_rules(
     ): Int
     external fun uniffi_tether_core_checksum_method_secretvault_delete(
     ): Int
@@ -1035,6 +1129,28 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_tether_core_checksum_method_sessionruntime_set_project_network(
     ): Int
+    external fun uniffi_tether_core_checksum_method_sessionruntime_install_runtime_pack(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_sessionruntime_runtime_packs(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_sessionruntime_setup_linux_mode(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_sessionruntime_memory_write_approval(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_sessionruntime_set_memory_write_approval(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_sessionruntime_set_skill_enabled(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_sessionruntime_set_skill_write_approval(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_sessionruntime_set_vault_write_approval(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_sessionruntime_skill_change_diff(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_sessionruntime_skill_write_approval(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_sessionruntime_vault_write_approval(
+    ): Int
     external fun uniffi_tether_core_checksum_method_sessionruntime_network_changed(
     ): Int
     external fun uniffi_tether_core_checksum_method_sessionruntime_set_network_platform(
@@ -1083,6 +1199,10 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_tether_core_checksum_method_sessionruntime_set_global_instructions(
     ): Int
+    external fun uniffi_tether_core_checksum_method_sessionruntime_rerun_elsewhere(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_sessionruntime_run_user_command(
+    ): Int
     external fun uniffi_tether_core_checksum_method_sessionruntime_list_models(
     ): Int
     external fun uniffi_tether_core_checksum_method_sessionruntime_rename_session(
@@ -1103,6 +1223,18 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_tether_core_checksum_method_skillsruntime_read(
     ): Int
+    external fun uniffi_tether_core_checksum_method_skillsruntime_approve_skill_install(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_skillsruntime_discard_quarantine(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_skillsruntime_restore_skill(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_skillsruntime_run_skill_upkeep(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_skillsruntime_skill_install_preview_url(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_skillsruntime_skill_install_preview_zip(
+    ): Int
     external fun uniffi_tether_core_checksum_method_downloadprogress_on_progress(
     ): Int
     external fun uniffi_tether_core_checksum_method_updater_cancel(
@@ -1119,7 +1251,17 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_tether_core_checksum_method_usageruntime_usage_summary(
     ): Int
+    external fun uniffi_tether_core_checksum_method_vaultfolderplatform_list(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_vaultfolderplatform_read(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_vaultfolderplatform_write(
+    ): Int
     external fun uniffi_tether_core_checksum_method_vaultruntime_append(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_vaultruntime_export_zip(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_vaultruntime_import_zip(
     ): Int
     external fun uniffi_tether_core_checksum_method_vaultruntime_links(
     ): Int
@@ -1131,19 +1273,27 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_tether_core_checksum_method_vaultruntime_search(
     ): Int
+    external fun uniffi_tether_core_checksum_method_vaultruntime_sync_with_platform(
+    ): Int
     external fun uniffi_tether_core_checksum_method_vaultruntime_write(
     ): Int
     external fun uniffi_tether_core_checksum_constructor_tethercore_new(
     ): Int
+    external fun uniffi_tether_core_checksum_constructor_ciruntime_new(
+    ): Int
     external fun uniffi_tether_core_checksum_constructor_filesruntime_new(
     ): Int
     external fun uniffi_tether_core_checksum_constructor_gitruntime_new(
+    ): Int
+    external fun uniffi_tether_core_checksum_constructor_mcpruntime_new(
     ): Int
     external fun uniffi_tether_core_checksum_constructor_memoryruntime_new(
     ): Int
     external fun uniffi_tether_core_checksum_constructor_projectruntime_new(
     ): Int
     external fun uniffi_tether_core_checksum_constructor_providersettings_new(
+    ): Int
+    external fun uniffi_tether_core_checksum_constructor_qualityruntime_new(
     ): Int
     external fun uniffi_tether_core_checksum_constructor_secretvault_new(
     ): Int
@@ -1176,10 +1326,12 @@ internal object UniffiLib {
         uniffiCallbackInterfaceCloneProgressView.register(this)
         uniffiCallbackInterfaceDownloadProgress.register(this)
         uniffiCallbackInterfaceEventSink.register(this)
+        uniffiCallbackInterfaceExecutorProgress.register(this)
         uniffiCallbackInterfaceNetworkPlatform.register(this)
         uniffiCallbackInterfaceNotifyPlatform.register(this)
         uniffiCallbackInterfaceRunServicePlatform.register(this)
         uniffiCallbackInterfaceSecretsPlatform.register(this)
+        uniffiCallbackInterfaceVaultFolderPlatform.register(this)
         
     }
 
@@ -1234,6 +1386,30 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_tether_core_fn_method_runserviceplatform_stop_run_service(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_tether_core_fn_clone_ciruntime(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_tether_core_fn_free_ciruntime(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_constructor_ciruntime_new(`databasePath`: RustBuffer.ByValue,`workspacesRoot`: RustBuffer.ByValue,`vault`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_tether_core_fn_method_ciruntime_cancel_ci_run(`ptr`: Long,`projectId`: RustBuffer.ByValue,`runId`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_method_ciruntime_ci_run_logs(`ptr`: Long,`projectId`: RustBuffer.ByValue,`runId`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_tether_core_fn_method_ciruntime_ci_status(`ptr`: Long,`projectId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_tether_core_fn_method_ciruntime_list_ci_runs(`ptr`: Long,`projectId`: RustBuffer.ByValue,`limit`: Int,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_tether_core_fn_method_ciruntime_workflow_proposal(`ptr`: Long,`projectId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_tether_core_fn_clone_executorprogress(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_tether_core_fn_free_executorprogress(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_init_callback_vtable_executorprogress(`vtable`: UniffiVTableCallbackInterfaceExecutorProgress,
+    ): Unit
+    external fun uniffi_tether_core_fn_method_executorprogress_on_progress(`ptr`: Long,`downloaded`: Long,`total`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_tether_core_fn_clone_filesruntime(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
     external fun uniffi_tether_core_fn_free_filesruntime(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1254,7 +1430,9 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_tether_core_fn_constructor_gitruntime_new(`databasePath`: RustBuffer.ByValue,`workspacesRoot`: RustBuffer.ByValue,`vault`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
-    external fun uniffi_tether_core_fn_method_gitruntime_clone_repository(`ptr`: Long,`url`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`shallow`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_tether_core_fn_method_gitruntime_cancel_clone(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_method_gitruntime_clone_repository(`ptr`: Long,`url`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,`shallow`: RustBuffer.ByValue,`progress`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_tether_core_fn_method_gitruntime_current_branch(`ptr`: Long,`projectId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -1292,6 +1470,26 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_tether_core_fn_method_cloneprogressview_on_progress(`ptr`: Long,`phase`: RustBuffer.ByValue,`received`: Long,`total`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_tether_core_fn_clone_mcpruntime(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_tether_core_fn_free_mcpruntime(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_constructor_mcpruntime_new(`databasePath`: RustBuffer.ByValue,`vault`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_tether_core_fn_method_mcpruntime_add_mcp_server(`ptr`: Long,`name`: RustBuffer.ByValue,`url`: RustBuffer.ByValue,`headers`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_tether_core_fn_method_mcpruntime_list_mcp_servers(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_tether_core_fn_method_mcpruntime_refresh_mcp_tools(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_method_mcpruntime_remove_mcp_server(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_method_mcpruntime_set_mcp_server_enabled(`ptr`: Long,`id`: RustBuffer.ByValue,`enabled`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_method_mcpruntime_set_mcp_tool(`ptr`: Long,`serverId`: RustBuffer.ByValue,`tool`: RustBuffer.ByValue,`enabled`: Byte,`approval`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_method_mcpruntime_test_mcp_server(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Int
     external fun uniffi_tether_core_fn_clone_memoryruntime(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
     external fun uniffi_tether_core_fn_free_memoryruntime(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1324,7 +1522,13 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_tether_core_fn_method_projectruntime_trust_project(`ptr`: Long,`projectId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_tether_core_fn_method_projectruntime_cancel_import(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_tether_core_fn_method_projectruntime_create_project(`ptr`: Long,`name`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_tether_core_fn_method_projectruntime_export_project_zip(`ptr`: Long,`projectId`: RustBuffer.ByValue,`destPath`: RustBuffer.ByValue,`includeIgnored`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_method_projectruntime_import_project_zip(`ptr`: Long,`zipPath`: RustBuffer.ByValue,`name`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_tether_core_fn_method_projectruntime_list_projects(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -1351,6 +1555,16 @@ internal object UniffiLib {
     external fun uniffi_tether_core_fn_method_providersettings_test_connection(`ptr`: Long,`provider`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_tether_core_fn_method_providersettings_test_target(`ptr`: Long,`provider`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_tether_core_fn_clone_qualityruntime(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_tether_core_fn_free_qualityruntime(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_constructor_qualityruntime_new(`databasePath`: RustBuffer.ByValue,`workspacesRoot`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_tether_core_fn_method_qualityruntime_effective_quality(`ptr`: Long,`projectId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_tether_core_fn_method_qualityruntime_list_quality_rules(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_tether_core_fn_clone_secretvault(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
@@ -1440,6 +1654,28 @@ internal object UniffiLib {
     ): Byte
     external fun uniffi_tether_core_fn_method_sessionruntime_set_project_network(`ptr`: Long,`projectId`: RustBuffer.ByValue,`allowed`: Byte,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_tether_core_fn_method_sessionruntime_install_runtime_pack(`ptr`: Long,`packId`: RustBuffer.ByValue,`manifestUrl`: RustBuffer.ByValue,`progress`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_method_sessionruntime_runtime_packs(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_tether_core_fn_method_sessionruntime_setup_linux_mode(`ptr`: Long,`manifestUrl`: RustBuffer.ByValue,`progress`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_method_sessionruntime_memory_write_approval(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_tether_core_fn_method_sessionruntime_set_memory_write_approval(`ptr`: Long,`enabled`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_method_sessionruntime_set_skill_enabled(`ptr`: Long,`name`: RustBuffer.ByValue,`enabled`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_method_sessionruntime_set_skill_write_approval(`ptr`: Long,`enabled`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_method_sessionruntime_set_vault_write_approval(`ptr`: Long,`enabled`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_method_sessionruntime_skill_change_diff(`ptr`: Long,`sessionId`: RustBuffer.ByValue,`toolCallId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_tether_core_fn_method_sessionruntime_skill_write_approval(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_tether_core_fn_method_sessionruntime_vault_write_approval(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
     external fun uniffi_tether_core_fn_method_sessionruntime_network_changed(`ptr`: Long,`online`: Byte,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_tether_core_fn_method_sessionruntime_set_network_platform(`ptr`: Long,`platform`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1488,6 +1724,10 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_tether_core_fn_method_sessionruntime_set_global_instructions(`ptr`: Long,`text`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_tether_core_fn_method_sessionruntime_rerun_elsewhere(`ptr`: Long,`sessionId`: RustBuffer.ByValue,`toolCallId`: RustBuffer.ByValue,`executor`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_tether_core_fn_method_sessionruntime_run_user_command(`ptr`: Long,`sessionId`: RustBuffer.ByValue,`command`: RustBuffer.ByValue,`executor`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_tether_core_fn_method_sessionruntime_list_models(`ptr`: Long,`provider`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_tether_core_fn_method_sessionruntime_rename_session(`ptr`: Long,`sessionId`: RustBuffer.ByValue,`title`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -1513,6 +1753,18 @@ internal object UniffiLib {
     external fun uniffi_tether_core_fn_method_skillsruntime_list(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_tether_core_fn_method_skillsruntime_read(`ptr`: Long,`folder`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_tether_core_fn_method_skillsruntime_approve_skill_install(`ptr`: Long,`id`: RustBuffer.ByValue,`scope`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_tether_core_fn_method_skillsruntime_discard_quarantine(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_method_skillsruntime_restore_skill(`ptr`: Long,`name`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_method_skillsruntime_run_skill_upkeep(`ptr`: Long,`nowMs`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_tether_core_fn_method_skillsruntime_skill_install_preview_url(`ptr`: Long,`url`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_tether_core_fn_method_skillsruntime_skill_install_preview_zip(`ptr`: Long,`zipPath`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_tether_core_fn_clone_downloadprogress(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
@@ -1548,6 +1800,18 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_tether_core_fn_method_usageruntime_usage_summary(`ptr`: Long,`days`: Int,`utcOffsetMinutes`: Int,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_tether_core_fn_clone_vaultfolderplatform(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_tether_core_fn_free_vaultfolderplatform(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_init_callback_vtable_vaultfolderplatform(`vtable`: UniffiVTableCallbackInterfaceVaultFolderPlatform,
+    ): Unit
+    external fun uniffi_tether_core_fn_method_vaultfolderplatform_list(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_tether_core_fn_method_vaultfolderplatform_read(`ptr`: Long,`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_tether_core_fn_method_vaultfolderplatform_write(`ptr`: Long,`path`: RustBuffer.ByValue,`bytes`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_tether_core_fn_clone_vaultruntime(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
     external fun uniffi_tether_core_fn_free_vaultruntime(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1555,6 +1819,10 @@ internal object UniffiLib {
     external fun uniffi_tether_core_fn_constructor_vaultruntime_new(`vaultDir`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
     external fun uniffi_tether_core_fn_method_vaultruntime_append(`ptr`: Long,`path`: RustBuffer.ByValue,`text`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_tether_core_fn_method_vaultruntime_export_zip(`ptr`: Long,`destPath`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_method_vaultruntime_import_zip(`ptr`: Long,`zipPath`: RustBuffer.ByValue,`mode`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_tether_core_fn_method_vaultruntime_links(`ptr`: Long,`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -1565,6 +1833,8 @@ internal object UniffiLib {
     external fun uniffi_tether_core_fn_method_vaultruntime_read(`ptr`: Long,`path`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_tether_core_fn_method_vaultruntime_search(`ptr`: Long,`query`: RustBuffer.ByValue,`limit`: Int,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_tether_core_fn_method_vaultruntime_sync_with_platform(`ptr`: Long,`folder`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_tether_core_fn_method_vaultruntime_write(`ptr`: Long,`path`: RustBuffer.ByValue,`source`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -1722,6 +1992,24 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_tether_core_checksum_method_runserviceplatform_stop_run_service() and 0xFFFF) != 61449) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_tether_core_checksum_method_ciruntime_cancel_ci_run() and 0xFFFF) != 27037) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_ciruntime_ci_run_logs() and 0xFFFF) != 16991) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_ciruntime_ci_status() and 0xFFFF) != 12832) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_ciruntime_list_ci_runs() and 0xFFFF) != 14696) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_ciruntime_workflow_proposal() and 0xFFFF) != 50826) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_executorprogress_on_progress() and 0xFFFF) != 55886) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_tether_core_checksum_method_filesruntime_list_dir() and 0xFFFF) != 53011) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1734,7 +2022,10 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_tether_core_checksum_method_filesruntime_search_file_text() and 0xFFFF) != 52457) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_tether_core_checksum_method_gitruntime_clone_repository() and 0xFFFF) != 4755) {
+    if ((lib.uniffi_tether_core_checksum_method_gitruntime_cancel_clone() and 0xFFFF) != 16209) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_gitruntime_clone_repository() and 0xFFFF) != 62817) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_method_gitruntime_current_branch() and 0xFFFF) != 39838) {
@@ -1782,6 +2073,27 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_tether_core_checksum_method_cloneprogressview_on_progress() and 0xFFFF) != 4708) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_tether_core_checksum_method_mcpruntime_add_mcp_server() and 0xFFFF) != 56387) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_mcpruntime_list_mcp_servers() and 0xFFFF) != 16638) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_mcpruntime_refresh_mcp_tools() and 0xFFFF) != 17581) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_mcpruntime_remove_mcp_server() and 0xFFFF) != 49405) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_mcpruntime_set_mcp_server_enabled() and 0xFFFF) != 59044) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_mcpruntime_set_mcp_tool() and 0xFFFF) != 47875) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_mcpruntime_test_mcp_server() and 0xFFFF) != 34066) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_tether_core_checksum_method_memoryruntime_apply() and 0xFFFF) != 51060) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1812,7 +2124,16 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_tether_core_checksum_method_projectruntime_trust_project() and 0xFFFF) != 21581) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_tether_core_checksum_method_projectruntime_cancel_import() and 0xFFFF) != 6943) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_tether_core_checksum_method_projectruntime_create_project() and 0xFFFF) != 451) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_projectruntime_export_project_zip() and 0xFFFF) != 29458) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_projectruntime_import_project_zip() and 0xFFFF) != 52778) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_method_projectruntime_list_projects() and 0xFFFF) != 39316) {
@@ -1843,6 +2164,12 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_method_providersettings_test_target() and 0xFFFF) != 18423) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_qualityruntime_effective_quality() and 0xFFFF) != 7741) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_qualityruntime_list_quality_rules() and 0xFFFF) != 47800) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_method_secretvault_delete() and 0xFFFF) != 49153) {
@@ -1944,6 +2271,39 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_tether_core_checksum_method_sessionruntime_set_project_network() and 0xFFFF) != 31734) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_tether_core_checksum_method_sessionruntime_install_runtime_pack() and 0xFFFF) != 57226) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_sessionruntime_runtime_packs() and 0xFFFF) != 50265) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_sessionruntime_setup_linux_mode() and 0xFFFF) != 376) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_sessionruntime_memory_write_approval() and 0xFFFF) != 56796) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_sessionruntime_set_memory_write_approval() and 0xFFFF) != 16357) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_sessionruntime_set_skill_enabled() and 0xFFFF) != 44728) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_sessionruntime_set_skill_write_approval() and 0xFFFF) != 47958) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_sessionruntime_set_vault_write_approval() and 0xFFFF) != 53623) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_sessionruntime_skill_change_diff() and 0xFFFF) != 22621) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_sessionruntime_skill_write_approval() and 0xFFFF) != 2669) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_sessionruntime_vault_write_approval() and 0xFFFF) != 62716) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_tether_core_checksum_method_sessionruntime_network_changed() and 0xFFFF) != 43344) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -2016,6 +2376,12 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_tether_core_checksum_method_sessionruntime_set_global_instructions() and 0xFFFF) != 40901) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_tether_core_checksum_method_sessionruntime_rerun_elsewhere() and 0xFFFF) != 7126) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_sessionruntime_run_user_command() and 0xFFFF) != 2563) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_tether_core_checksum_method_sessionruntime_list_models() and 0xFFFF) != 49847) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -2046,6 +2412,24 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_tether_core_checksum_method_skillsruntime_read() and 0xFFFF) != 35627) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_tether_core_checksum_method_skillsruntime_approve_skill_install() and 0xFFFF) != 31276) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_skillsruntime_discard_quarantine() and 0xFFFF) != 34537) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_skillsruntime_restore_skill() and 0xFFFF) != 40059) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_skillsruntime_run_skill_upkeep() and 0xFFFF) != 64839) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_skillsruntime_skill_install_preview_url() and 0xFFFF) != 45078) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_skillsruntime_skill_install_preview_zip() and 0xFFFF) != 14644) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_tether_core_checksum_method_downloadprogress_on_progress() and 0xFFFF) != 47177) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -2070,7 +2454,22 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_tether_core_checksum_method_usageruntime_usage_summary() and 0xFFFF) != 63974) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_tether_core_checksum_method_vaultfolderplatform_list() and 0xFFFF) != 40370) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_vaultfolderplatform_read() and 0xFFFF) != 20392) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_vaultfolderplatform_write() and 0xFFFF) != 5355) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_tether_core_checksum_method_vaultruntime_append() and 0xFFFF) != 17471) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_vaultruntime_export_zip() and 0xFFFF) != 35355) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_vaultruntime_import_zip() and 0xFFFF) != 28496) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_method_vaultruntime_links() and 0xFFFF) != 21015) {
@@ -2088,16 +2487,25 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_tether_core_checksum_method_vaultruntime_search() and 0xFFFF) != 3940) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_tether_core_checksum_method_vaultruntime_sync_with_platform() and 0xFFFF) != 47885) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_tether_core_checksum_method_vaultruntime_write() and 0xFFFF) != 63312) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_constructor_tethercore_new() and 0xFFFF) != 22145) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_tether_core_checksum_constructor_ciruntime_new() and 0xFFFF) != 40643) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_tether_core_checksum_constructor_filesruntime_new() and 0xFFFF) != 32736) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_constructor_gitruntime_new() and 0xFFFF) != 24745) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_constructor_mcpruntime_new() and 0xFFFF) != 4623) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_constructor_memoryruntime_new() and 0xFFFF) != 38625) {
@@ -2107,6 +2515,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_constructor_providersettings_new() and 0xFFFF) != 21775) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_constructor_qualityruntime_new() and 0xFFFF) != 27996) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_constructor_secretvault_new() and 0xFFFF) != 45283) {
@@ -2530,6 +2941,416 @@ public object FfiConverterByteArray: FfiConverterRustBuffer<ByteArray> {
     override fun write(value: ByteArray, buf: ByteBuffer) {
         buf.putInt(value.size)
         buf.put(value)
+    }
+}
+
+
+// This template implements a class for working with a Rust struct via a handle
+// to the live Rust struct on the other side of the FFI.
+//
+// There's some subtlety here, because we have to be careful not to operate on a Rust
+// struct after it has been dropped, and because we must expose a public API for freeing
+// theq Kotlin wrapper object in lieu of reliable finalizers. The core requirements are:
+//
+//   * Each instance holds an opaque handle to the underlying Rust struct.
+//     Method calls need to read this handle from the object's state and pass it in to
+//     the Rust FFI.
+//
+//   * When an instance is no longer needed, its handle should be passed to a
+//     special destructor function provided by the Rust FFI, which will drop the
+//     underlying Rust struct.
+//
+//   * Given an instance, calling code is expected to call the special
+//     `destroy` method in order to free it after use, either by calling it explicitly
+//     or by using a higher-level helper like the `use` method. Failing to do so risks
+//     leaking the underlying Rust struct.
+//
+//   * We can't assume that calling code will do the right thing, and must be prepared
+//     to handle Kotlin method calls executing concurrently with or even after a call to
+//     `destroy`, and to handle multiple (possibly concurrent!) calls to `destroy`.
+//
+//   * We must never allow Rust code to operate on the underlying Rust struct after
+//     the destructor has been called, and must never call the destructor more than once.
+//     Doing so may trigger memory unsafety.
+//
+//   * To mitigate many of the risks of leaking memory and use-after-free unsafety, a `Cleaner`
+//     is implemented to call the destructor when the Kotlin object becomes unreachable.
+//     This is done in a background thread. This is not a panacea, and client code should be aware that
+//      1. the thread may starve if some there are objects that have poorly performing
+//     `drop` methods or do significant work in their `drop` methods.
+//      2. the thread is shared across the whole library. This can be tuned by using `android_cleaner = true`,
+//         or `android = true` in the [`kotlin` section of the `uniffi.toml` file](https://mozilla.github.io/uniffi-rs/kotlin/configuration.html).
+//
+// If we try to implement this with mutual exclusion on access to the handle, there is the
+// possibility of a race between a method call and a concurrent call to `destroy`:
+//
+//    * Thread A starts a method call, reads the value of the handle, but is interrupted
+//      before it can pass the handle over the FFI to Rust.
+//    * Thread B calls `destroy` and frees the underlying Rust struct.
+//    * Thread A resumes, passing the already-read handle value to Rust and triggering
+//      a use-after-free.
+//
+// One possible solution would be to use a `ReadWriteLock`, with each method call taking
+// a read lock (and thus allowed to run concurrently) and the special `destroy` method
+// taking a write lock (and thus blocking on live method calls). However, we aim not to
+// generate methods with any hidden blocking semantics, and a `destroy` method that might
+// block if called incorrectly seems to meet that bar.
+//
+// So, we achieve our goals by giving each instance an associated `AtomicLong` counter to track
+// the number of in-flight method calls, and an `AtomicBoolean` flag to indicate whether `destroy`
+// has been called. These are updated according to the following rules:
+//
+//    * The initial value of the counter is 1, indicating a live object with no in-flight calls.
+//      The initial value for the flag is false.
+//
+//    * At the start of each method call, we atomically check the counter.
+//      If it is 0 then the underlying Rust struct has already been destroyed and the call is aborted.
+//      If it is nonzero them we atomically increment it by 1 and proceed with the method call.
+//
+//    * At the end of each method call, we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+//    * When `destroy` is called, we atomically flip the flag from false to true.
+//      If the flag was already true we silently fail.
+//      Otherwise we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+// Astute readers may observe that this all sounds very similar to the way that Rust's `Arc<T>` works,
+// and indeed it is, with the addition of a flag to guard against multiple calls to `destroy`.
+//
+// The overall effect is that the underlying Rust struct is destroyed only when `destroy` has been
+// called *and* all in-flight method calls have completed, avoiding violating any of the expectations
+// of the underlying Rust code.
+//
+// This makes a cleaner a better alternative to _not_ calling `destroy()` as
+// and when the object is finished with, but the abstraction is not perfect: if the Rust object's `drop`
+// method is slow, and/or there are many objects to cleanup, and it's on a low end Android device, then the cleaner
+// thread may be starved, and the app will leak memory.
+//
+// In this case, `destroy`ing manually may be a better solution.
+//
+// The cleaner can live side by side with the manual calling of `destroy`. In the order of responsiveness, uniffi objects
+// with Rust peers are reclaimed:
+//
+// 1. By calling the `destroy` method of the object, which calls `rustObject.free()`. If that doesn't happen:
+// 2. When the object becomes unreachable, AND the Cleaner thread gets to call `rustObject.free()`. If the thread is starved then:
+// 3. The memory is reclaimed when the process terminates.
+//
+// [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
+//
+
+
+/**
+ * Owns CI credentials, project metadata, and the shared CI service.
+ */
+public interface CiRuntimeInterface {
+    
+    /**
+     * Cancels one workflow run.
+     *
+     * # Errors
+     * Returns an error when project storage or GitHub is unavailable.
+     */
+    fun `cancelCiRun`(`projectId`: kotlin.String, `runId`: kotlin.ULong)
+    
+    /**
+     * Reads and parses logs for one run.
+     *
+     * # Errors
+     * Returns an error when project storage or GitHub is unavailable.
+     */
+    fun `ciRunLogs`(`projectId`: kotlin.String, `runId`: kotlin.ULong): CiLogView
+    
+    /**
+     * Reads CI readiness and workflow state for one project.
+     *
+     * # Errors
+     * Returns an error when project storage cannot be read.
+     */
+    fun `ciStatus`(`projectId`: kotlin.String): CiStatusView
+    
+    /**
+     * Lists recent workflow runs for one project.
+     *
+     * # Errors
+     * Returns an error when project storage or GitHub is unavailable.
+     */
+    fun `listCiRuns`(`projectId`: kotlin.String, `limit`: kotlin.UInt): List<CiRunView>
+    
+    /**
+     * Returns the workflow proposal for one project.
+     *
+     * # Errors
+     * Returns an error when project storage cannot be read.
+     */
+    fun `workflowProposal`(`projectId`: kotlin.String): WorkflowProposalView?
+    
+    companion object
+}
+
+/**
+ * Owns CI credentials, project metadata, and the shared CI service.
+ */
+open class CiRuntime: Disposable, AutoCloseable, CiRuntimeInterface
+{
+
+    @Suppress("UNUSED_PARAMETER")
+    /**
+     * @suppress
+     */
+    constructor(withHandle: UniffiWithHandle, handle: Long) {
+        this.handle = handle
+        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(handle))
+    }
+
+    /**
+     * @suppress
+     *
+     * This constructor can be used to instantiate a fake object. Only used for tests. Any
+     * attempt to actually use an object constructed this way will fail as there is no
+     * connected Rust object.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    constructor(noHandle: NoHandle) {
+        this.handle = 0
+        this.cleanable = null
+    }
+    /**
+     * Opens the CI runtime over the app database, workspaces, and vault.
+     *
+     * # Errors
+     * Returns an error when the database or runtime cannot start.
+     */
+    constructor(`databasePath`: kotlin.String, `workspacesRoot`: kotlin.String, `vault`: SecretVault) :
+        this(UniffiWithHandle, 
+    uniffiRustCallWithError(CiRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_constructor_ciruntime_new(
+    
+        
+        FfiConverterString.lower(`databasePath`),
+        FfiConverterString.lower(`workspacesRoot`),
+        FfiConverterTypeSecretVault.lower(`vault`),_status)
+}
+    )
+
+    protected val handle: Long
+    protected val cleanable: UniffiCleaner.Cleanable?
+
+    private val wasDestroyed = AtomicBoolean(false)
+    private val callCounter = AtomicLong(1)
+
+    /**
+     * Whether the current object has been destroyed and its reference is gone in the Rust side.
+     */
+    val uniffiIsDestroyed: Boolean get() = wasDestroyed.get()
+
+    override fun destroy() {
+        // Only allow a single call to this method.
+        // TODO: maybe we should log a warning if called more than once?
+        if (this.wasDestroyed.compareAndSet(false, true)) {
+            // This decrement always matches the initial count of 1 given at creation time.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    @Synchronized
+    override fun close() {
+        this.destroy()
+    }
+
+    internal inline fun <R> callWithHandle(block: (handle: Long) -> R): R {
+        // Check and increment the call counter, to keep the object alive.
+        // This needs a compare-and-set retry loop in case of concurrent updates.
+        do {
+            val c = this.callCounter.get()
+            if (c == 0L) {
+                throw IllegalStateException("${this.javaClass.simpleName} object has already been destroyed")
+            }
+            if (c == Long.MAX_VALUE) {
+                throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
+            }
+        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        // Now we can safely do the method call without the handle being freed concurrently.
+        try {
+            return block(this.uniffiCloneHandle())
+        } finally {
+            // This decrement always matches the increment we performed above.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    // Use a static inner class instead of a closure so as not to accidentally
+    // capture `this` as part of the cleanable's action.
+    private class UniffiCleanAction(private val handle: Long) : Runnable {
+        override fun run() {
+            if (handle == 0.toLong()) {
+                // Fake object created with `NoHandle`, don't try to free.
+                return;
+            }
+            uniffiRustCall { status ->
+                UniffiLib.uniffi_tether_core_fn_free_ciruntime(handle, status)
+            }
+        }
+    }
+
+    /**
+     * @suppress
+     */
+    fun uniffiCloneHandle(): Long {
+        if (handle == 0.toLong()) {
+            throw InternalException("uniffiCloneHandle() called on NoHandle object");
+        }
+        return uniffiRustCall() { status ->
+            UniffiLib.uniffi_tether_core_fn_clone_ciruntime(handle, status)
+        }
+    }
+
+    
+    /**
+     * Cancels one workflow run.
+     *
+     * # Errors
+     * Returns an error when project storage or GitHub is unavailable.
+     */
+    @Throws(CiRuntimeException::class)override fun `cancelCiRun`(`projectId`: kotlin.String, `runId`: kotlin.ULong)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(CiRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_ciruntime_cancel_ci_run(
+        it,
+        
+        FfiConverterString.lower(`projectId`),
+        FfiConverterULong.lower(`runId`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Reads and parses logs for one run.
+     *
+     * # Errors
+     * Returns an error when project storage or GitHub is unavailable.
+     */
+    @Throws(CiRuntimeException::class)override fun `ciRunLogs`(`projectId`: kotlin.String, `runId`: kotlin.ULong): CiLogView {
+            return FfiConverterTypeCiLogView.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CiRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_ciruntime_ci_run_logs(
+        it,
+        
+        FfiConverterString.lower(`projectId`),
+        FfiConverterULong.lower(`runId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Reads CI readiness and workflow state for one project.
+     *
+     * # Errors
+     * Returns an error when project storage cannot be read.
+     */
+    @Throws(CiRuntimeException::class)override fun `ciStatus`(`projectId`: kotlin.String): CiStatusView {
+            return FfiConverterTypeCiStatusView.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CiRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_ciruntime_ci_status(
+        it,
+        
+        FfiConverterString.lower(`projectId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Lists recent workflow runs for one project.
+     *
+     * # Errors
+     * Returns an error when project storage or GitHub is unavailable.
+     */
+    @Throws(CiRuntimeException::class)override fun `listCiRuns`(`projectId`: kotlin.String, `limit`: kotlin.UInt): List<CiRunView> {
+            return FfiConverterSequenceTypeCiRunView.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CiRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_ciruntime_list_ci_runs(
+        it,
+        
+        FfiConverterString.lower(`projectId`),
+        FfiConverterUInt.lower(`limit`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Returns the workflow proposal for one project.
+     *
+     * # Errors
+     * Returns an error when project storage cannot be read.
+     */
+    @Throws(CiRuntimeException::class)override fun `workflowProposal`(`projectId`: kotlin.String): WorkflowProposalView? {
+            return FfiConverterOptionalTypeWorkflowProposalView.lift(
+    callWithHandle {
+    uniffiRustCallWithError(CiRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_ciruntime_workflow_proposal(
+        it,
+        
+        FfiConverterString.lower(`projectId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+
+    
+
+
+    
+    
+    /**
+     * @suppress
+     */
+    companion object
+    
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCiRuntime: FfiConverter<CiRuntime, Long> {
+    override fun lower(value: CiRuntime): Long {
+        return value.uniffiCloneHandle()
+    }
+
+    override fun lift(value: Long): CiRuntime {
+        return CiRuntime(UniffiWithHandle, value)
+    }
+
+    override fun read(buf: ByteBuffer): CiRuntime {
+        return lift(buf.getLong())
+    }
+
+    override fun allocationSize(value: CiRuntime) = 8UL
+
+    override fun write(value: CiRuntime, buf: ByteBuffer) {
+        buf.putLong(lower(value))
     }
 }
 
@@ -3605,6 +4426,331 @@ public object FfiConverterTypeEventSink: FfiConverter<EventSink, Long> {
 
 
 /**
+ * Progress reported by runtime pack and Linux setup operations.
+ */
+public interface ExecutorProgress {
+    
+    /**
+     * Receives downloaded and declared byte counts.
+     */
+    fun `onProgress`(`downloaded`: kotlin.ULong, `total`: kotlin.ULong)
+    
+    companion object
+}
+
+/**
+ * Progress reported by runtime pack and Linux setup operations.
+ */
+open class ExecutorProgressImpl: Disposable, AutoCloseable, ExecutorProgress
+{
+
+    @Suppress("UNUSED_PARAMETER")
+    /**
+     * @suppress
+     */
+    constructor(withHandle: UniffiWithHandle, handle: Long) {
+        this.handle = handle
+        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(handle))
+    }
+
+    /**
+     * @suppress
+     *
+     * This constructor can be used to instantiate a fake object. Only used for tests. Any
+     * attempt to actually use an object constructed this way will fail as there is no
+     * connected Rust object.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    constructor(noHandle: NoHandle) {
+        this.handle = 0
+        this.cleanable = null
+    }
+
+    protected val handle: Long
+    protected val cleanable: UniffiCleaner.Cleanable?
+
+    private val wasDestroyed = AtomicBoolean(false)
+    private val callCounter = AtomicLong(1)
+
+    /**
+     * Whether the current object has been destroyed and its reference is gone in the Rust side.
+     */
+    val uniffiIsDestroyed: Boolean get() = wasDestroyed.get()
+
+    override fun destroy() {
+        // Only allow a single call to this method.
+        // TODO: maybe we should log a warning if called more than once?
+        if (this.wasDestroyed.compareAndSet(false, true)) {
+            // This decrement always matches the initial count of 1 given at creation time.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    @Synchronized
+    override fun close() {
+        this.destroy()
+    }
+
+    internal inline fun <R> callWithHandle(block: (handle: Long) -> R): R {
+        // Check and increment the call counter, to keep the object alive.
+        // This needs a compare-and-set retry loop in case of concurrent updates.
+        do {
+            val c = this.callCounter.get()
+            if (c == 0L) {
+                throw IllegalStateException("${this.javaClass.simpleName} object has already been destroyed")
+            }
+            if (c == Long.MAX_VALUE) {
+                throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
+            }
+        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        // Now we can safely do the method call without the handle being freed concurrently.
+        try {
+            return block(this.uniffiCloneHandle())
+        } finally {
+            // This decrement always matches the increment we performed above.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    // Use a static inner class instead of a closure so as not to accidentally
+    // capture `this` as part of the cleanable's action.
+    private class UniffiCleanAction(private val handle: Long) : Runnable {
+        override fun run() {
+            if (handle == 0.toLong()) {
+                // Fake object created with `NoHandle`, don't try to free.
+                return;
+            }
+            uniffiRustCall { status ->
+                UniffiLib.uniffi_tether_core_fn_free_executorprogress(handle, status)
+            }
+        }
+    }
+
+    /**
+     * @suppress
+     */
+    fun uniffiCloneHandle(): Long {
+        if (handle == 0.toLong()) {
+            throw InternalException("uniffiCloneHandle() called on NoHandle object");
+        }
+        return uniffiRustCall() { status ->
+            UniffiLib.uniffi_tether_core_fn_clone_executorprogress(handle, status)
+        }
+    }
+
+    
+    /**
+     * Receives downloaded and declared byte counts.
+     */override fun `onProgress`(`downloaded`: kotlin.ULong, `total`: kotlin.ULong)
+        = 
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_executorprogress_on_progress(
+        it,
+        
+        FfiConverterULong.lower(`downloaded`),
+        FfiConverterULong.lower(`total`),_status)
+}
+    }
+    
+    
+
+    
+
+    
+
+
+    
+    
+    /**
+     * @suppress
+     */
+    companion object
+    
+}
+
+
+
+// Put the implementation in an object so we don't pollute the top-level namespace
+internal object uniffiCallbackInterfaceExecutorProgress {
+    internal object `onProgress`: UniffiCallbackInterfaceExecutorProgressMethod0 {
+        override fun callback(`uniffiHandle`: Long,`downloaded`: Long,`total`: Long,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeExecutorProgress.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`onProgress`(
+                    FfiConverterULong.lift(`downloaded`),
+                    FfiConverterULong.lift(`total`),
+                )
+            }
+            val writeReturn = { _: Unit -> Unit }
+            uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
+        }
+    }
+
+    internal object uniffiFree: UniffiCallbackInterfaceFree {
+        override fun callback(handle: Long) {
+            FfiConverterTypeExecutorProgress.handleMap.remove(handle)
+        }
+    }
+
+    internal object uniffiClone: UniffiCallbackInterfaceClone {
+        override fun callback(handle: Long): Long {
+            return FfiConverterTypeExecutorProgress.handleMap.clone(handle)
+        }
+    }
+
+    internal var vtable = UniffiVTableCallbackInterfaceExecutorProgress.UniffiByValue(
+        uniffiFree,
+        uniffiClone,
+        `onProgress`,
+    )
+
+    // Registers the foreign callback with the Rust side.
+    // This method is generated for each callback interface.
+    internal fun register(lib: UniffiLib) {
+        lib.uniffi_tether_core_fn_init_callback_vtable_executorprogress(vtable)
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeExecutorProgress: FfiConverter<ExecutorProgress, Long> {
+    internal val handleMap = UniffiHandleMap<ExecutorProgress>()
+
+    override fun lower(value: ExecutorProgress): Long {
+        if (value is ExecutorProgressImpl) {
+             // Rust-implemented object.  Clone the handle and return it
+            return value.uniffiCloneHandle()
+         } else {
+            // Kotlin object, generate a new vtable handle and return that.
+            return handleMap.insert(value)
+         }
+    }
+
+    override fun lift(value: Long): ExecutorProgress {
+        if ((value and 1.toLong()) == 0.toLong()) {
+            // Rust-generated handle, construct a new class that uses the handle to implement the
+            // interface
+            return ExecutorProgressImpl(UniffiWithHandle, value)
+        } else {
+            // Kotlin-generated handle, get the object from the handle map
+            return handleMap.remove(value)
+        }
+    }
+
+    override fun read(buf: ByteBuffer): ExecutorProgress {
+        return lift(buf.getLong())
+    }
+
+    override fun allocationSize(value: ExecutorProgress) = 8UL
+
+    override fun write(value: ExecutorProgress, buf: ByteBuffer) {
+        buf.putLong(lower(value))
+    }
+}
+
+
+// This template implements a class for working with a Rust struct via a handle
+// to the live Rust struct on the other side of the FFI.
+//
+// There's some subtlety here, because we have to be careful not to operate on a Rust
+// struct after it has been dropped, and because we must expose a public API for freeing
+// theq Kotlin wrapper object in lieu of reliable finalizers. The core requirements are:
+//
+//   * Each instance holds an opaque handle to the underlying Rust struct.
+//     Method calls need to read this handle from the object's state and pass it in to
+//     the Rust FFI.
+//
+//   * When an instance is no longer needed, its handle should be passed to a
+//     special destructor function provided by the Rust FFI, which will drop the
+//     underlying Rust struct.
+//
+//   * Given an instance, calling code is expected to call the special
+//     `destroy` method in order to free it after use, either by calling it explicitly
+//     or by using a higher-level helper like the `use` method. Failing to do so risks
+//     leaking the underlying Rust struct.
+//
+//   * We can't assume that calling code will do the right thing, and must be prepared
+//     to handle Kotlin method calls executing concurrently with or even after a call to
+//     `destroy`, and to handle multiple (possibly concurrent!) calls to `destroy`.
+//
+//   * We must never allow Rust code to operate on the underlying Rust struct after
+//     the destructor has been called, and must never call the destructor more than once.
+//     Doing so may trigger memory unsafety.
+//
+//   * To mitigate many of the risks of leaking memory and use-after-free unsafety, a `Cleaner`
+//     is implemented to call the destructor when the Kotlin object becomes unreachable.
+//     This is done in a background thread. This is not a panacea, and client code should be aware that
+//      1. the thread may starve if some there are objects that have poorly performing
+//     `drop` methods or do significant work in their `drop` methods.
+//      2. the thread is shared across the whole library. This can be tuned by using `android_cleaner = true`,
+//         or `android = true` in the [`kotlin` section of the `uniffi.toml` file](https://mozilla.github.io/uniffi-rs/kotlin/configuration.html).
+//
+// If we try to implement this with mutual exclusion on access to the handle, there is the
+// possibility of a race between a method call and a concurrent call to `destroy`:
+//
+//    * Thread A starts a method call, reads the value of the handle, but is interrupted
+//      before it can pass the handle over the FFI to Rust.
+//    * Thread B calls `destroy` and frees the underlying Rust struct.
+//    * Thread A resumes, passing the already-read handle value to Rust and triggering
+//      a use-after-free.
+//
+// One possible solution would be to use a `ReadWriteLock`, with each method call taking
+// a read lock (and thus allowed to run concurrently) and the special `destroy` method
+// taking a write lock (and thus blocking on live method calls). However, we aim not to
+// generate methods with any hidden blocking semantics, and a `destroy` method that might
+// block if called incorrectly seems to meet that bar.
+//
+// So, we achieve our goals by giving each instance an associated `AtomicLong` counter to track
+// the number of in-flight method calls, and an `AtomicBoolean` flag to indicate whether `destroy`
+// has been called. These are updated according to the following rules:
+//
+//    * The initial value of the counter is 1, indicating a live object with no in-flight calls.
+//      The initial value for the flag is false.
+//
+//    * At the start of each method call, we atomically check the counter.
+//      If it is 0 then the underlying Rust struct has already been destroyed and the call is aborted.
+//      If it is nonzero them we atomically increment it by 1 and proceed with the method call.
+//
+//    * At the end of each method call, we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+//    * When `destroy` is called, we atomically flip the flag from false to true.
+//      If the flag was already true we silently fail.
+//      Otherwise we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+// Astute readers may observe that this all sounds very similar to the way that Rust's `Arc<T>` works,
+// and indeed it is, with the addition of a flag to guard against multiple calls to `destroy`.
+//
+// The overall effect is that the underlying Rust struct is destroyed only when `destroy` has been
+// called *and* all in-flight method calls have completed, avoiding violating any of the expectations
+// of the underlying Rust code.
+//
+// This makes a cleaner a better alternative to _not_ calling `destroy()` as
+// and when the object is finished with, but the abstraction is not perfect: if the Rust object's `drop`
+// method is slow, and/or there are many objects to cleanup, and it's on a low end Android device, then the cleaner
+// thread may be starved, and the app will leak memory.
+//
+// In this case, `destroy`ing manually may be a better solution.
+//
+// The cleaner can live side by side with the manual calling of `destroy`. In the order of responsiveness, uniffi objects
+// with Rust peers are reclaimed:
+//
+// 1. By calling the `destroy` method of the object, which calls `rustObject.free()`. If that doesn't happen:
+// 2. When the object becomes unreachable, AND the Cleaner thread gets to call `rustObject.free()`. If the thread is starved then:
+// 3. The memory is reclaimed when the process terminates.
+//
+// [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
+//
+
+
+/**
  * Reads a saved project's files without changing them.
  */
 public interface FilesRuntimeInterface {
@@ -3995,12 +5141,17 @@ public object FfiConverterTypeFilesRuntime: FfiConverter<FilesRuntime, Long> {
 public interface GitRuntimeInterface {
     
     /**
+     * Cancels the clone currently in flight, if any.
+     */
+    fun `cancelClone`()
+    
+    /**
      * Clones a repository into a new project workspace.
      *
      * # Errors
      * Returns an error when metadata, storage, or cloning fails.
      */
-    fun `cloneRepository`(`url`: kotlin.String, `name`: kotlin.String?, `shallow`: ShallowChoiceView): kotlin.String
+    fun `cloneRepository`(`url`: kotlin.String, `name`: kotlin.String?, `shallow`: ShallowChoiceView, `progress`: CloneProgressView): kotlin.String
     
     /**
      * Returns the current branch for one project.
@@ -4240,12 +5391,27 @@ open class GitRuntime: Disposable, AutoCloseable, GitRuntimeInterface
 
     
     /**
+     * Cancels the clone currently in flight, if any.
+     */override fun `cancelClone`()
+        = 
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_gitruntime_cancel_clone(
+        it,
+        _status)
+}
+    }
+    
+    
+
+    
+    /**
      * Clones a repository into a new project workspace.
      *
      * # Errors
      * Returns an error when metadata, storage, or cloning fails.
      */
-    @Throws(GitRuntimeException::class)override fun `cloneRepository`(`url`: kotlin.String, `name`: kotlin.String?, `shallow`: ShallowChoiceView): kotlin.String {
+    @Throws(GitRuntimeException::class)override fun `cloneRepository`(`url`: kotlin.String, `name`: kotlin.String?, `shallow`: ShallowChoiceView, `progress`: CloneProgressView): kotlin.String {
             return FfiConverterString.lift(
     callWithHandle {
     uniffiRustCallWithError(GitRuntimeException) { _status ->
@@ -4254,7 +5420,8 @@ open class GitRuntime: Disposable, AutoCloseable, GitRuntimeInterface
         
         FfiConverterString.lower(`url`),
         FfiConverterOptionalString.lower(`name`),
-        FfiConverterTypeShallowChoiceView.lower(`shallow`),_status)
+        FfiConverterTypeShallowChoiceView.lower(`shallow`),
+        FfiConverterTypeCloneProgressView.lower(`progress`),_status)
 }
     }
     )
@@ -4584,6 +5751,472 @@ public object FfiConverterTypeGitRuntime: FfiConverter<GitRuntime, Long> {
     override fun allocationSize(value: GitRuntime) = 8UL
 
     override fun write(value: GitRuntime, buf: ByteBuffer) {
+        buf.putLong(lower(value))
+    }
+}
+
+
+// This template implements a class for working with a Rust struct via a handle
+// to the live Rust struct on the other side of the FFI.
+//
+// There's some subtlety here, because we have to be careful not to operate on a Rust
+// struct after it has been dropped, and because we must expose a public API for freeing
+// theq Kotlin wrapper object in lieu of reliable finalizers. The core requirements are:
+//
+//   * Each instance holds an opaque handle to the underlying Rust struct.
+//     Method calls need to read this handle from the object's state and pass it in to
+//     the Rust FFI.
+//
+//   * When an instance is no longer needed, its handle should be passed to a
+//     special destructor function provided by the Rust FFI, which will drop the
+//     underlying Rust struct.
+//
+//   * Given an instance, calling code is expected to call the special
+//     `destroy` method in order to free it after use, either by calling it explicitly
+//     or by using a higher-level helper like the `use` method. Failing to do so risks
+//     leaking the underlying Rust struct.
+//
+//   * We can't assume that calling code will do the right thing, and must be prepared
+//     to handle Kotlin method calls executing concurrently with or even after a call to
+//     `destroy`, and to handle multiple (possibly concurrent!) calls to `destroy`.
+//
+//   * We must never allow Rust code to operate on the underlying Rust struct after
+//     the destructor has been called, and must never call the destructor more than once.
+//     Doing so may trigger memory unsafety.
+//
+//   * To mitigate many of the risks of leaking memory and use-after-free unsafety, a `Cleaner`
+//     is implemented to call the destructor when the Kotlin object becomes unreachable.
+//     This is done in a background thread. This is not a panacea, and client code should be aware that
+//      1. the thread may starve if some there are objects that have poorly performing
+//     `drop` methods or do significant work in their `drop` methods.
+//      2. the thread is shared across the whole library. This can be tuned by using `android_cleaner = true`,
+//         or `android = true` in the [`kotlin` section of the `uniffi.toml` file](https://mozilla.github.io/uniffi-rs/kotlin/configuration.html).
+//
+// If we try to implement this with mutual exclusion on access to the handle, there is the
+// possibility of a race between a method call and a concurrent call to `destroy`:
+//
+//    * Thread A starts a method call, reads the value of the handle, but is interrupted
+//      before it can pass the handle over the FFI to Rust.
+//    * Thread B calls `destroy` and frees the underlying Rust struct.
+//    * Thread A resumes, passing the already-read handle value to Rust and triggering
+//      a use-after-free.
+//
+// One possible solution would be to use a `ReadWriteLock`, with each method call taking
+// a read lock (and thus allowed to run concurrently) and the special `destroy` method
+// taking a write lock (and thus blocking on live method calls). However, we aim not to
+// generate methods with any hidden blocking semantics, and a `destroy` method that might
+// block if called incorrectly seems to meet that bar.
+//
+// So, we achieve our goals by giving each instance an associated `AtomicLong` counter to track
+// the number of in-flight method calls, and an `AtomicBoolean` flag to indicate whether `destroy`
+// has been called. These are updated according to the following rules:
+//
+//    * The initial value of the counter is 1, indicating a live object with no in-flight calls.
+//      The initial value for the flag is false.
+//
+//    * At the start of each method call, we atomically check the counter.
+//      If it is 0 then the underlying Rust struct has already been destroyed and the call is aborted.
+//      If it is nonzero them we atomically increment it by 1 and proceed with the method call.
+//
+//    * At the end of each method call, we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+//    * When `destroy` is called, we atomically flip the flag from false to true.
+//      If the flag was already true we silently fail.
+//      Otherwise we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+// Astute readers may observe that this all sounds very similar to the way that Rust's `Arc<T>` works,
+// and indeed it is, with the addition of a flag to guard against multiple calls to `destroy`.
+//
+// The overall effect is that the underlying Rust struct is destroyed only when `destroy` has been
+// called *and* all in-flight method calls have completed, avoiding violating any of the expectations
+// of the underlying Rust code.
+//
+// This makes a cleaner a better alternative to _not_ calling `destroy()` as
+// and when the object is finished with, but the abstraction is not perfect: if the Rust object's `drop`
+// method is slow, and/or there are many objects to cleanup, and it's on a low end Android device, then the cleaner
+// thread may be starved, and the app will leak memory.
+//
+// In this case, `destroy`ing manually may be a better solution.
+//
+// The cleaner can live side by side with the manual calling of `destroy`. In the order of responsiveness, uniffi objects
+// with Rust peers are reclaimed:
+//
+// 1. By calling the `destroy` method of the object, which calls `rustObject.free()`. If that doesn't happen:
+// 2. When the object becomes unreachable, AND the Cleaner thread gets to call `rustObject.free()`. If the thread is starved then:
+// 3. The memory is reclaimed when the process terminates.
+//
+// [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
+//
+
+
+/**
+ * Owns saved MCP servers, their manager, and the secret store.
+ */
+public interface McpRuntimeInterface {
+    
+    /**
+     * Adds an MCP server and stores header values in the secret store.
+     *
+     * # Errors
+     * Returns a typed validation or storage error.
+     */
+    fun `addMcpServer`(`name`: kotlin.String, `url`: kotlin.String, `headers`: List<McpHeaderInput>): kotlin.String
+    
+    /**
+     * Lists MCP servers without returning header values.
+     *
+     * # Errors
+     * Returns an error when storage cannot be read.
+     */
+    fun `listMcpServers`(): List<McpServerView>
+    
+    /**
+     * Refreshes one server's cached tools.
+     *
+     * # Errors
+     * Returns `NotFound`, connection, or protocol failure.
+     */
+    fun `refreshMcpTools`(`id`: kotlin.String)
+    
+    /**
+     * Removes an MCP server and its secret-backed headers.
+     *
+     * # Errors
+     * Returns `NotFound` or a storage error.
+     */
+    fun `removeMcpServer`(`id`: kotlin.String)
+    
+    /**
+     * Enables or disables one MCP server.
+     *
+     * # Errors
+     * Returns `NotFound` or an update error.
+     */
+    fun `setMcpServerEnabled`(`id`: kotlin.String, `enabled`: kotlin.Boolean)
+    
+    /**
+     * Saves one MCP tool's enabled and approval settings.
+     *
+     * # Errors
+     * Returns `NotFound`, invalid approval, or a storage error.
+     */
+    fun `setMcpTool`(`serverId`: kotlin.String, `tool`: kotlin.String, `enabled`: kotlin.Boolean, `approval`: kotlin.String)
+    
+    /**
+     * Connects to a server and reports its advertised tool count.
+     *
+     * # Errors
+     * Returns the safe connection failure when the test cannot complete.
+     */
+    fun `testMcpServer`(`id`: kotlin.String): kotlin.UInt
+    
+    companion object
+}
+
+/**
+ * Owns saved MCP servers, their manager, and the secret store.
+ */
+open class McpRuntime: Disposable, AutoCloseable, McpRuntimeInterface
+{
+
+    @Suppress("UNUSED_PARAMETER")
+    /**
+     * @suppress
+     */
+    constructor(withHandle: UniffiWithHandle, handle: Long) {
+        this.handle = handle
+        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(handle))
+    }
+
+    /**
+     * @suppress
+     *
+     * This constructor can be used to instantiate a fake object. Only used for tests. Any
+     * attempt to actually use an object constructed this way will fail as there is no
+     * connected Rust object.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    constructor(noHandle: NoHandle) {
+        this.handle = 0
+        this.cleanable = null
+    }
+    /**
+     * Opens MCP settings and starts its async runtime.
+     *
+     * # Errors
+     * Returns an error when the database or runtime cannot start.
+     */
+    constructor(`databasePath`: kotlin.String, `vault`: SecretVault) :
+        this(UniffiWithHandle, 
+    uniffiRustCallWithError(McpRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_constructor_mcpruntime_new(
+    
+        
+        FfiConverterString.lower(`databasePath`),
+        FfiConverterTypeSecretVault.lower(`vault`),_status)
+}
+    )
+
+    protected val handle: Long
+    protected val cleanable: UniffiCleaner.Cleanable?
+
+    private val wasDestroyed = AtomicBoolean(false)
+    private val callCounter = AtomicLong(1)
+
+    /**
+     * Whether the current object has been destroyed and its reference is gone in the Rust side.
+     */
+    val uniffiIsDestroyed: Boolean get() = wasDestroyed.get()
+
+    override fun destroy() {
+        // Only allow a single call to this method.
+        // TODO: maybe we should log a warning if called more than once?
+        if (this.wasDestroyed.compareAndSet(false, true)) {
+            // This decrement always matches the initial count of 1 given at creation time.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    @Synchronized
+    override fun close() {
+        this.destroy()
+    }
+
+    internal inline fun <R> callWithHandle(block: (handle: Long) -> R): R {
+        // Check and increment the call counter, to keep the object alive.
+        // This needs a compare-and-set retry loop in case of concurrent updates.
+        do {
+            val c = this.callCounter.get()
+            if (c == 0L) {
+                throw IllegalStateException("${this.javaClass.simpleName} object has already been destroyed")
+            }
+            if (c == Long.MAX_VALUE) {
+                throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
+            }
+        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        // Now we can safely do the method call without the handle being freed concurrently.
+        try {
+            return block(this.uniffiCloneHandle())
+        } finally {
+            // This decrement always matches the increment we performed above.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    // Use a static inner class instead of a closure so as not to accidentally
+    // capture `this` as part of the cleanable's action.
+    private class UniffiCleanAction(private val handle: Long) : Runnable {
+        override fun run() {
+            if (handle == 0.toLong()) {
+                // Fake object created with `NoHandle`, don't try to free.
+                return;
+            }
+            uniffiRustCall { status ->
+                UniffiLib.uniffi_tether_core_fn_free_mcpruntime(handle, status)
+            }
+        }
+    }
+
+    /**
+     * @suppress
+     */
+    fun uniffiCloneHandle(): Long {
+        if (handle == 0.toLong()) {
+            throw InternalException("uniffiCloneHandle() called on NoHandle object");
+        }
+        return uniffiRustCall() { status ->
+            UniffiLib.uniffi_tether_core_fn_clone_mcpruntime(handle, status)
+        }
+    }
+
+    
+    /**
+     * Adds an MCP server and stores header values in the secret store.
+     *
+     * # Errors
+     * Returns a typed validation or storage error.
+     */
+    @Throws(McpRuntimeException::class)override fun `addMcpServer`(`name`: kotlin.String, `url`: kotlin.String, `headers`: List<McpHeaderInput>): kotlin.String {
+            return FfiConverterString.lift(
+    callWithHandle {
+    uniffiRustCallWithError(McpRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_mcpruntime_add_mcp_server(
+        it,
+        
+        FfiConverterString.lower(`name`),
+        FfiConverterString.lower(`url`),
+        FfiConverterSequenceTypeMcpHeaderInput.lower(`headers`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Lists MCP servers without returning header values.
+     *
+     * # Errors
+     * Returns an error when storage cannot be read.
+     */
+    @Throws(McpRuntimeException::class)override fun `listMcpServers`(): List<McpServerView> {
+            return FfiConverterSequenceTypeMcpServerView.lift(
+    callWithHandle {
+    uniffiRustCallWithError(McpRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_mcpruntime_list_mcp_servers(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Refreshes one server's cached tools.
+     *
+     * # Errors
+     * Returns `NotFound`, connection, or protocol failure.
+     */
+    @Throws(McpRuntimeException::class)override fun `refreshMcpTools`(`id`: kotlin.String)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(McpRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_mcpruntime_refresh_mcp_tools(
+        it,
+        
+        FfiConverterString.lower(`id`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Removes an MCP server and its secret-backed headers.
+     *
+     * # Errors
+     * Returns `NotFound` or a storage error.
+     */
+    @Throws(McpRuntimeException::class)override fun `removeMcpServer`(`id`: kotlin.String)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(McpRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_mcpruntime_remove_mcp_server(
+        it,
+        
+        FfiConverterString.lower(`id`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Enables or disables one MCP server.
+     *
+     * # Errors
+     * Returns `NotFound` or an update error.
+     */
+    @Throws(McpRuntimeException::class)override fun `setMcpServerEnabled`(`id`: kotlin.String, `enabled`: kotlin.Boolean)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(McpRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_mcpruntime_set_mcp_server_enabled(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterBoolean.lower(`enabled`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Saves one MCP tool's enabled and approval settings.
+     *
+     * # Errors
+     * Returns `NotFound`, invalid approval, or a storage error.
+     */
+    @Throws(McpRuntimeException::class)override fun `setMcpTool`(`serverId`: kotlin.String, `tool`: kotlin.String, `enabled`: kotlin.Boolean, `approval`: kotlin.String)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(McpRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_mcpruntime_set_mcp_tool(
+        it,
+        
+        FfiConverterString.lower(`serverId`),
+        FfiConverterString.lower(`tool`),
+        FfiConverterBoolean.lower(`enabled`),
+        FfiConverterString.lower(`approval`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Connects to a server and reports its advertised tool count.
+     *
+     * # Errors
+     * Returns the safe connection failure when the test cannot complete.
+     */
+    @Throws(McpRuntimeException::class)override fun `testMcpServer`(`id`: kotlin.String): kotlin.UInt {
+            return FfiConverterUInt.lift(
+    callWithHandle {
+    uniffiRustCallWithError(McpRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_mcpruntime_test_mcp_server(
+        it,
+        
+        FfiConverterString.lower(`id`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+
+    
+
+
+    
+    
+    /**
+     * @suppress
+     */
+    companion object
+    
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeMcpRuntime: FfiConverter<McpRuntime, Long> {
+    override fun lower(value: McpRuntime): Long {
+        return value.uniffiCloneHandle()
+    }
+
+    override fun lift(value: Long): McpRuntime {
+        return McpRuntime(UniffiWithHandle, value)
+    }
+
+    override fun read(buf: ByteBuffer): McpRuntime {
+        return lift(buf.getLong())
+    }
+
+    override fun allocationSize(value: McpRuntime) = 8UL
+
+    override fun write(value: McpRuntime, buf: ByteBuffer) {
         buf.putLong(lower(value))
     }
 }
@@ -5897,12 +7530,34 @@ public interface ProjectRuntimeInterface {
     fun `trustProject`(`projectId`: kotlin.String)
     
     /**
+     * Cancels the project import currently in flight, if any.
+     */
+    fun `cancelImport`()
+    
+    /**
      * Saves a project and creates its workspace directory.
      *
      * # Errors
      * Returns an error for an invalid name or unavailable storage.
      */
     fun `createProject`(`name`: kotlin.String): ProjectView
+    
+    /**
+     * Exports one project workspace to a ZIP file.
+     *
+     * # Errors
+     * Returns an unknown-project, destination, archive, or storage error.
+     */
+    fun `exportProjectZip`(`projectId`: kotlin.String, `destPath`: kotlin.String, `includeIgnored`: kotlin.Boolean)
+    
+    /**
+     * Imports a ZIP into a new project workspace and returns its project id.
+     *
+     * # Errors
+     * Returns an archive, name, storage, or cancellation error. Failed imports remove both the
+     * workspace folder and its database row.
+     */
+    fun `importProjectZip`(`zipPath`: kotlin.String, `name`: kotlin.String?): kotlin.String
     
     /**
      * Lists projects by newest activity.
@@ -6196,6 +7851,21 @@ open class ProjectRuntime: Disposable, AutoCloseable, ProjectRuntimeInterface
 
     
     /**
+     * Cancels the project import currently in flight, if any.
+     */override fun `cancelImport`()
+        = 
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_projectruntime_cancel_import(
+        it,
+        _status)
+}
+    }
+    
+    
+
+    
+    /**
      * Saves a project and creates its workspace directory.
      *
      * # Errors
@@ -6209,6 +7879,51 @@ open class ProjectRuntime: Disposable, AutoCloseable, ProjectRuntimeInterface
         it,
         
         FfiConverterString.lower(`name`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Exports one project workspace to a ZIP file.
+     *
+     * # Errors
+     * Returns an unknown-project, destination, archive, or storage error.
+     */
+    @Throws(ProjectRuntimeException::class)override fun `exportProjectZip`(`projectId`: kotlin.String, `destPath`: kotlin.String, `includeIgnored`: kotlin.Boolean)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(ProjectRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_projectruntime_export_project_zip(
+        it,
+        
+        FfiConverterString.lower(`projectId`),
+        FfiConverterString.lower(`destPath`),
+        FfiConverterBoolean.lower(`includeIgnored`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Imports a ZIP into a new project workspace and returns its project id.
+     *
+     * # Errors
+     * Returns an archive, name, storage, or cancellation error. Failed imports remove both the
+     * workspace folder and its database row.
+     */
+    @Throws(ProjectRuntimeException::class)override fun `importProjectZip`(`zipPath`: kotlin.String, `name`: kotlin.String?): kotlin.String {
+            return FfiConverterString.lift(
+    callWithHandle {
+    uniffiRustCallWithError(ProjectRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_projectruntime_import_project_zip(
+        it,
+        
+        FfiConverterString.lower(`zipPath`),
+        FfiConverterOptionalString.lower(`name`),_status)
 }
     }
     )
@@ -6780,6 +8495,318 @@ public object FfiConverterTypeProviderSettings: FfiConverter<ProviderSettings, L
     override fun allocationSize(value: ProviderSettings) = 8UL
 
     override fun write(value: ProviderSettings, buf: ByteBuffer) {
+        buf.putLong(lower(value))
+    }
+}
+
+
+// This template implements a class for working with a Rust struct via a handle
+// to the live Rust struct on the other side of the FFI.
+//
+// There's some subtlety here, because we have to be careful not to operate on a Rust
+// struct after it has been dropped, and because we must expose a public API for freeing
+// theq Kotlin wrapper object in lieu of reliable finalizers. The core requirements are:
+//
+//   * Each instance holds an opaque handle to the underlying Rust struct.
+//     Method calls need to read this handle from the object's state and pass it in to
+//     the Rust FFI.
+//
+//   * When an instance is no longer needed, its handle should be passed to a
+//     special destructor function provided by the Rust FFI, which will drop the
+//     underlying Rust struct.
+//
+//   * Given an instance, calling code is expected to call the special
+//     `destroy` method in order to free it after use, either by calling it explicitly
+//     or by using a higher-level helper like the `use` method. Failing to do so risks
+//     leaking the underlying Rust struct.
+//
+//   * We can't assume that calling code will do the right thing, and must be prepared
+//     to handle Kotlin method calls executing concurrently with or even after a call to
+//     `destroy`, and to handle multiple (possibly concurrent!) calls to `destroy`.
+//
+//   * We must never allow Rust code to operate on the underlying Rust struct after
+//     the destructor has been called, and must never call the destructor more than once.
+//     Doing so may trigger memory unsafety.
+//
+//   * To mitigate many of the risks of leaking memory and use-after-free unsafety, a `Cleaner`
+//     is implemented to call the destructor when the Kotlin object becomes unreachable.
+//     This is done in a background thread. This is not a panacea, and client code should be aware that
+//      1. the thread may starve if some there are objects that have poorly performing
+//     `drop` methods or do significant work in their `drop` methods.
+//      2. the thread is shared across the whole library. This can be tuned by using `android_cleaner = true`,
+//         or `android = true` in the [`kotlin` section of the `uniffi.toml` file](https://mozilla.github.io/uniffi-rs/kotlin/configuration.html).
+//
+// If we try to implement this with mutual exclusion on access to the handle, there is the
+// possibility of a race between a method call and a concurrent call to `destroy`:
+//
+//    * Thread A starts a method call, reads the value of the handle, but is interrupted
+//      before it can pass the handle over the FFI to Rust.
+//    * Thread B calls `destroy` and frees the underlying Rust struct.
+//    * Thread A resumes, passing the already-read handle value to Rust and triggering
+//      a use-after-free.
+//
+// One possible solution would be to use a `ReadWriteLock`, with each method call taking
+// a read lock (and thus allowed to run concurrently) and the special `destroy` method
+// taking a write lock (and thus blocking on live method calls). However, we aim not to
+// generate methods with any hidden blocking semantics, and a `destroy` method that might
+// block if called incorrectly seems to meet that bar.
+//
+// So, we achieve our goals by giving each instance an associated `AtomicLong` counter to track
+// the number of in-flight method calls, and an `AtomicBoolean` flag to indicate whether `destroy`
+// has been called. These are updated according to the following rules:
+//
+//    * The initial value of the counter is 1, indicating a live object with no in-flight calls.
+//      The initial value for the flag is false.
+//
+//    * At the start of each method call, we atomically check the counter.
+//      If it is 0 then the underlying Rust struct has already been destroyed and the call is aborted.
+//      If it is nonzero them we atomically increment it by 1 and proceed with the method call.
+//
+//    * At the end of each method call, we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+//    * When `destroy` is called, we atomically flip the flag from false to true.
+//      If the flag was already true we silently fail.
+//      Otherwise we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+// Astute readers may observe that this all sounds very similar to the way that Rust's `Arc<T>` works,
+// and indeed it is, with the addition of a flag to guard against multiple calls to `destroy`.
+//
+// The overall effect is that the underlying Rust struct is destroyed only when `destroy` has been
+// called *and* all in-flight method calls have completed, avoiding violating any of the expectations
+// of the underlying Rust code.
+//
+// This makes a cleaner a better alternative to _not_ calling `destroy()` as
+// and when the object is finished with, but the abstraction is not perfect: if the Rust object's `drop`
+// method is slow, and/or there are many objects to cleanup, and it's on a low end Android device, then the cleaner
+// thread may be starved, and the app will leak memory.
+//
+// In this case, `destroy`ing manually may be a better solution.
+//
+// The cleaner can live side by side with the manual calling of `destroy`. In the order of responsiveness, uniffi objects
+// with Rust peers are reclaimed:
+//
+// 1. By calling the `destroy` method of the object, which calls `rustObject.free()`. If that doesn't happen:
+// 2. When the object becomes unreachable, AND the Cleaner thread gets to call `rustObject.free()`. If the thread is starved then:
+// 3. The memory is reclaimed when the process terminates.
+//
+// [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
+//
+
+
+/**
+ * Quality settings runtime.
+ */
+public interface QualityRuntimeInterface {
+    
+    /**
+     * Reads the effective quality settings for a project.
+     *
+     * # Errors
+     * Returns `NotFound` for an unknown project.
+     */
+    fun `effectiveQuality`(`projectId`: kotlin.String): QualityConfigView
+    
+    /**
+     * Lists every built-in quality rule.
+     */
+    fun `listQualityRules`(): List<QualityRuleView>
+    
+    companion object
+}
+
+/**
+ * Quality settings runtime.
+ */
+open class QualityRuntime: Disposable, AutoCloseable, QualityRuntimeInterface
+{
+
+    @Suppress("UNUSED_PARAMETER")
+    /**
+     * @suppress
+     */
+    constructor(withHandle: UniffiWithHandle, handle: Long) {
+        this.handle = handle
+        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(handle))
+    }
+
+    /**
+     * @suppress
+     *
+     * This constructor can be used to instantiate a fake object. Only used for tests. Any
+     * attempt to actually use an object constructed this way will fail as there is no
+     * connected Rust object.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    constructor(noHandle: NoHandle) {
+        this.handle = 0
+        this.cleanable = null
+    }
+    /**
+     * Opens the quality settings runtime.
+     *
+     * # Errors
+     * Returns `Unavailable` when the database cannot be opened.
+     */
+    constructor(`databasePath`: kotlin.String, `workspacesRoot`: kotlin.String) :
+        this(UniffiWithHandle, 
+    uniffiRustCallWithError(QualityRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_constructor_qualityruntime_new(
+    
+        
+        FfiConverterString.lower(`databasePath`),
+        FfiConverterString.lower(`workspacesRoot`),_status)
+}
+    )
+
+    protected val handle: Long
+    protected val cleanable: UniffiCleaner.Cleanable?
+
+    private val wasDestroyed = AtomicBoolean(false)
+    private val callCounter = AtomicLong(1)
+
+    /**
+     * Whether the current object has been destroyed and its reference is gone in the Rust side.
+     */
+    val uniffiIsDestroyed: Boolean get() = wasDestroyed.get()
+
+    override fun destroy() {
+        // Only allow a single call to this method.
+        // TODO: maybe we should log a warning if called more than once?
+        if (this.wasDestroyed.compareAndSet(false, true)) {
+            // This decrement always matches the initial count of 1 given at creation time.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    @Synchronized
+    override fun close() {
+        this.destroy()
+    }
+
+    internal inline fun <R> callWithHandle(block: (handle: Long) -> R): R {
+        // Check and increment the call counter, to keep the object alive.
+        // This needs a compare-and-set retry loop in case of concurrent updates.
+        do {
+            val c = this.callCounter.get()
+            if (c == 0L) {
+                throw IllegalStateException("${this.javaClass.simpleName} object has already been destroyed")
+            }
+            if (c == Long.MAX_VALUE) {
+                throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
+            }
+        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        // Now we can safely do the method call without the handle being freed concurrently.
+        try {
+            return block(this.uniffiCloneHandle())
+        } finally {
+            // This decrement always matches the increment we performed above.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    // Use a static inner class instead of a closure so as not to accidentally
+    // capture `this` as part of the cleanable's action.
+    private class UniffiCleanAction(private val handle: Long) : Runnable {
+        override fun run() {
+            if (handle == 0.toLong()) {
+                // Fake object created with `NoHandle`, don't try to free.
+                return;
+            }
+            uniffiRustCall { status ->
+                UniffiLib.uniffi_tether_core_fn_free_qualityruntime(handle, status)
+            }
+        }
+    }
+
+    /**
+     * @suppress
+     */
+    fun uniffiCloneHandle(): Long {
+        if (handle == 0.toLong()) {
+            throw InternalException("uniffiCloneHandle() called on NoHandle object");
+        }
+        return uniffiRustCall() { status ->
+            UniffiLib.uniffi_tether_core_fn_clone_qualityruntime(handle, status)
+        }
+    }
+
+    
+    /**
+     * Reads the effective quality settings for a project.
+     *
+     * # Errors
+     * Returns `NotFound` for an unknown project.
+     */
+    @Throws(QualityRuntimeException::class)override fun `effectiveQuality`(`projectId`: kotlin.String): QualityConfigView {
+            return FfiConverterTypeQualityConfigView.lift(
+    callWithHandle {
+    uniffiRustCallWithError(QualityRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_qualityruntime_effective_quality(
+        it,
+        
+        FfiConverterString.lower(`projectId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Lists every built-in quality rule.
+     */override fun `listQualityRules`(): List<QualityRuleView> {
+            return FfiConverterSequenceTypeQualityRuleView.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_qualityruntime_list_quality_rules(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+
+    
+
+
+    
+    
+    /**
+     * @suppress
+     */
+    companion object
+    
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeQualityRuntime: FfiConverter<QualityRuntime, Long> {
+    override fun lower(value: QualityRuntime): Long {
+        return value.uniffiCloneHandle()
+    }
+
+    override fun lift(value: Long): QualityRuntime {
+        return QualityRuntime(UniffiWithHandle, value)
+    }
+
+    override fun read(buf: ByteBuffer): QualityRuntime {
+        return lift(buf.getLong())
+    }
+
+    override fun allocationSize(value: QualityRuntime) = 8UL
+
+    override fun write(value: QualityRuntime, buf: ByteBuffer) {
         buf.putLong(lower(value))
     }
 }
@@ -8565,6 +10592,94 @@ public interface SessionRuntimeInterface {
     fun `setProjectNetwork`(`projectId`: kotlin.String, `allowed`: kotlin.Boolean)
     
     /**
+     * Installs one signed runtime pack from a manifest URL.
+     *
+     * # Errors
+     * Returns an error when configuration, signatures, downloads, or storage fail.
+     */
+    fun `installRuntimePack`(`packId`: kotlin.String, `manifestUrl`: kotlin.String, `progress`: ExecutorProgress)
+    
+    /**
+     * Lists installed runtime pack versions.
+     *
+     * # Errors
+     * Returns an error when the configured runtime folder cannot be read.
+     */
+    fun `runtimePacks`(): List<RuntimePackView>
+    
+    /**
+     * Installs the signed Linux root filesystem and its base packages.
+     *
+     * # Errors
+     * Returns an error when configuration, signatures, downloads, or setup fail.
+     */
+    fun `setupLinuxMode`(`manifestUrl`: kotlin.String, `progress`: ExecutorProgress)
+    
+    /**
+     * Returns whether memory writes ask for approval.
+     *
+     * # Errors
+     * Returns `Unavailable` when the store cannot be read.
+     */
+    fun `memoryWriteApproval`(): kotlin.Boolean
+    
+    /**
+     * Sets whether memory writes ask for approval.
+     *
+     * # Errors
+     * Returns `Unavailable` when the store cannot be written.
+     */
+    fun `setMemoryWriteApproval`(`enabled`: kotlin.Boolean)
+    
+    /**
+     * Enables or disables a named skill.
+     *
+     * # Errors
+     * Returns `Unavailable` when the store cannot be written.
+     */
+    fun `setSkillEnabled`(`name`: kotlin.String, `enabled`: kotlin.Boolean)
+    
+    /**
+     * Sets whether skill writes ask for approval.
+     *
+     * # Errors
+     * Returns `Unavailable` when the store cannot be written.
+     */
+    fun `setSkillWriteApproval`(`enabled`: kotlin.Boolean)
+    
+    /**
+     * Sets whether vault writes ask for approval.
+     *
+     * # Errors
+     * Returns `Unavailable` when the store cannot be written.
+     */
+    fun `setVaultWriteApproval`(`enabled`: kotlin.Boolean)
+    
+    /**
+     * Returns a staged skill diff for the approval screen.
+     *
+     * # Errors
+     * Returns `Unavailable` when the store cannot be read.
+     */
+    fun `skillChangeDiff`(`sessionId`: kotlin.String, `toolCallId`: kotlin.String): kotlin.String
+    
+    /**
+     * Returns whether skill writes ask for approval.
+     *
+     * # Errors
+     * Returns `Unavailable` when the store cannot be read.
+     */
+    fun `skillWriteApproval`(): kotlin.Boolean
+    
+    /**
+     * Returns whether vault writes ask for approval.
+     *
+     * # Errors
+     * Returns `Unavailable` when the store cannot be read.
+     */
+    fun `vaultWriteApproval`(): kotlin.Boolean
+    
+    /**
      * Wakes paused turns after a connectivity change.
      */
     fun `networkChanged`(`online`: kotlin.Boolean)
@@ -8749,6 +10864,22 @@ public interface SessionRuntimeInterface {
      * Returns `InstructionsTooLong` over 32 KiB or `Unavailable` for file errors.
      */
     fun `setGlobalInstructions`(`text`: kotlin.String?)
+    
+    /**
+     * Reruns a saved command with a different executor and no approval.
+     *
+     * # Errors
+     * Returns an error when the saved call or target executor is unavailable.
+     */
+    fun `rerunElsewhere`(`sessionId`: kotlin.String, `toolCallId`: kotlin.String, `executor`: ExecutorView): kotlin.String
+    
+    /**
+     * Runs a command typed by the user without requesting approval.
+     *
+     * # Errors
+     * Returns an error when the session, workspace, or executor is unavailable.
+     */
+    fun `runUserCommand`(`sessionId`: kotlin.String, `command`: kotlin.String, `executor`: ExecutorView?): kotlin.String
     
     /**
      * Lists models from the saved provider catalog in provider order.
@@ -9390,6 +11521,232 @@ open class SessionRuntime: Disposable, AutoCloseable, SessionRuntimeInterface
 
     
     /**
+     * Installs one signed runtime pack from a manifest URL.
+     *
+     * # Errors
+     * Returns an error when configuration, signatures, downloads, or storage fail.
+     */
+    @Throws(ExecutorRuntimeException::class)override fun `installRuntimePack`(`packId`: kotlin.String, `manifestUrl`: kotlin.String, `progress`: ExecutorProgress)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(ExecutorRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_sessionruntime_install_runtime_pack(
+        it,
+        
+        FfiConverterString.lower(`packId`),
+        FfiConverterString.lower(`manifestUrl`),
+        FfiConverterTypeExecutorProgress.lower(`progress`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Lists installed runtime pack versions.
+     *
+     * # Errors
+     * Returns an error when the configured runtime folder cannot be read.
+     */
+    @Throws(ExecutorRuntimeException::class)override fun `runtimePacks`(): List<RuntimePackView> {
+            return FfiConverterSequenceTypeRuntimePackView.lift(
+    callWithHandle {
+    uniffiRustCallWithError(ExecutorRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_sessionruntime_runtime_packs(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Installs the signed Linux root filesystem and its base packages.
+     *
+     * # Errors
+     * Returns an error when configuration, signatures, downloads, or setup fail.
+     */
+    @Throws(ExecutorRuntimeException::class)override fun `setupLinuxMode`(`manifestUrl`: kotlin.String, `progress`: ExecutorProgress)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(ExecutorRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_sessionruntime_setup_linux_mode(
+        it,
+        
+        FfiConverterString.lower(`manifestUrl`),
+        FfiConverterTypeExecutorProgress.lower(`progress`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Returns whether memory writes ask for approval.
+     *
+     * # Errors
+     * Returns `Unavailable` when the store cannot be read.
+     */
+    @Throws(SessionRuntimeException::class)override fun `memoryWriteApproval`(): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCallWithError(SessionRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_sessionruntime_memory_write_approval(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Sets whether memory writes ask for approval.
+     *
+     * # Errors
+     * Returns `Unavailable` when the store cannot be written.
+     */
+    @Throws(SessionRuntimeException::class)override fun `setMemoryWriteApproval`(`enabled`: kotlin.Boolean)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(SessionRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_sessionruntime_set_memory_write_approval(
+        it,
+        
+        FfiConverterBoolean.lower(`enabled`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Enables or disables a named skill.
+     *
+     * # Errors
+     * Returns `Unavailable` when the store cannot be written.
+     */
+    @Throws(SessionRuntimeException::class)override fun `setSkillEnabled`(`name`: kotlin.String, `enabled`: kotlin.Boolean)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(SessionRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_sessionruntime_set_skill_enabled(
+        it,
+        
+        FfiConverterString.lower(`name`),
+        FfiConverterBoolean.lower(`enabled`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Sets whether skill writes ask for approval.
+     *
+     * # Errors
+     * Returns `Unavailable` when the store cannot be written.
+     */
+    @Throws(SessionRuntimeException::class)override fun `setSkillWriteApproval`(`enabled`: kotlin.Boolean)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(SessionRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_sessionruntime_set_skill_write_approval(
+        it,
+        
+        FfiConverterBoolean.lower(`enabled`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Sets whether vault writes ask for approval.
+     *
+     * # Errors
+     * Returns `Unavailable` when the store cannot be written.
+     */
+    @Throws(SessionRuntimeException::class)override fun `setVaultWriteApproval`(`enabled`: kotlin.Boolean)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(SessionRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_sessionruntime_set_vault_write_approval(
+        it,
+        
+        FfiConverterBoolean.lower(`enabled`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Returns a staged skill diff for the approval screen.
+     *
+     * # Errors
+     * Returns `Unavailable` when the store cannot be read.
+     */
+    @Throws(SessionRuntimeException::class)override fun `skillChangeDiff`(`sessionId`: kotlin.String, `toolCallId`: kotlin.String): kotlin.String {
+            return FfiConverterString.lift(
+    callWithHandle {
+    uniffiRustCallWithError(SessionRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_sessionruntime_skill_change_diff(
+        it,
+        
+        FfiConverterString.lower(`sessionId`),
+        FfiConverterString.lower(`toolCallId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Returns whether skill writes ask for approval.
+     *
+     * # Errors
+     * Returns `Unavailable` when the store cannot be read.
+     */
+    @Throws(SessionRuntimeException::class)override fun `skillWriteApproval`(): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCallWithError(SessionRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_sessionruntime_skill_write_approval(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Returns whether vault writes ask for approval.
+     *
+     * # Errors
+     * Returns `Unavailable` when the store cannot be read.
+     */
+    @Throws(SessionRuntimeException::class)override fun `vaultWriteApproval`(): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCallWithError(SessionRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_sessionruntime_vault_write_approval(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Wakes paused turns after a connectivity change.
      */override fun `networkChanged`(`online`: kotlin.Boolean)
         = 
@@ -9881,6 +12238,52 @@ open class SessionRuntime: Disposable, AutoCloseable, SessionRuntimeInterface
 
     
     /**
+     * Reruns a saved command with a different executor and no approval.
+     *
+     * # Errors
+     * Returns an error when the saved call or target executor is unavailable.
+     */
+    @Throws(SessionRuntimeException::class)override fun `rerunElsewhere`(`sessionId`: kotlin.String, `toolCallId`: kotlin.String, `executor`: ExecutorView): kotlin.String {
+            return FfiConverterString.lift(
+    callWithHandle {
+    uniffiRustCallWithError(SessionRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_sessionruntime_rerun_elsewhere(
+        it,
+        
+        FfiConverterString.lower(`sessionId`),
+        FfiConverterString.lower(`toolCallId`),
+        FfiConverterTypeExecutorView.lower(`executor`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Runs a command typed by the user without requesting approval.
+     *
+     * # Errors
+     * Returns an error when the session, workspace, or executor is unavailable.
+     */
+    @Throws(SessionRuntimeException::class)override fun `runUserCommand`(`sessionId`: kotlin.String, `command`: kotlin.String, `executor`: ExecutorView?): kotlin.String {
+            return FfiConverterString.lift(
+    callWithHandle {
+    uniffiRustCallWithError(SessionRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_sessionruntime_run_user_command(
+        it,
+        
+        FfiConverterString.lower(`sessionId`),
+        FfiConverterString.lower(`command`),
+        FfiConverterOptionalTypeExecutorView.lower(`executor`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Lists models from the saved provider catalog in provider order.
      *
      * # Errors
@@ -10206,6 +12609,54 @@ public interface SkillsRuntimeInterface {
      */
     fun `read`(`folder`: kotlin.String): SkillDetailView
     
+    /**
+     * Approves one clean quarantined skill and moves it without changing its files.
+     *
+     * # Errors
+     * Returns a typed quarantine, trust, collision, or storage error.
+     */
+    fun `approveSkillInstall`(`id`: kotlin.String, `scope`: SkillScopeView): InstalledSkillView
+    
+    /**
+     * Removes one quarantined skill.
+     *
+     * # Errors
+     * Returns an invalid id or storage error.
+     */
+    fun `discardQuarantine`(`id`: kotlin.String)
+    
+    /**
+     * Restores an archived user skill.
+     *
+     * # Errors
+     * Returns a missing, collision, invalid-name, or storage error.
+     */
+    fun `restoreSkill`(`name`: kotlin.String)
+    
+    /**
+     * Runs file-backed stale and archive transitions for user skills.
+     *
+     * # Errors
+     * Returns a storage error when a state transition cannot be applied.
+     */
+    fun `runSkillUpkeep`(`nowMs`: kotlin.Long): List<UpkeepActionView>
+    
+    /**
+     * Previews a GitHub skill in quarantine without installing it.
+     *
+     * # Errors
+     * Returns a typed URL, download, archive, scan, or storage error.
+     */
+    fun `skillInstallPreviewUrl`(`url`: kotlin.String): QuarantineView
+    
+    /**
+     * Previews a local ZIP skill in quarantine without installing it.
+     *
+     * # Errors
+     * Returns a typed archive, scan, or storage error.
+     */
+    fun `skillInstallPreviewZip`(`zipPath`: kotlin.String): QuarantineView
+    
     companion object
 }
 
@@ -10363,6 +12814,131 @@ open class SkillsRuntime: Disposable, AutoCloseable, SkillsRuntimeInterface
         it,
         
         FfiConverterString.lower(`folder`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Approves one clean quarantined skill and moves it without changing its files.
+     *
+     * # Errors
+     * Returns a typed quarantine, trust, collision, or storage error.
+     */
+    @Throws(SkillsRuntimeException::class)override fun `approveSkillInstall`(`id`: kotlin.String, `scope`: SkillScopeView): InstalledSkillView {
+            return FfiConverterTypeInstalledSkillView.lift(
+    callWithHandle {
+    uniffiRustCallWithError(SkillsRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_skillsruntime_approve_skill_install(
+        it,
+        
+        FfiConverterString.lower(`id`),
+        FfiConverterTypeSkillScopeView.lower(`scope`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Removes one quarantined skill.
+     *
+     * # Errors
+     * Returns an invalid id or storage error.
+     */
+    @Throws(SkillsRuntimeException::class)override fun `discardQuarantine`(`id`: kotlin.String)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(SkillsRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_skillsruntime_discard_quarantine(
+        it,
+        
+        FfiConverterString.lower(`id`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Restores an archived user skill.
+     *
+     * # Errors
+     * Returns a missing, collision, invalid-name, or storage error.
+     */
+    @Throws(SkillsRuntimeException::class)override fun `restoreSkill`(`name`: kotlin.String)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(SkillsRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_skillsruntime_restore_skill(
+        it,
+        
+        FfiConverterString.lower(`name`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Runs file-backed stale and archive transitions for user skills.
+     *
+     * # Errors
+     * Returns a storage error when a state transition cannot be applied.
+     */
+    @Throws(SkillsRuntimeException::class)override fun `runSkillUpkeep`(`nowMs`: kotlin.Long): List<UpkeepActionView> {
+            return FfiConverterSequenceTypeUpkeepActionView.lift(
+    callWithHandle {
+    uniffiRustCallWithError(SkillsRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_skillsruntime_run_skill_upkeep(
+        it,
+        
+        FfiConverterLong.lower(`nowMs`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Previews a GitHub skill in quarantine without installing it.
+     *
+     * # Errors
+     * Returns a typed URL, download, archive, scan, or storage error.
+     */
+    @Throws(SkillsRuntimeException::class)override fun `skillInstallPreviewUrl`(`url`: kotlin.String): QuarantineView {
+            return FfiConverterTypeQuarantineView.lift(
+    callWithHandle {
+    uniffiRustCallWithError(SkillsRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_skillsruntime_skill_install_preview_url(
+        it,
+        
+        FfiConverterString.lower(`url`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Previews a local ZIP skill in quarantine without installing it.
+     *
+     * # Errors
+     * Returns a typed archive, scan, or storage error.
+     */
+    @Throws(SkillsRuntimeException::class)override fun `skillInstallPreviewZip`(`zipPath`: kotlin.String): QuarantineView {
+            return FfiConverterTypeQuarantineView.lift(
+    callWithHandle {
+    uniffiRustCallWithError(SkillsRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_skillsruntime_skill_install_preview_zip(
+        it,
+        
+        FfiConverterString.lower(`zipPath`),_status)
 }
     }
     )
@@ -11505,6 +14081,435 @@ public object FfiConverterTypeUsageRuntime: FfiConverter<UsageRuntime, Long> {
 
 
 /**
+ * Provides access to a user-selected shared vault folder.
+ */
+public interface VaultFolderPlatform {
+    
+    /**
+     * Lists relative Markdown paths in the shared folder.
+     *
+     * # Errors
+     * Returns a platform error when listing fails.
+     */
+    fun `list`(): List<kotlin.String>
+    
+    /**
+     * Reads a shared Markdown file, or returns `None` when it is absent.
+     *
+     * # Errors
+     * Returns a platform error when reading fails.
+     */
+    fun `read`(`path`: kotlin.String): kotlin.ByteArray?
+    
+    /**
+     * Writes one complete shared Markdown file.
+     *
+     * # Errors
+     * Returns a platform error when writing fails.
+     */
+    fun `write`(`path`: kotlin.String, `bytes`: kotlin.ByteArray)
+    
+    companion object
+}
+
+/**
+ * Provides access to a user-selected shared vault folder.
+ */
+open class VaultFolderPlatformImpl: Disposable, AutoCloseable, VaultFolderPlatform
+{
+
+    @Suppress("UNUSED_PARAMETER")
+    /**
+     * @suppress
+     */
+    constructor(withHandle: UniffiWithHandle, handle: Long) {
+        this.handle = handle
+        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(handle))
+    }
+
+    /**
+     * @suppress
+     *
+     * This constructor can be used to instantiate a fake object. Only used for tests. Any
+     * attempt to actually use an object constructed this way will fail as there is no
+     * connected Rust object.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    constructor(noHandle: NoHandle) {
+        this.handle = 0
+        this.cleanable = null
+    }
+
+    protected val handle: Long
+    protected val cleanable: UniffiCleaner.Cleanable?
+
+    private val wasDestroyed = AtomicBoolean(false)
+    private val callCounter = AtomicLong(1)
+
+    /**
+     * Whether the current object has been destroyed and its reference is gone in the Rust side.
+     */
+    val uniffiIsDestroyed: Boolean get() = wasDestroyed.get()
+
+    override fun destroy() {
+        // Only allow a single call to this method.
+        // TODO: maybe we should log a warning if called more than once?
+        if (this.wasDestroyed.compareAndSet(false, true)) {
+            // This decrement always matches the initial count of 1 given at creation time.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    @Synchronized
+    override fun close() {
+        this.destroy()
+    }
+
+    internal inline fun <R> callWithHandle(block: (handle: Long) -> R): R {
+        // Check and increment the call counter, to keep the object alive.
+        // This needs a compare-and-set retry loop in case of concurrent updates.
+        do {
+            val c = this.callCounter.get()
+            if (c == 0L) {
+                throw IllegalStateException("${this.javaClass.simpleName} object has already been destroyed")
+            }
+            if (c == Long.MAX_VALUE) {
+                throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
+            }
+        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        // Now we can safely do the method call without the handle being freed concurrently.
+        try {
+            return block(this.uniffiCloneHandle())
+        } finally {
+            // This decrement always matches the increment we performed above.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    // Use a static inner class instead of a closure so as not to accidentally
+    // capture `this` as part of the cleanable's action.
+    private class UniffiCleanAction(private val handle: Long) : Runnable {
+        override fun run() {
+            if (handle == 0.toLong()) {
+                // Fake object created with `NoHandle`, don't try to free.
+                return;
+            }
+            uniffiRustCall { status ->
+                UniffiLib.uniffi_tether_core_fn_free_vaultfolderplatform(handle, status)
+            }
+        }
+    }
+
+    /**
+     * @suppress
+     */
+    fun uniffiCloneHandle(): Long {
+        if (handle == 0.toLong()) {
+            throw InternalException("uniffiCloneHandle() called on NoHandle object");
+        }
+        return uniffiRustCall() { status ->
+            UniffiLib.uniffi_tether_core_fn_clone_vaultfolderplatform(handle, status)
+        }
+    }
+
+    
+    /**
+     * Lists relative Markdown paths in the shared folder.
+     *
+     * # Errors
+     * Returns a platform error when listing fails.
+     */
+    @Throws(VaultFolderPlatformException::class)override fun `list`(): List<kotlin.String> {
+            return FfiConverterSequenceString.lift(
+    callWithHandle {
+    uniffiRustCallWithError(VaultFolderPlatformException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_vaultfolderplatform_list(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Reads a shared Markdown file, or returns `None` when it is absent.
+     *
+     * # Errors
+     * Returns a platform error when reading fails.
+     */
+    @Throws(VaultFolderPlatformException::class)override fun `read`(`path`: kotlin.String): kotlin.ByteArray? {
+            return FfiConverterOptionalByteArray.lift(
+    callWithHandle {
+    uniffiRustCallWithError(VaultFolderPlatformException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_vaultfolderplatform_read(
+        it,
+        
+        FfiConverterString.lower(`path`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Writes one complete shared Markdown file.
+     *
+     * # Errors
+     * Returns a platform error when writing fails.
+     */
+    @Throws(VaultFolderPlatformException::class)override fun `write`(`path`: kotlin.String, `bytes`: kotlin.ByteArray)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(VaultFolderPlatformException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_vaultfolderplatform_write(
+        it,
+        
+        FfiConverterString.lower(`path`),
+        FfiConverterByteArray.lower(`bytes`),_status)
+}
+    }
+    
+    
+
+    
+
+    
+
+
+    
+    
+    /**
+     * @suppress
+     */
+    companion object
+    
+}
+
+
+
+// Put the implementation in an object so we don't pollute the top-level namespace
+internal object uniffiCallbackInterfaceVaultFolderPlatform {
+    internal object `list`: UniffiCallbackInterfaceVaultFolderPlatformMethod0 {
+        override fun callback(`uniffiHandle`: Long,`uniffiOutReturn`: RustBuffer,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeVaultFolderPlatform.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`list`(
+                )
+            }
+            val writeReturn = { value: List<kotlin.String> -> uniffiOutReturn.setValue(FfiConverterSequenceString.lower(value)) }
+            uniffiTraitInterfaceCallWithError(
+                uniffiCallStatus,
+                makeCall,
+                writeReturn,
+                { e: VaultFolderPlatformException -> FfiConverterTypeVaultFolderPlatformError.lower(e) }
+            )
+        }
+    }
+    internal object `read`: UniffiCallbackInterfaceVaultFolderPlatformMethod1 {
+        override fun callback(`uniffiHandle`: Long,`path`: RustBuffer.ByValue,`uniffiOutReturn`: RustBuffer,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeVaultFolderPlatform.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`read`(
+                    FfiConverterString.lift(`path`),
+                )
+            }
+            val writeReturn = { value: kotlin.ByteArray? -> uniffiOutReturn.setValue(FfiConverterOptionalByteArray.lower(value)) }
+            uniffiTraitInterfaceCallWithError(
+                uniffiCallStatus,
+                makeCall,
+                writeReturn,
+                { e: VaultFolderPlatformException -> FfiConverterTypeVaultFolderPlatformError.lower(e) }
+            )
+        }
+    }
+    internal object `write`: UniffiCallbackInterfaceVaultFolderPlatformMethod2 {
+        override fun callback(`uniffiHandle`: Long,`path`: RustBuffer.ByValue,`bytes`: RustBuffer.ByValue,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeVaultFolderPlatform.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`write`(
+                    FfiConverterString.lift(`path`),
+                    FfiConverterByteArray.lift(`bytes`),
+                )
+            }
+            val writeReturn = { _: Unit -> Unit }
+            uniffiTraitInterfaceCallWithError(
+                uniffiCallStatus,
+                makeCall,
+                writeReturn,
+                { e: VaultFolderPlatformException -> FfiConverterTypeVaultFolderPlatformError.lower(e) }
+            )
+        }
+    }
+
+    internal object uniffiFree: UniffiCallbackInterfaceFree {
+        override fun callback(handle: Long) {
+            FfiConverterTypeVaultFolderPlatform.handleMap.remove(handle)
+        }
+    }
+
+    internal object uniffiClone: UniffiCallbackInterfaceClone {
+        override fun callback(handle: Long): Long {
+            return FfiConverterTypeVaultFolderPlatform.handleMap.clone(handle)
+        }
+    }
+
+    internal var vtable = UniffiVTableCallbackInterfaceVaultFolderPlatform.UniffiByValue(
+        uniffiFree,
+        uniffiClone,
+        `list`,
+        `read`,
+        `write`,
+    )
+
+    // Registers the foreign callback with the Rust side.
+    // This method is generated for each callback interface.
+    internal fun register(lib: UniffiLib) {
+        lib.uniffi_tether_core_fn_init_callback_vtable_vaultfolderplatform(vtable)
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeVaultFolderPlatform: FfiConverter<VaultFolderPlatform, Long> {
+    internal val handleMap = UniffiHandleMap<VaultFolderPlatform>()
+
+    override fun lower(value: VaultFolderPlatform): Long {
+        if (value is VaultFolderPlatformImpl) {
+             // Rust-implemented object.  Clone the handle and return it
+            return value.uniffiCloneHandle()
+         } else {
+            // Kotlin object, generate a new vtable handle and return that.
+            return handleMap.insert(value)
+         }
+    }
+
+    override fun lift(value: Long): VaultFolderPlatform {
+        if ((value and 1.toLong()) == 0.toLong()) {
+            // Rust-generated handle, construct a new class that uses the handle to implement the
+            // interface
+            return VaultFolderPlatformImpl(UniffiWithHandle, value)
+        } else {
+            // Kotlin-generated handle, get the object from the handle map
+            return handleMap.remove(value)
+        }
+    }
+
+    override fun read(buf: ByteBuffer): VaultFolderPlatform {
+        return lift(buf.getLong())
+    }
+
+    override fun allocationSize(value: VaultFolderPlatform) = 8UL
+
+    override fun write(value: VaultFolderPlatform, buf: ByteBuffer) {
+        buf.putLong(lower(value))
+    }
+}
+
+
+// This template implements a class for working with a Rust struct via a handle
+// to the live Rust struct on the other side of the FFI.
+//
+// There's some subtlety here, because we have to be careful not to operate on a Rust
+// struct after it has been dropped, and because we must expose a public API for freeing
+// theq Kotlin wrapper object in lieu of reliable finalizers. The core requirements are:
+//
+//   * Each instance holds an opaque handle to the underlying Rust struct.
+//     Method calls need to read this handle from the object's state and pass it in to
+//     the Rust FFI.
+//
+//   * When an instance is no longer needed, its handle should be passed to a
+//     special destructor function provided by the Rust FFI, which will drop the
+//     underlying Rust struct.
+//
+//   * Given an instance, calling code is expected to call the special
+//     `destroy` method in order to free it after use, either by calling it explicitly
+//     or by using a higher-level helper like the `use` method. Failing to do so risks
+//     leaking the underlying Rust struct.
+//
+//   * We can't assume that calling code will do the right thing, and must be prepared
+//     to handle Kotlin method calls executing concurrently with or even after a call to
+//     `destroy`, and to handle multiple (possibly concurrent!) calls to `destroy`.
+//
+//   * We must never allow Rust code to operate on the underlying Rust struct after
+//     the destructor has been called, and must never call the destructor more than once.
+//     Doing so may trigger memory unsafety.
+//
+//   * To mitigate many of the risks of leaking memory and use-after-free unsafety, a `Cleaner`
+//     is implemented to call the destructor when the Kotlin object becomes unreachable.
+//     This is done in a background thread. This is not a panacea, and client code should be aware that
+//      1. the thread may starve if some there are objects that have poorly performing
+//     `drop` methods or do significant work in their `drop` methods.
+//      2. the thread is shared across the whole library. This can be tuned by using `android_cleaner = true`,
+//         or `android = true` in the [`kotlin` section of the `uniffi.toml` file](https://mozilla.github.io/uniffi-rs/kotlin/configuration.html).
+//
+// If we try to implement this with mutual exclusion on access to the handle, there is the
+// possibility of a race between a method call and a concurrent call to `destroy`:
+//
+//    * Thread A starts a method call, reads the value of the handle, but is interrupted
+//      before it can pass the handle over the FFI to Rust.
+//    * Thread B calls `destroy` and frees the underlying Rust struct.
+//    * Thread A resumes, passing the already-read handle value to Rust and triggering
+//      a use-after-free.
+//
+// One possible solution would be to use a `ReadWriteLock`, with each method call taking
+// a read lock (and thus allowed to run concurrently) and the special `destroy` method
+// taking a write lock (and thus blocking on live method calls). However, we aim not to
+// generate methods with any hidden blocking semantics, and a `destroy` method that might
+// block if called incorrectly seems to meet that bar.
+//
+// So, we achieve our goals by giving each instance an associated `AtomicLong` counter to track
+// the number of in-flight method calls, and an `AtomicBoolean` flag to indicate whether `destroy`
+// has been called. These are updated according to the following rules:
+//
+//    * The initial value of the counter is 1, indicating a live object with no in-flight calls.
+//      The initial value for the flag is false.
+//
+//    * At the start of each method call, we atomically check the counter.
+//      If it is 0 then the underlying Rust struct has already been destroyed and the call is aborted.
+//      If it is nonzero them we atomically increment it by 1 and proceed with the method call.
+//
+//    * At the end of each method call, we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+//    * When `destroy` is called, we atomically flip the flag from false to true.
+//      If the flag was already true we silently fail.
+//      Otherwise we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+// Astute readers may observe that this all sounds very similar to the way that Rust's `Arc<T>` works,
+// and indeed it is, with the addition of a flag to guard against multiple calls to `destroy`.
+//
+// The overall effect is that the underlying Rust struct is destroyed only when `destroy` has been
+// called *and* all in-flight method calls have completed, avoiding violating any of the expectations
+// of the underlying Rust code.
+//
+// This makes a cleaner a better alternative to _not_ calling `destroy()` as
+// and when the object is finished with, but the abstraction is not perfect: if the Rust object's `drop`
+// method is slow, and/or there are many objects to cleanup, and it's on a low end Android device, then the cleaner
+// thread may be starved, and the app will leak memory.
+//
+// In this case, `destroy`ing manually may be a better solution.
+//
+// The cleaner can live side by side with the manual calling of `destroy`. In the order of responsiveness, uniffi objects
+// with Rust peers are reclaimed:
+//
+// 1. By calling the `destroy` method of the object, which calls `rustObject.free()`. If that doesn't happen:
+// 2. When the object becomes unreachable, AND the Cleaner thread gets to call `rustObject.free()`. If the thread is starved then:
+// 3. The memory is reclaimed when the process terminates.
+//
+// [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
+//
+
+
+/**
  * Reads and writes notes inside one private vault directory.
  */
 public interface VaultRuntimeInterface {
@@ -11516,6 +14521,22 @@ public interface VaultRuntimeInterface {
      * Returns an invalid path, invalid note, missing note, size, or storage error.
      */
     fun `append`(`path`: kotlin.String, `text`: kotlin.String): VaultNoteView
+    
+    /**
+     * Exports Markdown notes and supported attachments as a ZIP.
+     *
+     * # Errors
+     * Returns an invalid destination or storage error.
+     */
+    fun `exportZip`(`destPath`: kotlin.String)
+    
+    /**
+     * Imports Markdown notes and supported attachments from a ZIP.
+     *
+     * # Errors
+     * Returns an invalid archive, invalid note, non-empty-vault, or storage error.
+     */
+    fun `importZip`(`zipPath`: kotlin.String, `mode`: ImportMode): VaultImportReportView
     
     /**
      * Returns outgoing links and backlinks for a note.
@@ -11556,6 +14577,14 @@ public interface VaultRuntimeInterface {
      * Returns an invalid note or storage error.
      */
     fun `search`(`query`: kotlin.String, `limit`: kotlin.UInt): List<VaultNoteView>
+    
+    /**
+     * Syncs the private vault with a platform-owned shared folder.
+     *
+     * # Errors
+     * Returns a platform, path, manifest, or filesystem error.
+     */
+    fun `syncWithPlatform`(`folder`: VaultFolderPlatform): VaultSyncReportView
     
     /**
      * Replaces one complete note after store validation.
@@ -11711,6 +14740,48 @@ open class VaultRuntime: Disposable, AutoCloseable, VaultRuntimeInterface
 
     
     /**
+     * Exports Markdown notes and supported attachments as a ZIP.
+     *
+     * # Errors
+     * Returns an invalid destination or storage error.
+     */
+    @Throws(VaultRuntimeException::class)override fun `exportZip`(`destPath`: kotlin.String)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(VaultRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_vaultruntime_export_zip(
+        it,
+        
+        FfiConverterString.lower(`destPath`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Imports Markdown notes and supported attachments from a ZIP.
+     *
+     * # Errors
+     * Returns an invalid archive, invalid note, non-empty-vault, or storage error.
+     */
+    @Throws(VaultRuntimeException::class)override fun `importZip`(`zipPath`: kotlin.String, `mode`: ImportMode): VaultImportReportView {
+            return FfiConverterTypeVaultImportReportView.lift(
+    callWithHandle {
+    uniffiRustCallWithError(VaultRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_vaultruntime_import_zip(
+        it,
+        
+        FfiConverterString.lower(`zipPath`),
+        FfiConverterTypeImportMode.lower(`mode`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Returns outgoing links and backlinks for a note.
      *
      * # Errors
@@ -11810,6 +14881,27 @@ open class VaultRuntime: Disposable, AutoCloseable, VaultRuntimeInterface
         
         FfiConverterString.lower(`query`),
         FfiConverterUInt.lower(`limit`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Syncs the private vault with a platform-owned shared folder.
+     *
+     * # Errors
+     * Returns a platform, path, manifest, or filesystem error.
+     */
+    @Throws(VaultRuntimeException::class)override fun `syncWithPlatform`(`folder`: VaultFolderPlatform): VaultSyncReportView {
+            return FfiConverterTypeVaultSyncReportView.lift(
+    callWithHandle {
+    uniffiRustCallWithError(VaultRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_vaultruntime_sync_with_platform(
+        it,
+        
+        FfiConverterTypeVaultFolderPlatform.lower(`folder`),_status)
 }
     }
     )
@@ -11983,6 +15075,306 @@ public object FfiConverterTypeCheckpointView: FfiConverterRustBuffer<CheckpointV
             FfiConverterOptionalString.write(value.`messageId`, buf)
             FfiConverterLong.write(value.`createdAtMs`, buf)
             FfiConverterSequenceString.write(value.`paths`, buf)
+    }
+}
+
+
+
+/**
+ * One parsed failure shown with a CI log.
+ */
+data class CiFailureView (
+    /**
+     * Framework name.
+     */
+    var `framework`: kotlin.String
+    , 
+    /**
+     * Test name.
+     */
+    var `testName`: kotlin.String?
+    , 
+    /**
+     * Repository-relative file.
+     */
+    var `file`: kotlin.String?
+    , 
+    /**
+     * One-based line.
+     */
+    var `line`: kotlin.UInt?
+    , 
+    /**
+     * One-based column.
+     */
+    var `column`: kotlin.UInt?
+    , 
+    /**
+     * Failure message.
+     */
+    var `message`: kotlin.String
+    , 
+    /**
+     * Short excerpt.
+     */
+    var `excerpt`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCiFailureView: FfiConverterRustBuffer<CiFailureView> {
+    override fun read(buf: ByteBuffer): CiFailureView {
+        return CiFailureView(
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalUInt.read(buf),
+            FfiConverterOptionalUInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CiFailureView) = (
+            FfiConverterString.allocationSize(value.`framework`) +
+            FfiConverterOptionalString.allocationSize(value.`testName`) +
+            FfiConverterOptionalString.allocationSize(value.`file`) +
+            FfiConverterOptionalUInt.allocationSize(value.`line`) +
+            FfiConverterOptionalUInt.allocationSize(value.`column`) +
+            FfiConverterString.allocationSize(value.`message`) +
+            FfiConverterString.allocationSize(value.`excerpt`)
+    )
+
+    override fun write(value: CiFailureView, buf: ByteBuffer) {
+            FfiConverterString.write(value.`framework`, buf)
+            FfiConverterOptionalString.write(value.`testName`, buf)
+            FfiConverterOptionalString.write(value.`file`, buf)
+            FfiConverterOptionalUInt.write(value.`line`, buf)
+            FfiConverterOptionalUInt.write(value.`column`, buf)
+            FfiConverterString.write(value.`message`, buf)
+            FfiConverterString.write(value.`excerpt`, buf)
+    }
+}
+
+
+
+/**
+ * A trimmed CI log and parsed failures.
+ */
+data class CiLogView (
+    /**
+     * Trimmed log.
+     */
+    var `text`: kotlin.String
+    , 
+    /**
+     * Parsed failures.
+     */
+    var `failures`: List<CiFailureView>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCiLogView: FfiConverterRustBuffer<CiLogView> {
+    override fun read(buf: ByteBuffer): CiLogView {
+        return CiLogView(
+            FfiConverterString.read(buf),
+            FfiConverterSequenceTypeCiFailureView.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CiLogView) = (
+            FfiConverterString.allocationSize(value.`text`) +
+            FfiConverterSequenceTypeCiFailureView.allocationSize(value.`failures`)
+    )
+
+    override fun write(value: CiLogView, buf: ByteBuffer) {
+            FfiConverterString.write(value.`text`, buf)
+            FfiConverterSequenceTypeCiFailureView.write(value.`failures`, buf)
+    }
+}
+
+
+
+/**
+ * One run in the CI history list.
+ */
+data class CiRunView (
+    /**
+     * Numeric run id.
+     */
+    var `id`: kotlin.ULong
+    , 
+    /**
+     * GitHub run number.
+     */
+    var `number`: kotlin.ULong
+    , 
+    /**
+     * Command title.
+     */
+    var `title`: kotlin.String
+    , 
+    /**
+     * Branch.
+     */
+    var `branch`: kotlin.String
+    , 
+    /**
+     * Run status.
+     */
+    var `status`: kotlin.String
+    , 
+    /**
+     * Run conclusion.
+     */
+    var `conclusion`: kotlin.String
+    , 
+    /**
+     * Start time.
+     */
+    var `startedAt`: kotlin.String
+    , 
+    /**
+     * Duration in seconds.
+     */
+    var `durationSeconds`: kotlin.ULong
+    , 
+    /**
+     * Run page.
+     */
+    var `htmlUrl`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCiRunView: FfiConverterRustBuffer<CiRunView> {
+    override fun read(buf: ByteBuffer): CiRunView {
+        return CiRunView(
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CiRunView) = (
+            FfiConverterULong.allocationSize(value.`id`) +
+            FfiConverterULong.allocationSize(value.`number`) +
+            FfiConverterString.allocationSize(value.`title`) +
+            FfiConverterString.allocationSize(value.`branch`) +
+            FfiConverterString.allocationSize(value.`status`) +
+            FfiConverterString.allocationSize(value.`conclusion`) +
+            FfiConverterString.allocationSize(value.`startedAt`) +
+            FfiConverterULong.allocationSize(value.`durationSeconds`) +
+            FfiConverterString.allocationSize(value.`htmlUrl`)
+    )
+
+    override fun write(value: CiRunView, buf: ByteBuffer) {
+            FfiConverterULong.write(value.`id`, buf)
+            FfiConverterULong.write(value.`number`, buf)
+            FfiConverterString.write(value.`title`, buf)
+            FfiConverterString.write(value.`branch`, buf)
+            FfiConverterString.write(value.`status`, buf)
+            FfiConverterString.write(value.`conclusion`, buf)
+            FfiConverterString.write(value.`startedAt`, buf)
+            FfiConverterULong.write(value.`durationSeconds`, buf)
+            FfiConverterString.write(value.`htmlUrl`, buf)
+    }
+}
+
+
+
+/**
+ * A safe CI readiness summary.
+ */
+data class CiStatusView (
+    /**
+     * Whether sign-in and a GitHub remote are available.
+     */
+    var `ready`: kotlin.Boolean
+    , 
+    /**
+     * Whether the workflow file exists.
+     */
+    var `workflowPresent`: kotlin.Boolean
+    , 
+    /**
+     * Whether the workflow is current.
+     */
+    var `workflowCurrent`: kotlin.Boolean
+    , 
+    /**
+     * Why CI is unavailable.
+     */
+    var `reason`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCiStatusView: FfiConverterRustBuffer<CiStatusView> {
+    override fun read(buf: ByteBuffer): CiStatusView {
+        return CiStatusView(
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: CiStatusView) = (
+            FfiConverterBoolean.allocationSize(value.`ready`) +
+            FfiConverterBoolean.allocationSize(value.`workflowPresent`) +
+            FfiConverterBoolean.allocationSize(value.`workflowCurrent`) +
+            FfiConverterString.allocationSize(value.`reason`)
+    )
+
+    override fun write(value: CiStatusView, buf: ByteBuffer) {
+            FfiConverterBoolean.write(value.`ready`, buf)
+            FfiConverterBoolean.write(value.`workflowPresent`, buf)
+            FfiConverterBoolean.write(value.`workflowCurrent`, buf)
+            FfiConverterString.write(value.`reason`, buf)
     }
 }
 
@@ -13424,6 +16816,53 @@ public object FfiConverterTypeGithubStatusView: FfiConverterRustBuffer<GithubSta
 
 
 /**
+ * One installed skill returned after approval.
+ */
+data class InstalledSkillView (
+    /**
+     * Installed skill name.
+     */
+    var `name`: kotlin.String
+    , 
+    /**
+     * Installation scope.
+     */
+    var `scope`: SkillScopeView
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeInstalledSkillView: FfiConverterRustBuffer<InstalledSkillView> {
+    override fun read(buf: ByteBuffer): InstalledSkillView {
+        return InstalledSkillView(
+            FfiConverterString.read(buf),
+            FfiConverterTypeSkillScopeView.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: InstalledSkillView) = (
+            FfiConverterString.allocationSize(value.`name`) +
+            FfiConverterTypeSkillScopeView.allocationSize(value.`scope`)
+    )
+
+    override fun write(value: InstalledSkillView, buf: ByteBuffer) {
+            FfiConverterString.write(value.`name`, buf)
+            FfiConverterTypeSkillScopeView.write(value.`scope`, buf)
+    }
+}
+
+
+
+/**
  * The operation a killed session was performing.
  */
 data class InterruptionView (
@@ -13465,6 +16904,203 @@ public object FfiConverterTypeInterruptionView: FfiConverterRustBuffer<Interrupt
     override fun write(value: InterruptionView, buf: ByteBuffer) {
             FfiConverterString.write(value.`step`, buf)
             FfiConverterLong.write(value.`atMs`, buf)
+    }
+}
+
+
+
+/**
+ * A header supplied while adding an MCP server.
+ */
+data class McpHeaderInput (
+    /**
+     * Header name.
+     */
+    var `name`: kotlin.String
+    , 
+    /**
+     * Header value. It is written only to the secret store.
+     */
+    var `value`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeMcpHeaderInput: FfiConverterRustBuffer<McpHeaderInput> {
+    override fun read(buf: ByteBuffer): McpHeaderInput {
+        return McpHeaderInput(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: McpHeaderInput) = (
+            FfiConverterString.allocationSize(value.`name`) +
+            FfiConverterString.allocationSize(value.`value`)
+    )
+
+    override fun write(value: McpHeaderInput, buf: ByteBuffer) {
+            FfiConverterString.write(value.`name`, buf)
+            FfiConverterString.write(value.`value`, buf)
+    }
+}
+
+
+
+/**
+ * One MCP server shown in settings. Header values are never included.
+ */
+data class McpServerView (
+    /**
+     * Stable server id.
+     */
+    var `id`: kotlin.String
+    , 
+    /**
+     * User-facing server name.
+     */
+    var `name`: kotlin.String
+    , 
+    /**
+     * Server endpoint.
+     */
+    var `url`: kotlin.String
+    , 
+    /**
+     * Whether the server is enabled.
+     */
+    var `enabled`: kotlin.Boolean
+    , 
+    /**
+     * `connected`, `failed`, `disabled`, or `not_tried`.
+     */
+    var `status`: kotlin.String
+    , 
+    /**
+     * Saved header names only.
+     */
+    var `headerNames`: List<kotlin.String>
+    , 
+    /**
+     * Cached server tools and their local settings.
+     */
+    var `tools`: List<McpToolView>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeMcpServerView: FfiConverterRustBuffer<McpServerView> {
+    override fun read(buf: ByteBuffer): McpServerView {
+        return McpServerView(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterSequenceTypeMcpToolView.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: McpServerView) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`name`) +
+            FfiConverterString.allocationSize(value.`url`) +
+            FfiConverterBoolean.allocationSize(value.`enabled`) +
+            FfiConverterString.allocationSize(value.`status`) +
+            FfiConverterSequenceString.allocationSize(value.`headerNames`) +
+            FfiConverterSequenceTypeMcpToolView.allocationSize(value.`tools`)
+    )
+
+    override fun write(value: McpServerView, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`name`, buf)
+            FfiConverterString.write(value.`url`, buf)
+            FfiConverterBoolean.write(value.`enabled`, buf)
+            FfiConverterString.write(value.`status`, buf)
+            FfiConverterSequenceString.write(value.`headerNames`, buf)
+            FfiConverterSequenceTypeMcpToolView.write(value.`tools`, buf)
+    }
+}
+
+
+
+/**
+ * One MCP tool shown in server settings.
+ */
+data class McpToolView (
+    /**
+     * Server-advertised tool name.
+     */
+    var `name`: kotlin.String
+    , 
+    /**
+     * Server-provided description.
+     */
+    var `description`: kotlin.String
+    , 
+    /**
+     * Whether the tool is offered to models.
+     */
+    var `enabled`: kotlin.Boolean
+    , 
+    /**
+     * `ask` or `auto`.
+     */
+    var `approval`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeMcpToolView: FfiConverterRustBuffer<McpToolView> {
+    override fun read(buf: ByteBuffer): McpToolView {
+        return McpToolView(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: McpToolView) = (
+            FfiConverterString.allocationSize(value.`name`) +
+            FfiConverterString.allocationSize(value.`description`) +
+            FfiConverterBoolean.allocationSize(value.`enabled`) +
+            FfiConverterString.allocationSize(value.`approval`)
+    )
+
+    override fun write(value: McpToolView, buf: ByteBuffer) {
+            FfiConverterString.write(value.`name`, buf)
+            FfiConverterString.write(value.`description`, buf)
+            FfiConverterBoolean.write(value.`enabled`, buf)
+            FfiConverterString.write(value.`approval`, buf)
     }
 }
 
@@ -14378,6 +18014,400 @@ public object FfiConverterTypeProviderStatusView: FfiConverterRustBuffer<Provide
 
 
 /**
+ * Effective quality settings for one project.
+ */
+data class QualityConfigView (
+    /**
+     * Effective numeric thresholds.
+     */
+    var `thresholds`: List<ThresholdView>
+    , 
+    /**
+     * Disabled rule ids.
+     */
+    var `disabledRules`: List<kotlin.String>
+    , 
+    /**
+     * Rule severity overrides as `rule_id=severity` strings.
+     */
+    var `severityOverrides`: List<kotlin.String>
+    , 
+    /**
+     * Recoverable configuration issues.
+     */
+    var `issues`: List<ConfigIssueView>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeQualityConfigView: FfiConverterRustBuffer<QualityConfigView> {
+    override fun read(buf: ByteBuffer): QualityConfigView {
+        return QualityConfigView(
+            FfiConverterSequenceTypeThresholdView.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterSequenceTypeConfigIssueView.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: QualityConfigView) = (
+            FfiConverterSequenceTypeThresholdView.allocationSize(value.`thresholds`) +
+            FfiConverterSequenceString.allocationSize(value.`disabledRules`) +
+            FfiConverterSequenceString.allocationSize(value.`severityOverrides`) +
+            FfiConverterSequenceTypeConfigIssueView.allocationSize(value.`issues`)
+    )
+
+    override fun write(value: QualityConfigView, buf: ByteBuffer) {
+            FfiConverterSequenceTypeThresholdView.write(value.`thresholds`, buf)
+            FfiConverterSequenceString.write(value.`disabledRules`, buf)
+            FfiConverterSequenceString.write(value.`severityOverrides`, buf)
+            FfiConverterSequenceTypeConfigIssueView.write(value.`issues`, buf)
+    }
+}
+
+
+
+/**
+ * FFI view of quality finding counts.
+ */
+data class QualityCountsView (
+    /**
+     * Informational findings.
+     */
+    var `info`: kotlin.UInt
+    , 
+    /**
+     * Warning findings.
+     */
+    var `warn`: kotlin.UInt
+    , 
+    /**
+     * Blocking findings.
+     */
+    var `block`: kotlin.UInt
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeQualityCountsView: FfiConverterRustBuffer<QualityCountsView> {
+    override fun read(buf: ByteBuffer): QualityCountsView {
+        return QualityCountsView(
+            FfiConverterUInt.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterUInt.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: QualityCountsView) = (
+            FfiConverterUInt.allocationSize(value.`info`) +
+            FfiConverterUInt.allocationSize(value.`warn`) +
+            FfiConverterUInt.allocationSize(value.`block`)
+    )
+
+    override fun write(value: QualityCountsView, buf: ByteBuffer) {
+            FfiConverterUInt.write(value.`info`, buf)
+            FfiConverterUInt.write(value.`warn`, buf)
+            FfiConverterUInt.write(value.`block`, buf)
+    }
+}
+
+
+
+/**
+ * FFI view of one quality finding.
+ */
+data class QualityFindingRecordView (
+    /**
+     * Stable rule identifier.
+     */
+    var `ruleId`: kotlin.String
+    , 
+    /**
+     * Finding severity.
+     */
+    var `severity`: kotlin.String
+    , 
+    /**
+     * Repository-relative path.
+     */
+    var `path`: kotlin.String
+    , 
+    /**
+     * First affected line.
+     */
+    var `line`: kotlin.UInt
+    , 
+    /**
+     * Short explanation.
+     */
+    var `message`: kotlin.String
+    , 
+    /**
+     * Suggested action.
+     */
+    var `advice`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeQualityFindingRecordView: FfiConverterRustBuffer<QualityFindingRecordView> {
+    override fun read(buf: ByteBuffer): QualityFindingRecordView {
+        return QualityFindingRecordView(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: QualityFindingRecordView) = (
+            FfiConverterString.allocationSize(value.`ruleId`) +
+            FfiConverterString.allocationSize(value.`severity`) +
+            FfiConverterString.allocationSize(value.`path`) +
+            FfiConverterUInt.allocationSize(value.`line`) +
+            FfiConverterString.allocationSize(value.`message`) +
+            FfiConverterString.allocationSize(value.`advice`)
+    )
+
+    override fun write(value: QualityFindingRecordView, buf: ByteBuffer) {
+            FfiConverterString.write(value.`ruleId`, buf)
+            FfiConverterString.write(value.`severity`, buf)
+            FfiConverterString.write(value.`path`, buf)
+            FfiConverterUInt.write(value.`line`, buf)
+            FfiConverterString.write(value.`message`, buf)
+            FfiConverterString.write(value.`advice`, buf)
+    }
+}
+
+
+
+/**
+ * One built-in rule shown by the settings screen.
+ */
+data class QualityRuleView (
+    /**
+     * Stable rule id.
+     */
+    var `id`: kotlin.String
+    , 
+    /**
+     * Default severity.
+     */
+    var `defaultSeverity`: kotlin.String
+    , 
+    /**
+     * Rule family.
+     */
+    var `family`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeQualityRuleView: FfiConverterRustBuffer<QualityRuleView> {
+    override fun read(buf: ByteBuffer): QualityRuleView {
+        return QualityRuleView(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: QualityRuleView) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`defaultSeverity`) +
+            FfiConverterString.allocationSize(value.`family`)
+    )
+
+    override fun write(value: QualityRuleView, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`defaultSeverity`, buf)
+            FfiConverterString.write(value.`family`, buf)
+    }
+}
+
+
+
+/**
+ * One quarantined file exposed to the platform.
+ */
+data class QuarantineFileView (
+    /**
+     * Path relative to the skill folder.
+     */
+    var `path`: kotlin.String
+    , 
+    /**
+     * File size in bytes.
+     */
+    var `bytes`: kotlin.ULong
+    , 
+    /**
+     * Whether the file is an executor script.
+     */
+    var `isScript`: kotlin.Boolean
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeQuarantineFileView: FfiConverterRustBuffer<QuarantineFileView> {
+    override fun read(buf: ByteBuffer): QuarantineFileView {
+        return QuarantineFileView(
+            FfiConverterString.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: QuarantineFileView) = (
+            FfiConverterString.allocationSize(value.`path`) +
+            FfiConverterULong.allocationSize(value.`bytes`) +
+            FfiConverterBoolean.allocationSize(value.`isScript`)
+    )
+
+    override fun write(value: QuarantineFileView, buf: ByteBuffer) {
+            FfiConverterString.write(value.`path`, buf)
+            FfiConverterULong.write(value.`bytes`, buf)
+            FfiConverterBoolean.write(value.`isScript`, buf)
+    }
+}
+
+
+
+/**
+ * A skill waiting for install approval.
+ */
+data class QuarantineView (
+    /**
+     * Quarantine id.
+     */
+    var `id`: kotlin.String
+    , 
+    /**
+     * Skill name.
+     */
+    var `name`: kotlin.String
+    , 
+    /**
+     * Skill description.
+     */
+    var `description`: kotlin.String
+    , 
+    /**
+     * Files shown before approval.
+     */
+    var `files`: List<QuarantineFileView>
+    , 
+    /**
+     * Static scan result.
+     */
+    var `scan`: ScanReportView
+    , 
+    /**
+     * Whether approval can install the skill.
+     */
+    var `canInstall`: kotlin.Boolean
+    , 
+    /**
+     * Human-readable source label.
+     */
+    var `sourceLabel`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeQuarantineView: FfiConverterRustBuffer<QuarantineView> {
+    override fun read(buf: ByteBuffer): QuarantineView {
+        return QuarantineView(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterSequenceTypeQuarantineFileView.read(buf),
+            FfiConverterTypeScanReportView.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: QuarantineView) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`name`) +
+            FfiConverterString.allocationSize(value.`description`) +
+            FfiConverterSequenceTypeQuarantineFileView.allocationSize(value.`files`) +
+            FfiConverterTypeScanReportView.allocationSize(value.`scan`) +
+            FfiConverterBoolean.allocationSize(value.`canInstall`) +
+            FfiConverterString.allocationSize(value.`sourceLabel`)
+    )
+
+    override fun write(value: QuarantineView, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`name`, buf)
+            FfiConverterString.write(value.`description`, buf)
+            FfiConverterSequenceTypeQuarantineFileView.write(value.`files`, buf)
+            FfiConverterTypeScanReportView.write(value.`scan`, buf)
+            FfiConverterBoolean.write(value.`canInstall`, buf)
+            FfiConverterString.write(value.`sourceLabel`, buf)
+    }
+}
+
+
+
+/**
  * Release metadata displayed by the Android About screen.
  */
 data class ReleaseView (
@@ -14451,6 +18481,187 @@ public object FfiConverterTypeReleaseView: FfiConverterRustBuffer<ReleaseView> {
             FfiConverterString.write(value.`publishedAt`, buf)
             FfiConverterString.write(value.`apkName`, buf)
             FfiConverterULong.write(value.`apkSizeBytes`, buf)
+    }
+}
+
+
+
+/**
+ * One installed or available runtime pack.
+ */
+data class RuntimePackView (
+    /**
+     * Stable pack identifier.
+     */
+    var `id`: kotlin.String
+    , 
+    /**
+     * Pack version.
+     */
+    var `version`: kotlin.String
+    , 
+    /**
+     * Whether this version is installed.
+     */
+    var `installed`: kotlin.Boolean
+    , 
+    /**
+     * Sum of declared payload file sizes.
+     */
+    var `sizeBytes`: kotlin.ULong
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeRuntimePackView: FfiConverterRustBuffer<RuntimePackView> {
+    override fun read(buf: ByteBuffer): RuntimePackView {
+        return RuntimePackView(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterULong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: RuntimePackView) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`version`) +
+            FfiConverterBoolean.allocationSize(value.`installed`) +
+            FfiConverterULong.allocationSize(value.`sizeBytes`)
+    )
+
+    override fun write(value: RuntimePackView, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`version`, buf)
+            FfiConverterBoolean.write(value.`installed`, buf)
+            FfiConverterULong.write(value.`sizeBytes`, buf)
+    }
+}
+
+
+
+/**
+ * One scan finding exposed to the platform.
+ */
+data class ScanFindingView (
+    /**
+     * Stable rule id.
+     */
+    var `ruleId`: kotlin.String
+    , 
+    /**
+     * Finding severity.
+     */
+    var `severity`: ScanSeverityView
+    , 
+    /**
+     * Relative file path.
+     */
+    var `path`: kotlin.String
+    , 
+    /**
+     * One-based source line.
+     */
+    var `line`: kotlin.UInt
+    , 
+    /**
+     * Safe explanation.
+     */
+    var `message`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeScanFindingView: FfiConverterRustBuffer<ScanFindingView> {
+    override fun read(buf: ByteBuffer): ScanFindingView {
+        return ScanFindingView(
+            FfiConverterString.read(buf),
+            FfiConverterTypeScanSeverityView.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ScanFindingView) = (
+            FfiConverterString.allocationSize(value.`ruleId`) +
+            FfiConverterTypeScanSeverityView.allocationSize(value.`severity`) +
+            FfiConverterString.allocationSize(value.`path`) +
+            FfiConverterUInt.allocationSize(value.`line`) +
+            FfiConverterString.allocationSize(value.`message`)
+    )
+
+    override fun write(value: ScanFindingView, buf: ByteBuffer) {
+            FfiConverterString.write(value.`ruleId`, buf)
+            FfiConverterTypeScanSeverityView.write(value.`severity`, buf)
+            FfiConverterString.write(value.`path`, buf)
+            FfiConverterUInt.write(value.`line`, buf)
+            FfiConverterString.write(value.`message`, buf)
+    }
+}
+
+
+
+/**
+ * A static scan exposed to the platform.
+ */
+data class ScanReportView (
+    /**
+     * Findings from the scan.
+     */
+    var `findings`: List<ScanFindingView>
+    , 
+    /**
+     * Overall verdict.
+     */
+    var `verdict`: ScanVerdictView
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeScanReportView: FfiConverterRustBuffer<ScanReportView> {
+    override fun read(buf: ByteBuffer): ScanReportView {
+        return ScanReportView(
+            FfiConverterSequenceTypeScanFindingView.read(buf),
+            FfiConverterTypeScanVerdictView.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ScanReportView) = (
+            FfiConverterSequenceTypeScanFindingView.allocationSize(value.`findings`) +
+            FfiConverterTypeScanVerdictView.allocationSize(value.`verdict`)
+    )
+
+    override fun write(value: ScanReportView, buf: ByteBuffer) {
+            FfiConverterSequenceTypeScanFindingView.write(value.`findings`, buf)
+            FfiConverterTypeScanVerdictView.write(value.`verdict`, buf)
     }
 }
 
@@ -14844,6 +19055,61 @@ public object FfiConverterTypeSkillView: FfiConverterRustBuffer<SkillView> {
 
 
 /**
+ * One effective quality threshold and its source.
+ */
+data class ThresholdView (
+    /**
+     * Threshold key.
+     */
+    var `key`: kotlin.String
+    , 
+    /**
+     * Effective value as text.
+     */
+    var `value`: kotlin.String
+    , 
+    /**
+     * `built_in`, `global`, or `project`.
+     */
+    var `origin`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeThresholdView: FfiConverterRustBuffer<ThresholdView> {
+    override fun read(buf: ByteBuffer): ThresholdView {
+        return ThresholdView(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ThresholdView) = (
+            FfiConverterString.allocationSize(value.`key`) +
+            FfiConverterString.allocationSize(value.`value`) +
+            FfiConverterString.allocationSize(value.`origin`)
+    )
+
+    override fun write(value: ThresholdView, buf: ByteBuffer) {
+            FfiConverterString.write(value.`key`, buf)
+            FfiConverterString.write(value.`value`, buf)
+            FfiConverterString.write(value.`origin`, buf)
+    }
+}
+
+
+
+/**
  * The FFI view of one checklist item.
  */
 data class TodoItemView (
@@ -14948,6 +19214,61 @@ public object FfiConverterTypeTranscriptHitView: FfiConverterRustBuffer<Transcri
             FfiConverterString.write(value.`sessionId`, buf)
             FfiConverterString.write(value.`sessionTitle`, buf)
             FfiConverterString.write(value.`text`, buf)
+    }
+}
+
+
+
+/**
+ * One upkeep state transition.
+ */
+data class UpkeepActionView (
+    /**
+     * Skill name.
+     */
+    var `name`: kotlin.String
+    , 
+    /**
+     * State before upkeep.
+     */
+    var `from`: SkillStateView
+    , 
+    /**
+     * State after upkeep.
+     */
+    var `to`: SkillStateView
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeUpkeepActionView: FfiConverterRustBuffer<UpkeepActionView> {
+    override fun read(buf: ByteBuffer): UpkeepActionView {
+        return UpkeepActionView(
+            FfiConverterString.read(buf),
+            FfiConverterTypeSkillStateView.read(buf),
+            FfiConverterTypeSkillStateView.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: UpkeepActionView) = (
+            FfiConverterString.allocationSize(value.`name`) +
+            FfiConverterTypeSkillStateView.allocationSize(value.`from`) +
+            FfiConverterTypeSkillStateView.allocationSize(value.`to`)
+    )
+
+    override fun write(value: UpkeepActionView, buf: ByteBuffer) {
+            FfiConverterString.write(value.`name`, buf)
+            FfiConverterTypeSkillStateView.write(value.`from`, buf)
+            FfiConverterTypeSkillStateView.write(value.`to`, buf)
     }
 }
 
@@ -15137,6 +19458,61 @@ public object FfiConverterTypeUsageTotalsView: FfiConverterRustBuffer<UsageTotal
             FfiConverterULong.write(value.`tokensIn`, buf)
             FfiConverterULong.write(value.`tokensOut`, buf)
             FfiConverterULong.write(value.`costMicros`, buf)
+    }
+}
+
+
+
+/**
+ * Counts the files handled by a vault import.
+ */
+data class VaultImportReportView (
+    /**
+     * Number of new files written.
+     */
+    var `imported`: kotlin.ULong
+    , 
+    /**
+     * Number of identical or unsupported files skipped.
+     */
+    var `skipped`: kotlin.ULong
+    , 
+    /**
+     * Number of changed files saved beside an existing file.
+     */
+    var `conflicts`: kotlin.ULong
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeVaultImportReportView: FfiConverterRustBuffer<VaultImportReportView> {
+    override fun read(buf: ByteBuffer): VaultImportReportView {
+        return VaultImportReportView(
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: VaultImportReportView) = (
+            FfiConverterULong.allocationSize(value.`imported`) +
+            FfiConverterULong.allocationSize(value.`skipped`) +
+            FfiConverterULong.allocationSize(value.`conflicts`)
+    )
+
+    override fun write(value: VaultImportReportView, buf: ByteBuffer) {
+            FfiConverterULong.write(value.`imported`, buf)
+            FfiConverterULong.write(value.`skipped`, buf)
+            FfiConverterULong.write(value.`conflicts`, buf)
     }
 }
 
@@ -15380,6 +19756,124 @@ public object FfiConverterTypeVaultNoteView: FfiConverterRustBuffer<VaultNoteVie
 
 
 /**
+ * Changes made by a shared-folder sync.
+ */
+data class VaultSyncReportView (
+    /**
+     * Paths copied into the private vault.
+     */
+    var `copiedToPrivate`: List<kotlin.String>
+    , 
+    /**
+     * Paths copied into the shared folder.
+     */
+    var `copiedToShared`: List<kotlin.String>
+    , 
+    /**
+     * Original paths with two different edits.
+     */
+    var `conflicts`: List<kotlin.String>
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeVaultSyncReportView: FfiConverterRustBuffer<VaultSyncReportView> {
+    override fun read(buf: ByteBuffer): VaultSyncReportView {
+        return VaultSyncReportView(
+            FfiConverterSequenceString.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterSequenceString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: VaultSyncReportView) = (
+            FfiConverterSequenceString.allocationSize(value.`copiedToPrivate`) +
+            FfiConverterSequenceString.allocationSize(value.`copiedToShared`) +
+            FfiConverterSequenceString.allocationSize(value.`conflicts`)
+    )
+
+    override fun write(value: VaultSyncReportView, buf: ByteBuffer) {
+            FfiConverterSequenceString.write(value.`copiedToPrivate`, buf)
+            FfiConverterSequenceString.write(value.`copiedToShared`, buf)
+            FfiConverterSequenceString.write(value.`conflicts`, buf)
+    }
+}
+
+
+
+/**
+ * A workflow proposal shown before the user writes it.
+ */
+data class WorkflowProposalView (
+    /**
+     * Destination path.
+     */
+    var `path`: kotlin.String
+    , 
+    /**
+     * Complete workflow content.
+     */
+    var `content`: kotlin.String
+    , 
+    /**
+     * Unified diff.
+     */
+    var `diff`: kotlin.String
+    , 
+    /**
+     * Whether the file is new.
+     */
+    var `isNew`: kotlin.Boolean
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeWorkflowProposalView: FfiConverterRustBuffer<WorkflowProposalView> {
+    override fun read(buf: ByteBuffer): WorkflowProposalView {
+        return WorkflowProposalView(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: WorkflowProposalView) = (
+            FfiConverterString.allocationSize(value.`path`) +
+            FfiConverterString.allocationSize(value.`content`) +
+            FfiConverterString.allocationSize(value.`diff`) +
+            FfiConverterBoolean.allocationSize(value.`isNew`)
+    )
+
+    override fun write(value: WorkflowProposalView, buf: ByteBuffer) {
+            FfiConverterString.write(value.`path`, buf)
+            FfiConverterString.write(value.`content`, buf)
+            FfiConverterString.write(value.`diff`, buf)
+            FfiConverterBoolean.write(value.`isNew`, buf)
+    }
+}
+
+
+
+/**
  * FFI view of [`BudgetScope`].
  */
 
@@ -15413,6 +19907,149 @@ public object FfiConverterTypeBudgetScopeView: FfiConverterRustBuffer<BudgetScop
 }
 
 
+
+
+
+
+
+/**
+ * Errors from CI runtime calls.
+ */
+sealed class CiRuntimeException: kotlin.Exception() {
+    
+    /**
+     * The project or repository is absent.
+     */
+    class Repository(
+        ) : CiRuntimeException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * GitHub sign-in is absent.
+     */
+    class NotSignedIn(
+        ) : CiRuntimeException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * The project has no GitHub remote.
+     */
+    class NoRemote(
+        ) : CiRuntimeException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * Storage or runtime setup failed.
+     */
+    class Unavailable(
+        ) : CiRuntimeException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * GitHub returned an error.
+     */
+    class Github(
+        
+        /**
+         * Safe error detail.
+         */
+        val `detail`: kotlin.String
+        ) : CiRuntimeException() {
+        override val message
+            get() = "detail=${ `detail` }"
+    }
+    
+
+    
+
+
+    companion object ErrorHandler : UniffiRustCallStatusErrorHandler<CiRuntimeException> {
+        override fun lift(error_buf: RustBuffer.ByValue): CiRuntimeException = FfiConverterTypeCiRuntimeError.lift(error_buf)
+    }
+
+    
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeCiRuntimeError : FfiConverterRustBuffer<CiRuntimeException> {
+    override fun read(buf: ByteBuffer): CiRuntimeException {
+        
+
+        return when(buf.getInt()) {
+            1 -> CiRuntimeException.Repository()
+            2 -> CiRuntimeException.NotSignedIn()
+            3 -> CiRuntimeException.NoRemote()
+            4 -> CiRuntimeException.Unavailable()
+            5 -> CiRuntimeException.Github(
+                FfiConverterString.read(buf),
+                )
+            else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: CiRuntimeException): ULong {
+        return when(value) {
+            is CiRuntimeException.Repository -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is CiRuntimeException.NotSignedIn -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is CiRuntimeException.NoRemote -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is CiRuntimeException.Unavailable -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is CiRuntimeException.Github -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`detail`)
+            )
+        }
+    }
+
+    override fun write(value: CiRuntimeException, buf: ByteBuffer) {
+        when(value) {
+            is CiRuntimeException.Repository -> {
+                buf.putInt(1)
+                Unit
+            }
+            is CiRuntimeException.NotSignedIn -> {
+                buf.putInt(2)
+                Unit
+            }
+            is CiRuntimeException.NoRemote -> {
+                buf.putInt(3)
+                Unit
+            }
+            is CiRuntimeException.Unavailable -> {
+                buf.putInt(4)
+                Unit
+            }
+            is CiRuntimeException.Github -> {
+                buf.putInt(5)
+                FfiConverterString.write(value.`detail`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+
+}
 
 
 
@@ -16073,6 +20710,37 @@ sealed class CoreEventView {
         companion object
     }
     
+    /**
+     * A quality gate report for one edit batch.
+     */
+    data class QualityReport(
+        /**
+         * Session id.
+         */
+        val `sessionId`: kotlin.String, 
+        /**
+         * Last tool call id in the batch.
+         */
+        val `toolCallId`: kotlin.String, 
+        /**
+         * Finding counts.
+         */
+        val `counts`: app.tether.core.generated.QualityCountsView, 
+        /**
+         * Findings for the diff card.
+         */
+        val `findings`: List<app.tether.core.generated.QualityFindingRecordView>, 
+        /**
+         * Number of skipped changed files.
+         */
+        val `skipped`: kotlin.UInt) : CoreEventView()
+        
+    {
+        
+
+        companion object
+    }
+    
 
     
 
@@ -16195,6 +20863,13 @@ public object FfiConverterTypeCoreEventView : FfiConverterRustBuffer<CoreEventVi
                 FfiConverterString.read(buf),
                 FfiConverterString.read(buf),
                 FfiConverterUInt.read(buf),
+                FfiConverterUInt.read(buf),
+                )
+            25 -> CoreEventView.QualityReport(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                FfiConverterTypeQualityCountsView.read(buf),
+                FfiConverterSequenceTypeQualityFindingRecordView.read(buf),
                 FfiConverterUInt.read(buf),
                 )
             else -> throw RuntimeException("invalid enum value, something is very wrong!!")
@@ -16406,6 +21081,17 @@ public object FfiConverterTypeCoreEventView : FfiConverterRustBuffer<CoreEventVi
                 + FfiConverterUInt.allocationSize(value.`tokensAfter`)
             )
         }
+        is CoreEventView.QualityReport -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`sessionId`)
+                + FfiConverterString.allocationSize(value.`toolCallId`)
+                + FfiConverterTypeQualityCountsView.allocationSize(value.`counts`)
+                + FfiConverterSequenceTypeQualityFindingRecordView.allocationSize(value.`findings`)
+                + FfiConverterUInt.allocationSize(value.`skipped`)
+            )
+        }
     }
 
     override fun write(value: CoreEventView, buf: ByteBuffer) {
@@ -16564,6 +21250,15 @@ public object FfiConverterTypeCoreEventView : FfiConverterRustBuffer<CoreEventVi
                 FfiConverterString.write(value.`summaryMessageId`, buf)
                 FfiConverterUInt.write(value.`tokensBefore`, buf)
                 FfiConverterUInt.write(value.`tokensAfter`, buf)
+                Unit
+            }
+            is CoreEventView.QualityReport -> {
+                buf.putInt(25)
+                FfiConverterString.write(value.`sessionId`, buf)
+                FfiConverterString.write(value.`toolCallId`, buf)
+                FfiConverterTypeQualityCountsView.write(value.`counts`, buf)
+                FfiConverterSequenceTypeQualityFindingRecordView.write(value.`findings`, buf)
+                FfiConverterUInt.write(value.`skipped`, buf)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
@@ -17116,6 +21811,264 @@ public object FfiConverterTypeGitRuntimeError : FfiConverterRustBuffer<GitRuntim
             is GitRuntimeException.Repository -> {
                 buf.putInt(11)
                 FfiConverterString.write(value.`detail`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+
+}
+
+
+
+/**
+ * Controls whether vault import merges into or replaces an empty vault.
+ */
+
+enum class ImportMode {
+    
+    /**
+     * Keep existing files and save changed incoming notes as conflict copies.
+     */
+    MERGE,
+    /**
+     * Import only when the vault contains no notes or attachments.
+     */
+    REPLACE_EMPTY;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeImportMode: FfiConverterRustBuffer<ImportMode> {
+    override fun read(buf: ByteBuffer) = try {
+        ImportMode.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: ImportMode) = 4UL
+
+    override fun write(value: ImportMode, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+
+
+/**
+ * An MCP settings operation failed.
+ */
+sealed class McpRuntimeException: kotlin.Exception() {
+    
+    /**
+     * The server name is outside the supported form.
+     */
+    class InvalidName(
+        ) : McpRuntimeException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * The URL is not an HTTPS URL without userinfo.
+     */
+    class InvalidUrl(
+        ) : McpRuntimeException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * A header name is outside the supported form.
+     */
+    class InvalidHeaderName(
+        ) : McpRuntimeException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * More than eight headers were supplied.
+     */
+    class TooManyHeaders(
+        ) : McpRuntimeException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * A header value is too large.
+     */
+    class HeaderTooLong(
+        ) : McpRuntimeException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * The requested server does not exist.
+     */
+    class NotFound(
+        ) : McpRuntimeException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * The approval value is not supported.
+     */
+    class InvalidApproval(
+        ) : McpRuntimeException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * The database or secret store is unavailable.
+     */
+    class Unavailable(
+        ) : McpRuntimeException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * A server test or refresh failed.
+     */
+    class TestFailed(
+        
+        /**
+         * Safe failure detail.
+         */
+        val `reason`: kotlin.String
+        ) : McpRuntimeException() {
+        override val message
+            get() = "reason=${ `reason` }"
+    }
+    
+
+    
+
+
+    companion object ErrorHandler : UniffiRustCallStatusErrorHandler<McpRuntimeException> {
+        override fun lift(error_buf: RustBuffer.ByValue): McpRuntimeException = FfiConverterTypeMcpRuntimeError.lift(error_buf)
+    }
+
+    
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeMcpRuntimeError : FfiConverterRustBuffer<McpRuntimeException> {
+    override fun read(buf: ByteBuffer): McpRuntimeException {
+        
+
+        return when(buf.getInt()) {
+            1 -> McpRuntimeException.InvalidName()
+            2 -> McpRuntimeException.InvalidUrl()
+            3 -> McpRuntimeException.InvalidHeaderName()
+            4 -> McpRuntimeException.TooManyHeaders()
+            5 -> McpRuntimeException.HeaderTooLong()
+            6 -> McpRuntimeException.NotFound()
+            7 -> McpRuntimeException.InvalidApproval()
+            8 -> McpRuntimeException.Unavailable()
+            9 -> McpRuntimeException.TestFailed(
+                FfiConverterString.read(buf),
+                )
+            else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: McpRuntimeException): ULong {
+        return when(value) {
+            is McpRuntimeException.InvalidName -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is McpRuntimeException.InvalidUrl -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is McpRuntimeException.InvalidHeaderName -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is McpRuntimeException.TooManyHeaders -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is McpRuntimeException.HeaderTooLong -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is McpRuntimeException.NotFound -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is McpRuntimeException.InvalidApproval -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is McpRuntimeException.Unavailable -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is McpRuntimeException.TestFailed -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`reason`)
+            )
+        }
+    }
+
+    override fun write(value: McpRuntimeException, buf: ByteBuffer) {
+        when(value) {
+            is McpRuntimeException.InvalidName -> {
+                buf.putInt(1)
+                Unit
+            }
+            is McpRuntimeException.InvalidUrl -> {
+                buf.putInt(2)
+                Unit
+            }
+            is McpRuntimeException.InvalidHeaderName -> {
+                buf.putInt(3)
+                Unit
+            }
+            is McpRuntimeException.TooManyHeaders -> {
+                buf.putInt(4)
+                Unit
+            }
+            is McpRuntimeException.HeaderTooLong -> {
+                buf.putInt(5)
+                Unit
+            }
+            is McpRuntimeException.NotFound -> {
+                buf.putInt(6)
+                Unit
+            }
+            is McpRuntimeException.InvalidApproval -> {
+                buf.putInt(7)
+                Unit
+            }
+            is McpRuntimeException.Unavailable -> {
+                buf.putInt(8)
+                Unit
+            }
+            is McpRuntimeException.TestFailed -> {
+                buf.putInt(9)
+                FfiConverterString.write(value.`reason`, buf)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
@@ -17790,6 +22743,29 @@ sealed class ProjectRuntimeException: kotlin.Exception() {
     }
     
     /**
+     * The archive input or output is invalid.
+     */
+    class Archive(
+        
+        /**
+         * Short archive failure detail.
+         */
+        val `detail`: kotlin.String
+        ) : ProjectRuntimeException() {
+        override val message
+            get() = "detail=${ `detail` }"
+    }
+    
+    /**
+     * The archive operation was cancelled.
+     */
+    class Cancelled(
+        ) : ProjectRuntimeException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
      * The requested project does not exist.
      */
     class NotFound(
@@ -17829,8 +22805,12 @@ public object FfiConverterTypeProjectRuntimeError : FfiConverterRustBuffer<Proje
             1 -> ProjectRuntimeException.InvalidName()
             2 -> ProjectRuntimeException.InvalidDefaults()
             3 -> ProjectRuntimeException.BypassNeedsConfirmation()
-            4 -> ProjectRuntimeException.NotFound()
-            5 -> ProjectRuntimeException.Unavailable()
+            4 -> ProjectRuntimeException.Archive(
+                FfiConverterString.read(buf),
+                )
+            5 -> ProjectRuntimeException.Cancelled()
+            6 -> ProjectRuntimeException.NotFound()
+            7 -> ProjectRuntimeException.Unavailable()
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
     }
@@ -17846,6 +22826,15 @@ public object FfiConverterTypeProjectRuntimeError : FfiConverterRustBuffer<Proje
                 4UL
             )
             is ProjectRuntimeException.BypassNeedsConfirmation -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is ProjectRuntimeException.Archive -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`detail`)
+            )
+            is ProjectRuntimeException.Cancelled -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
             )
@@ -17874,12 +22863,21 @@ public object FfiConverterTypeProjectRuntimeError : FfiConverterRustBuffer<Proje
                 buf.putInt(3)
                 Unit
             }
-            is ProjectRuntimeException.NotFound -> {
+            is ProjectRuntimeException.Archive -> {
                 buf.putInt(4)
+                FfiConverterString.write(value.`detail`, buf)
+                Unit
+            }
+            is ProjectRuntimeException.Cancelled -> {
+                buf.putInt(5)
+                Unit
+            }
+            is ProjectRuntimeException.NotFound -> {
+                buf.putInt(6)
                 Unit
             }
             is ProjectRuntimeException.Unavailable -> {
-                buf.putInt(5)
+                buf.putInt(7)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
@@ -18009,6 +23007,86 @@ public object FfiConverterTypeProviderView: FfiConverterRustBuffer<ProviderView>
 
 
 
+
+
+/**
+ * A quality runtime operation failed.
+ */
+sealed class QualityRuntimeException: kotlin.Exception() {
+    
+    /**
+     * The requested project does not exist.
+     */
+    class NotFound(
+        ) : QualityRuntimeException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * Storage or configuration paths are unavailable.
+     */
+    class Unavailable(
+        ) : QualityRuntimeException() {
+        override val message
+            get() = ""
+    }
+    
+
+    
+
+
+    companion object ErrorHandler : UniffiRustCallStatusErrorHandler<QualityRuntimeException> {
+        override fun lift(error_buf: RustBuffer.ByValue): QualityRuntimeException = FfiConverterTypeQualityRuntimeError.lift(error_buf)
+    }
+
+    
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeQualityRuntimeError : FfiConverterRustBuffer<QualityRuntimeException> {
+    override fun read(buf: ByteBuffer): QualityRuntimeException {
+        
+
+        return when(buf.getInt()) {
+            1 -> QualityRuntimeException.NotFound()
+            2 -> QualityRuntimeException.Unavailable()
+            else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: QualityRuntimeException): ULong {
+        return when(value) {
+            is QualityRuntimeException.NotFound -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is QualityRuntimeException.Unavailable -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+        }
+    }
+
+    override fun write(value: QualityRuntimeException, buf: ByteBuffer) {
+        when(value) {
+            is QualityRuntimeException.NotFound -> {
+                buf.putInt(1)
+                Unit
+            }
+            is QualityRuntimeException.Unavailable -> {
+                buf.putInt(2)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+
+}
+
+
+
 /**
  * Part of a session to restore.
  */
@@ -18087,6 +23165,100 @@ public object FfiConverterTypeRoleView: FfiConverterRustBuffer<RoleView> {
     override fun allocationSize(value: RoleView) = 4UL
 
     override fun write(value: RoleView, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
+ * Scan severity exposed to the platform.
+ */
+
+enum class ScanSeverityView {
+    
+    /**
+     * Informational result.
+     */
+    INFO,
+    /**
+     * Review result.
+     */
+    WARN,
+    /**
+     * Blocking result.
+     */
+    BLOCK;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeScanSeverityView: FfiConverterRustBuffer<ScanSeverityView> {
+    override fun read(buf: ByteBuffer) = try {
+        ScanSeverityView.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: ScanSeverityView) = 4UL
+
+    override fun write(value: ScanSeverityView, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
+ * Scan verdict exposed to the platform.
+ */
+
+enum class ScanVerdictView {
+    
+    /**
+     * No findings.
+     */
+    CLEAN,
+    /**
+     * Warnings only.
+     */
+    WARNINGS,
+    /**
+     * Installation is blocked.
+     */
+    BLOCKED;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeScanVerdictView: FfiConverterRustBuffer<ScanVerdictView> {
+    override fun read(buf: ByteBuffer) = try {
+        ScanVerdictView.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: ScanVerdictView) = 4UL
+
+    override fun write(value: ScanVerdictView, buf: ByteBuffer) {
         buf.putInt(value.ordinal + 1)
     }
 }
@@ -18715,6 +23887,138 @@ public object FfiConverterTypeSignInStateView : FfiConverterRustBuffer<SignInSta
 
 
 
+/**
+ * Destination for an approved skill.
+ */
+sealed class SkillScopeView {
+    
+    /**
+     * Private app skill storage.
+     */
+    object User : SkillScopeView()
+    
+    
+    /**
+     * Trusted project skill storage.
+     */
+    data class Project(
+        /**
+         * Project id.
+         */
+        val `projectId`: kotlin.String) : SkillScopeView()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeSkillScopeView : FfiConverterRustBuffer<SkillScopeView>{
+    override fun read(buf: ByteBuffer): SkillScopeView {
+        return when(buf.getInt()) {
+            1 -> SkillScopeView.User
+            2 -> SkillScopeView.Project(
+                FfiConverterString.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: SkillScopeView): ULong = when(value) {
+        is SkillScopeView.User -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is SkillScopeView.Project -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`projectId`)
+            )
+        }
+    }
+
+    override fun write(value: SkillScopeView, buf: ByteBuffer) {
+        when(value) {
+            is SkillScopeView.User -> {
+                buf.putInt(1)
+                Unit
+            }
+            is SkillScopeView.Project -> {
+                buf.putInt(2)
+                FfiConverterString.write(value.`projectId`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+/**
+ * Skill state exposed to the platform.
+ */
+
+enum class SkillStateView {
+    
+    /**
+     * Available skill.
+     */
+    ACTIVE,
+    /**
+     * Unused skill.
+     */
+    STALE,
+    /**
+     * Archived skill.
+     */
+    ARCHIVED;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeSkillStateView: FfiConverterRustBuffer<SkillStateView> {
+    override fun read(buf: ByteBuffer) = try {
+        SkillStateView.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: SkillStateView) = 4UL
+
+    override fun write(value: SkillStateView, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
 
 
 /**
@@ -18758,6 +24062,83 @@ sealed class SkillsRuntimeException: kotlin.Exception() {
             get() = ""
     }
     
+    /**
+     * The install source URL is not an allowed GitHub URL.
+     */
+    class InvalidUrl(
+        ) : SkillsRuntimeException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * The install source could not be downloaded.
+     */
+    class Download(
+        ) : SkillsRuntimeException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * The install archive exceeds a configured limit.
+     */
+    class TooLarge(
+        ) : SkillsRuntimeException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * The source does not contain one valid skill.
+     */
+    class NotASkill(
+        ) : SkillsRuntimeException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * The source contains more than one skill.
+     */
+    class SeveralSkills(
+        
+        /**
+         * Skill names found in the source.
+         */
+        val `names`: List<kotlin.String>
+        ) : SkillsRuntimeException() {
+        override val message
+            get() = "names=${ `names` }"
+    }
+    
+    /**
+     * The static scan blocked installation.
+     */
+    class Blocked(
+        ) : SkillsRuntimeException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * The project is not trusted for project-scoped installation.
+     */
+    class NotTrusted(
+        ) : SkillsRuntimeException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * A skill with the same name is already installed.
+     */
+    class AlreadyInstalled(
+        ) : SkillsRuntimeException() {
+        override val message
+            get() = ""
+    }
+    
 
     
 
@@ -18781,6 +24162,16 @@ public object FfiConverterTypeSkillsRuntimeError : FfiConverterRustBuffer<Skills
             2 -> SkillsRuntimeException.NotFound()
             3 -> SkillsRuntimeException.InvalidSkill()
             4 -> SkillsRuntimeException.Unavailable()
+            5 -> SkillsRuntimeException.InvalidUrl()
+            6 -> SkillsRuntimeException.Download()
+            7 -> SkillsRuntimeException.TooLarge()
+            8 -> SkillsRuntimeException.NotASkill()
+            9 -> SkillsRuntimeException.SeveralSkills(
+                FfiConverterSequenceString.read(buf),
+                )
+            10 -> SkillsRuntimeException.Blocked()
+            11 -> SkillsRuntimeException.NotTrusted()
+            12 -> SkillsRuntimeException.AlreadyInstalled()
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
     }
@@ -18803,6 +24194,39 @@ public object FfiConverterTypeSkillsRuntimeError : FfiConverterRustBuffer<Skills
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
             )
+            is SkillsRuntimeException.InvalidUrl -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is SkillsRuntimeException.Download -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is SkillsRuntimeException.TooLarge -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is SkillsRuntimeException.NotASkill -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is SkillsRuntimeException.SeveralSkills -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterSequenceString.allocationSize(value.`names`)
+            )
+            is SkillsRuntimeException.Blocked -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is SkillsRuntimeException.NotTrusted -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is SkillsRuntimeException.AlreadyInstalled -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
         }
     }
 
@@ -18822,6 +24246,39 @@ public object FfiConverterTypeSkillsRuntimeError : FfiConverterRustBuffer<Skills
             }
             is SkillsRuntimeException.Unavailable -> {
                 buf.putInt(4)
+                Unit
+            }
+            is SkillsRuntimeException.InvalidUrl -> {
+                buf.putInt(5)
+                Unit
+            }
+            is SkillsRuntimeException.Download -> {
+                buf.putInt(6)
+                Unit
+            }
+            is SkillsRuntimeException.TooLarge -> {
+                buf.putInt(7)
+                Unit
+            }
+            is SkillsRuntimeException.NotASkill -> {
+                buf.putInt(8)
+                Unit
+            }
+            is SkillsRuntimeException.SeveralSkills -> {
+                buf.putInt(9)
+                FfiConverterSequenceString.write(value.`names`, buf)
+                Unit
+            }
+            is SkillsRuntimeException.Blocked -> {
+                buf.putInt(10)
+                Unit
+            }
+            is SkillsRuntimeException.NotTrusted -> {
+                buf.putInt(11)
+                Unit
+            }
+            is SkillsRuntimeException.AlreadyInstalled -> {
+                buf.putInt(12)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
@@ -19364,6 +24821,68 @@ public object FfiConverterTypeUsageRuntimeError : FfiConverterRustBuffer<UsageRu
 
 
 /**
+ * A shared-folder platform operation failed.
+ */
+sealed class VaultFolderPlatformException: kotlin.Exception() {
+    
+    /**
+     * The platform could not complete the operation.
+     */
+    class Failed(
+        ) : VaultFolderPlatformException() {
+        override val message
+            get() = ""
+    }
+    
+
+    
+
+
+    companion object ErrorHandler : UniffiRustCallStatusErrorHandler<VaultFolderPlatformException> {
+        override fun lift(error_buf: RustBuffer.ByValue): VaultFolderPlatformException = FfiConverterTypeVaultFolderPlatformError.lift(error_buf)
+    }
+
+    
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeVaultFolderPlatformError : FfiConverterRustBuffer<VaultFolderPlatformException> {
+    override fun read(buf: ByteBuffer): VaultFolderPlatformException {
+        
+
+        return when(buf.getInt()) {
+            1 -> VaultFolderPlatformException.Failed()
+            else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: VaultFolderPlatformException): ULong {
+        return when(value) {
+            is VaultFolderPlatformException.Failed -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+        }
+    }
+
+    override fun write(value: VaultFolderPlatformException, buf: ByteBuffer) {
+        when(value) {
+            is VaultFolderPlatformException.Failed -> {
+                buf.putInt(1)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+
+}
+
+
+
+
+
+/**
  * A vault operation failed without exposing an absolute path.
  */
 sealed class VaultRuntimeException: kotlin.Exception() {
@@ -19413,6 +24932,33 @@ sealed class VaultRuntimeException: kotlin.Exception() {
             get() = ""
     }
     
+    /**
+     * The archive is invalid or violates the vault archive rules.
+     */
+    class Archive(
+        ) : VaultRuntimeException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * The archive operation was cancelled.
+     */
+    class Cancelled(
+        ) : VaultRuntimeException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * Replace mode was requested for a non-empty vault.
+     */
+    class VaultNotEmpty(
+        ) : VaultRuntimeException() {
+        override val message
+            get() = ""
+    }
+    
 
     
 
@@ -19437,6 +24983,9 @@ public object FfiConverterTypeVaultRuntimeError : FfiConverterRustBuffer<VaultRu
             3 -> VaultRuntimeException.NotFound()
             4 -> VaultRuntimeException.OverCap()
             5 -> VaultRuntimeException.Unavailable()
+            6 -> VaultRuntimeException.Archive()
+            7 -> VaultRuntimeException.Cancelled()
+            8 -> VaultRuntimeException.VaultNotEmpty()
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
     }
@@ -19463,6 +25012,18 @@ public object FfiConverterTypeVaultRuntimeError : FfiConverterRustBuffer<VaultRu
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
             )
+            is VaultRuntimeException.Archive -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is VaultRuntimeException.Cancelled -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is VaultRuntimeException.VaultNotEmpty -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
         }
     }
 
@@ -19486,6 +25047,18 @@ public object FfiConverterTypeVaultRuntimeError : FfiConverterRustBuffer<VaultRu
             }
             is VaultRuntimeException.Unavailable -> {
                 buf.putInt(5)
+                Unit
+            }
+            is VaultRuntimeException.Archive -> {
+                buf.putInt(6)
+                Unit
+            }
+            is VaultRuntimeException.Cancelled -> {
+                buf.putInt(7)
+                Unit
+            }
+            is VaultRuntimeException.VaultNotEmpty -> {
+                buf.putInt(8)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
@@ -19659,6 +25232,38 @@ public object FfiConverterOptionalString: FfiConverterRustBuffer<kotlin.String?>
 /**
  * @suppress
  */
+public object FfiConverterOptionalByteArray: FfiConverterRustBuffer<kotlin.ByteArray?> {
+    override fun read(buf: ByteBuffer): kotlin.ByteArray? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterByteArray.read(buf)
+    }
+
+    override fun allocationSize(value: kotlin.ByteArray?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterByteArray.allocationSize(value)
+        }
+    }
+
+    override fun write(value: kotlin.ByteArray?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterByteArray.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterOptionalTypeInterruptionView: FfiConverterRustBuffer<InterruptionView?> {
     override fun read(buf: ByteBuffer): InterruptionView? {
         if (buf.get().toInt() == 0) {
@@ -19745,6 +25350,38 @@ public object FfiConverterOptionalTypePlanView: FfiConverterRustBuffer<PlanView?
         } else {
             buf.put(1)
             FfiConverterTypePlanView.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeWorkflowProposalView: FfiConverterRustBuffer<WorkflowProposalView?> {
+    override fun read(buf: ByteBuffer): WorkflowProposalView? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeWorkflowProposalView.read(buf)
+    }
+
+    override fun allocationSize(value: WorkflowProposalView?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeWorkflowProposalView.allocationSize(value)
+        }
+    }
+
+    override fun write(value: WorkflowProposalView?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeWorkflowProposalView.write(value, buf)
         }
     }
 }
@@ -19897,6 +25534,62 @@ public object FfiConverterSequenceTypeCheckpointView: FfiConverterRustBuffer<Lis
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeCheckpointView.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeCiFailureView: FfiConverterRustBuffer<List<CiFailureView>> {
+    override fun read(buf: ByteBuffer): List<CiFailureView> {
+        val len = buf.getInt()
+        return List<CiFailureView>(len) {
+            FfiConverterTypeCiFailureView.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<CiFailureView>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeCiFailureView.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<CiFailureView>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeCiFailureView.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeCiRunView: FfiConverterRustBuffer<List<CiRunView>> {
+    override fun read(buf: ByteBuffer): List<CiRunView> {
+        val len = buf.getInt()
+        return List<CiRunView>(len) {
+            FfiConverterTypeCiRunView.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<CiRunView>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeCiRunView.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<CiRunView>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeCiRunView.write(it, buf)
         }
     }
 }
@@ -20215,6 +25908,90 @@ public object FfiConverterSequenceTypeGithubRepoView: FfiConverterRustBuffer<Lis
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeMcpHeaderInput: FfiConverterRustBuffer<List<McpHeaderInput>> {
+    override fun read(buf: ByteBuffer): List<McpHeaderInput> {
+        val len = buf.getInt()
+        return List<McpHeaderInput>(len) {
+            FfiConverterTypeMcpHeaderInput.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<McpHeaderInput>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeMcpHeaderInput.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<McpHeaderInput>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeMcpHeaderInput.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeMcpServerView: FfiConverterRustBuffer<List<McpServerView>> {
+    override fun read(buf: ByteBuffer): List<McpServerView> {
+        val len = buf.getInt()
+        return List<McpServerView>(len) {
+            FfiConverterTypeMcpServerView.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<McpServerView>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeMcpServerView.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<McpServerView>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeMcpServerView.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeMcpToolView: FfiConverterRustBuffer<List<McpToolView>> {
+    override fun read(buf: ByteBuffer): List<McpToolView> {
+        val len = buf.getInt()
+        return List<McpToolView>(len) {
+            FfiConverterTypeMcpToolView.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<McpToolView>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeMcpToolView.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<McpToolView>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeMcpToolView.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeMessageView: FfiConverterRustBuffer<List<MessageView>> {
     override fun read(buf: ByteBuffer): List<MessageView> {
         val len = buf.getInt()
@@ -20467,6 +26244,146 @@ public object FfiConverterSequenceTypePromptSectionView: FfiConverterRustBuffer<
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeQualityFindingRecordView: FfiConverterRustBuffer<List<QualityFindingRecordView>> {
+    override fun read(buf: ByteBuffer): List<QualityFindingRecordView> {
+        val len = buf.getInt()
+        return List<QualityFindingRecordView>(len) {
+            FfiConverterTypeQualityFindingRecordView.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<QualityFindingRecordView>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeQualityFindingRecordView.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<QualityFindingRecordView>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeQualityFindingRecordView.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeQualityRuleView: FfiConverterRustBuffer<List<QualityRuleView>> {
+    override fun read(buf: ByteBuffer): List<QualityRuleView> {
+        val len = buf.getInt()
+        return List<QualityRuleView>(len) {
+            FfiConverterTypeQualityRuleView.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<QualityRuleView>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeQualityRuleView.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<QualityRuleView>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeQualityRuleView.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeQuarantineFileView: FfiConverterRustBuffer<List<QuarantineFileView>> {
+    override fun read(buf: ByteBuffer): List<QuarantineFileView> {
+        val len = buf.getInt()
+        return List<QuarantineFileView>(len) {
+            FfiConverterTypeQuarantineFileView.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<QuarantineFileView>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeQuarantineFileView.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<QuarantineFileView>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeQuarantineFileView.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeRuntimePackView: FfiConverterRustBuffer<List<RuntimePackView>> {
+    override fun read(buf: ByteBuffer): List<RuntimePackView> {
+        val len = buf.getInt()
+        return List<RuntimePackView>(len) {
+            FfiConverterTypeRuntimePackView.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<RuntimePackView>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeRuntimePackView.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<RuntimePackView>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeRuntimePackView.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeScanFindingView: FfiConverterRustBuffer<List<ScanFindingView>> {
+    override fun read(buf: ByteBuffer): List<ScanFindingView> {
+        val len = buf.getInt()
+        return List<ScanFindingView>(len) {
+            FfiConverterTypeScanFindingView.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<ScanFindingView>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeScanFindingView.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<ScanFindingView>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeScanFindingView.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeSessionRecordView: FfiConverterRustBuffer<List<SessionRecordView>> {
     override fun read(buf: ByteBuffer): List<SessionRecordView> {
         val len = buf.getInt()
@@ -20523,6 +26440,34 @@ public object FfiConverterSequenceTypeSkillView: FfiConverterRustBuffer<List<Ski
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeThresholdView: FfiConverterRustBuffer<List<ThresholdView>> {
+    override fun read(buf: ByteBuffer): List<ThresholdView> {
+        val len = buf.getInt()
+        return List<ThresholdView>(len) {
+            FfiConverterTypeThresholdView.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<ThresholdView>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeThresholdView.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<ThresholdView>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeThresholdView.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeTodoItemView: FfiConverterRustBuffer<List<TodoItemView>> {
     override fun read(buf: ByteBuffer): List<TodoItemView> {
         val len = buf.getInt()
@@ -20569,6 +26514,34 @@ public object FfiConverterSequenceTypeTranscriptHitView: FfiConverterRustBuffer<
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeTranscriptHitView.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeUpkeepActionView: FfiConverterRustBuffer<List<UpkeepActionView>> {
+    override fun read(buf: ByteBuffer): List<UpkeepActionView> {
+        val len = buf.getInt()
+        return List<UpkeepActionView>(len) {
+            FfiConverterTypeUpkeepActionView.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<UpkeepActionView>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeUpkeepActionView.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<UpkeepActionView>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeUpkeepActionView.write(it, buf)
         }
     }
 }

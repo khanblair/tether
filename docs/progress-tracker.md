@@ -268,6 +268,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Files | Change | PR |
 |---|---|---|---|
+| 2026-11-23 | `core/crates/tether-vcs/src/repo/{helpers,ops}.rs`, `repo_tests.rs` | `create_branch` now sets a fallback committer when the repository has none. A reflog entry needs one, and a phone has no Git configuration, so `git_branch` failed on a device and on the CI runner. Found by the `rust` job on #206. | #206 |
 | 2026-11-23 | `android/app/src/main/kotlin/app/tether/{git,projectarchive,session/{agent,approval,cards,tools,notices,compose},settings/{github,mcp,executors,budgets}}/`, `nav/*Routes.kt`, `home/ProjectHomeScreen.kt`, `session/{SessionConnection,Composer,TranscriptParts,TranscriptScreen,SessionSheetHost}.kt`, `di/AppModule.kt`, per feature `strings_*.xml`, `designsystem/.../{TetherIcons,ToolIcons}.kt`, tests | Android screens for the backend shipped in rounds 1 and 2, with their routes, gateways, view models, strings, and tests. The not available placeholders for GitHub, MCP, executors, budgets, cost, clone and import are gone. | #208 |
 | 2026-11-23 | `core/crates/tether-{ci,engine,ffi,store,skills,sandbox,linux,mcp,connectors,types}/`, `android/core-bridge/.../generated/tether_core.kt`, `AreaFailure.kt` | Backend round 2: CI executor, MCP and web tools, knowledge and skill tools with install and upkeep, project and vault zip, quality gate on edit batches, run tool completion; migrations 0012 and 0013; regenerated bindings | #206 |
 | 2026-11-22 | `core/crates/tether-{engine,ffi,store,workspace,quality,vcs,sandbox,mcp,connectors,linux,memory,skills}/`, `android/core-bridge/.../generated/tether_core.kt`, `SessionSettingsGateway.kt` | Joined the backend baseline: tool registry and permissions, commands and config, Git and GitHub, sandbox runner, MCP and web fetch libraries, cost and budgets, context compaction, ignore rules and zip archives; migrations 0004 to 0011; regenerated bindings | #204 |
@@ -335,6 +336,7 @@ Full list with defaults in product-scope.md section 11 and mobile.md section 15.
 
 | Date | Doc | Change |
 |---|---|---|
+| 2026-11-23 | progress-tracker | Recorded that #206 merged into `main` with a merge commit and the `create_branch` fix it needed |
 | 2026-11-23 | ui-registry, project-structure, progress-tracker | Marked the built Android components, added rows for the screens the code has, described the new feature packages, and recorded D37 |
 | 2026-11-23 | project-structure, progress-tracker | Described the round 2 modules, recorded D36 and the round 2 status |
 | 2026-11-22 | project-structure, progress-tracker | Described the backend crates and modules that now exist, and recorded the unified backend draft (#204) and its defaults (D35) |

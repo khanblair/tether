@@ -20,6 +20,9 @@ impl SessionRuntime {
             .load_session(&id)
             .map_err(|_| SessionRuntimeError::Unavailable)?
             .ok_or(SessionRuntimeError::NotFound)?;
+        if session.status != tether_types::SessionStatus::Interrupted {
+            return Ok(None);
+        }
         let step = store
             .interruption_step(&id)
             .map_err(|_| SessionRuntimeError::Unavailable)?;

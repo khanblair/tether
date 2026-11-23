@@ -137,7 +137,7 @@ fn store_compaction(
     };
     let first = old.first().ok_or_else(empty_range)?;
     let last = old.last().ok_or_else(empty_range)?;
-    let text = format!("[Conversation summary]\n{text}");
+    let text = format!("[Conversation summary]\n{}", limit_words(text, 1_500));
     let summary = actor
         .store
         .append_message(
@@ -205,6 +205,13 @@ fn summary_prompt(focus: Option<&str>) -> String {
     )
 }
 
+fn limit_words(text: &str, limit: usize) -> String {
+    text.split_whitespace()
+        .take(limit)
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 /// Streams one summary. The usage the provider reported comes back with the result, so a
 /// failed or interrupted request is still counted.
 async fn summary_request(
@@ -267,6 +274,93 @@ pub(super) fn should_auto_compact(
     let estimate = prompt_tokens
         .saturating_add(tool_tokens)
         .saturating_add(crate::context::estimate_messages(messages));
-    Ok(u64::from(estimate).saturating_mul(100)
-        >= u64::from(window).saturating_mul(u64::from(threshold)))
+    let over_threshold = u64::from(estimate).saturating_mul(100)
+        >= u64::from(window).saturating_mul(u64::from(threshold));
+    Ok(over_threshold && compaction_cut(messages).is_some())
+}
+
+#[cfg(test)]
+mod tests {
+    use tether_store::{SessionRecord, Store};
+    use tether_types::{Message, MessagePart, ModelCaps, ModelInfo, Provider, Role};
+
+    use crate::prompt::{PromptSection, SystemPrompt};
+    use crate::session_tests::seeded_store;
+
+    use super::limit_words;
+    use super::should_auto_compact;
+
+    fn prompt(tokens: u32) -> SystemPrompt {
+        SystemPrompt {
+            text: String::new(),
+            sections: vec![PromptSection {
+                name: "Instructions".into(),
+                chars: tokens * 4,
+                approx_tokens: tokens,
+            }],
+        }
+    }
+
+    fn add_empty_turn(store: &mut Store, session_id: &tether_types::SessionId) {
+        for role in [Role::User, Role::Assistant] {
+            store
+                .append_message(
+                    session_id,
+                    role,
+                    &[MessagePart::Text {
+                        text: String::new(),
+                    }],
+                    1,
+                )
+                .unwrap();
+        }
+    }
+
+    fn threshold_fixture() -> (tempfile::TempDir, Store, SessionRecord, Vec<Message>) {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("sessions.db");
+        let (mut store, session_id) = seeded_store(&path);
+        store
+            .replace_models(
+                Provider::Anthropic,
+                &[ModelInfo {
+                    provider: Provider::Anthropic,
+                    id: "test-model".into(),
+                    display_name: "Test".into(),
+                    context_window: Some(100),
+                    max_output_tokens: None,
+                    price: None,
+                    caps: ModelCaps::UNKNOWN,
+                }],
+                1,
+            )
+            .unwrap();
+        for _ in 0..5 {
+            add_empty_turn(&mut store, &session_id);
+        }
+        let session = store.load_session(&session_id).unwrap().unwrap();
+        let messages = store.messages(&session_id).unwrap();
+        (directory, store, session, messages)
+    }
+
+    #[test]
+    fn summary_text_is_capped_at_1500_words() {
+        let input = (0..1_501)
+            .map(|value| format!("word{value}"))
+            .collect::<Vec<_>>()
+            .join(" ");
+
+        let output = limit_words(&input, 1_500);
+
+        assert_eq!(output.split_whitespace().count(), 1_500);
+        assert_eq!(output.split_whitespace().last(), Some("word1499"));
+    }
+
+    #[test]
+    fn automatic_compaction_starts_at_the_default_eighty_percent_threshold() {
+        let (_directory, store, session, messages) = threshold_fixture();
+
+        assert!(!should_auto_compact(&store, &session, &prompt(79), &[], &messages).unwrap());
+        assert!(should_auto_compact(&store, &session, &prompt(80), &[], &messages).unwrap());
+    }
 }

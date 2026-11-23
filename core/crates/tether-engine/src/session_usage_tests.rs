@@ -228,7 +228,10 @@ async fn a_compaction_summary_counts_toward_session_usage() {
     let before = Store::open(&path).unwrap().session_usage(&id).unwrap();
     assert_eq!((before.tokens_in, before.tokens_out), (500, 250));
 
-    handle.compact(None).await.unwrap();
+    handle
+        .compact(Some("release blockers".into()))
+        .await
+        .unwrap();
     let mut updated = None;
     while let Ok(Some(event)) =
         tokio::time::timeout(std::time::Duration::from_millis(200), rx.recv()).await
@@ -243,6 +246,10 @@ async fn a_compaction_summary_counts_toward_session_usage() {
     assert_eq!((after.tokens_in, after.tokens_out), (600, 300));
     assert_eq!(updated.map(|usage| usage.tokens_in), Some(600));
     assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 6);
+    assert_eq!(
+        Store::open(&path).unwrap().compactions(&id).unwrap()[0].focus,
+        Some("release blockers".into())
+    );
 }
 
 /// Sets a daily limit and records more spend than it allows.

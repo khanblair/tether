@@ -38,14 +38,31 @@ fn string<'a>(value: &'a Value, key: &str) -> Option<&'a str> {
 
 #[cfg(test)]
 mod tests {
+    use serde_json::to_string;
+
     use super::summarize_call;
 
     #[test]
     fn summaries_are_short_and_do_not_include_content() {
         assert_eq!(
-            summarize_call("write", r#"{"path":"src/a.rs","content":"a\nb"}"#),
-            "write src/a.rs: 2 lines"
+            summarize_call("edit", r#"{"path":"src/a.rs","new_text":"a\nb\nc"}"#),
+            "edit src/a.rs: 3 lines changed"
+        );
+        assert_eq!(
+            summarize_call(
+                "write",
+                &format!(
+                    r#"{{"path":"src/b.rs","content":{}}}"#,
+                    to_string(&"x\n".repeat(120)).unwrap()
+                )
+            ),
+            "write src/b.rs: 120 lines"
         );
         assert_eq!(summarize_call("delete", r#"{"path":"x"}"#), "delete x");
+        assert_eq!(
+            summarize_call("run", r#"{"command":"pytest -q"}"#),
+            "run: pytest -q"
+        );
+        assert_eq!(summarize_call("other", r#"{"target":"remote"}"#), "remote");
     }
 }

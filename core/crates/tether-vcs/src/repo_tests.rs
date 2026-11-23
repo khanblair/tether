@@ -1,7 +1,7 @@
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 
-use super::test_support::{add_commit, git_ok, identity, init_repo, write};
+use super::test_support::{TempDir, add_commit, git_ok, identity, init_repo, write};
 use super::{DiffSpec, FileState, RepoError};
 
 #[test]
@@ -213,4 +213,42 @@ fn switching_dirty_conflict_names_the_path_and_empty_commits_are_rejected() {
         repo.commit("empty", &identity()),
         Err(RepoError::EmptyCommit)
     ));
+}
+
+#[test]
+fn create_branch_works_when_no_committer_is_configured() {
+    // A phone has no global Git configuration, and Tether keeps the identity in its own
+    // database, so the repository has no committer. The reflog entry still needs a signature.
+    let dir = TempDir::new("no-committer");
+    git_ok(dir.path(), &["init", "-b", "main"]);
+    git_ok(
+        dir.path(),
+        &[
+            "-c",
+            "user.name=T",
+            "-c",
+            "user.email=t@example.test",
+            "commit",
+            "--allow-empty",
+            "-m",
+            "start",
+        ],
+    );
+    let isolated = gix::open_opts(dir.path(), gix::open::Options::isolated()).expect("open");
+    assert!(
+        isolated.committer().is_none(),
+        "the fixture has a committer"
+    );
+    super::repo::create_branch_in(isolated, "feature/no-identity", "HEAD").expect("create");
+    let repo = super::Repo::open(dir.path()).expect("reopen");
+    let names: Vec<String> = repo
+        .branches()
+        .expect("branches")
+        .into_iter()
+        .map(|branch| branch.name)
+        .collect();
+    assert!(
+        names.contains(&"feature/no-identity".to_owned()),
+        "{names:?}"
+    );
 }

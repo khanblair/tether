@@ -8,8 +8,8 @@ use super::helpers::{
 use super::log::log_order;
 use super::stageable::{stage_one, stage_paths, stageable_files};
 use super::{
-    BTreeMap, BranchInfo, ByteSlice, CommitId, CommitInfo, DiffSpec, Identity, Path, PathBuf,
-    PreviousValue, Repo, RepoError, StatusEntry, StatusItem, fs,
+    BTreeMap, BranchInfo, ByteSlice, CommitId, CommitInfo, DiffSpec, Identity, Path, PathBuf, Repo,
+    RepoError, StatusEntry, StatusItem, fs,
 };
 
 impl Repo {
@@ -203,19 +203,7 @@ impl Repo {
     /// Returns an error when the branch or start point is invalid.
     pub fn create_branch(&self, name: &str, start_point: &str) -> Result<(), RepoError> {
         validate_branch_name(name)?;
-        let repo = self.git()?;
-        let id = repo
-            .rev_parse_single(start_point)
-            .map_err(|_| RepoError::RefNotFound)?
-            .detach();
-        repo.reference(
-            format!("refs/heads/{name}"),
-            id,
-            PreviousValue::MustNotExist,
-            "branch: Created",
-        )
-        .map_err(|_| RepoError::Git)
-        .map(|_| ())
+        super::helpers::create_branch_in(self.git()?, name, start_point)
     }
 
     /// Switches to a local branch after checking for overwrite risks.

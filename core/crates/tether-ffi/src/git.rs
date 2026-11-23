@@ -7,18 +7,21 @@ use tether_engine::{GitTools, GitToolsConfig, GithubClientFactory, ToolHandler};
 use tether_secrets::{Secret, SecretRef};
 use tether_store::{GitIdentity, Store};
 use tether_types::ProjectId;
-use tether_vcs::{CloneRequest, DiffSpec, Repo, parse_github_url, should_clone_shallow};
+use tether_vcs::{DiffSpec, HttpClient, Repo, ReqwestHttpClient};
 
 use crate::SecretVault;
 use crate::git_support::{
-    RuntimeGithub, RuntimeIdentity, RuntimeTransport, SilentCloneProgress, branch_view, cap_diff,
-    commit_view, now_ms, repo_error, status_view, validate_identity_field,
+    RuntimeGithub, RuntimeIdentity, RuntimeTransport, branch_view, cap_diff, commit_view,
+    filter_diff_path, now_ms, repo_error, status_view, validate_identity_field,
 };
 use crate::git_types::{
     GitBranchView, GitCommitView, GitDiffSpecView, GitRuntimeError, GitStatusView,
     ShallowChoiceView,
 };
 use crate::github::{DeviceGrantState, GithubRepoView};
+
+#[path = "git_clone.rs"]
+mod git_clone;
 
 /// Owns GitHub credentials, project metadata, and repository operations.
 #[derive(uniffi::Object)]
@@ -29,9 +32,17 @@ pub struct GitRuntime {
     pub(crate) runtime: Arc<tokio::runtime::Runtime>,
     pub(crate) oauth_client_id: Mutex<Option<String>>,
     pub(crate) device_grant: Mutex<Option<DeviceGrantState>>,
+    pub(crate) scopes: Mutex<Vec<String>>,
+    pub(crate) active_clone: Mutex<Option<Arc<tether_vcs::CancellationToken>>>,
+    pub(crate) http: Mutex<Arc<dyn HttpClient>>,
 }
 
 impl GitRuntime {
+    #[cfg(test)]
+    pub(crate) fn set_http_for_tests(&self, http: Arc<dyn HttpClient>) {
+        *self.http.lock().expect("test HTTP lock") = http;
+    }
+
     pub(crate) fn tool_handler(
         runtime: Arc<Self>,
         remote_url: Option<String>,
@@ -61,6 +72,7 @@ impl GitRuntime {
         vault: Arc<SecretVault>,
     ) -> Result<Arc<Self>, GitRuntimeError> {
         Store::open(Path::new(database_path)).map_err(|_| GitRuntimeError::Unavailable)?;
+        let http = ReqwestHttpClient::new().map_err(|_| GitRuntimeError::GithubNetwork)?;
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .enable_all()
             .build()
@@ -72,6 +84,9 @@ impl GitRuntime {
             runtime: Arc::new(runtime),
             oauth_client_id: Mutex::new(None),
             device_grant: Mutex::new(None),
+            scopes: Mutex::new(Vec::new()),
+            active_clone: Mutex::new(None),
+            http: Mutex::new(Arc::new(http)),
         }))
     }
 
@@ -98,10 +113,10 @@ impl GitRuntime {
     /// # Errors
     /// Returns an error when the project or repository cannot be read.
     pub fn git_status(&self, project_id: &str) -> Result<Vec<GitStatusView>, GitRuntimeError> {
-        let repo = self.repo(project_id)?;
-        repo.status()
-            .map(|rows| rows.into_iter().map(status_view).collect())
-            .map_err(|error| repo_error(&error))
+        self.with_repo(project_id, |repo| {
+            repo.status()
+                .map(|rows| rows.into_iter().map(status_view).collect())
+        })
     }
 
     /// Reads a bounded repository diff for one project.
@@ -113,15 +128,20 @@ impl GitRuntime {
         project_id: &str,
         spec: GitDiffSpecView,
     ) -> Result<String, GitRuntimeError> {
-        let repo = self.repo(project_id)?;
-        let diff = match (spec.from, spec.to) {
+        if spec.from.is_some() != spec.to.is_some() {
+            return Err(GitRuntimeError::InvalidInput);
+        }
+        let path = spec.path.clone();
+        let diff = self.with_repo(project_id, move |repo| match (spec.from, spec.to) {
             (Some(from), Some(to)) => repo.diff(DiffSpec::Revisions { old: from, new: to }),
             (None, None) if spec.staged => repo.diff(DiffSpec::Staged),
             (None, None) => repo.diff(DiffSpec::Worktree),
-            _ => return Err(GitRuntimeError::InvalidInput),
-        }
-        .map_err(|error| repo_error(&error))?;
-        Ok(cap_diff(diff))
+            _ => unreachable!("validated diff revisions"),
+        })?;
+        Ok(match path {
+            Some(path) => filter_diff_path(&diff, &path),
+            None => cap_diff(diff),
+        })
     }
 
     /// Reads recent commits for one project.
@@ -136,10 +156,10 @@ impl GitRuntime {
         if !(1..=50).contains(&limit) {
             return Err(GitRuntimeError::InvalidInput);
         }
-        self.repo(project_id)?
-            .log(limit as usize, None)
-            .map(|rows| rows.into_iter().map(commit_view).collect())
-            .map_err(|error| repo_error(&error))
+        self.with_repo(project_id, move |repo| {
+            repo.log(limit as usize, None)
+                .map(|rows| rows.into_iter().map(commit_view).collect())
+        })
     }
 
     /// Lists local branches for one project.
@@ -147,10 +167,10 @@ impl GitRuntime {
     /// # Errors
     /// Returns an error when the project or repository cannot be read.
     pub fn git_branches(&self, project_id: &str) -> Result<Vec<GitBranchView>, GitRuntimeError> {
-        self.repo(project_id)?
-            .branches()
-            .map(|rows| rows.into_iter().map(branch_view).collect())
-            .map_err(|error| repo_error(&error))
+        self.with_repo(project_id, |repo| {
+            repo.branches()
+                .map(|rows| rows.into_iter().map(branch_view).collect())
+        })
     }
 
     /// Returns the current branch for one project.
@@ -158,9 +178,7 @@ impl GitRuntime {
     /// # Errors
     /// Returns an error when the project or repository cannot be read.
     pub fn current_branch(&self, project_id: &str) -> Result<Option<String>, GitRuntimeError> {
-        self.repo(project_id)?
-            .current_branch()
-            .map_err(|error| repo_error(&error))
+        self.with_repo(project_id, |repo| repo.current_branch())
     }
 
     /// Initializes a repository in an empty project folder.
@@ -169,7 +187,13 @@ impl GitRuntime {
     /// Returns an error when the project is absent, non-empty, or the branch is invalid.
     pub fn git_init(&self, project_id: &str, default_branch: &str) -> Result<(), GitRuntimeError> {
         let path = self.project_root(project_id)?;
-        Repo::init(path, default_branch)
+        let branch = default_branch.to_owned();
+        self.runtime
+            .block_on(
+                self.runtime
+                    .spawn_blocking(move || Repo::init(path, &branch)),
+            )
+            .map_err(|_| GitRuntimeError::Unavailable)?
             .map(|_| ())
             .map_err(|error| repo_error(&error))
     }
@@ -182,7 +206,7 @@ impl GitRuntime {
         if page == 0 {
             return Err(GitRuntimeError::InvalidInput);
         }
-        let client = RuntimeGithub(Arc::new(self.clone_for_factory()?))
+        let client = RuntimeGithub(Arc::new(git_clone::clone_for_factory(self)?))
             .client()
             .map_err(|_| GitRuntimeError::GithubNetwork)?;
         self.runtime
@@ -210,89 +234,22 @@ impl GitRuntime {
         url: &str,
         name: Option<String>,
         shallow: ShallowChoiceView,
+        progress: Arc<dyn crate::CloneProgressView>,
     ) -> Result<String, GitRuntimeError> {
-        let (default_branch, depth) = self.clone_choice(url, shallow)?;
-        let project_name = name.unwrap_or_else(|| {
-            url.rsplit('/')
-                .next()
-                .unwrap_or("project")
-                .trim_end_matches(".git")
-                .to_owned()
-        });
-        let mut store = self.store()?;
-        let project = store
-            .create_project(&project_name, now_ms())
-            .map_err(|_| GitRuntimeError::Unavailable)?;
-        let destination = Path::new(&self.workspaces_root).join(&project.path);
-        let result = tether_vcs::clone(
-            CloneRequest {
-                url: url.to_owned(),
-                dest: destination.clone(),
-                depth,
-                branch: Some(default_branch.clone()),
-                credentials: self.token().ok(),
-            },
-            &SilentCloneProgress,
-            &tether_vcs::CancellationToken::new(),
-        );
-        if result.is_err() {
-            drop(std::fs::remove_dir_all(&destination));
-            drop(store.delete_project(&project.id));
-            return Err(GitRuntimeError::Repository {
-                detail: "clone failed".into(),
-            });
-        }
-        store
-            .set_project_remote(&project.id, url, &default_branch)
-            .map_err(|_| GitRuntimeError::Unavailable)?;
-        Ok(project.id.to_string())
+        git_clone::clone_repository(self, url, name, shallow, progress)
+    }
+
+    /// Cancels the clone currently in flight, if any.
+    pub fn cancel_clone(&self) {
+        git_clone::cancel_clone(self);
     }
 }
 
+#[cfg(test)]
+#[path = "git_tests.rs"]
+mod tests;
+
 impl GitRuntime {
-    fn clone_choice(
-        &self,
-        url: &str,
-        choice: ShallowChoiceView,
-    ) -> Result<(String, Option<u32>), GitRuntimeError> {
-        if url.starts_with("file://") {
-            return Ok((
-                "main".into(),
-                matches!(choice, ShallowChoiceView::Shallow).then_some(1),
-            ));
-        }
-        let (owner, repo) = parse_github_url(url).ok_or(GitRuntimeError::InvalidInput)?;
-        let client = RuntimeGithub(Arc::new(self.clone_for_factory()?))
-            .client()
-            .map_err(|_| GitRuntimeError::GithubNetwork)?;
-        let info = self
-            .runtime
-            .block_on(client.get_repo(&owner, &repo))
-            .map_err(|_| GitRuntimeError::GithubResponse)?;
-        let use_shallow = match choice {
-            ShallowChoiceView::Auto => should_clone_shallow(info.size_kb),
-            ShallowChoiceView::Shallow => true,
-            ShallowChoiceView::Full => false,
-        };
-        Ok((info.default_branch, use_shallow.then_some(1)))
-    }
-
-    fn clone_for_factory(&self) -> Result<Self, GitRuntimeError> {
-        Ok(Self {
-            database_path: self.database_path.clone(),
-            workspaces_root: self.workspaces_root.clone(),
-            vault: Arc::clone(&self.vault),
-            runtime: Arc::clone(&self.runtime),
-            oauth_client_id: Mutex::new(
-                self.oauth_client_id
-                    .lock()
-                    .map_err(|_| GitRuntimeError::Unavailable)?
-                    .clone(),
-            ),
-            device_grant: Mutex::new(None),
-        })
-    }
-
     pub(crate) fn store(&self) -> Result<Store, GitRuntimeError> {
         Store::open(Path::new(&self.database_path)).map_err(|_| GitRuntimeError::Unavailable)
     }
@@ -310,6 +267,18 @@ impl GitRuntime {
         Repo::open(self.project_root(project_id)?).map_err(|error| repo_error(&error))
     }
 
+    fn with_repo<T, F>(&self, project_id: &str, action: F) -> Result<T, GitRuntimeError>
+    where
+        T: Send + 'static,
+        F: FnOnce(Repo) -> Result<T, tether_vcs::RepoError> + Send + 'static,
+    {
+        let repo = self.repo(project_id)?;
+        self.runtime
+            .block_on(self.runtime.spawn_blocking(move || action(repo)))
+            .map_err(|_| GitRuntimeError::Unavailable)?
+            .map_err(|error| repo_error(&error))
+    }
+
     pub(crate) fn token(&self) -> Result<Secret, String> {
         let reference = SecretRef::new("github-oauth")
             .map_err(|_| "GitHub token reference is invalid".to_owned())?;
@@ -318,5 +287,15 @@ impl GitRuntime {
             .get(&reference)
             .map_err(|_| "GitHub token is unavailable".to_owned())?
             .ok_or_else(|| "GitHub is not signed in".to_owned())
+    }
+
+    pub(crate) fn github_client(&self) -> Result<tether_vcs::GithubClient, GitRuntimeError> {
+        Ok(tether_vcs::GithubClient::new(
+            self.http
+                .lock()
+                .map_err(|_| GitRuntimeError::Unavailable)?
+                .clone(),
+            self.token().map_err(|_| GitRuntimeError::NotSignedIn)?,
+        ))
     }
 }

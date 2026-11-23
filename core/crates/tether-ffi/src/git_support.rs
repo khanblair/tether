@@ -5,8 +5,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use tether_engine::{GitIdentityReader, GithubClientFactory, TransportFactory};
 use tether_vcs::{
-    BranchInfo, CloneProgress, CommitInfo, Identity, RepoError, ReqwestHttpClient,
-    ReqwestTransport, StatusEntry, Transport,
+    BranchInfo, CommitInfo, Identity, RepoError, ReqwestTransport, StatusEntry, Transport,
 };
 
 use crate::git::GitRuntime;
@@ -42,10 +41,7 @@ impl TransportFactory for RuntimeTransport {
 pub(crate) struct RuntimeGithub(pub(crate) Arc<GitRuntime>);
 impl GithubClientFactory for RuntimeGithub {
     fn client(&self) -> Result<tether_vcs::GithubClient, String> {
-        let http = Arc::new(
-            ReqwestHttpClient::new().map_err(|_| "GitHub HTTP is unavailable".to_owned())?,
-        );
-        Ok(tether_vcs::GithubClient::new(http, self.0.token()?))
+        self.0.github_client().map_err(|error| error.to_string())
     }
 }
 
@@ -64,8 +60,12 @@ pub(crate) fn validate_identity_field(value: &str) -> Result<(), GitRuntimeError
 pub(crate) fn status_view(status: StatusEntry) -> GitStatusView {
     GitStatusView {
         path: status.path,
-        index_state: format!("{:?}", status.index_state),
-        worktree_state: format!("{:?}", status.worktree_state),
+        index_state: status
+            .index_state
+            .map_or_else(String::new, |state| format!("{state:?}")),
+        worktree_state: status
+            .worktree_state
+            .map_or_else(String::new, |state| format!("{state:?}")),
     }
 }
 
@@ -106,15 +106,22 @@ pub(crate) fn cap_diff(mut diff: String) -> String {
     diff
 }
 
+pub(crate) fn filter_diff_path(text: &str, path: &str) -> String {
+    let marker = format!("diff --git a/{path} b/{path}");
+    let mut output = String::new();
+    for chunk in text.split("diff --git ") {
+        if chunk.starts_with(marker.trim_start_matches("diff --git ")) {
+            output.push_str("diff --git ");
+            output.push_str(chunk);
+        }
+    }
+    cap_diff(output)
+}
+
 pub(crate) fn now_ms() -> i64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(0, |duration| {
             i64::try_from(duration.as_millis()).unwrap_or(i64::MAX)
         })
-}
-
-pub(crate) struct SilentCloneProgress;
-impl CloneProgress for SilentCloneProgress {
-    fn update(&self, _phase: tether_vcs::ClonePhase, _received: u64, _total: Option<u64>) {}
 }

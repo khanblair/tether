@@ -1,12 +1,13 @@
 //! GitHub sign-in and identity views for the platform layer.
 
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant};
 
 use serde_json::Value;
+use tether_vcs::{HttpRequest, HttpResponse};
 
 use crate::git::GitRuntime;
+use crate::git_support::now_ms;
 use crate::git_types::GitRuntimeError;
-
 /// The public part of a GitHub device grant.
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct DeviceGrantView {
@@ -19,7 +20,6 @@ pub struct DeviceGrantView {
     /// Seconds until the grant expires.
     pub expires_in_seconds: u64,
 }
-
 /// One GitHub sign-in poll result.
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Enum)]
 pub enum SignInStateView {
@@ -115,6 +115,9 @@ impl GitRuntime {
             .and_then(Value::as_u64)
             .unwrap_or(5)
             .max(5);
+        if !(1..=900).contains(&expires_in) {
+            return Err(GitRuntimeError::GithubResponse);
+        }
         *self
             .device_grant
             .lock()
@@ -154,6 +157,7 @@ impl GitRuntime {
         let value = self.request_device_token(client_id, &state.device_code)?;
         if let Some(token) = value.get("access_token").and_then(Value::as_str) {
             self.save_github_token(token)?;
+            self.set_scopes(["repo".into()])?;
             self.refresh_identity()?;
             let login = self.github_status()?.login.unwrap_or_default();
             *grant = None;
@@ -209,6 +213,7 @@ impl GitRuntime {
             });
         }
         self.save_github_token(token)?;
+        self.set_scopes(scopes)?;
         self.refresh_identity()
     }
 
@@ -222,7 +227,8 @@ impl GitRuntime {
             .map_err(|_| GitRuntimeError::Unavailable)?;
         self.store()?
             .clear_git_identity()
-            .map_err(|_| GitRuntimeError::Unavailable)
+            .map_err(|_| GitRuntimeError::Unavailable)?;
+        self.set_scopes(Vec::new())
     }
 
     /// Reads the saved GitHub account and Git identity state.
@@ -243,7 +249,11 @@ impl GitRuntime {
             login: identity.as_ref().and_then(|value| value.login.clone()),
             name: identity.as_ref().map(|value| value.name.clone()),
             email: identity.as_ref().map(|value| value.email.clone()),
-            scopes: Vec::new(),
+            scopes: self
+                .scopes
+                .lock()
+                .map_err(|_| GitRuntimeError::Unavailable)?
+                .clone(),
         })
     }
 }
@@ -275,59 +285,44 @@ impl GitRuntime {
     }
 
     fn refresh_identity(&self) -> Result<(), GitRuntimeError> {
-        let (status, body, _) =
-            self.http_bearer("https://api.github.com/user", &self.token_text()?)?;
-        if !(200..300).contains(&status) {
-            return Err(GitRuntimeError::GithubCredentials);
-        }
-        let login = field(&body, "login")?;
-        let name = body
-            .get("name")
-            .and_then(Value::as_str)
-            .unwrap_or(&login)
-            .to_owned();
-        let email = body
-            .get("email")
-            .and_then(Value::as_str)
-            .unwrap_or_default()
-            .to_owned();
+        let client = self.github_client()?;
+        let identity = self
+            .runtime
+            .block_on(client.current_user())
+            .map_err(|_| GitRuntimeError::GithubResponse)?;
         self.store()?
             .set_git_identity(&tether_store::GitIdentity {
-                login: Some(login),
-                name,
-                email,
+                login: Some(identity.login),
+                name: identity.name,
+                email: identity.email,
                 source: "github".into(),
                 updated_at: now_ms(),
             })
             .map_err(|_| GitRuntimeError::Unavailable)
     }
 
-    fn token_text(&self) -> Result<String, GitRuntimeError> {
-        self.vault
-            .reveal("github-oauth")
-            .map_err(|_| GitRuntimeError::Unavailable)?
-            .ok_or(GitRuntimeError::NotSignedIn)
-    }
-
     fn http_form(&self, url: &str, fields: &[(&str, String)]) -> Result<Vec<u8>, GitRuntimeError> {
-        let client = reqwest::Client::builder()
-            .redirect(reqwest::redirect::Policy::none())
-            .build()
-            .map_err(|_| GitRuntimeError::GithubNetwork)?;
-        let response = self
-            .runtime
-            .block_on(
-                client
-                    .post(url)
-                    .header("accept", "application/json")
-                    .form(fields)
-                    .send(),
-            )
-            .map_err(|_| GitRuntimeError::GithubNetwork)?;
-        self.runtime
-            .block_on(response.bytes())
-            .map(|bytes| bytes.to_vec())
-            .map_err(|_| GitRuntimeError::GithubNetwork)
+        let body = fields
+            .iter()
+            .map(|(key, value)| format!("{}={}", form_escape(key), form_escape(value)))
+            .collect::<Vec<_>>()
+            .join("&")
+            .into_bytes();
+        let response = self.http_request(HttpRequest {
+            method: "POST".into(),
+            url: url.into(),
+            headers: [
+                ("accept".into(), "application/json".into()),
+                (
+                    "content-type".into(),
+                    "application/x-www-form-urlencoded".into(),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+            body: Some(body),
+        })?;
+        Ok(response.body)
     }
 
     fn http_bearer(
@@ -335,32 +330,59 @@ impl GitRuntime {
         url: &str,
         token: &str,
     ) -> Result<(u16, Value, Option<String>), GitRuntimeError> {
-        let client = reqwest::Client::builder()
-            .redirect(reqwest::redirect::Policy::none())
-            .build()
-            .map_err(|_| GitRuntimeError::GithubNetwork)?;
-        let response = self
-            .runtime
-            .block_on(
-                client
-                    .get(url)
-                    .bearer_auth(token)
-                    .header("user-agent", "Tether")
-                    .send(),
-            )
-            .map_err(|_| GitRuntimeError::GithubNetwork)?;
-        let status = response.status().as_u16();
-        let scopes = response
-            .headers()
-            .get("x-oauth-scopes")
-            .and_then(|value| value.to_str().ok())
-            .map(str::to_owned);
-        let body = self
-            .runtime
-            .block_on(response.json())
-            .map_err(|_| GitRuntimeError::GithubResponse)?;
-        Ok((status, body, scopes))
+        let response = self.http_request(HttpRequest {
+            method: "GET".into(),
+            url: url.into(),
+            headers: [
+                ("authorization".into(), format!("Bearer {token}")),
+                ("user-agent".into(), "Tether".into()),
+            ]
+            .into_iter()
+            .collect(),
+            body: None,
+        })?;
+        let body = serde_json::from_slice(&response.body).unwrap_or(Value::Null);
+        Ok((
+            response.status,
+            body,
+            response.headers.get("x-oauth-scopes").cloned(),
+        ))
     }
+
+    fn http_request(&self, request: HttpRequest) -> Result<HttpResponse, GitRuntimeError> {
+        let http = self
+            .http
+            .lock()
+            .map_err(|_| GitRuntimeError::Unavailable)?
+            .clone();
+        self.runtime
+            .block_on(http.send(request))
+            .map_err(|_| GitRuntimeError::GithubNetwork)
+    }
+
+    fn set_scopes<I>(&self, scopes: I) -> Result<(), GitRuntimeError>
+    where
+        I: IntoIterator<Item = String>,
+    {
+        *self
+            .scopes
+            .lock()
+            .map_err(|_| GitRuntimeError::Unavailable)? = scopes.into_iter().collect();
+        Ok(())
+    }
+}
+
+fn form_escape(value: &str) -> String {
+    value
+        .bytes()
+        .flat_map(|byte| match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                vec![byte as char]
+            }
+            b' ' => vec!['+'],
+            other => format!("%{other:02X}").chars().collect(),
+        })
+        .collect()
 }
 
 fn field(value: &Value, key: &str) -> Result<String, GitRuntimeError> {
@@ -370,12 +392,4 @@ fn field(value: &Value, key: &str) -> Result<String, GitRuntimeError> {
         .filter(|text| !text.is_empty())
         .map(str::to_owned)
         .ok_or(GitRuntimeError::GithubResponse)
-}
-
-fn now_ms() -> i64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_or(0, |duration| {
-            i64::try_from(duration.as_millis()).unwrap_or(i64::MAX)
-        })
 }

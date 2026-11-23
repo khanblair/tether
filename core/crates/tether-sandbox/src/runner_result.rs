@@ -15,11 +15,13 @@ pub(crate) fn classify_error(error: &wasmtime::Error, reason: &AtomicU8) -> RunO
             if let Some(exit) = error.downcast_ref::<wasmtime_wasi::I32Exit>() {
                 return RunOutcome::Exited(exit.0);
             }
-            let message = error.to_string();
-            if message.to_ascii_lowercase().contains("memory") {
+            let is_memory_failure = error
+                .chain()
+                .any(|cause| cause.to_string().to_ascii_lowercase().contains("memory"));
+            if is_memory_failure {
                 RunOutcome::OutOfMemory
             } else {
-                RunOutcome::Trapped(sanitize_message(&message))
+                RunOutcome::Trapped(sanitize_message(&error.to_string()))
             }
         }
     }

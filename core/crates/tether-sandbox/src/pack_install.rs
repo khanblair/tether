@@ -1,10 +1,8 @@
 //! Atomic runtime pack installation and on-device integrity checks.
 
 use std::collections::BTreeMap;
-use std::fs::{self, OpenOptions};
-use std::io;
+use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
 
 use tokio_util::sync::CancellationToken;
 
@@ -12,7 +10,10 @@ use crate::pack::{
     PackEntry, PackError, PackFetcher, PackManifest, PackMount, validate_manifest, validate_name,
     validate_path,
 };
-use crate::pack_io::{HashingWriter, hash_file};
+use crate::pack_io::hash_file;
+use crate::pack_layout::{
+    install_files, prepare_root, temporary_pack_path, verified_root, write_manifest,
+};
 
 /// A verified pack installed below a caller-owned root.
 #[derive(Debug, Clone)]
@@ -43,18 +44,19 @@ impl InstalledPack {
             id: id.into(),
             path: String::new(),
         })?;
-        let root = packs_root.join(id).join(version);
-        let metadata = fs::symlink_metadata(&root).map_err(|_| PackError::NotFound {
+        let root = verified_root(packs_root, id, version)?;
+        let manifest_path = root.join("manifest.json");
+        let metadata = fs::symlink_metadata(&manifest_path).map_err(|_| PackError::NotFound {
             id: id.into(),
             path: "manifest.json".into(),
         })?;
-        if metadata.file_type().is_symlink() || !metadata.is_dir() {
+        if metadata.file_type().is_symlink() || !metadata.is_file() {
             return Err(PackError::Path {
                 id: id.into(),
                 path: "manifest.json".into(),
             });
         }
-        let bytes = fs::read(root.join("manifest.json")).map_err(|_| PackError::NotFound {
+        let bytes = fs::read(manifest_path).map_err(|_| PackError::Io {
             id: id.into(),
             path: "manifest.json".into(),
         })?;
@@ -133,7 +135,41 @@ impl InstalledPack {
 
     fn file_path(&self, path: &str) -> Result<PathBuf, PackError> {
         validate_path(&self.entry.id, path)?;
-        Ok(self.root.join(path))
+        let mut current = self.root.clone();
+        let components = path.split('/').collect::<Vec<_>>();
+        for (index, component) in components.iter().enumerate() {
+            current.push(component);
+            let is_intermediate = index + 1 < components.len();
+            self.check_component(&current, path, is_intermediate)?;
+        }
+        Ok(current)
+    }
+
+    fn check_component(
+        &self,
+        current: &Path,
+        path: &str,
+        is_intermediate: bool,
+    ) -> Result<(), PackError> {
+        let metadata = fs::symlink_metadata(current).map_err(|_| self.not_found(path))?;
+        if metadata.file_type().is_symlink() || (is_intermediate && !metadata.is_dir()) {
+            return Err(self.path_error(path));
+        }
+        Ok(())
+    }
+
+    fn not_found(&self, path: &str) -> PackError {
+        PackError::NotFound {
+            id: self.entry.id.clone(),
+            path: path.into(),
+        }
+    }
+
+    fn path_error(&self, path: &str) -> PackError {
+        PackError::Path {
+            id: self.entry.id.clone(),
+            path: path.into(),
+        }
     }
 
     fn verify_file(&self, file: &crate::PackFile) -> Result<(), PackError> {
@@ -233,6 +269,12 @@ pub fn program_for(packs_root: &Path, program: &str) -> Result<InstalledPack, Pa
         if validate_name(&id).is_err() {
             continue;
         }
+        let Ok(metadata) = fs::symlink_metadata(id_entry.path()) else {
+            continue;
+        };
+        if metadata.file_type().is_symlink() || !metadata.is_dir() {
+            continue;
+        }
         let Ok(versions) = fs::read_dir(id_entry.path()) else {
             continue;
         };
@@ -252,120 +294,5 @@ pub fn program_for(packs_root: &Path, program: &str) -> Result<InstalledPack, Pa
     Err(PackError::NotFound {
         id: program.into(),
         path: program.into(),
-    })
-}
-
-fn prepare_root(root: &Path, pack: &PackEntry) -> Result<PathBuf, PackError> {
-    match fs::symlink_metadata(root) {
-        Ok(metadata) if metadata.file_type().is_symlink() || !metadata.is_dir() => {
-            return Err(PackError::Path {
-                id: pack.id.clone(),
-                path: String::new(),
-            });
-        }
-        Ok(_) => {}
-        Err(_) => fs::create_dir_all(root).map_err(|_| PackError::Io {
-            id: pack.id.clone(),
-            path: String::new(),
-        })?,
-    }
-    let id_root = root.join(&pack.id);
-    if let Ok(metadata) = fs::symlink_metadata(&id_root) {
-        if metadata.file_type().is_symlink() || !metadata.is_dir() {
-            return Err(PackError::Path {
-                id: pack.id.clone(),
-                path: String::new(),
-            });
-        }
-    } else {
-        fs::create_dir(&id_root).map_err(|_| PackError::Io {
-            id: pack.id.clone(),
-            path: String::new(),
-        })?;
-    }
-    Ok(id_root)
-}
-
-fn temporary_pack_path(id_root: &Path, pack: &PackEntry) -> Result<PathBuf, PackError> {
-    static NEXT: AtomicU64 = AtomicU64::new(0);
-    for _ in 0..32 {
-        let suffix = NEXT.fetch_add(1, Ordering::Relaxed);
-        let path = id_root.join(format!(".{}.tmp-{suffix:x}", pack.version));
-        match fs::create_dir(&path) {
-            Ok(()) => return Ok(path),
-            Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {}
-            Err(_) => {
-                return Err(PackError::Io {
-                    id: pack.id.clone(),
-                    path: String::new(),
-                });
-            }
-        }
-    }
-    Err(PackError::Io {
-        id: pack.id.clone(),
-        path: String::new(),
-    })
-}
-
-fn install_files(
-    pack: &PackEntry,
-    fetcher: &dyn PackFetcher,
-    temporary: &Path,
-    cancel: &CancellationToken,
-) -> Result<(), PackError> {
-    for file in &pack.files {
-        if cancel.is_cancelled() {
-            return Err(PackError::Cancelled {
-                id: pack.id.clone(),
-                path: file.path.clone(),
-            });
-        }
-        validate_path(&pack.id, &file.path)?;
-        let destination = temporary.join(&file.path);
-        if let Some(parent) = destination.parent() {
-            fs::create_dir_all(parent).map_err(|_| PackError::Io {
-                id: pack.id.clone(),
-                path: file.path.clone(),
-            })?;
-        }
-        let file_handle = OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&destination)
-            .map_err(|_| PackError::Io {
-                id: pack.id.clone(),
-                path: file.path.clone(),
-            })?;
-        let mut writer = HashingWriter::new(file_handle, file.size_bytes);
-        let fetch_result = fetcher.fetch(pack, file, &mut writer, cancel);
-        if cancel.is_cancelled() {
-            return Err(PackError::Cancelled {
-                id: pack.id.clone(),
-                path: file.path.clone(),
-            });
-        }
-        if writer.exceeded() {
-            return Err(PackError::Size {
-                id: pack.id.clone(),
-                path: file.path.clone(),
-            });
-        }
-        fetch_result?;
-        writer.finish(pack, file)?;
-    }
-    Ok(())
-}
-
-fn write_manifest(pack: &PackEntry, temporary: &Path) -> Result<(), PackError> {
-    let manifest = PackManifest {
-        format: 1,
-        packs: vec![pack.clone()],
-    };
-    let bytes = serde_json::to_vec(&manifest)
-        .map_err(|_| PackError::Manifest("manifest serialization failed".into()))?;
-    fs::write(temporary.join("manifest.json"), bytes).map_err(|_| PackError::Io {
-        id: pack.id.clone(),
-        path: "manifest.json".into(),
     })
 }

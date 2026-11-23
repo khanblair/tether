@@ -8,6 +8,7 @@ mod pack_catalog;
 mod pack_cleanup;
 mod pack_install;
 mod pack_io;
+mod pack_layout;
 mod pack_replace;
 #[cfg(test)]
 mod pack_tests;

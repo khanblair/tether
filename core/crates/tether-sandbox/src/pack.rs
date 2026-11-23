@@ -318,6 +318,7 @@ pub(crate) fn validate_path(id: &str, path: &str) -> Result<(), PackError> {
     if path.is_empty()
         || path.starts_with('/')
         || path.contains('\\')
+        || path.contains('\0')
         || path
             .split('/')
             .any(|part| part.is_empty() || part == "." || part == "..")

@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Where commands run screen. -->
+    <string name="executors_title">Where commands run</string>
+    <string name="executors_section_sandbox">Sandbox</string>
+    <string name="executors_section_linux">Linux mode</string>
+    <string name="executors_section_ci">CI</string>
+    <string name="executors_section_network">Network</string>
+    <string name="executors_no_project">Open a project to set its network access and check its CI.</string>
+    <string name="executors_not_available">Not available in this build</string>
+    <string name="executors_na_linux_build">This build has no Linux mode. Commands run in the sandbox.</string>
+    <string name="executors_na_config">This build is missing its executor settings, so this part cannot run.</string>
+    <string name="executors_size_mb">%1$d MB</string>
+    <string name="executors_try_again">Try again</string>
+    <string name="executors_cancel">Cancel</string>
+    <string name="executors_install">Install</string>
+
+    <!-- Runtime packs. -->
+    <string name="executors_packs_empty">No runtime packs on this phone yet.</string>
+    <string name="executors_pack_not_installed">Not installed</string>
+    <string name="executors_pack_download_size">Download size %1$s</string>
+    <string name="executors_pack_downloading">Downloading. %1$s of %2$s</string>
+    <string name="executors_pack_downloading_unknown">Downloading</string>
+    <string name="executors_pack_verifying">Verifying the download</string>
+    <string name="executors_pack_ready">Ready. Version %1$s</string>
+    <string name="executors_pack_failed">Install failed</string>
+    <string name="executors_source">From %1$s</string>
+    <string name="executors_cancel_note">Tether stops waiting for this download. It is checked again when the download ends.</string>
+
+    <!-- Linux mode. -->
+    <string name="executors_linux_checking">Checking Linux mode</string>
+    <string name="executors_linux_not_installed">Not set up</string>
+    <string name="executors_linux_not_installed_body">Setup downloads the Linux root filesystem and its base packages.</string>
+    <string name="executors_linux_starting">Starting setup</string>
+    <string name="executors_linux_downloading">Downloading. %1$s of %2$s</string>
+    <string name="executors_linux_downloading_unknown">Downloading</string>
+    <string name="executors_linux_setting_up">Setting up the root filesystem</string>
+    <string name="executors_linux_ready">Ready</string>
+    <string name="executors_linux_ready_body">Commands run in a private Linux root filesystem.</string>
+    <string name="executors_linux_broken">Broken</string>
+    <string name="executors_linux_broken_body">Repair sets up the Linux files again.</string>
+    <string name="executors_linux_repair">Repair</string>
+    <string name="executors_linux_remove">Remove Linux mode</string>
+
+    <!-- Errors shown in the executor screens. -->
+    <string name="executors_error_not_configured">This build is missing its executor settings.</string>
+    <string name="executors_error_unavailable">Could not read the local executor settings. Try again.</string>
+    <string name="executors_error_project_not_found">This project no longer exists.</string>
+    <string name="executors_error_no_repository">This project has no repository on this phone.</string>
+    <string name="executors_error_not_signed_in">Sign in to GitHub in Settings to use CI.</string>
+    <string name="executors_error_no_remote">This project has no GitHub remote.</string>
+    <string name="executors_error_github">GitHub returned an error. Try again later.</string>
+    <string name="executors_error_verification">The download failed its check. Try again.</string>
+    <string name="executors_error_unknown">This step did not finish. Try again.</string>
+
+    <!-- CI readiness. -->
+    <string name="executors_ci_ready">Ready. Tether can read this project\'s runs.</string>
+    <string name="executors_ci_not_signed_in">Sign in to GitHub to read CI runs.</string>
+    <string name="executors_ci_no_remote">This project has no GitHub remote.</string>
+    <string name="executors_ci_workflow_missing">The workflow file is missing from this project.</string>
+    <string name="executors_ci_workflow_outdated">The workflow file is out of date.</string>
+    <string name="executors_ci_unavailable">CI is not available right now. Try again.</string>
+    <string name="executors_ci_view_runs">View CI runs</string>
+
+    <!-- Network. -->
+    <string name="executors_network_title">Allow network access</string>
+    <string name="executors_network_body">Linux mode commands in this project can reach the internet, for example to install packages. Off by default.</string>
+    <string name="executors_network_failed">Could not change network access. Try again.</string>
+
+    <!-- CI runs screen. -->
+    <string name="executors_runs_title">CI runs</string>
+    <string name="executors_runs_empty">No CI runs for this project yet.</string>
+    <string name="executors_runs_no_project">Open a project to see its CI runs.</string>
+    <plurals name="executors_runs_count">
+        <item quantity="one">Last %1$d run</item>
+        <item quantity="other">Last %1$d runs</item>
+    </plurals>
+    <string name="executors_run_queued">Queued</string>
+    <string name="executors_run_running">Running</string>
+    <string name="executors_run_succeeded">Succeeded</string>
+    <string name="executors_run_failed">Failed</string>
+    <string name="executors_run_cancelled">Cancelled</string>
+    <string name="executors_run_finished">Finished</string>
+    <string name="executors_run_summary">%1$s on %2$s. Took %3$s. %4$s.</string>
+    <string name="executors_run_summary_no_time">%1$s on %2$s. Took %3$s.</string>
+    <string name="executors_duration_seconds">%1$d s</string>
+    <string name="executors_duration_minutes">%1$d min %2$d s</string>
+    <string name="executors_duration_hours">%1$d h %2$d min</string>
+</resources>

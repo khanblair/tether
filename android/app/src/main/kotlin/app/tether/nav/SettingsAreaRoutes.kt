@@ -18,7 +18,6 @@ import app.tether.TetherApp
 import app.tether.di.AppModule
 import app.tether.settings.DataScreen
 import app.tether.settings.DataViewModel
-import app.tether.settings.ExecutorsScreen
 import app.tether.settings.ModelDefaultsScreen
 import app.tether.settings.ModelDefaultsViewModel
 import app.tether.settings.NotificationsScreen
@@ -137,29 +136,11 @@ private fun NavGraphBuilder.permissionRoutes(
 
 /** The screens the app cannot show yet, each with one sentence on what it needs. */
 private fun NavGraphBuilder.notAvailableRoutes(nav: TetherNav) {
-    composable(SETTINGS_EXECUTORS_ROUTE) { ExecutorsScreen(onBack = nav::back) }
-    composable(SETTINGS_GITHUB_ROUTE) {
-        NotAvailable(
-            nav,
-            R.string.settings_area_github_title,
-            R.string.settings_area_github_na_body,
-        )
-    }
-    composable(SETTINGS_MCP_ROUTE) {
-        NotAvailable(nav, R.string.settings_area_mcp_title, R.string.settings_area_mcp_na_body)
-    }
     composable(SETTINGS_QUALITY_ROUTE) {
         NotAvailable(
             nav,
             R.string.settings_area_quality_title,
             R.string.settings_area_quality_na_body,
-        )
-    }
-    composable(SETTINGS_BUDGETS_ROUTE) {
-        NotAvailable(
-            nav,
-            R.string.settings_area_budgets_title,
-            R.string.settings_area_budgets_na_body,
         )
     }
 }

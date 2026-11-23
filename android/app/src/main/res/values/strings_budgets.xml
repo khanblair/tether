@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Budgets settings: the two money limits. -->
+    <string name="budgets_title">Budgets</string>
+    <string name="budgets_intro">Set money limits before the agent can exceed them.</string>
+    <string name="budgets_daily_label">Daily limit</string>
+    <string name="budgets_session_label">Default session limit</string>
+    <string name="budgets_limit_hint">Dollars, like 2.50. Leave blank for no limit.</string>
+    <string name="budgets_remove_limit">Remove limit</string>
+    <string name="budgets_explain">When a limit is reached, the turn pauses and you choose to continue.</string>
+    <string name="budgets_warning">You get a note in the transcript at 80% of a limit.</string>
+    <string name="budgets_save">Save</string>
+    <string name="budgets_saved">Limits saved.</string>
+    <string name="budgets_load_failed">Couldn\'t load your budgets.</string>
+    <string name="budgets_save_failed">Couldn\'t save the limits. Try again.</string>
+    <string name="budgets_invalid_range">A limit must be between $0.01 and $10,000.</string>
+    <string name="budgets_problem_not_number">Type an amount in dollars, like 2.50.</string>
+    <string name="budgets_problem_decimals">Use at most two decimal places, like 2.50.</string>
+    <string name="budgets_problem_negative">A limit cannot be negative.</string>
+    <string name="budgets_problem_below">The lowest limit is $0.01.</string>
+    <string name="budgets_problem_above">The highest limit is $10,000.</string>
+    <string name="budgets_try_again">Try again</string>
+
+    <!-- Cost screen: spend by day, project, and model. -->
+    <string name="budgets_cost_title">Cost</string>
+    <string name="budgets_cost_failed">Couldn\'t load the cost. Try again.</string>
+    <string name="budgets_range_week">7 days</string>
+    <string name="budgets_range_month">30 days</string>
+    <string name="budgets_cost_empty">No spend yet.</string>
+    <string name="budgets_stat_today">Today</string>
+    <string name="budgets_stat_week">Last 7 days</string>
+    <string name="budgets_stat_month">Last 30 days</string>
+    <string name="budgets_tokens">%1$s in, %2$s out</string>
+    <string name="budgets_less_than_a_cent">less than $0.01</string>
+    <string name="budgets_chart_description">Daily cost for the last %1$s. Highest on %2$s, at %3$s.</string>
+    <plurals name="budgets_days">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
+    <string name="budgets_by_project">By project</string>
+    <string name="budgets_by_model">By model</string>
+    <string name="budgets_column_project">Project</string>
+    <string name="budgets_column_model">Model</string>
+    <string name="budgets_column_cost">Cost</string>
+    <string name="budgets_deleted_project">Deleted project</string>
+</resources>

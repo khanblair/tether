@@ -340,4 +340,47 @@ object TetherIcons {
             strokeSvg("m6 9 6 6 6-6")
         }
     }
+
+    val ChevronUp: ImageVector by lazy {
+        tetherIcon("ChevronUp") {
+            strokeSvg("m18 15-6-6-6 6")
+        }
+    }
+
+    val Terminal: ImageVector by lazy {
+        tetherIcon("Terminal") {
+            strokeSvg("M12 19h8")
+            strokeSvg("m4 17 6-6-6-6")
+        }
+    }
+
+    val FilePen: ImageVector by lazy {
+        tetherIcon("FilePen") {
+            strokeSvg(
+                "M12.659 22H18a2 2 0 0 0 2-2V8a2.4 2.4 0 0 0-.706-1.706" +
+                    "l-3.588-3.588A2.4 2.4 0 0 0 14 2H6a2 2 0 0 0-2 2v9.34",
+            )
+            strokeSvg("M14 2v5a1 1 0 0 0 1 1h5")
+            strokeSvg(
+                "M10.378 12.622a1 1 0 0 1 3 3.003L8.36 20.637a2 2 0 0 1-.854.506" +
+                    "l-2.867.837a.5.5 0 0 1-.62-.62l.836-2.869a2 2 0 0 1 .506-.853z",
+            )
+        }
+    }
+
+    val Upload: ImageVector by lazy {
+        tetherIcon("Upload") {
+            strokeSvg("M12 3v12")
+            strokeSvg("m17 8-5-5-5 5")
+            strokeSvg("M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4")
+        }
+    }
+
+    val Globe: ImageVector by lazy {
+        tetherIcon("Globe") {
+            strokePath { circle(12f, 12f, 10f) }
+            strokeSvg("M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20")
+            strokeSvg("M2 12h20")
+        }
+    }
 }

@@ -29,29 +29,53 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.TextFieldValue
 import app.tether.R
 import app.tether.design.tokens.TetherRatio
 import app.tether.design.tokens.TetherSpace
+import app.tether.session.compose.ComposeAssistDeps
+import app.tether.session.compose.ComposeAssistPanel
+import app.tether.session.compose.textAtEnd
+import app.tether.session.compose.toFieldValue
 
-/** The session input. The field grows with text, capped at 40% of the display height. */
+/**
+ * The session input. The field grows with text, capped at 40% of the display height. While
+ * [sendBlocked] is true, Send is off: a message cannot go out while an approval waits.
+ */
 @Composable
 fun Composer(
     modelId: String,
     running: Boolean,
     onSend: (String) -> Unit,
     onStop: () -> Unit,
+    sendBlocked: Boolean = false,
+    assist: ComposeAssistDeps? = null,
 ) {
-    var input by rememberSaveable { mutableStateOf("") }
+    var field by rememberSaveable(stateSaver = TextFieldValue.Saver) {
+        mutableStateOf(TextFieldValue(""))
+    }
+    val input = field.text
     var image by rememberSaveable { mutableStateOf<String?>(null) }
     var speechUnavailable by rememberSaveable { mutableStateOf(false) }
     val picker = rememberImagePicker { image = it }
-    val startVoice = rememberVoiceInput { words -> input = mergeVoiceDraft(input, words) }
+    val startVoice =
+        rememberVoiceInput { words ->
+            field = textAtEnd(mergeVoiceDraft(input, words))
+        }
     val windowHeight = LocalWindowInfo.current.containerSize.height
     val maximum = with(LocalDensity.current) { windowHeight.toDp() * TetherRatio.composerMax }
     Column(modifier = Modifier.fillMaxWidth().padding(TetherSpace.space4)) {
+        assist?.let { deps ->
+            ComposeAssistPanel(
+                deps = deps,
+                text = input,
+                cursor = field.selection.end,
+                onEdit = { edit -> field = edit.toFieldValue() },
+            )
+        }
         OutlinedTextField(
-            value = input,
-            onValueChange = { input = it },
+            value = field,
+            onValueChange = { field = it },
             label = { Text(stringResource(R.string.composer_hint)) },
             modifier = Modifier.fillMaxWidth().heightIn(max = maximum),
             maxLines = Int.MAX_VALUE,
@@ -68,7 +92,7 @@ fun Composer(
         ComposerActions(
             modelId = modelId,
             running = running,
-            canSend = input.isNotBlank() && image == null,
+            canSend = composerCanSend(input, image, sendBlocked),
             onAttach = { picker.launch("image/*") },
             onVoice = { if (!startVoice()) speechUnavailable = true },
             onStop = onStop,
@@ -76,12 +100,22 @@ fun Composer(
                 val text = outgoingText(input)
                 if (text != null) {
                     onSend(text)
-                    input = ""
+                    field = TextFieldValue("")
                 }
             },
         )
     }
 }
+
+/**
+ * True when Send may go out: the field has text, no image is staged, and nothing blocks the send.
+ * A staged image is not sent yet, so it keeps Send off.
+ */
+internal fun composerCanSend(
+    input: String,
+    image: String?,
+    sendBlocked: Boolean,
+): Boolean = input.isNotBlank() && image == null && !sendBlocked
 
 /** The row under the field: attach, model name, voice, and send or stop. */
 @Composable

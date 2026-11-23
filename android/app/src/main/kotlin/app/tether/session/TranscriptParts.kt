@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,7 +27,21 @@ import app.tether.core.generated.RoleView
 import app.tether.design.TetherTheme
 import app.tether.design.tokens.TetherSize
 import app.tether.design.tokens.TetherSpace
+import app.tether.files.FilesGateway
+import app.tether.messages.AppMessages
 import app.tether.providers.providerNameRes
+import app.tether.session.agent.AgentScreenUi
+import app.tether.session.agent.PartSegment
+import app.tether.session.agent.ToolCallRows
+import app.tether.session.agent.ToolCardState
+import app.tether.session.agent.agentLiveItems
+import app.tether.session.agent.liveSection
+import app.tether.session.agent.segmentParts
+import app.tether.session.compose.CommandHooks
+import app.tether.session.compose.ComposeAssistDeps
+import app.tether.session.compose.SkippedMention
+import app.tether.session.compose.rememberCommandSend
+import app.tether.session.compose.skippedMentionsLine
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -44,11 +59,13 @@ internal fun CoroutineScope.sendTurn(
     text: String,
     onStart: () -> Unit,
     onFailed: () -> Unit,
+    onSkipped: (List<SkippedMention>) -> Unit = {},
 ) {
     onStart()
     launch {
         try {
-            withContext(Dispatchers.IO) { connection.send(text) }
+            val skipped = withContext(Dispatchers.IO) { connection.send(text) }
+            if (skipped.isNotEmpty()) onSkipped(skipped)
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: Exception) {
@@ -75,17 +92,36 @@ internal fun ComposerControls(
     running: Boolean,
     onSendStart: () -> Unit,
     onSendFailed: () -> Unit,
+    sendBlocked: Boolean = false,
+    files: FilesGateway? = null,
+    messages: AppMessages? = null,
+    commands: CommandHooks? = null,
 ) {
     val scope = rememberCoroutineScope()
+    val skippedText = stringResource(R.string.compose_skipped_files)
+    val assist =
+        remember(connection, files) {
+            files?.let { ComposeAssistDeps(connection.commands, it, connection.projectId) }
+        }
+    val sendPlain: (String) -> Unit = { text ->
+        scope.sendTurn(connection, text, onSendStart, onSendFailed) { skipped ->
+            messages?.show(skippedText.format(skippedMentionsLine(skipped)))
+        }
+    }
     Composer(
         modelId = modelId,
         running = running,
-        onSend = { text -> scope.sendTurn(connection, text, onSendStart, onSendFailed) },
+        onSend = rememberCommandSend(connection, commands, messages, sendPlain),
         onStop = { scope.launch(Dispatchers.IO) { connection.stop() } },
+        sendBlocked = sendBlocked,
+        assist = assist,
     )
 }
 
-/** The transcript rows, or the empty line when there is nothing to show. */
+/**
+ * The transcript rows, or the empty line when there is nothing to show. [messages] are the rows to
+ * draw. The live section of [agent] follows them, then the turn footer.
+ */
 @Composable
 internal fun TranscriptList(
     messages: List<MessageView>,
@@ -97,10 +133,14 @@ internal fun TranscriptList(
     onOpenProviders: (() -> Unit)?,
     onDismissStopped: () -> Unit,
     onLongPress: ((MessageView) -> Unit)?,
+    agent: AgentScreenUi? = null,
+    tools: ToolCardState = ToolCardState.Empty,
+    onSendPlanEdit: (String) -> Unit = {},
 ) {
     val footer = turn.hasFooter
     val rowModifier = Modifier.widthIn(max = TetherSize.transcriptMax).fillMaxWidth()
-    if (messages.isEmpty() && !footer) {
+    val hasLive = agent?.liveSection()?.isNotEmpty() == true
+    if (messages.isEmpty() && !footer && !hasLive) {
         val emptyLabel = if (failed) R.string.transcript_load_failed else R.string.transcript_empty
         Text(
             text = stringResource(emptyLabel),
@@ -120,8 +160,10 @@ internal fun TranscriptList(
                 message,
                 rowModifier,
                 onLongPress = longPressFor(message, onLongPress),
+                tools = tools,
             )
         }
+        if (agent != null) agentLiveItems(agent, tools, rowModifier, onSendPlanEdit)
         if (footer) {
             item(key = TURN_FOOTER_KEY) {
                 TurnFooter(
@@ -180,6 +222,7 @@ internal fun TranscriptMessage(
     message: MessageView,
     modifier: Modifier = Modifier,
     onLongPress: (() -> Unit)? = null,
+    tools: ToolCardState? = null,
 ) {
     val label =
         when (message.role) {
@@ -208,18 +251,27 @@ internal fun TranscriptMessage(
             style = MaterialTheme.typography.labelMedium,
             color = TetherTheme.colors.text2,
         )
-        message.parts.forEach { part ->
-            when (part) {
-                is MessagePartView.Text -> MarkdownBlocks(part.text)
-                is MessagePartView.Thinking -> Text(part.text, color = TetherTheme.colors.text2)
-                is MessagePartView.CompactionSummary ->
-                    Text(part.text, color = TetherTheme.colors.text2)
-                else ->
-                    Text(
-                        stringResource(R.string.transcript_attachment),
-                        color = TetherTheme.colors.text2,
-                    )
+        val toolState = tools ?: ToolCardState.Empty
+        segmentParts(message.parts, toolState.persisted).forEach { segment ->
+            when (segment) {
+                is PartSegment.Calls -> ToolCallRows(segment.calls, toolState)
+                is PartSegment.Part -> MessagePartBody(segment.part)
             }
         }
+    }
+}
+
+/** One message part that is not a tool call. */
+@Composable
+private fun MessagePartBody(part: MessagePartView) {
+    when (part) {
+        is MessagePartView.Text -> MarkdownBlocks(part.text)
+        is MessagePartView.Thinking -> Text(part.text, color = TetherTheme.colors.text2)
+        is MessagePartView.CompactionSummary -> Text(part.text, color = TetherTheme.colors.text2)
+        else ->
+            Text(
+                stringResource(R.string.transcript_attachment),
+                color = TetherTheme.colors.text2,
+            )
     }
 }

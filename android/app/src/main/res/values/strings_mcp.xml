@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- MCP server list. -->
+    <string name="mcp_title">MCP servers</string>
+    <string name="mcp_body">Extra tools from remote servers. Each tool has its own approval.</string>
+    <string name="mcp_empty_body">No MCP servers yet. Add one to give the agent extra tools.</string>
+    <string name="mcp_add_server">Add server</string>
+    <string name="mcp_load_failed">Could not read the MCP servers. Try again.</string>
+    <string name="mcp_try_again">Try again</string>
+    <string name="mcp_dismiss">Dismiss</string>
+    <string name="mcp_test">Test</string>
+    <string name="mcp_testing">Testing the connection.</string>
+    <string name="mcp_enable_server">Enable %1$s</string>
+    <string name="mcp_action_failed">That change did not save. Try again.</string>
+
+    <!-- Connection status, shown as a badge on each server. -->
+    <string name="mcp_status_connected">Connected</string>
+    <string name="mcp_status_failed">Failed</string>
+    <string name="mcp_status_disabled">Disabled</string>
+    <string name="mcp_status_not_tried">Not tried yet</string>
+
+    <!-- Tool counts and the result of a test. -->
+    <plurals name="mcp_tool_count">
+        <item quantity="one">%d tool</item>
+        <item quantity="other">%d tools</item>
+    </plurals>
+    <plurals name="mcp_test_passed">
+        <item quantity="one">Connected. %d tool found.</item>
+        <item quantity="other">Connected. %d tools found.</item>
+    </plurals>
+    <string name="mcp_test_failed">Could not connect. Check the address and headers, then test again.</string>
+
+    <!-- Server detail. -->
+    <string name="mcp_detail_address">Address</string>
+    <string name="mcp_detail_tools_title">Tools</string>
+    <string name="mcp_detail_no_tools">No tools yet. Refresh tools to read them from the server.</string>
+    <string name="mcp_tool_no_description">The server gave no description.</string>
+    <string name="mcp_tool_enabled">Offer %1$s to the agent</string>
+    <string name="mcp_approval_ask">Ask</string>
+    <string name="mcp_approval_auto">Auto</string>
+    <string name="mcp_approval_note">Auto skips the question in Ask and Accept edits modes. It never skips it in Plan mode.</string>
+    <string name="mcp_refresh_tools">Refresh tools</string>
+    <string name="mcp_remove_server">Remove server</string>
+    <string name="mcp_remove_title">Remove %1$s?</string>
+    <string name="mcp_remove_body">The agent loses this server and its tools. Its saved headers are deleted from this phone.</string>
+    <string name="mcp_remove_confirm">Remove server</string>
+    <string name="mcp_remove_keep">Keep server</string>
+
+    <!-- Add server sheet. -->
+    <string name="mcp_add_title">Add MCP server</string>
+    <string name="mcp_add_name_label">Name</string>
+    <string name="mcp_add_name_rule">Lowercase letters, numbers, and hyphens. Start with a letter or number. Up to 40 characters.</string>
+    <string name="mcp_add_url_label">Address</string>
+    <string name="mcp_add_url_rule">Start with https://. Do not put a user name or password in the address.</string>
+    <string name="mcp_add_headers_title">Headers</string>
+    <string name="mcp_add_headers_rule">Optional. Up to 8 headers. Values are saved on this phone and are not shown again.</string>
+    <string name="mcp_add_header_name_label">Header name</string>
+    <string name="mcp_add_header_name_rule">Letters, numbers, and hyphens. Up to 64 characters.</string>
+    <string name="mcp_add_header_value_label">Header value</string>
+    <string name="mcp_add_header_value_rule">Up to 4 KiB, with no line breaks.</string>
+    <string name="mcp_add_header_add">Add header</string>
+    <string name="mcp_add_header_remove">Remove header</string>
+    <string name="mcp_add_reveal">Show value</string>
+    <string name="mcp_add_hide">Hide value</string>
+    <string name="mcp_add_paste">Paste</string>
+    <string name="mcp_add_saved">Server added.</string>
+    <string name="mcp_add_saved_test_failed">The server is saved, but the test failed. Check the address and headers, then test it again from the list.</string>
+    <string name="mcp_add_done">Done</string>
+
+    <!-- Failure messages. None of them repeat a header value or a core detail. -->
+    <string name="mcp_error_invalid_name">Check the server name. It must match the rule under the field.</string>
+    <string name="mcp_error_invalid_url">Check the address. It must start with https:// and hold no user name.</string>
+    <string name="mcp_error_invalid_header_name">Check the header names. Use letters, numbers, and hyphens.</string>
+    <string name="mcp_error_too_many_headers">A server takes up to 8 headers.</string>
+    <string name="mcp_error_header_too_long">A header value is larger than 4 KiB.</string>
+    <string name="mcp_error_not_found">That server no longer exists. Go back to the list.</string>
+    <string name="mcp_error_invalid_approval">That approval choice is not supported.</string>
+    <string name="mcp_error_unavailable">Could not save to this phone. Try again.</string>
+    <string name="mcp_error_test_failed">Could not connect. Check the address and headers, then test again.</string>
+</resources>

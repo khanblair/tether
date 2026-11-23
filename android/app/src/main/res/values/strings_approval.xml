@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Approval bar: the one-line summary of each kind of call. -->
+    <string name="approval_kind_command">Run command</string>
+    <string name="approval_kind_edit">Edit file</string>
+    <string name="approval_kind_delete">Delete file</string>
+    <string name="approval_kind_move">Move file</string>
+    <string name="approval_kind_network">Use the network</string>
+    <string name="approval_kind_push">Push to GitHub</string>
+    <string name="approval_kind_force_push">Force push to GitHub</string>
+    <string name="approval_kind_pull_request">Open a pull request on GitHub</string>
+    <string name="approval_kind_other">Use a tool</string>
+
+    <!-- Approval bar: the position in the waiting list, the buttons, and the expanded detail. -->
+    <string name="approval_position">%1$d of %2$d</string>
+    <string name="approval_allow">Allow</string>
+    <string name="approval_deny">Deny</string>
+    <string name="approval_always">Always allow</string>
+    <string name="approval_expand">Show the full text</string>
+    <string name="approval_collapse">Show less</string>
+    <string name="approval_push_asked_every_time">Pushes are asked every time.</string>
+
+    <!-- Always allow menu: the rule that the answer creates. -->
+    <string name="approval_always_title">Always allow</string>
+    <string name="approval_always_command">Always allow %1$s commands in this project</string>
+    <string name="approval_always_edit">Always allow edits to %1$s in this project</string>
+    <string name="approval_always_confirm">Create rule and allow</string>
+    <string name="approval_always_cancel">Cancel</string>
+    <string name="approval_always_footer">Rules can be removed in Settings, then Permissions.</string>
+
+    <!-- Deny sheet: the optional reason for the agent. -->
+    <string name="approval_deny_title">Deny and tell the agent why</string>
+    <string name="approval_deny_hint">Reason, for example: use the sandbox instead</string>
+    <plurals name="approval_reason_left">
+        <item quantity="one">%1$d character left</item>
+        <item quantity="other">%1$d characters left</item>
+    </plurals>
+    <string name="approval_deny_submit">Deny</string>
+    <string name="approval_deny_cancel">Cancel</string>
+
+    <!-- Shown in the approval screens when a call fails. -->
+    <string name="approval_failure_not_found">This approval is no longer waiting. The agent may have moved on.</string>
+    <string name="approval_failure_busy">The session is busy. Try again when the turn finishes.</string>
+    <string name="approval_failure_unavailable">The agent core is not available. Restart the app and try again.</string>
+    <string name="approval_failure_other">The answer could not be saved. Try again.</string>
+</resources>

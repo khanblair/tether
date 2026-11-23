@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- GitHub account screen -->
+    <string name="github_account_title">GitHub</string>
+    <string name="github_account_signed_in_as">Signed in as %1$s</string>
+    <string name="github_account_signed_out">Not signed in. Sign in to clone your repositories.</string>
+    <string name="github_account_name">Name</string>
+    <string name="github_account_email">Email</string>
+    <string name="github_account_scopes">Scopes: %1$s</string>
+    <string name="github_account_sign_in">Sign in with GitHub</string>
+    <string name="github_account_sign_out">Sign out</string>
+    <string name="github_account_edit_identity">Edit Git identity</string>
+    <string name="github_account_token_title">Personal access token</string>
+    <string name="github_account_token_label">Token</string>
+    <string name="github_account_token_placeholder">Paste a token</string>
+    <string name="github_account_token_hint">The token needs the repo scope. It stays on this phone.</string>
+    <string name="github_account_token_paste">Paste</string>
+    <string name="github_account_token_reveal">Show token</string>
+    <string name="github_account_token_hide">Hide token</string>
+    <string name="github_account_token_sign_in">Sign in</string>
+    <string name="github_account_token_empty">Paste a token first.</string>
+    <string name="github_account_device_unavailable">Sign in with GitHub is not set up in this build. The device flow needs a GitHub client ID, so use a personal access token instead.</string>
+
+    <!-- Device code panel -->
+    <string name="github_device_title">Enter this code on GitHub</string>
+    <string name="github_device_code_label">One-time code</string>
+    <string name="github_device_copy">Copy code</string>
+    <string name="github_device_copied">Code copied</string>
+    <string name="github_device_open">Open GitHub</string>
+    <string name="github_device_open_target">Opens %1$s</string>
+    <string name="github_device_waiting">Waiting for approval on GitHub.</string>
+    <string name="github_device_starting">Requesting a code from GitHub.</string>
+    <plurals name="github_device_expires_minutes">
+        <item quantity="one">Expires in %1$d minute</item>
+        <item quantity="other">Expires in %1$d minutes</item>
+    </plurals>
+    <plurals name="github_device_expires_seconds">
+        <item quantity="one">Expires in %1$d second</item>
+        <item quantity="other">Expires in %1$d seconds</item>
+    </plurals>
+    <string name="github_device_denied">GitHub access was denied. Get a new code to try again.</string>
+    <string name="github_device_expired">The code expired. Get a new code to try again.</string>
+    <string name="github_device_new_code">Get a new code</string>
+
+    <!-- Failures, shared by the GitHub screens -->
+    <string name="github_failure_invalid_input">That input is not valid. Check it and try again.</string>
+    <string name="github_failure_not_found">GitHub could not find that. Check the name or URL.</string>
+    <string name="github_failure_unavailable">Tether could not read its GitHub settings. Restart the app and try again.</string>
+    <string name="github_failure_not_configured">Sign in with GitHub is not set up in this build. Use a personal access token.</string>
+    <string name="github_failure_not_signed_in">Sign in to GitHub first.</string>
+    <string name="github_failure_no_grant">There is no active code. Get a new code.</string>
+    <string name="github_failure_rejected">GitHub rejected this account. Sign in again.</string>
+    <string name="github_failure_bad_response">GitHub sent a reply Tether cannot read. Try again later.</string>
+    <string name="github_failure_network">No connection to GitHub. Check the network and try again.</string>
+    <string name="github_failure_missing_scope">This token does not have the repo scope. Create a token with repo checked, then paste it again.</string>
+    <string name="github_failure_repository">The repository could not be cloned. Check the URL and your access, then try again.</string>
+
+    <!-- Git identity -->
+    <string name="github_identity_title">Git identity</string>
+    <string name="github_identity_intro">Commits made for you use this name and email. Signing in to GitHub fills them in.</string>
+    <string name="github_identity_name_label">Author name</string>
+    <string name="github_identity_name_placeholder">Ada Lovelace</string>
+    <string name="github_identity_email_label">Author email</string>
+    <string name="github_identity_email_placeholder">you@example.com</string>
+    <string name="github_identity_name_empty">Enter a name.</string>
+    <string name="github_identity_email_empty">Enter an email address.</string>
+    <string name="github_identity_forbidden">Remove angle brackets and line breaks.</string>
+    <string name="github_identity_save">Save</string>
+    <string name="github_identity_saved">Git identity saved.</string>
+
+    <!-- Clone from GitHub -->
+    <string name="github_clone_title">Clone from GitHub</string>
+    <string name="github_clone_url_label">Repository URL</string>
+    <string name="github_clone_url_placeholder">https://github.com/owner/repo</string>
+    <string name="github_clone_repos_title">Your repositories</string>
+    <string name="github_clone_search_placeholder">Search repositories</string>
+    <string name="github_clone_search_clear">Clear search</string>
+    <plurals name="github_clone_repo_count">
+        <item quantity="one">%1$d repository</item>
+        <item quantity="other">%1$d repositories</item>
+    </plurals>
+    <string name="github_clone_sign_in_first">Sign in to GitHub to see your repositories. You can still clone a public repository by URL.</string>
+    <string name="github_clone_sign_in_button">Sign in to GitHub</string>
+    <string name="github_clone_repos_empty">No repositories on this account.</string>
+    <string name="github_clone_no_match">No repository matches \"%1$s\".</string>
+    <string name="github_clone_load_more">Load more repositories</string>
+    <string name="github_clone_loading">Loading repositories.</string>
+    <string name="github_repo_selected">Selected</string>
+    <string name="github_repo_private">Private</string>
+    <string name="github_repo_public">Public</string>
+    <string name="github_repo_summary">%1$s, about %2$d MB</string>
+    <string name="github_clone_name_label">Project name</string>
+    <string name="github_clone_name_hint">Starts as the repository name.</string>
+    <string name="github_clone_history_label">History</string>
+    <string name="github_clone_history_auto">Auto</string>
+    <string name="github_clone_history_shallow">Shallow</string>
+    <string name="github_clone_history_full">Full</string>
+    <string name="github_clone_history_hint">Auto picks shallow or full from the repository size. Shallow fetches a short history. Full fetches all of it.</string>
+    <string name="github_clone_cloning_target">Cloning %1$s</string>
+    <string name="github_clone_button">Clone</string>
+    <string name="github_clone_cancel">Cancel</string>
+    <string name="github_clone_try_again">Try again</string>
+    <string name="github_clone_phase_resolving">Finding the repository</string>
+    <string name="github_clone_phase_receiving">Receiving files</string>
+    <string name="github_clone_phase_checking_out">Checking out files</string>
+    <string name="github_clone_phase_unknown">Cloning</string>
+    <string name="github_clone_received_total">%1$s MB of %2$s MB</string>
+    <string name="github_clone_received_only">%1$s MB received</string>
+    <string name="github_clone_canceled">Clone canceled. Nothing was kept.</string>
+</resources>

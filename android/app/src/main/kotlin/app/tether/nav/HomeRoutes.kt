@@ -3,6 +3,9 @@ package app.tether.nav
 import android.net.Uri
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -108,14 +111,26 @@ private fun NavGraphBuilder.projectHomeRoute(
         LaunchedEffect(home) {
             home.openedSessions.collect { nav.open("session/${Uri.encode(it)}") }
         }
+        var exporting by rememberSaveable { mutableStateOf(false) }
         ProjectHomeScreen(
             state = state,
             onBack = nav::back,
             onOpenSession = { nav.open("session/${Uri.encode(it)}") },
             onNewSession = home::startSession,
             onOpenProviders = { nav.go(Route.Providers) },
+            onExport = { exporting = true },
+            onOpenChanges = { nav.open(gitPath(id)) },
             onOpenFiles = { nav.open(filesPath(id)) },
         )
+        val project = state.project
+        if (exporting && project != null) {
+            ExportProjectHost(
+                module = module,
+                projectId = id,
+                projectName = project.name,
+                onDismiss = { exporting = false },
+            )
+        }
     }
 }
 

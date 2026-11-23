@@ -19,11 +19,15 @@ import app.tether.design.TetherTheme
 import app.tether.design.tokens.TetherSize
 import app.tether.design.tokens.TetherSpace
 import app.tether.home.formatTokens
+import app.tether.session.notices.ContextMeter
+import app.tether.session.notices.CostMeter
 
 /**
  * Always visible between the transcript and composer. The model and mode segments open their
  * sheets when [onModelClick] and [onModeClick] are set. A Bypass session gets the danger fill.
  * Usage shows tokens and cost; the context percentage is left out until the core provides it.
+ * When [onOpenBreakdown] is set, the usage becomes a [ContextMeter] and a [CostMeter] instead, with
+ * [budgetMicros] as the cost limit. Without it the line is the same as before.
  */
 @Composable
 fun StatusLine(
@@ -31,6 +35,8 @@ fun StatusLine(
     usage: SessionUsage?,
     onModelClick: (() -> Unit)?,
     onModeClick: (() -> Unit)?,
+    onOpenBreakdown: (() -> Unit)? = null,
+    budgetMicros: Long? = null,
 ) {
     val model = status?.modelId ?: stringResource(R.string.status_unknown)
     val mode = modeLabel(status?.mode)
@@ -58,7 +64,29 @@ fun StatusLine(
         StatusSegment(model, onModelClick, R.string.session_change_model)
         StatusText(" · ")
         StatusSegment(mode, onModeClick, R.string.session_change_mode)
-        StatusText(stringResource(R.string.status_usage, tokens, cost))
+        if (onOpenBreakdown != null) {
+            MeterSegments(status, usage, budgetMicros, onOpenBreakdown)
+        } else {
+            StatusText(stringResource(R.string.status_usage, tokens, cost))
+        }
+    }
+}
+
+/** The context meter and the cost meter, each with its separator. */
+@Composable
+private fun MeterSegments(
+    status: SessionStatus?,
+    usage: SessionUsage?,
+    budgetMicros: Long?,
+    onOpenBreakdown: () -> Unit,
+) {
+    status?.contextPercent?.let { percent ->
+        StatusText(" · ")
+        ContextMeter(percent = percent, onOpenBreakdown = onOpenBreakdown)
+    }
+    if (usage != null) {
+        StatusText(" · ")
+        CostMeter(costMicros = usage.costMicros, budgetMicros = budgetMicros)
     }
 }
 

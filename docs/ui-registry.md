@@ -46,7 +46,7 @@ All components start as **Planned**. Screenshot tests start with the first featu
 | `SecretField` | Masked key input with paste and reveal. Reveal asks the caller for a biometric check | `value`, `onValueChange`, `label`, `revealed`, `onToggleReveal`, `onPaste`, `hint`, `error` | empty, masked, revealed, error | P1 | Built |
 | `ToggleRow` | Setting with a switch | `title`, `description`, `checked`, `onCheckedChange` | on, off, disabled | P1 | Planned |
 | `SelectRow` | Setting that opens a picker | `title`, `value`, `onClick` | default, disabled | P1 | Planned |
-| `SegmentedControl` | Two to four exclusive options | `options`, `selected`, `onSelect` | each selected, disabled | P1 | Planned |
+| `SegmentedControl` | Two to four exclusive options | `options`, `selected`, `onSelect`, `label` | each selected, disabled | P1 | Built |
 | `Chip` | Compact selectable label | `label`, `icon`, `selected`, `onClick` | default, selected, disabled | P1 | Planned |
 
 ## Navigation and structure
@@ -64,16 +64,18 @@ All components start as **Planned**. Screenshot tests start with the first featu
 | `SessionRow` | Session: status mark, title, subtitle | `title`, `subtitle`, `state` (`SessionState`), `onClick` | each state | P1 | Built |
 | `ListRow` | Generic row: icon, title, subtitle, trailing | `title`, `subtitle`, `leading`, `trailing`, `onClick`, `enabled` | default, pressed, disabled | P1 | Built |
 | `TetherSheet` | Modal bottom sheet with a title | `title`, `onDismiss`, `content` | default | P1 | Built |
-| `ModelSheet` | Pick the session's model from the saved lists of providers with a key. App module | `models`, `current`, `onPick`, `enabled` | list, empty, disabled while a turn runs | P1 | Built |
-| `ModeSheet` | Pick one of five permission modes; Bypass asks for a biometric check. App module | `current`, `onPick`, `enabled` | each mode selected, bypass confirm, disabled while a turn runs | P1 | Built |
+| `ModelSheet` | Pick the session's model from the saved lists of providers with a key. App module | `state`, `running`, `onChoose`, `onOpenProviders`, `onDismiss` | list, empty, disabled while a turn runs | P1 | Built |
+| `ModeSheet` | Pick one of five permission modes; Bypass asks for a biometric check. App module | `state`, `running`, `onChoose`, `onConfirmBypass`, `onCancelBypass`, `onDismiss` | each mode selected, bypass confirm, disabled while a turn runs | P1 | Built |
 | `SessionMenuSheet` | Rename and Rewind for a session. App module | `onRename`, `onRewind` | default | P1 | Built |
 | `RewindSheet` | Checkpoints with three restore scopes and a confirmation for file scopes. App module | `checkpoints`, `scope`, `onRewind` | list, empty, confirm, error | P2 | Built |
-| `FilesScreen` | Lazy file tree with name and text search and an ignored-files toggle. App module | `projectId`, `onOpenFile` | loading, tree, empty folder, folder error, truncated listing, ignored shown | P2 | Built |
-| `FileViewScreen` | Read-only file text with line numbers, horizontal scroll, and Copy path. App module | `projectId`, `path` | text, truncated, binary, error | P2 | Built |
-| `TurnFooter` | The blocks under the transcript: rejected key, rate limit, other failure, stopped, and the thinking label. App module | `problem`, `onRetry`, `onOpenProviders`, `onDismiss` | each problem, stopped, thinking | P1 | Built |
+| `FilesScreen` | Lazy file tree with name and text search and an ignored-files toggle. App module | `viewModel`, `onOpenFile` | loading, tree, empty folder, folder error, truncated listing, ignored shown | P2 | Built |
+| `FileViewScreen` | Read-only file text with line numbers, horizontal scroll, and Copy path. App module | `viewModel`, `path` | text, truncated, binary, error | P2 | Built |
+| `TurnFooter` | The blocks under the transcript: rejected key, rate limit, other failure, stopped, and the thinking label. App module | `turn`, `providerName`, `onRetry`, `onOpenProviders`, `onDismissStopped` | each problem, stopped, thinking | P1 | Built |
 | `MessageActionsSheet` | Long press on a message opens it; Copy only for now. App module | `onCopy` | default | P1 | Built |
-| `OfflineBanner` | Banner under the status line while the phone has no network. App module | `visible` | hidden, visible | P1 | Built |
-| `SearchScreen` | Message search with scope chips and the match in bold. App module | `query`, `scope`, `hits` | idle, loading, hits, nothing found | P1 | Built |
+| `OfflineBanner` | Banner under the status line while the phone has no network. App module. Code name: `NetworkBanner` | none | hidden, visible | P1 | Built |
+| `SearchScreen` | Message search with scope chips and the match in bold. App module | `viewModel`, `hasProject`, `onBack`, `onOpenSession` | idle, loading, hits, nothing found | P1 | Built |
+| `ImportProjectScreen` | Import a project ZIP: pick a file, name the project, import | `state`, `onChooseFile`, `onNameChange`, `onImport`, `onCancel`, `onImported` | idle, picked, importing, done, failed, name too long, too large | P2 | Built |
+| `ExportProjectSheet` | Export a project as a ZIP, with an option to include ignored files | `state`, `onIncludeIgnoredChange`, `onChooseDestination`, `onTryAgain`, `onExported`, `onDismiss` | editing, exporting, failed | P2 | Built |
 | `TetherDialog` | Confirmation dialog | `title`, `body`, `confirm`, `dismiss`, `destructive` | default, destructive | P1 | Planned |
 | `TwoPaneScaffold` | Expanded and large layouts | `primary`, `detail`, `list` | compact, medium, expanded, large | P10 | Planned |
 
@@ -81,23 +83,23 @@ All components start as **Planned**. Screenshot tests start with the first featu
 
 | Name | Purpose | Props | States | Phase | Status |
 |---|---|---|---|---|---|
-| `Transcript` | Lazy persisted message list with prose and fenced code | `messages`, `listState` | empty, load failure, long history | P1 | Built; frame timing unverified |
+| `Transcript` | Lazy persisted message list with prose and fenced code. Code name: `TranscriptScreen` | `connection`, `sheets`, `onBack` | empty, load failure, long history | P1 | Built; frame timing unverified |
 | `UserMessage` | User's message, inset | `text`, `attachments`, `onLongPress` | default, with images, rewound (dimmed) | P1 | Planned |
 | `AgentText` | Streamed Markdown text from the agent | `blocks` (parsed in core), `streaming` | complete, streaming with caret | P1 | Planned |
 | `CodeBlock` | Highlighted code with copy | `code`, `language`, `spans` | default, long (scrolls), copied | P1 | Planned |
 | `ThinkingBlock` | Collapsed model reasoning | `text`, `durationMs` | collapsed, expanded, streaming | P1 | Planned |
-| `ToolCallCard` | One tool call with status and output | `call: ToolCallView`, `onExpand`, `onRunElsewhere` | proposed, awaiting approval, running, succeeded, failed, timed out, denied, blocked | P2 | Planned |
-| `ToolGroupCard` | Collapsed group of read-only calls | `calls`, `summary` | collapsed, expanded | P2 | Planned |
+| `ToolCallCard` | One tool call with status and output | `call: ToolCallUi`, `expanded`, `onToggle`, `onRunElsewhere` | proposed, awaiting approval, running, succeeded, failed, timed out, denied, blocked | P2 | Built |
+| `ToolGroupCard` | Collapsed group of read-only calls | `calls`, `expanded`, `onToggleGroup`, `onToggleCall` | collapsed, expanded | P2 | Built |
 | `DiffCard` | Summary of an edit batch | `summary: DiffSummary`, `quality`, `onOpen`, `onReview` | clean, warnings, blocking | P2 | Planned |
-| `PlanCard` | Plan from Plan mode | `plan`, `onRun`, `onEdit`, `onKeepPlanning` | default, editing | P3 | Planned |
-| `ChecklistPin` | Pinned todo list | `items`, `current`, `expanded` | collapsed, expanded, all done | P3 | Planned |
-| `AskUserCard` | Agent's question with options | `question`, `options`, `onAnswer` | open, answered | P3 | Planned |
-| `RunCard` | Command run with live output | `run: RunView`, `onOpenConsole` | running, succeeded, failed, killed at limit | P5 | Planned |
+| `PlanCard` | Plan from Plan mode | `plan`, `started`, `editing`, `onRun`, `onChooseMode` | default, editing | P3 | Built |
+| `ChecklistPin` | Pinned todo list | `items`, `current`, `expanded`, `onToggleExpanded`, `onDismiss` | collapsed, expanded, all done | P3 | Built |
+| `AskUserCard` | Agent's question with options | `question`, `answer`, `draft`, `onOption`, `onSend` | open, answered | P3 | Built |
+| `RunCard` | Command run with live output | `call: ToolCallUi`, `expanded`, `onToggle`, `onRunElsewhere` | running, succeeded, failed, killed at limit | P5 | Built |
 | `CiRunCard` | CI run status in the transcript | `run: CiRunView`, `onOpenGitHub` | queued, in progress, succeeded, failed, cancelled | P6 | Planned |
-| `QualityReportCard` | Findings from the quality gate | `findings`, `onOpenFinding` | none, info, warnings, blocking | P8 | Planned |
+| `QualityReportCard` | Findings from the quality gate | `report`, `onOpenFinding` | none, info, warnings, blocking | P8 | Built |
 | `ReviewCard` | Second-model review results | `review`, `onOpenFinding` | loading, findings, no findings | P8 | Planned |
 | `PrCard` | Pull request status | `pr: PrView`, `onRefresh`, `onOpen` | open with checks pending, passing, failing, merged | P4 | Planned |
-| `SystemNote` | Compaction, rewind, mode change markers | `kind`, `text` | compaction, rewind, mode change, model change | P2 | Planned |
+| `SystemNote` | Compaction, rewind, mode change markers | `kind` (`SystemNoteKind`) | compaction, rewind, mode change, model change | P2 | Built |
 | `ErrorBlock` | Inline error with action | `title`, `body`, `action` | retryable, needs settings, budget reached, interrupted | P1 | Planned |
 | `JumpToLatest` | Floating button when scrolled up | `newCount`, `onClick` | hidden, visible with count | P1 | Planned |
 
@@ -105,12 +107,14 @@ All components start as **Planned**. Screenshot tests start with the first featu
 
 | Name | Purpose | Props | States | Phase | Status |
 |---|---|---|---|---|---|
-| `Composer` | Message input and controls | `state: ComposerState`, `onSend`, `onStop`, `onAttach` | empty, typing, multiline at max, turn running (Stop), disabled offline | P1 | Planned |
+| `Composer` | Message input and controls | `modelId`, `running`, `onSend`, `onStop`, `sendBlocked`, `assist` | empty, typing, multiline at max, turn running (Stop), disabled offline | P1 | Built |
 | `ModeChip` | Shows and changes permission mode | `mode`, `onClick` | plan, ask, accept edits, auto, bypass | P3 | Planned |
 | `ModelChip` | Shows and changes model | `model`, `onClick` | default, model without tools (warning) | P1 | Planned |
 | `AttachmentRow` | Attached images and files | `attachments`, `onRemove` | none, one, many | P1 | Planned |
-| `CommandSheet` | `/` command list with filter | `commands`, `query`, `onPick` | full, filtered, no match | P3 | Planned |
-| `MentionSheet` | `@` file picker with filter | `files`, `query`, `onPick` | full, filtered, no match, loading | P3 | Planned |
+| `CommandSheet` | `/` command list with filter. The query comes from the view model | `commands`, `query`, `loaded`, `failed`, `onPick` | full, filtered, no match | P3 | Built |
+| `MentionSheet` | `@` file picker with filter. The query comes from the view model | `files`, `loading`, `failed`, `onPick` | full, filtered, no match, loading | P3 | Built |
+| `MentionChips` | Removable chips for the `@` files in the message | `paths`, `onRemove` | default | P3 | Built |
+| `ComposeAssistPanel` | Command and mention assist shown over the composer | `deps`, `text`, `cursor`, `onEdit` | command list, mention list, no match, loading | P3 | Built |
 | `VoiceInputButton` | Speech to text | `listening`, `onToggle` | idle, listening, unavailable | P1 | Planned |
 | `SendStopButton` | Send or interrupt | `running`, `enabled`, `onSend`, `onStop` | send enabled, send disabled, stop | P1 | Planned |
 
@@ -118,9 +122,9 @@ All components start as **Planned**. Screenshot tests start with the first featu
 
 | Name | Purpose | Props | States | Phase | Status |
 |---|---|---|---|---|---|
-| `ApprovalBar` | Pending approval above the composer | `request: ApprovalView`, `onAllow`, `onDeny`, `onAlways` | command, edit, network, push, expanded detail | P3 | Planned |
-| `AlwaysAllowMenu` | Shows the rule that will be created | `rules`, `onPick` | default | P3 | Planned |
-| `DenyReasonSheet` | Optional reason for denial | `onSubmit` | empty, filled | P3 | Planned |
+| `ApprovalBar` | Pending approval above the composer | `approval`, `busy`, `failure`, `onAllow`, `onDeny`, `onAlwaysAllow` | command, edit, network, push, expanded detail | P3 | Built |
+| `AlwaysAllowMenu` | Shows the rule that will be created | `rule`, `busy`, `failure`, `onConfirm`, `onCancel` | default | P3 | Built |
+| `DenyReasonSheet` | Optional reason for denial | `reason`, `busy`, `failure`, `onReasonChange`, `onSubmit`, `onCancel` | empty, filled | P3 | Built |
 | `ModePicker` | Sheet listing the five modes with one-line descriptions | `current`, `onPick` | each mode selected | P3 | Planned |
 | `BypassConfirm` | Biometric-gated confirmation | `onConfirmed` | prompt, failed | P3 | Planned |
 
@@ -128,10 +132,11 @@ All components start as **Planned**. Screenshot tests start with the first featu
 
 | Name | Purpose | Props | States | Phase | Status |
 |---|---|---|---|---|---|
-| `StatusLine` | Model, mode, context, cost | `status: StatusView`, `onSegment` | normal, bypass, offline, near context limit | P1 | Planned |
-| `ContextMeter` | Context use with breakdown link | `percent`, `onClick` | under 60%, 60 to 80%, over 80% | P1 | Planned |
-| `CostMeter` | Session cost with budget | `cost`, `budget` | no budget, under budget, near, reached | P1 | Planned |
-| `OfflineBanner` | Offline notice | `visible` | hidden, visible | P9 | Planned |
+| `StatusLine` | Model, mode, context, cost | `status`, `usage`, `budgetMicros`, `onModelClick`, `onModeClick`, `onOpenBreakdown` | normal, bypass, offline, near context limit | P1 | Built |
+| `ContextMeter` | Context use with breakdown link | `percent`, `onOpenBreakdown` | under 60%, 60 to 80%, over 80% | P1 | Built |
+| `CostMeter` | Session cost with budget | `costMicros`, `budgetMicros` | no budget, under budget, near, reached | P1 | Built |
+| `CostScreen` | Cost over a chosen range, with a chart and tables | `state`, `onSelect`, `onRetry`, `onBack` | data, load failure | P9 | Built |
+| `OfflineBanner` | Offline notice. Code name: `NetworkBanner` | none | hidden, visible | P9 | Built |
 | `ProgressLine` | Thin indeterminate progress | `active` | idle, active | P1 | Planned |
 | `RunningIndicator` | Small running icon | `label` | animated, reduced motion static | P1 | Planned |
 | `StatusBadge` | Pill with a label and an optional icon | `label`, `tone` (`BadgeTone`: neutral, tonal, success, warning, danger), `icon` | each tone | P1 | Built |
@@ -146,25 +151,27 @@ All components start as **Planned**. Screenshot tests start with the first featu
 
 | Name | Purpose | Props | States | Phase | Status |
 |---|---|---|---|---|---|
-| `DiffView` | Full diff for a batch or the working tree | `files`, `layout` (unified, split), `wrap` | unified, split, wrapped, unwrapped, empty | P2 | Planned |
+| `DiffView` | Full diff for a batch or the working tree. Unified layout only, no split view | `rows`, `wrap`, `listState` | unified, wrapped, unwrapped, empty | P2 | Built |
 | `DiffFileChips` | File list with counts | `files`, `onPick` | default, many (scrolls) | P2 | Planned |
 | `DiffHunk` | One hunk with Keep and Undo | `hunk`, `onKeep`, `onUndo` | pending, kept, undone | P2 | Planned |
-| `DiffLine` | One line with gutter and marks | `line`, `wordSpans` | context, added, removed, with finding | P2 | Planned |
+| `DiffLine` | One line with gutter and marks | `line`, `wrap` | context, added, removed, with finding | P2 | Built |
 | `InlineFinding` | Quality finding under a line | `finding` | info, warn, block | P8 | Planned |
 | `CheckpointList` | Rewind targets | `checkpoints`, `onRestore` | list, empty | P2 | Planned |
 | `RestoreOptionsSheet` | Files, conversation, or both | `onPick` | default | P2 | Planned |
 | `FileTree` | Lazy project tree | `nodes`, `onOpen` | loading, full, ignored shown | P2 | Planned |
 | `FileViewer` | Read-only highlighted file | `content`, `spans`, `onAsk` | default, large file, binary file notice | P2 | Planned |
+| `GitScreen` | Git: Changes, Branches, and History tabs with refresh and a way into the diff | `state`, `onSelectTab`, `onRefresh`, `onOpenDiff`, `onBack` | changes, branches, history, loading, failed, not a repository | P4 | Built |
+| `DiffScreen` | Diff for one file or all changes, staged or not, with a wrap toggle | `state`, `onSetStaged`, `onToggleWrap`, `onRetry`, `onBack` | wrapped, unwrapped, empty, failed, truncated | P4 | Built |
 
 ## Runs and environments
 
 | Name | Purpose | Props | States | Phase | Status |
 |---|---|---|---|---|---|
 | `RunConsole` | Full-screen run output | `run`, `onKill`, `onRunElsewhere` | running, finished, killed | P5 | Planned |
-| `ExecutorBadge` | Sandbox, Linux, or CI label | `executor` | sandbox, linux, ci | P5 | Planned |
-| `RuntimePackRow` | Sandbox runtime pack with install state | `pack`, `onInstall` | not installed, downloading, ready, failed | P5 | Planned |
-| `CiRunsList` | Recent CI runs | `runs`, `onOpen` | loading, list, empty | P6 | Planned |
-| `LinuxSetupCard` | Linux mode setup and status | `status`, `onInstall`, `onRepair`, `onRemove` | not installed, each setup step, ready, broken, unavailable in `play` | P7 | Planned |
+| `ExecutorBadge` | Sandbox, Linux, or CI label | `executor` | sandbox, linux, ci | P5 | Built |
+| `RuntimePackRow` | Sandbox runtime pack with install state | `pack`, `source`, `onInstall`, `onCancel` | not installed, downloading, ready, failed | P5 | Built |
+| `CiRunsList` | Recent CI runs | `runs`, `onOpen` | loading, list, empty | P6 | Built |
+| `LinuxSetupCard` | Linux mode setup and status | `state`, `source`, `onInstall`, `onRepair`, `onRemove` | not installed, each setup step, ready, broken, unavailable in `play` | P7 | Built |
 | `TerminalView` | Linux shell rendering | `screen` (from core `vt100`), `onInput` | default, network off badge | P7 | Planned |
 | `TerminalKeyRow` | Extra keys above the keyboard | `onKey`, `modifiers` | default, Ctrl held | P7 | Planned |
 
@@ -176,11 +183,12 @@ All components start as **Planned**. Screenshot tests start with the first featu
 | `TestConnectionButton` | Outlined full-width button that starts a key test | `state` (`TestState`), `label`, `onTest`, `enabled` | idle, testing, ok, failed, disabled | P1 | Built |
 | `ModelPicker` | Searchable model list with badges | `models`, `selected`, `onPick` | loading, list, filtered, no tools model disabled | P1 | Planned |
 | `CapabilityBadges` | Tools, images, reasoning badges | `caps` | each combination | P1 | Planned |
-| `GitHubAccountCard` | GitHub sign-in state | `state`, `onSignIn`, `onSignOut` | signed out, device code shown, signed in | P4 | Planned |
-| `DeviceCodePanel` | OAuth device code with copy and open | `code`, `url`, `onOpen` | waiting, expired | P4 | Planned |
-| `McpServerRow` | MCP server with tools | `server`, `onToggleTool` | connected, error, disabled | P9 | Planned |
-| `BudgetEditor` | Session and daily budgets | `budgets`, `onChange` | none, set | P9 | Planned |
-| `CostChart` | Bar chart of daily cost | `series`, `summary` | data, empty | P9 | Planned |
+| `GitHubAccountCard` | GitHub sign-in state | `status`, `onSignOut` | signed out, device code shown, signed in | P4 | Built |
+| `DeviceCodePanel` | OAuth device code with copy and open | `grant`, `expiresAtMillis`, `onOpen` | waiting, expired | P4 | Built |
+| `McpServerRow` | MCP server with an enable switch and a Test button. Tool toggles are on `McpServerDetailScreen` | `server`, `testing`, `testResult`, `onOpen`, `onToggle`, `onTest` | connected, error, disabled | P9 | Built |
+| `BudgetEditor` | Session and daily budgets | `daily`, `session`, `canSave`, `saving`, `onDailyChange`, `onSessionChange`, `onSave` | none, set | P9 | Built |
+| `BudgetsScreen` | Session and daily budget limits with save and remove | `state`, `onSave`, `onRetry`, `onBack` (plus the field callbacks) | default, saving, load failure | P9 | Built |
+| `CostChart` | Bar chart of daily cost | `days` | data, empty | P9 | Built |
 | `BatteryGuidance` | OEM-specific battery steps | `oem`, `onOpenSettings` | per OEM, generic | P9 | Planned |
 
 ## Feedback
@@ -196,7 +204,7 @@ All components start as **Planned**. Screenshot tests start with the first featu
 
 | Name | Purpose | Props | States | Phase | Status |
 |---|---|---|---|---|---|
-| `OnboardingPage` | One onboarding step | `title`, `body`, `primary`, `onSkip` | default | P10 | Planned |
+| `OnboardingPage` | One onboarding step | `step`, `onBack`, `content` | default | P10 | Built |
 | `ProviderQuickAdd` | Add the first key | `providers`, `onAdd` | empty, one added | P10 | Planned |
 | `ProjectQuickStart` | Clone, new, or import | `onPick` | default, GitHub not signed in | P10 | Planned |
 

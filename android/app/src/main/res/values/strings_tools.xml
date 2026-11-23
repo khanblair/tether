@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tool status labels. The glyph and the label carry the meaning, not the color. -->
+    <string name="tools_status_proposed">Proposed</string>
+    <string name="tools_status_allowed">Allowed</string>
+    <string name="tools_status_needs_approval">Needs approval</string>
+    <string name="tools_status_running">Running</string>
+    <string name="tools_status_done">Done</string>
+    <string name="tools_status_failed">Failed</string>
+    <string name="tools_status_timed_out">Timed out</string>
+    <string name="tools_status_denied">Denied</string>
+    <string name="tools_status_blocked">Blocked</string>
+    <string name="tools_status_cancelled">Cancelled</string>
+
+    <!-- Tool titles: a verb, then the target. Imperative, present, and past forms. -->
+    <string name="tools_verb_read_imperative">Read</string>
+    <string name="tools_verb_read_present">Reading</string>
+    <string name="tools_verb_read_past">Read</string>
+    <string name="tools_verb_write_imperative">Write</string>
+    <string name="tools_verb_write_present">Writing</string>
+    <string name="tools_verb_write_past">Wrote</string>
+    <string name="tools_verb_edit_imperative">Edit</string>
+    <string name="tools_verb_edit_present">Editing</string>
+    <string name="tools_verb_edit_past">Edited</string>
+    <string name="tools_verb_delete_imperative">Delete</string>
+    <string name="tools_verb_delete_present">Deleting</string>
+    <string name="tools_verb_delete_past">Deleted</string>
+    <string name="tools_verb_list_imperative">List</string>
+    <string name="tools_verb_list_present">Listing</string>
+    <string name="tools_verb_list_past">Listed</string>
+    <string name="tools_verb_search_imperative">Search</string>
+    <string name="tools_verb_search_present">Searching</string>
+    <string name="tools_verb_search_past">Searched</string>
+    <string name="tools_verb_run_imperative">Run</string>
+    <string name="tools_verb_run_present">Running</string>
+    <string name="tools_verb_run_past">Ran</string>
+    <string name="tools_verb_ci_run_imperative">Run CI</string>
+    <string name="tools_verb_ci_run_present">Running CI</string>
+    <string name="tools_verb_ci_run_past">Ran CI</string>
+    <string name="tools_verb_unknown_imperative">Use</string>
+    <string name="tools_verb_unknown_present">Using</string>
+    <string name="tools_verb_unknown_past">Used</string>
+    <string name="tools_title_git_status">Git status</string>
+    <string name="tools_title_git_diff">Git diff</string>
+    <string name="tools_title_git_log">Git log</string>
+    <string name="tools_title_git_commit">Git commit</string>
+    <string name="tools_title_git_push">Git push</string>
+    <string name="tools_title_git_branch">Git branch</string>
+    <string name="tools_title_pr_create">Pull request</string>
+    <string name="tools_title_pr_status">Pull request status</string>
+    <string name="tools_title_ci_logs">CI logs</string>
+
+    <!-- Tool output. -->
+    <string name="tools_output_truncated">Showing the end of the output</string>
+    <string name="tools_output_none">No output yet</string>
+    <string name="tools_output_expand">Show output</string>
+    <string name="tools_output_collapse">Hide output</string>
+    <string name="tools_state_expanded">Expanded</string>
+    <string name="tools_state_collapsed">Collapsed</string>
+    <string name="tools_show_all">Show all</string>
+    <string name="tools_show_less">Show less</string>
+    <plurals name="tools_lines_hidden">
+        <item quantity="one">%d line hidden</item>
+        <item quantity="other">%d lines hidden</item>
+    </plurals>
+
+    <!-- Executor badges on run calls. -->
+    <string name="tools_executor_sandbox">Sandbox</string>
+    <string name="tools_executor_linux">Linux</string>
+    <string name="tools_executor_ci">CI</string>
+    <string name="tools_run_elsewhere">Run elsewhere</string>
+
+    <!-- The tap on a group header shows or hides its calls, not their output. -->
+    <string name="tools_group_expand">Show calls</string>
+    <string name="tools_group_collapse">Hide calls</string>
+
+    <!-- Collapsed groups of read-only calls. -->
+    <plurals name="tools_group_files">
+        <item quantity="one">Read %d file</item>
+        <item quantity="other">Read %d files</item>
+    </plurals>
+    <plurals name="tools_group_folders">
+        <item quantity="one">Listed %d folder</item>
+        <item quantity="other">Listed %d folders</item>
+    </plurals>
+    <plurals name="tools_group_searches">
+        <item quantity="one">Searched %d time</item>
+        <item quantity="other">Searched %d times</item>
+    </plurals>
+    <plurals name="tools_group_checks">
+        <item quantity="one">Checked git or CI %d time</item>
+        <item quantity="other">Checked git or CI %d times</item>
+    </plurals>
+    <string name="tools_group_separator">", "</string>
+
+    <!-- Quality report. -->
+    <plurals name="tools_count_warn">
+        <item quantity="one">%d warning</item>
+        <item quantity="other">%d warnings</item>
+    </plurals>
+    <plurals name="tools_count_block">
+        <item quantity="other">%d blocking</item>
+    </plurals>
+    <plurals name="tools_count_info">
+        <item quantity="one">%d note</item>
+        <item quantity="other">%d notes</item>
+    </plurals>
+    <plurals name="tools_skipped_files">
+        <item quantity="one">%d file was too large to check</item>
+        <item quantity="other">%d files were too large to check</item>
+    </plurals>
+    <string name="tools_finding_block">Blocking</string>
+    <string name="tools_finding_warn">Warning</string>
+    <string name="tools_finding_info">Note</string>
+
+    <!-- System notes in the transcript. -->
+    <string name="tools_note_compacted">Older messages were summarized. %1$s to %2$s tokens</string>
+    <string name="tools_note_rewound">Rewound to an earlier checkpoint</string>
+    <string name="tools_note_mode">Permission mode changed to %1$s</string>
+    <string name="tools_note_model">Model changed to %1$s</string>
+</resources>

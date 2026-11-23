@@ -2,13 +2,17 @@ package app.tether.di
 
 import android.content.Context
 import app.tether.core.CoreClient
+import app.tether.core.generated.CiRuntime
 import app.tether.core.generated.ProjectRuntime
 import app.tether.core.generated.ProviderSettings
+import app.tether.core.generated.SessionRuntime
 import app.tether.core.generated.Updater
 import app.tether.core.keystoreSecretVault
 import app.tether.design.ThemeMode
 import app.tether.files.FilesGateway
 import app.tether.files.createFilesGateway
+import app.tether.git.GitGateway
+import app.tether.git.createGitGateway
 import app.tether.home.CoreProjectGateway
 import app.tether.home.HomeSources
 import app.tether.home.ProjectGateway
@@ -16,15 +20,26 @@ import app.tether.home.createHomeSources
 import app.tether.memory.MemoryAreaGateways
 import app.tether.memory.createMemoryAreaGateways
 import app.tether.messages.AppMessages
+import app.tether.projectarchive.ProjectArchiveGateway
+import app.tether.projectarchive.createProjectArchiveGateway
 import app.tether.providers.CoreProviderGateway
 import app.tether.providers.ProviderGateway
 import app.tether.session.CoreSessionGateway
+import app.tether.session.QuietEvents
 import app.tether.session.SessionGateway
 import app.tether.session.SessionSettingsGateway
 import app.tether.session.SessionStarter
 import app.tether.session.createSessionSettingsGateway
 import app.tether.settings.PrefsSettingsStore
+import app.tether.settings.budgets.BudgetsGateway
+import app.tether.settings.budgets.createBudgetsGateway
 import app.tether.settings.createProjectDefaultsGateway
+import app.tether.settings.executors.CoreExecutorsGateway
+import app.tether.settings.executors.ExecutorsGateway
+import app.tether.settings.github.GithubGateway
+import app.tether.settings.github.createGithubGateway
+import app.tether.settings.mcp.McpGateway
+import app.tether.settings.mcp.createMcpGateway
 import app.tether.share.ShareInbox
 import app.tether.theme.PrefsThemeStore
 import app.tether.theme.ThemeController
@@ -68,6 +83,33 @@ class AppModule(
 
     /** Memory, skills, and vault for the Skills and memory screens. */
     val memoryArea: MemoryAreaGateways = createMemoryAreaGateways(context.filesDir)
+
+    /** GitHub sign-in, the Git identity, and cloning. The runtime opens on the first call. */
+    val githubGateway: GithubGateway by lazy {
+        createGithubGateway(databasePath, workspacesRoot, vault)
+    }
+
+    /** Runtime packs, Linux mode, project network, and CI runs. Both runtimes open on first use. */
+    val executorsGateway: ExecutorsGateway by lazy {
+        CoreExecutorsGateway(
+            sessionRuntime = lazy { SessionRuntime(databasePath, vault, QuietEvents) },
+            ciRuntime = lazy { CiRuntime(databasePath, workspacesRoot, vault) },
+        )
+    }
+
+    /** Budget limits and the cost summary. The runtime opens on the first call. */
+    val budgetsGateway: BudgetsGateway by lazy { createBudgetsGateway(databasePath) }
+
+    /** Importing a project from a ZIP and exporting one. The runtime opens on the first call. */
+    val projectArchiveGateway: ProjectArchiveGateway by lazy {
+        createProjectArchiveGateway(databasePath, workspacesRoot)
+    }
+
+    /** Git status, branches, history, and diffs of a project. The runtime opens on first use. */
+    val gitGateway: GitGateway by lazy { createGitGateway(databasePath, workspacesRoot, vault) }
+
+    /** MCP servers: the list, a server's tools, and adding one. */
+    val mcpGateway: McpGateway by lazy { createMcpGateway(databasePath, vault) }
 
     /** Browsing, previewing, and searching a project's files. */
     val filesGateway: FilesGateway by lazy { createFilesGateway(databasePath, workspacesRoot) }

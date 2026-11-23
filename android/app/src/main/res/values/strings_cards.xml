@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Pinned checklist: one line when collapsed, every item when expanded. -->
+    <string name="cards_checklist_progress" tools:ignore="PluralsCandidate">%1$d of %2$d done</string>
+    <string name="cards_checklist_all_done">All done</string>
+    <string name="cards_checklist_expand">Show checklist</string>
+    <string name="cards_checklist_collapse">Hide checklist</string>
+    <string name="cards_checklist_dismiss">Dismiss checklist</string>
+    <string name="cards_checklist_status_pending">Pending</string>
+    <string name="cards_checklist_status_running">In progress</string>
+    <string name="cards_checklist_status_done">Done</string>
+
+    <!-- Question card: the agent asks, and the user picks an option or types an answer. -->
+    <string name="cards_ask_title">The agent asks</string>
+    <string name="cards_ask_hint">Type your answer</string>
+    <string name="cards_ask_send">Send</string>
+    <string name="cards_ask_answered">Your answer</string>
+    <string name="cards_ask_counter" tools:ignore="PluralsCandidate">%1$d of %2$d characters</string>
+
+    <!-- Plan card: the plan from Plan mode, and what to do with it. -->
+    <string name="cards_plan_title">Plan</string>
+    <string name="cards_plan_started">Plan started</string>
+    <string name="cards_plan_run">Run this plan</string>
+    <string name="cards_plan_edit">Edit plan</string>
+    <string name="cards_plan_keep">Keep planning</string>
+    <string name="cards_plan_choose_mode">Run the plan in</string>
+    <string name="cards_plan_mode_ask">Ask</string>
+    <string name="cards_plan_mode_ask_desc">Asks before every edit and every command.</string>
+    <string name="cards_plan_mode_accept_edits">Accept edits</string>
+    <string name="cards_plan_mode_accept_edits_desc">Edits files without asking. Asks before commands.</string>
+    <string name="cards_plan_mode_auto">Auto</string>
+    <string name="cards_plan_mode_auto_desc">Runs allowed commands without asking. Asks about anything new.</string>
+    <string name="cards_plan_files">Files</string>
+    <plurals name="cards_plan_files_count">
+        <item quantity="one">%d file</item>
+        <item quantity="other">%d files</item>
+    </plurals>
+    <string name="cards_plan_commands">Commands</string>
+    <plurals name="cards_plan_commands_count">
+        <item quantity="one">%d command</item>
+        <item quantity="other">%d commands</item>
+    </plurals>
+    <string name="cards_plan_questions">Open questions</string>
+    <plurals name="cards_plan_questions_count">
+        <item quantity="one">%d question</item>
+        <item quantity="other">%d questions</item>
+    </plurals>
+    <string name="cards_plan_edit_label">Plan text</string>
+    <string name="cards_plan_save">Save</string>
+    <string name="cards_action_cancel">Cancel</string>
+
+    <!-- Failures of the question and plan cards. -->
+    <string name="cards_error_not_found">This item is no longer waiting. Refresh the session.</string>
+    <string name="cards_error_busy">The session is busy. Try again when the current step ends.</string>
+    <string name="cards_error_unavailable">The agent core is not available. Check the provider key in Settings.</string>
+    <string name="cards_error_other">That did not go through. Try again.</string>
+</resources>

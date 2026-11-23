@@ -40,6 +40,8 @@ fun ProjectHomeScreen(
     onOpenSession: (String) -> Unit,
     onNewSession: () -> Unit,
     onOpenProviders: () -> Unit,
+    onExport: () -> Unit,
+    onOpenChanges: () -> Unit,
     onOpenFiles: () -> Unit = {},
 ) {
     Scaffold(
@@ -71,6 +73,8 @@ fun ProjectHomeScreen(
             state = state,
             onOpenSession = onOpenSession,
             onOpenFiles = onOpenFiles,
+            onExport = onExport,
+            onOpenChanges = onOpenChanges,
             modifier = Modifier.fillMaxSize().padding(padding).padding(TetherSpace.space4),
         )
     }
@@ -81,6 +85,8 @@ private fun ProjectHomeBody(
     state: ProjectHomeUiState,
     onOpenSession: (String) -> Unit,
     onOpenFiles: () -> Unit,
+    onExport: () -> Unit,
+    onOpenChanges: () -> Unit,
     modifier: Modifier,
 ) {
     val project = state.project
@@ -115,14 +121,18 @@ private fun ProjectHomeBody(
             label = stringResource(R.string.project_home_executor),
             value = executorName(project.executor),
         )
-        FilesRow(onOpenFiles = onOpenFiles)
+        ProjectLinks(onOpenFiles = onOpenFiles, onOpenChanges = onOpenChanges, onExport = onExport)
         SessionList(sessions = state.sessions, onOpenSession = onOpenSession)
     }
 }
 
-/** The row that opens the project's files. The agent reads the same files. */
+/** The rows that open the project's files and export it. The agent reads the same files. */
 @Composable
-private fun FilesRow(onOpenFiles: () -> Unit) {
+private fun ProjectLinks(
+    onOpenFiles: () -> Unit,
+    onOpenChanges: () -> Unit,
+    onExport: () -> Unit,
+) {
     ListGroup {
         ListRow(
             title = stringResource(R.string.files_home_title),
@@ -142,6 +152,39 @@ private fun FilesRow(onOpenFiles: () -> Unit) {
                 )
             },
             onClick = onOpenFiles,
+        )
+        HorizontalDivider(thickness = TetherBorder.hairline, color = TetherTheme.colors.line)
+        ListRow(
+            title = stringResource(R.string.git_home_title),
+            subtitle = stringResource(R.string.git_home_body),
+            leading = {
+                TetherIcon(
+                    icon = TetherIcons.GitBranch,
+                    contentDescription = null,
+                    tint = TetherTheme.colors.text2,
+                )
+            },
+            trailing = {
+                TetherIcon(
+                    icon = TetherIcons.ChevronRight,
+                    contentDescription = null,
+                    tint = TetherTheme.colors.text3,
+                )
+            },
+            onClick = onOpenChanges,
+        )
+        HorizontalDivider(thickness = TetherBorder.hairline, color = TetherTheme.colors.line)
+        ListRow(
+            title = stringResource(R.string.archive_home_export_title),
+            subtitle = stringResource(R.string.archive_home_export_body),
+            leading = {
+                TetherIcon(
+                    icon = TetherIcons.Upload,
+                    contentDescription = null,
+                    tint = TetherTheme.colors.text2,
+                )
+            },
+            onClick = onExport,
         )
     }
 }

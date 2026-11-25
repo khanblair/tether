@@ -24,7 +24,7 @@ blake3 = "1.8.7"
 sha2 = "0.10"
 zstd = "0.14.4"
 wasmtime = { version = "50", default-features = false, features = ["runtime", "cranelift"] }
-wasmtime-wasi = { version = "50", default-features = false, features = ["p1"] }
+wasmtime-wasi = { version = "51", default-features = false, features = ["p1"] }
 ed25519-dalek = { version = "3", default-features = false }
 wat = "1"
 html2text = "0.16"

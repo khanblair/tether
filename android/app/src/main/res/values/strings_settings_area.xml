@@ -51,6 +51,7 @@
     <string name="settings_area_permissions_failed">Could not read the saved project modes. Try again later.</string>
     <string name="settings_area_permissions_defaults">Default for new sessions</string>
     <string name="settings_area_default_mode">Default mode</string>
+    <string name="settings_area_bypass_default_note">Bypass is turned on inside a session, with your biometric, and ends with it.</string>
     <string name="settings_area_saved_rules">Saved rules</string>
     <string name="settings_area_saved_rules_na">Not available yet. Needs approval rules, which ship in phase P3.</string>
     <string name="settings_area_push_guard">Push guard</string>

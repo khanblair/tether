@@ -9,6 +9,7 @@ mod config;
 mod context;
 mod executors;
 mod files;
+mod files_bytes;
 mod git;
 mod git_support;
 mod git_types;
@@ -56,6 +57,7 @@ pub use files::{
     DirListingView, FileEntryView, FilePreviewView, FileTextHitView, FilesRuntime,
     FilesRuntimeError,
 };
+pub use files_bytes::FileBytesView;
 pub use git::GitRuntime;
 pub use git_types::{
     CloneProgressView, GitBranchView, GitCommitView, GitDiffSpecView, GitRuntimeError,

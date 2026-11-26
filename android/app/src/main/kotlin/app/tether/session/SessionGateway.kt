@@ -40,6 +40,12 @@ interface SessionGateway {
         mode: PermissionModeView,
     )
 
+    /** Sets the thinking effort of [sessionId], or clears it with null. Used after creation. */
+    fun setEffort(
+        sessionId: String,
+        effort: ThinkingEffort?,
+    )
+
     /** Renames [sessionId] to [title]. The caller trims the title and never sends a blank one. */
     fun rename(
         sessionId: String,
@@ -81,6 +87,11 @@ class CoreSessionGateway(
         sessionId: String,
         mode: PermissionModeView,
     ) = runtime.setSessionMode(sessionId, mode)
+
+    override fun setEffort(
+        sessionId: String,
+        effort: ThinkingEffort?,
+    ) = coreCall { runtime.setSessionReasoning(sessionId, effort?.toCore()) }
 
     override fun rename(
         sessionId: String,

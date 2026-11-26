@@ -43,6 +43,7 @@ fun DashboardScreen(
     onOpenProjects: () -> Unit,
     onOpenProviders: () -> Unit,
     onNewProject: (NewProjectChoice) -> Unit,
+    onRenameSession: (SessionSummary) -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var sheetOpen by rememberSaveable { mutableStateOf(false) }
@@ -69,6 +70,7 @@ fun DashboardScreen(
             onOpenProjects = onOpenProjects,
             onOpenProviders = onOpenProviders,
             onNewProjectClick = { sheetOpen = true },
+            onRenameSession = onRenameSession,
             modifier = Modifier.padding(padding),
         )
     }
@@ -129,6 +131,7 @@ private fun DashboardBody(
     onOpenProjects: () -> Unit,
     onOpenProviders: () -> Unit,
     onNewProjectClick: () -> Unit,
+    onRenameSession: (SessionSummary) -> Unit,
     modifier: Modifier,
 ) {
     LazyColumn(
@@ -150,6 +153,7 @@ private fun DashboardBody(
                     onOpenAttention = onOpenAttention,
                     onOpenSession = onOpenSession,
                     onOpenAbout = onOpenAbout,
+                    onRenameSession = onRenameSession,
                 )
             }
         }

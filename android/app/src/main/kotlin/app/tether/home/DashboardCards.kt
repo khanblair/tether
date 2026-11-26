@@ -32,6 +32,7 @@ import app.tether.design.components.UsageBarChart
 import app.tether.design.tokens.TetherBorder
 import app.tether.design.tokens.TetherSize
 import app.tether.providers.providerNameRes
+import app.tether.session.sessionTitleText
 
 /** How many attention items the Needs you card lists. */
 private const val NEEDS_ROWS = 3
@@ -43,6 +44,7 @@ internal fun NeedsCard(
     onOpenAttention: () -> Unit,
     onOpenSession: (String) -> Unit,
     onOpenAbout: () -> Unit,
+    onRenameSession: (SessionSummary) -> Unit = {},
 ) {
     DashboardCard(
         title = stringResource(R.string.dashboard_needs_title),
@@ -67,10 +69,11 @@ internal fun NeedsCard(
             state.running.forEachIndexed { index, session ->
                 if (index > 0) RowDivider()
                 SessionRow(
-                    title = session.title,
+                    title = sessionTitleText(session.title),
                     subtitle = stringResource(R.string.drawer_state_running),
                     state = SessionState.Running,
                     onClick = { onOpenSession(session.id) },
+                    onLongClick = { onRenameSession(session) },
                 )
             }
         }

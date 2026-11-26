@@ -29,6 +29,7 @@ import app.tether.design.components.TetherTopBar
 import app.tether.design.tokens.TetherBorder
 import app.tether.design.tokens.TetherSpace
 import app.tether.providers.ConnectionMessage
+import app.tether.session.sessionTitleText
 import app.tether.shell.BackButton
 
 /**
@@ -46,6 +47,7 @@ fun ProjectHomeScreen(
     onExport: () -> Unit,
     onOpenChanges: () -> Unit,
     onOpenFiles: () -> Unit = {},
+    onRenameSession: (SessionSummary) -> Unit = {},
 ) {
     Scaffold(
         containerColor = TetherTheme.colors.bg,
@@ -81,6 +83,7 @@ fun ProjectHomeScreen(
         ProjectHomeBody(
             state = state,
             onOpenSession = onOpenSession,
+            onRenameSession = onRenameSession,
             onOpenFiles = onOpenFiles,
             onExport = onExport,
             onOpenChanges = onOpenChanges,
@@ -93,6 +96,7 @@ fun ProjectHomeScreen(
 private fun ProjectHomeBody(
     state: ProjectHomeUiState,
     onOpenSession: (String) -> Unit,
+    onRenameSession: (SessionSummary) -> Unit,
     onOpenFiles: () -> Unit,
     onExport: () -> Unit,
     onOpenChanges: () -> Unit,
@@ -131,7 +135,11 @@ private fun ProjectHomeBody(
             value = executorName(project.executor),
         )
         ProjectLinks(onOpenFiles = onOpenFiles, onOpenChanges = onOpenChanges, onExport = onExport)
-        SessionList(sessions = state.sessions, onOpenSession = onOpenSession)
+        SessionList(
+            sessions = state.sessions,
+            onOpenSession = onOpenSession,
+            onRenameSession = onRenameSession,
+        )
     }
 }
 
@@ -203,6 +211,7 @@ private fun ProjectLinks(
 private fun SessionList(
     sessions: List<SessionSummary>,
     onOpenSession: (String) -> Unit,
+    onRenameSession: (SessionSummary) -> Unit,
 ) {
     Text(
         text = stringResource(R.string.project_home_sessions_title),
@@ -226,10 +235,11 @@ private fun SessionList(
                 )
             }
             SessionRow(
-                title = session.title,
+                title = sessionTitleText(session.title),
                 subtitle = sessionSubtitle(session.state),
                 state = session.state,
                 onClick = { onOpenSession(session.id) },
+                onLongClick = { onRenameSession(session) },
             )
         }
     }

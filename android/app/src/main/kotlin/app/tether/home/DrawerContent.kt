@@ -47,6 +47,7 @@ import app.tether.design.tokens.TetherBorder
 import app.tether.design.tokens.TetherSize
 import app.tether.design.tokens.TetherSpace
 import app.tether.nav.Route
+import app.tether.session.sessionTitleText
 
 /** A top-level destination in the drawer. */
 private data class Destination(
@@ -80,6 +81,7 @@ fun HomeDrawer(
     onToggleTheme: () -> Unit,
     onDestination: (Route) -> Unit,
     onOpenSession: (String) -> Unit,
+    onRenameSession: (SessionSummary) -> Unit,
     onNewSession: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenSkills: () -> Unit,
@@ -101,6 +103,7 @@ fun HomeDrawer(
                 attentionCount = attentionCount,
                 onDestination = onDestination,
                 onOpenSession = onOpenSession,
+                onRenameSession = onRenameSession,
                 onSearchMessages = onSearchMessages,
                 now = now,
                 modifier = Modifier.weight(1f),
@@ -163,6 +166,7 @@ private fun DrawerList(
     attentionCount: Int,
     onDestination: (Route) -> Unit,
     onOpenSession: (String) -> Unit,
+    onRenameSession: (SessionSummary) -> Unit,
     onSearchMessages: ((String) -> Unit)?,
     now: Long,
     modifier: Modifier,
@@ -202,10 +206,11 @@ private fun DrawerList(
             item(key = "group-$project") { SectionTitle(text = project) }
             items(rows, key = { it.id }) { session ->
                 SessionRow(
-                    title = session.title,
+                    title = sessionTitleText(session.title),
                     subtitle = sessionSubtitle(session, now),
                     state = session.state,
                     onClick = { onOpenSession(session.id) },
+                    onLongClick = { onRenameSession(session) },
                 )
             }
         }

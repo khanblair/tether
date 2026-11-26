@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -42,7 +43,9 @@ import app.tether.di.AppModule
 import app.tether.home.AttentionViewModel
 import app.tether.home.HomeDrawer
 import app.tether.home.ProjectSummary
+import app.tether.home.SessionRenameHost
 import app.tether.home.SessionSummary
+import app.tether.home.sessionRenameViewModel
 import app.tether.session.SessionConnection
 import app.tether.session.SessionSheetEnv
 import app.tether.session.SessionUnavailableScreen
@@ -285,11 +288,17 @@ private fun DrawerHost(
     attentionCount: Int,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
-    val sessions by produceState(emptyList<SessionSummary>(), drawerState.currentValue) {
+    val reloads = remember { mutableIntStateOf(0) }
+    val sessions by produceState(
+        emptyList<SessionSummary>(),
+        drawerState.currentValue,
+        reloads.intValue,
+    ) {
         value = withContext(Dispatchers.IO) { module.home.sessions.sessions() }
     }
     val themeMode by module.themeMode.collectAsStateWithLifecycle()
     val now = remember(drawerState.currentValue) { System.currentTimeMillis() }
+    val rename = sessionRenameViewModel(module.sessionGateway)
     HomeDrawer(
         sessions = sessions,
         query = query,
@@ -300,12 +309,14 @@ private fun DrawerHost(
         onToggleTheme = { module.theme.cycle() },
         onDestination = { route -> nav.closeThen { nav.goTopLevel(route) } },
         onOpenSession = { nav.closeThen { nav.open("session/${Uri.encode(it)}") } },
+        onRenameSession = { rename.start(it.id, it.title) },
         onNewSession = { nav.closeThen { nav.go(Route.NewSession) } },
         onOpenSettings = { nav.closeThen { nav.go(Route.Settings) } },
         onOpenSkills = { nav.closeThen { nav.open(SKILLS_MEMORY_ROUTE) } },
         now = now,
         onSearchMessages = { query -> nav.closeThen { nav.open(searchPath(query)) } },
     )
+    SessionRenameHost(rename = rename, onRenamed = { reloads.intValue++ })
 }
 
 private const val TAG = "Tether"

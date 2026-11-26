@@ -18,6 +18,9 @@ class FakeSessionGateway : SessionGateway {
     /** Throws this from [setMode], and from nothing else. Set it to test a failed mode call. */
     var setModeError: Exception? = null
 
+    /** Throws this from [setEffort], and from nothing else. Set it to test a failed effort call. */
+    var setEffortError: Exception? = null
+
     /** The id [createSession] returns. */
     var nextSessionId = "new-session"
 
@@ -74,6 +77,7 @@ class FakeSessionGateway : SessionGateway {
         sessionId: String,
         effort: ThinkingEffort?,
     ) {
+        setEffortError?.let { throw it }
         efforts += sessionId to effort
     }
 }

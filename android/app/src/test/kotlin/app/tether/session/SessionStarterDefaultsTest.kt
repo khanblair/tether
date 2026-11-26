@@ -195,6 +195,41 @@ class SessionStarterDefaultsTest {
     }
 
     @Test
+    fun the_app_effort_is_applied_to_the_new_session() {
+        providers.keys[ProviderView.ANTHROPIC] = "key"
+        sessions.models[ProviderView.ANTHROPIC] = "first-saved"
+        appDefault.effort = ThinkingEffort.MEDIUM
+
+        starter.start("p1")
+
+        assertEquals(listOf("new-session" to ThinkingEffort.MEDIUM), sessions.efforts)
+    }
+
+    @Test
+    fun a_null_app_effort_is_the_model_default_and_makes_no_effort_call() {
+        providers.keys[ProviderView.ANTHROPIC] = "key"
+        sessions.models[ProviderView.ANTHROPIC] = "first-saved"
+        appDefault.effort = null
+
+        starter.start("p1")
+
+        assertTrue(sessions.efforts.isEmpty())
+    }
+
+    @Test
+    fun a_refused_effort_call_still_starts_the_session() {
+        providers.keys[ProviderView.ANTHROPIC] = "key"
+        sessions.models[ProviderView.ANTHROPIC] = "first-saved"
+        appDefault.effort = ThinkingEffort.HIGH
+        sessions.setEffortError = IllegalStateException("core refused the effort")
+
+        val result = starter.start("p1")
+
+        assertEquals(StartResult.Started("new-session"), result)
+        assertEquals(1, sessions.created.size)
+    }
+
+    @Test
     fun a_project_default_that_cannot_be_read_gives_failed_and_creates_nothing() {
         providers.keys[ProviderView.ANTHROPIC] = "key"
         projectDefaults.failLoad = true
@@ -208,10 +243,13 @@ class SessionStarterDefaultsTest {
     private class FixedAppDefault : app.tether.settings.AppDefaultSource {
         var model: DefaultModel? = null
         var mode: SessionMode? = null
+        var effort: ThinkingEffort? = null
 
         override fun defaultModel(): DefaultModel? = model
 
         override fun savedDefaultMode(): SessionMode? = mode
+
+        override fun savedDefaultEffort(): ThinkingEffort? = effort
     }
 
     private class MapProjectDefaults : ProjectDefaultsGateway {

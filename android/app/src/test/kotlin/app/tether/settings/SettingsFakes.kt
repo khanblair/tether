@@ -2,6 +2,7 @@ package app.tether.settings
 
 import app.tether.core.generated.ProviderView
 import app.tether.session.SessionMode
+import app.tether.session.ThinkingEffort
 
 /** Settings kept in memory. Every write is visible to the test. */
 class FakeSettingsStore(
@@ -10,6 +11,7 @@ class FakeSettingsStore(
     var mode: SessionMode = SessionMode.ACCEPT_EDITS,
     var lock: Boolean = false,
     var finished: Boolean = false,
+    var effort: ThinkingEffort? = ThinkingEffort.MEDIUM,
 ) : SettingsStore {
     override fun profileName(): String = name
 
@@ -29,6 +31,14 @@ class FakeSettingsStore(
 
     override fun saveDefaultMode(mode: SessionMode) {
         this.mode = mode
+    }
+
+    override fun defaultEffort(): ThinkingEffort? = effort
+
+    override fun savedDefaultEffort(): ThinkingEffort? = effort
+
+    override fun saveDefaultEffort(effort: ThinkingEffort?) {
+        this.effort = effort
     }
 
     override fun onboarded(): Boolean = finished

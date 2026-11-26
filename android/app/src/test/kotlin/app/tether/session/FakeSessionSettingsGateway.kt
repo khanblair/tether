@@ -22,6 +22,9 @@ class FakeSessionSettingsGateway(
     var transcriptHits = emptyList<SearchHit>()
     val calls = mutableListOf<String>()
 
+    /** Whether the fake session has Bypass on. */
+    var bypass = false
+
     /** Throws this from the next call of any kind, then clears itself. */
     var failNext: Exception? = null
 
@@ -66,6 +69,21 @@ class FakeSessionSettingsGateway(
     ) {
         record("rename:$title")
         session = session.copy(title = title)
+    }
+
+    override fun bypassActive(sessionId: String): Boolean {
+        record("bypassActive")
+        return bypass
+    }
+
+    override fun enableBypass(sessionId: String) {
+        record("enableBypass")
+        bypass = true
+    }
+
+    override fun disableBypass(sessionId: String) {
+        record("disableBypass")
+        bypass = false
     }
 
     override fun usage(sessionId: String): SessionUsage {

@@ -20,7 +20,16 @@ internal data class TranscriptSnapshot(
     val status: SessionStatus,
     val details: SessionDetails,
     val usage: SessionUsage,
+    /** Whether Bypass is on in the open session. A failed read counts as off. */
+    val bypass: Boolean,
 )
+
+/** The status the line shows: the saved mode, or Bypass while it is on in the open session. */
+internal fun SessionStatus.shownWith(bypass: Boolean): SessionStatus =
+    if (bypass) copy(mode = BYPASS_STATUS_MODE) else this
+
+/** The status mode name the status line reads as Bypass. */
+private const val BYPASS_STATUS_MODE = "bypass"
 
 internal suspend fun SessionConnection.snapshot(): TranscriptSnapshot =
     withContext(Dispatchers.IO) {
@@ -29,6 +38,9 @@ internal suspend fun SessionConnection.snapshot(): TranscriptSnapshot =
             status = status(),
             details = settings.details(sessionId),
             usage = settings.usage(sessionId),
+            bypass =
+                sessionCall(Dispatchers.IO) { settings.bypassActive(sessionId) }
+                    .getOrDefault(false),
         )
     }
 

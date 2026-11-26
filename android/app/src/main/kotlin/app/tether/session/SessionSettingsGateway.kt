@@ -105,6 +105,15 @@ interface SessionSettingsGateway {
         title: String,
     )
 
+    /** Whether in-memory Bypass is on for the open session. False when the session is not open. */
+    fun bypassActive(sessionId: String): Boolean
+
+    /** Turns Bypass on for the open session. It is never saved, and it ends with the session. */
+    fun enableBypass(sessionId: String)
+
+    /** Turns Bypass off, so the open session returns to its saved mode. */
+    fun disableBypass(sessionId: String)
+
     /** The tokens and cost [sessionId] has used. */
     fun usage(sessionId: String): SessionUsage
 
@@ -184,6 +193,19 @@ class CoreSessionSettingsGateway(
         sessionId: String,
         title: String,
     ) = coreCall { runtime.value.renameSession(sessionId, title) }
+
+    override fun bypassActive(sessionId: String): Boolean =
+        try {
+            coreCall { runtime.value.bypassActive(sessionId) }
+        } catch (error: SessionSettingsException) {
+            if (error.failure == SessionFailure.NOT_FOUND) false else throw error
+        }
+
+    override fun enableBypass(sessionId: String) =
+        coreCall { runtime.value.enableBypass(sessionId) }
+
+    override fun disableBypass(sessionId: String) =
+        coreCall { runtime.value.disableBypass(sessionId) }
 
     override fun usage(sessionId: String): SessionUsage =
         coreCall {

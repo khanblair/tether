@@ -8,6 +8,23 @@
     <string name="compose_command_unavailable_default">Not available right now.</string>
     <string name="compose_command_needs">Needs %1$s</string>
 
+    <!-- Plus sheet: attach, mention, and commands from the composer. -->
+    <string name="compose_plus_title">Add to message</string>
+    <string name="compose_plus_photo">Photo</string>
+    <string name="compose_plus_photo_sub">From your gallery</string>
+    <string name="compose_plus_camera">Camera</string>
+    <string name="compose_plus_camera_sub">Take a photo</string>
+    <string name="compose_plus_file">File</string>
+    <string name="compose_plus_file_sub">From this phone</string>
+    <string name="compose_plus_mention">Mention a file</string>
+    <string name="compose_plus_mention_sub">Insert @path from this project</string>
+    <string name="compose_plus_commands">Commands</string>
+    <string name="compose_plus_commands_sub">/compact, /plan, /review and more</string>
+    <string name="compose_plus_block_vision">This model cannot read images</string>
+    <string name="compose_plus_block_file">Attaching files is not available yet</string>
+    <string name="compose_plus_block_draft">Commands start a message</string>
+    <string name="compose_camera_unavailable">No camera app is available.</string>
+
     <!-- Mention sheet: the file picker above the composer. -->
     <string name="compose_mention_title">Mention a file</string>
     <string name="compose_mention_loading">Searching files</string>

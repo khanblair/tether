@@ -96,6 +96,10 @@ internal fun ComposerControls(
     files: FilesGateway? = null,
     messages: AppMessages? = null,
     commands: CommandHooks? = null,
+    mode: SessionMode = SessionMode.ACCEPT_EDITS,
+    supportsImages: Boolean = false,
+    onOpenMode: (() -> Unit)? = null,
+    onOpenModel: (() -> Unit)? = null,
 ) {
     val scope = rememberCoroutineScope()
     val skippedText = stringResource(R.string.compose_skipped_files)
@@ -109,10 +113,14 @@ internal fun ComposerControls(
         }
     }
     Composer(
-        modelId = modelId,
+        modelLabel = modelId,
+        mode = mode,
         running = running,
         onSend = rememberCommandSend(connection, commands, messages, sendPlain),
         onStop = { scope.launch(Dispatchers.IO) { connection.stop() } },
+        onOpenModel = onOpenModel,
+        onOpenMode = onOpenMode,
+        supportsImages = supportsImages,
         sendBlocked = sendBlocked,
         assist = assist,
     )

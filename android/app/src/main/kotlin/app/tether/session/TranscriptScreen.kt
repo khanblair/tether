@@ -251,7 +251,7 @@ fun TranscriptContent(
     val live = agent?.liveSection().orEmpty()
     val footerRows = if (turn.hasFooter) 1 else 0
     val unseen =
-        FollowTail(listState, visible, footerRows + live.size, liveKey = agent?.state?.calls)
+        followTail(listState, visible, footerRows + live.size, liveKey = agent?.state?.calls)
     val expanded = rememberSaveable(saver = expandedCardsSaver) { ExpandedCards() }
     val liveIds =
         agent
@@ -335,7 +335,7 @@ fun TranscriptContent(
  * reader leaving the bottom. Returns the rows that arrived since the reader left the bottom.
  */
 @Composable
-private fun FollowTail(
+private fun followTail(
     listState: LazyListState,
     messages: List<MessageView>,
     trailing: Int,

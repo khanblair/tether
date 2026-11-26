@@ -36,6 +36,9 @@ mod session_load;
 mod session_plans;
 #[cfg(test)]
 mod session_plans_tests;
+#[cfg(test)]
+mod session_reasoning_tests;
+mod session_rows;
 mod session_search;
 mod session_title;
 mod sessions;

@@ -1,12 +1,14 @@
 //! Session and transcript writes. A turn's text is committed before its event is emitted.
 
-use rusqlite::{OptionalExtension, Transaction, TransactionBehavior, params};
+use rusqlite::{OptionalExtension, TransactionBehavior, params};
 use tether_types::{
-    Message, MessageId, MessagePart, ModelRef, PermissionMode, ProjectId, Provider, Role,
-    SessionId, SessionStatus, UsageSnapshot,
+    Message, MessageId, MessagePart, ModelRef, PermissionMode, ProjectId, Provider,
+    ReasoningEffort, Role, SessionId, SessionStatus, UsageSnapshot,
 };
 use ulid::Ulid;
 
+pub(crate) use crate::session_rows::parse_enum;
+use crate::session_rows::{insert_message, insert_part};
 use crate::session_title::one_line_title;
 use crate::{Store, StoreError};
 
@@ -31,6 +33,8 @@ pub struct SessionRecord {
     pub created_at: i64,
     /// Time of the last change to the session, in Unix milliseconds.
     pub updated_at: i64,
+    /// Saved reasoning effort. `None` means the model default.
+    pub reasoning_effort: Option<ReasoningEffort>,
 }
 
 impl Store {
@@ -79,6 +83,7 @@ impl Store {
             status: SessionStatus::Idle,
             created_at: now_ms,
             updated_at: now_ms,
+            reasoning_effort: None,
         })
     }
 
@@ -354,46 +359,4 @@ impl Store {
             [],
         )?)
     }
-}
-
-pub(crate) fn parse_enum<T: std::str::FromStr>(
-    field: &'static str,
-    value: String,
-) -> Result<T, StoreError> {
-    value
-        .parse()
-        .map_err(|_| StoreError::InvalidSessionEnum { field, value })
-}
-
-fn insert_message(
-    tx: &Transaction<'_>,
-    session: &SessionId,
-    role: Role,
-    now_ms: i64,
-) -> Result<MessageId, StoreError> {
-    let seq: i64 = tx.query_row(
-        "SELECT COALESCE(MAX(seq), -1) + 1 FROM messages WHERE session_id = ?1",
-        [session.as_str()],
-        |row| row.get(0),
-    )?;
-    let id = MessageId::new(Ulid::new().to_string());
-    tx.execute(
-        "INSERT INTO messages (id, session_id, role, seq, created_at) VALUES (?1, ?2, ?3, ?4, ?5)",
-        params![id.as_str(), session.as_str(), role.as_str(), seq, now_ms],
-    )?;
-    Ok(id)
-}
-
-fn insert_part(
-    tx: &Transaction<'_>,
-    message: &MessageId,
-    seq: i64,
-    part: &MessagePart,
-) -> Result<(), StoreError> {
-    let body = serde_json::to_string(part).map_err(StoreError::MessagePartJson)?;
-    tx.execute(
-        "INSERT INTO message_parts (id, message_id, seq, kind, body_json) VALUES (?1, ?2, ?3, ?4, ?5)",
-        params![Ulid::new().to_string(), message.as_str(), seq, part.kind(), body],
-    )?;
-    Ok(())
 }

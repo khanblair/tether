@@ -30,6 +30,9 @@ mod prompt_snapshots;
 mod provider_configs;
 #[cfg(test)]
 mod schema_tests;
+mod session_archive;
+#[cfg(test)]
+mod session_archive_tests;
 mod session_context;
 mod session_fts;
 mod session_load;

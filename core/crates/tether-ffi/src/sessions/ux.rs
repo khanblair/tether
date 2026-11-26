@@ -125,6 +125,62 @@ impl SessionRuntime {
         })
     }
 
+    /// Archives a session or restores it. An archived session leaves the lists and
+    /// search, and its activity time does not change.
+    ///
+    /// # Errors
+    /// Returns an error for an absent or busy session, or store failure.
+    pub fn archive_session(
+        &self,
+        session_id: &str,
+        archived: bool,
+    ) -> Result<(), SessionRuntimeError> {
+        self.store()?
+            .set_session_archived(&SessionId::new(session_id), archived)
+            .map_err(|error| settings_error(&error))?;
+        self.forget_runner(session_id)
+    }
+
+    /// Deletes a session with its messages, checkpoints, and todos. Refused while a
+    /// turn runs.
+    ///
+    /// # Errors
+    /// Returns an error for an absent or busy session, or store failure.
+    pub fn delete_session(&self, session_id: &str) -> Result<(), SessionRuntimeError> {
+        self.store()?
+            .delete_session(&SessionId::new(session_id))
+            .map_err(|error| settings_error(&error))?;
+        self.forget_runner(session_id)?;
+        self.project_roots
+            .lock()
+            .map_err(|_| SessionRuntimeError::Unavailable)?
+            .remove(&SessionId::new(session_id));
+        Ok(())
+    }
+
+    /// Lists a project's archived sessions by newest activity.
+    ///
+    /// # Errors
+    /// Returns an error when the project is absent or storage cannot be read.
+    pub fn list_archived_sessions(
+        &self,
+        project_id: &str,
+    ) -> Result<Vec<SessionRecordView>, SessionRuntimeError> {
+        let store = self.store()?;
+        let id = ProjectId::new(project_id);
+        if store
+            .load_project(&id)
+            .map_err(|_| SessionRuntimeError::Unavailable)?
+            .is_none()
+        {
+            return Err(SessionRuntimeError::NotFound);
+        }
+        store
+            .list_archived_sessions(&id)
+            .map(|sessions| sessions.into_iter().map(Into::into).collect())
+            .map_err(|error| settings_error(&error))
+    }
+
     /// Finds sessions in one project by title or live message text.
     ///
     /// # Errors

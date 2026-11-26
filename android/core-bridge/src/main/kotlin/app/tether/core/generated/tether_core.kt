@@ -1207,6 +1207,12 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_tether_core_checksum_method_sessionruntime_run_user_command(
     ): Int
+    external fun uniffi_tether_core_checksum_method_sessionruntime_archive_session(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_sessionruntime_delete_session(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_sessionruntime_list_archived_sessions(
+    ): Int
     external fun uniffi_tether_core_checksum_method_sessionruntime_list_models(
     ): Int
     external fun uniffi_tether_core_checksum_method_sessionruntime_rename_session(
@@ -1735,6 +1741,12 @@ internal object UniffiLib {
     external fun uniffi_tether_core_fn_method_sessionruntime_rerun_elsewhere(`ptr`: Long,`sessionId`: RustBuffer.ByValue,`toolCallId`: RustBuffer.ByValue,`executor`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_tether_core_fn_method_sessionruntime_run_user_command(`ptr`: Long,`sessionId`: RustBuffer.ByValue,`command`: RustBuffer.ByValue,`executor`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_tether_core_fn_method_sessionruntime_archive_session(`ptr`: Long,`sessionId`: RustBuffer.ByValue,`archived`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_method_sessionruntime_delete_session(`ptr`: Long,`sessionId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_method_sessionruntime_list_archived_sessions(`ptr`: Long,`projectId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_tether_core_fn_method_sessionruntime_list_models(`ptr`: Long,`provider`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -2398,6 +2410,15 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_method_sessionruntime_run_user_command() and 0xFFFF) != 2563) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_sessionruntime_archive_session() and 0xFFFF) != 59538) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_sessionruntime_delete_session() and 0xFFFF) != 37167) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_sessionruntime_list_archived_sessions() and 0xFFFF) != 33876) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_method_sessionruntime_list_models() and 0xFFFF) != 49847) {
@@ -10912,6 +10933,32 @@ public interface SessionRuntimeInterface {
     fun `runUserCommand`(`sessionId`: kotlin.String, `command`: kotlin.String, `executor`: ExecutorView?): kotlin.String
     
     /**
+     * Archives a session or restores it. An archived session leaves the lists and
+     * search, and its activity time does not change.
+     *
+     * # Errors
+     * Returns an error for an absent or busy session, or store failure.
+     */
+    fun `archiveSession`(`sessionId`: kotlin.String, `archived`: kotlin.Boolean)
+    
+    /**
+     * Deletes a session with its messages, checkpoints, and todos. Refused while a
+     * turn runs.
+     *
+     * # Errors
+     * Returns an error for an absent or busy session, or store failure.
+     */
+    fun `deleteSession`(`sessionId`: kotlin.String)
+    
+    /**
+     * Lists a project's archived sessions by newest activity.
+     *
+     * # Errors
+     * Returns an error when the project is absent or storage cannot be read.
+     */
+    fun `listArchivedSessions`(`projectId`: kotlin.String): List<SessionRecordView>
+    
+    /**
      * Lists models from the saved provider catalog in provider order.
      *
      * # Errors
@@ -12336,6 +12383,70 @@ open class SessionRuntime: Disposable, AutoCloseable, SessionRuntimeInterface
         FfiConverterString.lower(`sessionId`),
         FfiConverterString.lower(`command`),
         FfiConverterOptionalTypeExecutorView.lower(`executor`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Archives a session or restores it. An archived session leaves the lists and
+     * search, and its activity time does not change.
+     *
+     * # Errors
+     * Returns an error for an absent or busy session, or store failure.
+     */
+    @Throws(SessionRuntimeException::class)override fun `archiveSession`(`sessionId`: kotlin.String, `archived`: kotlin.Boolean)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(SessionRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_sessionruntime_archive_session(
+        it,
+        
+        FfiConverterString.lower(`sessionId`),
+        FfiConverterBoolean.lower(`archived`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Deletes a session with its messages, checkpoints, and todos. Refused while a
+     * turn runs.
+     *
+     * # Errors
+     * Returns an error for an absent or busy session, or store failure.
+     */
+    @Throws(SessionRuntimeException::class)override fun `deleteSession`(`sessionId`: kotlin.String)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(SessionRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_sessionruntime_delete_session(
+        it,
+        
+        FfiConverterString.lower(`sessionId`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Lists a project's archived sessions by newest activity.
+     *
+     * # Errors
+     * Returns an error when the project is absent or storage cannot be read.
+     */
+    @Throws(SessionRuntimeException::class)override fun `listArchivedSessions`(`projectId`: kotlin.String): List<SessionRecordView> {
+            return FfiConverterSequenceTypeSessionRecordView.lift(
+    callWithHandle {
+    uniffiRustCallWithError(SessionRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_sessionruntime_list_archived_sessions(
+        it,
+        
+        FfiConverterString.lower(`projectId`),_status)
 }
     }
     )

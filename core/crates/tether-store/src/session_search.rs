@@ -35,7 +35,7 @@ impl Store {
         project_id: &ProjectId,
         query: Option<&str>,
     ) -> Result<Vec<SessionRecord>, StoreError> {
-        let sql = "SELECT s.id FROM sessions s WHERE s.project_id = ?1 AND (
+        let sql = "SELECT s.id FROM sessions s WHERE s.project_id = ?1 AND s.archived = 0 AND (
             ?2 IS NULL OR instr(lower(s.title), lower(?2)) > 0 OR EXISTS (
                 SELECT 1 FROM messages m JOIN message_parts p ON p.message_id = m.id
                 WHERE m.session_id = s.id AND m.rewound = 0 AND p.kind = 'text'

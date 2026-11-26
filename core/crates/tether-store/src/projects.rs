@@ -9,7 +9,7 @@ use crate::{Store, StoreError};
 const PROJECT_COLUMNS: &str = "SELECT p.id, p.name, p.path, p.created_at,
     COALESCE(MAX(s.updated_at), p.created_at), COUNT(s.id),
     p.default_provider, p.default_model_id, p.default_mode
-    FROM projects p LEFT JOIN sessions s ON s.project_id = p.id";
+    FROM projects p LEFT JOIN sessions s ON s.project_id = p.id AND s.archived = 0";
 
 /// A saved project and its current session activity.
 #[derive(Debug, Clone, PartialEq, Eq)]

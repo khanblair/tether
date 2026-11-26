@@ -110,4 +110,26 @@ class ModelSheetViewModelTest {
             assertEquals(0, fixture.reopenCount)
             assertEquals(0, applied)
         }
+
+    @Test
+    fun a_model_without_tool_support_cannot_be_chosen() =
+        runTest(dispatcher) {
+            fixture.providers.keys[ProviderView.OPEN_AI] = "key"
+            val chatOnly =
+                ModelChoice("chat-only", "Chat only", null, null, null, false, null, null)
+            fixture.settings.modelsByProvider[ProviderView.OPEN_AI] = listOf(chatOnly)
+            val vm = model()
+            vm.choose(ProviderView.OPEN_AI, chatOnly)
+            advanceUntilIdle()
+            assertTrue(fixture.settings.calls.none { it.startsWith("setModel") })
+            assertEquals(0, fixture.reopenCount)
+            assertEquals(0, applied)
+        }
+
+    @Test
+    fun only_a_model_that_says_it_has_no_tools_cannot_run_agents() {
+        assertFalse(ModelChoice("a", "A", null, null, null, false, null, null).canRunAgents)
+        assertTrue(ModelChoice("b", "B", null, null, null, null, null, null).canRunAgents)
+        assertTrue(sonnet.canRunAgents)
+    }
 }

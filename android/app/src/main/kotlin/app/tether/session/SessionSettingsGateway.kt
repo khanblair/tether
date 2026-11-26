@@ -156,6 +156,12 @@ interface SessionRewinder {
         checkpointId: String,
         scope: RewindScope,
     )
+
+    /**
+     * Hides [messageId] and every later message, and stops a running turn. Files stay as they are.
+     * Blocks until the core has done it.
+     */
+    fun rewindToMessage(messageId: String)
 }
 
 /**
@@ -283,6 +289,9 @@ class CoreSessionRewinder(
         checkpointId: String,
         scope: RewindScope,
     ) = coreCall { currentRunner().rewind(checkpointId, scope.toCore()) }
+
+    override fun rewindToMessage(messageId: String) =
+        coreCall { currentRunner().rewindToMessage(messageId) }
 }
 
 /**

@@ -137,6 +137,12 @@ class FakeSessionRewinder : SessionRewinder {
     val restores = mutableListOf<Pair<String, RewindScope>>()
     var failNext: Exception? = null
 
+    /** The message ids each message rewind reached, in order. */
+    val rewoundToMessages = mutableListOf<String>()
+
+    /** The next message rewind throws this, if set. It is cleared after it throws. */
+    var failNextRewindToMessage: Exception? = null
+
     override fun rewind(
         checkpointId: String,
         scope: RewindScope,
@@ -144,6 +150,14 @@ class FakeSessionRewinder : SessionRewinder {
         restores += checkpointId to scope
         failNext?.let {
             failNext = null
+            throw it
+        }
+    }
+
+    override fun rewindToMessage(messageId: String) {
+        rewoundToMessages += messageId
+        failNextRewindToMessage?.let {
+            failNextRewindToMessage = null
             throw it
         }
     }

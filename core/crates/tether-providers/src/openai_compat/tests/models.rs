@@ -208,6 +208,20 @@ async fn lists_deepseek_models_with_live_details() {
 }
 
 #[tokio::test]
+async fn deepseek_reasoning_comes_from_bundled_data_without_live_effort() {
+    let live = r#"{"object":"list","data":[{"id":"deepseek-flash","object":"model","owned_by":"deepseek"},{"id":"deepseek-v4-pro","object":"model","owned_by":"deepseek"}]}"#;
+    let server = start(Reply::json("200 OK", &[], live)).await;
+    let actual = provider(server.base_url, Dialect::DeepSeek)
+        .list_models(CancellationToken::new())
+        .await
+        .unwrap();
+    assert_eq!(actual.len(), 2);
+    for model in actual {
+        assert_eq!(model.caps.reasoning, Support::Yes, "{}", model.id);
+    }
+}
+
+#[tokio::test]
 async fn lists_openrouter_models_with_provider_prices() {
     let server = start(Reply::json("200 OK", &[], OPENROUTER)).await;
     let actual = provider(server.base_url, Dialect::OpenRouter)

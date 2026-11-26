@@ -8,6 +8,7 @@
       "input_per_million": "0.3",
       "output_per_million": "1.2",
       "cache_read_per_million": "0.006",
+      "reasoning": "yes",
       "note": "Peak rate. Off-peak is half."
     },
     {
@@ -15,6 +16,7 @@
       "input_per_million": "1.32",
       "output_per_million": "3.96",
       "cache_read_per_million": "0.044",
+      "reasoning": "yes",
       "note": "Peak rate. Off-peak is half."
     }
   ]

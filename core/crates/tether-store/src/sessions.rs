@@ -7,6 +7,7 @@ use tether_types::{
 };
 use ulid::Ulid;
 
+use crate::session_title::one_line_title;
 use crate::{Store, StoreError};
 
 /// The saved settings and current status of one session.
@@ -146,7 +147,7 @@ impl Store {
                 text: text.to_owned(),
             },
         )?;
-        let title: String = text.trim().chars().take(80).collect();
+        let title = one_line_title(text);
         let changed = tx.execute(
             "UPDATE sessions SET title = CASE WHEN title = '' THEN ?2 ELSE title END, status = 'requesting', updated_at = ?3 WHERE id = ?1",
             params![id.as_str(), title, now_ms],

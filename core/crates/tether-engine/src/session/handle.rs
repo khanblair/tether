@@ -26,6 +26,9 @@ pub(super) enum Command {
     DisableBypass {
         reply: oneshot::Sender<Result<(), SessionActorError>>,
     },
+    BypassActive {
+        reply: oneshot::Sender<Result<bool, SessionActorError>>,
+    },
     RunPlan {
         mode: PermissionMode,
         reply: oneshot::Sender<Result<(), SessionActorError>>,
@@ -151,6 +154,19 @@ impl SessionHandle {
         let (reply, result) = oneshot::channel();
         self.tx
             .send(Command::DisableBypass { reply })
+            .await
+            .map_err(|_| SessionActorError::Stopped)?;
+        result.await.map_err(|_| SessionActorError::Stopped)?
+    }
+
+    /// Reports whether the in-memory Bypass mode is on for this actor.
+    ///
+    /// # Errors
+    /// Returns an error when the actor stopped or its mode lock is poisoned.
+    pub async fn bypass_active(&self) -> Result<bool, SessionActorError> {
+        let (reply, result) = oneshot::channel();
+        self.tx
+            .send(Command::BypassActive { reply })
             .await
             .map_err(|_| SessionActorError::Stopped)?;
         result.await.map_err(|_| SessionActorError::Stopped)?

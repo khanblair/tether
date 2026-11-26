@@ -27,6 +27,9 @@ impl SessionActor {
             Command::DisableBypass { reply } => {
                 drop(reply.send(self.set_bypass(false)));
             }
+            Command::BypassActive { reply } => {
+                drop(reply.send(self.bypass_active()));
+            }
             Command::RunPlan { mode, reply } => {
                 let result = self.set_working_mode(mode);
                 let started = result.is_ok();

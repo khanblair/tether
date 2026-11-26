@@ -1091,6 +1091,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_tether_core_checksum_method_sessionruntime_approve_from_notification(
     ): Int
+    external fun uniffi_tether_core_checksum_method_sessionruntime_bypass_active(
+    ): Int
     external fun uniffi_tether_core_checksum_method_sessionruntime_delete_permission_rule(
     ): Int
     external fun uniffi_tether_core_checksum_method_sessionruntime_deny(
@@ -1616,6 +1618,8 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_tether_core_fn_method_sessionruntime_approve_from_notification(`ptr`: Long,`sessionId`: RustBuffer.ByValue,`toolCallId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_tether_core_fn_method_sessionruntime_bypass_active(`ptr`: Long,`sessionId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
     external fun uniffi_tether_core_fn_method_sessionruntime_delete_permission_rule(`ptr`: Long,`projectId`: RustBuffer.ByValue,`ruleId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_tether_core_fn_method_sessionruntime_deny(`ptr`: Long,`sessionId`: RustBuffer.ByValue,`toolCallId`: RustBuffer.ByValue,`reason`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -2216,6 +2220,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_method_sessionruntime_approve_from_notification() and 0xFFFF) != 59005) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_sessionruntime_bypass_active() and 0xFFFF) != 35075) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_method_sessionruntime_delete_permission_rule() and 0xFFFF) != 37104) {
@@ -10446,6 +10453,14 @@ public interface SessionRuntimeInterface {
     fun `approveFromNotification`(`sessionId`: kotlin.String, `toolCallId`: kotlin.String)
     
     /**
+     * Reports whether in-memory Bypass is on for an opened session.
+     *
+     * # Errors
+     * Returns `NotFound` when the session is not open or `Unavailable` when its actor stopped.
+     */
+    fun `bypassActive`(`sessionId`: kotlin.String): kotlin.Boolean
+    
+    /**
      * Deletes one permission rule from one project.
      *
      * # Errors
@@ -11121,6 +11136,27 @@ open class SessionRuntime: Disposable, AutoCloseable, SessionRuntimeInterface
 }
     }
     
+    
+
+    
+    /**
+     * Reports whether in-memory Bypass is on for an opened session.
+     *
+     * # Errors
+     * Returns `NotFound` when the session is not open or `Unavailable` when its actor stopped.
+     */
+    @Throws(SessionRuntimeException::class)override fun `bypassActive`(`sessionId`: kotlin.String): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCallWithError(SessionRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_sessionruntime_bypass_active(
+        it,
+        
+        FfiConverterString.lower(`sessionId`),_status)
+}
+    }
+    )
+    }
     
 
     

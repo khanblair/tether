@@ -79,7 +79,7 @@ impl SessionActor {
             messages,
             tools: tool_specs,
             max_output_tokens: super::MAX_OUTPUT_TOKENS,
-            reasoning: None,
+            reasoning: self.reasoning_for_request(),
         };
         let provider = (self.provider_for_turn)()?;
         let cancel = CancellationToken::new();

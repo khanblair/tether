@@ -25,8 +25,8 @@ pub use plan::PlanView;
 pub use project::ProjectView;
 pub use question::PendingQuestionView;
 pub use session::{
-    ModelView, PromptSectionView, SessionRecordView, SessionUsageView, SupportView,
-    TranscriptHitView,
+    ModelView, PromptSectionView, ReasoningEffortView, SessionRecordView, SessionUsageView,
+    SupportView, TranscriptHitView,
 };
 pub use todo::{TodoItemView, TodoStatusView};
 pub use types::{

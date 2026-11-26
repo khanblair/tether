@@ -387,3 +387,7 @@ impl SessionRunner {
 #[cfg(test)]
 #[path = "sessions/session_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "sessions/reasoning_tests.rs"]
+mod reasoning_tests;

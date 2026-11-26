@@ -1221,6 +1221,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_tether_core_checksum_method_sessionruntime_set_session_model(
     ): Int
+    external fun uniffi_tether_core_checksum_method_sessionruntime_set_session_reasoning(
+    ): Int
     external fun uniffi_tether_core_checksum_method_sessionruntime_continue_past_budget(
     ): Int
     external fun uniffi_tether_core_checksum_method_skillsruntime_list(
@@ -1747,6 +1749,8 @@ internal object UniffiLib {
     external fun uniffi_tether_core_fn_method_sessionruntime_set_session_mode(`ptr`: Long,`sessionId`: RustBuffer.ByValue,`mode`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_tether_core_fn_method_sessionruntime_set_session_model(`ptr`: Long,`sessionId`: RustBuffer.ByValue,`provider`: RustBuffer.ByValue,`modelId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_method_sessionruntime_set_session_reasoning(`ptr`: Long,`sessionId`: RustBuffer.ByValue,`effort`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_tether_core_fn_method_sessionruntime_continue_past_budget(`ptr`: Long,`sessionId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
@@ -2415,6 +2419,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_method_sessionruntime_set_session_model() and 0xFFFF) != 41118) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_sessionruntime_set_session_reasoning() and 0xFFFF) != 39830) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_method_sessionruntime_continue_past_budget() and 0xFFFF) != 60744) {
@@ -10961,6 +10968,14 @@ public interface SessionRuntimeInterface {
     fun `setSessionModel`(`sessionId`: kotlin.String, `provider`: ProviderView, `modelId`: kotlin.String)
     
     /**
+     * Sets the saved reasoning effort, or clears it to use the model default.
+     *
+     * # Errors
+     * Returns an error for an absent or busy session, or store failure.
+     */
+    fun `setSessionReasoning`(`sessionId`: kotlin.String, `effort`: ReasoningEffortView?)
+    
+    /**
      * Continues a turn paused at a budget limit. It is a no-op if no runner is paused.
      *
      * The same limit pauses again only after spending another 20% of that limit.
@@ -12472,6 +12487,27 @@ open class SessionRuntime: Disposable, AutoCloseable, SessionRuntimeInterface
         FfiConverterString.lower(`sessionId`),
         FfiConverterTypeProviderView.lower(`provider`),
         FfiConverterString.lower(`modelId`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Sets the saved reasoning effort, or clears it to use the model default.
+     *
+     * # Errors
+     * Returns an error for an absent or busy session, or store failure.
+     */
+    @Throws(SessionRuntimeException::class)override fun `setSessionReasoning`(`sessionId`: kotlin.String, `effort`: ReasoningEffortView?)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(SessionRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_sessionruntime_set_session_reasoning(
+        it,
+        
+        FfiConverterString.lower(`sessionId`),
+        FfiConverterOptionalTypeReasoningEffortView.lower(`effort`),_status)
 }
     }
     
@@ -18815,6 +18851,11 @@ data class SessionRecordView (
      * Time of the last change, in Unix milliseconds.
      */
     var `updatedAtMs`: kotlin.Long
+    , 
+    /**
+     * Saved reasoning effort. `None` means the model default.
+     */
+    var `reasoningEffort`: ReasoningEffortView?
     
 ){
     
@@ -18840,6 +18881,7 @@ public object FfiConverterTypeSessionRecordView: FfiConverterRustBuffer<SessionR
             FfiConverterTypeSessionStatusView.read(buf),
             FfiConverterLong.read(buf),
             FfiConverterLong.read(buf),
+            FfiConverterOptionalTypeReasoningEffortView.read(buf),
         )
     }
 
@@ -18852,7 +18894,8 @@ public object FfiConverterTypeSessionRecordView: FfiConverterRustBuffer<SessionR
             FfiConverterTypePermissionModeView.allocationSize(value.`mode`) +
             FfiConverterTypeSessionStatusView.allocationSize(value.`status`) +
             FfiConverterLong.allocationSize(value.`createdAtMs`) +
-            FfiConverterLong.allocationSize(value.`updatedAtMs`)
+            FfiConverterLong.allocationSize(value.`updatedAtMs`) +
+            FfiConverterOptionalTypeReasoningEffortView.allocationSize(value.`reasoningEffort`)
     )
 
     override fun write(value: SessionRecordView, buf: ByteBuffer) {
@@ -18865,6 +18908,7 @@ public object FfiConverterTypeSessionRecordView: FfiConverterRustBuffer<SessionR
             FfiConverterTypeSessionStatusView.write(value.`status`, buf)
             FfiConverterLong.write(value.`createdAtMs`, buf)
             FfiConverterLong.write(value.`updatedAtMs`, buf)
+            FfiConverterOptionalTypeReasoningEffortView.write(value.`reasoningEffort`, buf)
     }
 }
 
@@ -23133,6 +23177,53 @@ public object FfiConverterTypeQualityRuntimeError : FfiConverterRustBuffer<Quali
 
 
 /**
+ * FFI view of [`ReasoningEffort`]. `None` on a session means the model default.
+ */
+
+enum class ReasoningEffortView {
+    
+    /**
+     * Little reasoning, fast.
+     */
+    LOW,
+    /**
+     * The default balance.
+     */
+    MEDIUM,
+    /**
+     * Deep reasoning, slower and dearer.
+     */
+    HIGH;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeReasoningEffortView: FfiConverterRustBuffer<ReasoningEffortView> {
+    override fun read(buf: ByteBuffer) = try {
+        ReasoningEffortView.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: ReasoningEffortView) = 4UL
+
+    override fun write(value: ReasoningEffortView, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
  * Part of a session to restore.
  */
 
@@ -25523,6 +25614,38 @@ public object FfiConverterOptionalTypeProviderView: FfiConverterRustBuffer<Provi
         } else {
             buf.put(1)
             FfiConverterTypeProviderView.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeReasoningEffortView: FfiConverterRustBuffer<ReasoningEffortView?> {
+    override fun read(buf: ByteBuffer): ReasoningEffortView? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeReasoningEffortView.read(buf)
+    }
+
+    override fun allocationSize(value: ReasoningEffortView?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeReasoningEffortView.allocationSize(value)
+        }
+    }
+
+    override fun write(value: ReasoningEffortView?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeReasoningEffortView.write(value, buf)
         }
     }
 }

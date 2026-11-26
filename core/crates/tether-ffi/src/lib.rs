@@ -94,9 +94,10 @@ pub use views::{
     ErrorKindView, ExecutorView, InterruptionView, MessagePartView, MessageView, ModelRefView,
     ModelUsageView, ModelView, PendingApprovalView, PendingQuestionView, PermissionModeView,
     PermissionRuleView, PlanView, ProjectUsageView, ProjectView, PromptSectionView, ProviderView,
-    QualityCountsView, QualityFindingRecordView, RewindScopeView, RoleView, SessionRecordView,
-    SessionStatusView, SessionUsageView, SupportView, TodoItemView, TodoStatusView,
-    ToolCallStatusView, TranscriptHitView, UsageSnapshotView, UsageSummaryView, UsageTotalsView,
+    QualityCountsView, QualityFindingRecordView, ReasoningEffortView, RewindScopeView, RoleView,
+    SessionRecordView, SessionStatusView, SessionUsageView, SupportView, TodoItemView,
+    TodoStatusView, ToolCallStatusView, TranscriptHitView, UsageSnapshotView, UsageSummaryView,
+    UsageTotalsView,
 };
 
 uniffi::setup_scaffolding!();

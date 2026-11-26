@@ -86,6 +86,14 @@ class FakeSessionSettingsGateway(
         bypass = false
     }
 
+    override fun setEffort(
+        sessionId: String,
+        effort: ThinkingEffort?,
+    ) {
+        record("setEffort:${effort?.name ?: "none"}")
+        session = session.copy(effort = effort)
+    }
+
     override fun usage(sessionId: String): SessionUsage {
         record("usage")
         return usageValue

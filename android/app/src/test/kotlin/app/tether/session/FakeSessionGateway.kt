@@ -66,6 +66,16 @@ class FakeSessionGateway : SessionGateway {
         renameError?.let { throw it }
         renamed += sessionId to title
     }
+
+    /** The effort calls, in order: the session id and the level (null clears it). */
+    val efforts = mutableListOf<Pair<String, ThinkingEffort?>>()
+
+    override fun setEffort(
+        sessionId: String,
+        effort: ThinkingEffort?,
+    ) {
+        efforts += sessionId to effort
+    }
 }
 
 /** A session in the given status, for tests of the lists and the status mapping. */

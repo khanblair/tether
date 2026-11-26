@@ -22,6 +22,7 @@ data class SessionDetails(
     val provider: ProviderView,
     val modelId: String,
     val mode: SessionMode,
+    val effort: ThinkingEffort? = null,
 )
 
 /** One model of a provider. A null capability or price is unknown, not absent. */
@@ -105,6 +106,12 @@ interface SessionSettingsGateway {
         title: String,
     )
 
+    /** Sets the thinking effort, or clears it with null. The caller reopens the runner after it. */
+    fun setEffort(
+        sessionId: String,
+        effort: ThinkingEffort?,
+    )
+
     /** Whether in-memory Bypass is on for the open session. False when the session is not open. */
     fun bypassActive(sessionId: String): Boolean
 
@@ -158,6 +165,7 @@ class CoreSessionSettingsGateway(
                     provider = record.provider,
                     modelId = record.modelId,
                     mode = SessionMode.valueOf(record.mode.name),
+                    effort = record.reasoningEffort?.toThinking(),
                 )
             }
         }
@@ -193,6 +201,11 @@ class CoreSessionSettingsGateway(
         sessionId: String,
         title: String,
     ) = coreCall { runtime.value.renameSession(sessionId, title) }
+
+    override fun setEffort(
+        sessionId: String,
+        effort: ThinkingEffort?,
+    ) = coreCall { runtime.value.setSessionReasoning(sessionId, effort?.toCore()) }
 
     override fun bypassActive(sessionId: String): Boolean =
         try {

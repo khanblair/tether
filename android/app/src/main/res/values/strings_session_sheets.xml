@@ -15,13 +15,22 @@
     <string name="session_change_model">Change model</string>
     <string name="session_change_mode">Change permission mode</string>
 
+    <!-- Session top bar and the jump to latest pill. -->
+    <string name="session_review_changes">Review changes</string>
+    <string name="session_menu_action">Session menu</string>
+    <string name="session_subtitle_branch">%1$s · %2$s</string>
+    <plurals name="session_jump_new">
+        <item quantity="one">%d new</item>
+        <item quantity="other">%d new</item>
+    </plurals>
+    <plurals name="session_jump_description">
+        <item quantity="one">Jump to latest, %d new</item>
+        <item quantity="other">Jump to latest, %d new</item>
+    </plurals>
+
     <!-- Shared by the session sheets and the status line. -->
     <string name="session_busy_reason">A turn is running. You can change this when it finishes.</string>
     <string name="session_error_settings">The change could not be saved. Try again.</string>
-    <string name="session_cost_none">—</string>
-    <string name="session_more">More</string>
-    <string name="status_tokens">%1$s in, %2$s out</string>
-    <string name="status_usage">%1$s · %2$s</string>
 
     <!-- Mode sheet: the five permission modes, and the Bypass confirmation. -->
     <string name="session_mode_title">Permission mode</string>

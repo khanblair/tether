@@ -61,6 +61,9 @@ class SessionConnection(
      */
     val settings: SessionSettingsGateway = CoreSessionSettingsGateway(lazyOf(runtime))
 
+    /** The model of this session, found once per provider and id for the snapshot. */
+    internal val modelLookup = ModelLookup()
+
     /** The composer's slash commands: the command sheet and command resolution. */
     val commands: CommandsGateway = CoreCommandsGateway(lazyOf(runtime))
 

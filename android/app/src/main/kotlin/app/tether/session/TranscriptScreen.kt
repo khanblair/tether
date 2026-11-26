@@ -10,12 +10,14 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import app.tether.R
@@ -25,9 +27,8 @@ import app.tether.core.generated.ProviderView
 import app.tether.design.TetherTheme
 import app.tether.design.components.BannerTone
 import app.tether.design.components.InlineBanner
-import app.tether.design.components.TetherTextButton
-import app.tether.design.components.TetherTopBar
 import app.tether.design.tokens.TetherSpace
+import app.tether.git.rememberReducedMotion
 import app.tether.messages.AppMessages
 import app.tether.session.agent.AgentApprovalSlot
 import app.tether.session.agent.AgentScreenUi
@@ -40,8 +41,9 @@ import app.tether.session.agent.liveSection
 import app.tether.session.agent.rememberAgentLoop
 import app.tether.session.agent.rememberAgentScreen
 import app.tether.session.agent.toolCallsFromMessages
+import app.tether.session.compose.CommandScreen
 import app.tether.session.compose.commandHooksOf
-import app.tether.shell.BackButton
+import kotlinx.coroutines.launch
 
 /** Persisted messages are read off the main thread when the session route opens. */
 @Composable
@@ -61,6 +63,7 @@ fun TranscriptScreen(
     val messages = snapshot?.messages.orEmpty()
     val agent = rememberAgentLoop(connection)
     val agentUi = rememberAgentScreen(agent)
+    val project = rememberProjectSummary(sheets?.projects, connection?.projectId)
 
     /** A turn starts: the last turn's cards clear, and the send shows as running. */
     fun startTurn() {
@@ -112,12 +115,22 @@ fun TranscriptScreen(
         messages = messages,
         failed = failed,
         title = topBarTitle(snapshot?.details?.title),
+        subtitle =
+            sessionSubtitle(
+                projectName = project?.name,
+                branch = project?.branch.orEmpty(),
+                format = stringResource(R.string.session_subtitle_branch),
+            ),
         status = snapshot?.let { it.status.shownWith(it.bypass) },
+        modelName = snapshot?.modelName,
         usage = snapshot?.usage,
         turn = turn,
         provider = snapshot?.details?.provider,
         offline = offline,
         onBack = onBack,
+        onOpenDrawer = sheets?.openDrawer,
+        onReviewChanges = screenOpener(sheets, CommandScreen.Diff),
+        onOpenCost = screenOpener(sheets, CommandScreen.Cost),
         onModelClick = sheetOpener(sheets, sheetControl, SessionSheetKind.Model),
         onModeClick = sheetOpener(sheets, sheetControl, SessionSheetKind.Mode),
         onMore = sheetOpener(sheets, sheetControl, SessionSheetKind.Menu),
@@ -136,7 +149,7 @@ fun TranscriptScreen(
                 {
                     ComposerControls(
                         connection = active,
-                        modelId = snapshot?.details?.modelId.orEmpty(),
+                        modelId = snapshot?.modelName.orEmpty(),
                         running = turn.running,
                         onSendStart = { startTurn() },
                         onSendFailed = { turn = turn.onSendFailed() },
@@ -144,6 +157,10 @@ fun TranscriptScreen(
                         files = sheets?.files,
                         messages = sheets?.messages,
                         commands = sheets?.let { commandHooksOf(it, sheetControl) },
+                        mode = composerMode(snapshot),
+                        supportsImages = snapshot?.supportsImages == true,
+                        onOpenMode = sheetOpener(sheets, sheetControl, SessionSheetKind.Mode),
+                        onOpenModel = sheetOpener(sheets, sheetControl, SessionSheetKind.Model),
                     )
                 }
             },
@@ -185,6 +202,12 @@ private fun MessageSheetSlot(
     }
 }
 
+/** Opens a command screen for this session. Without sheets, the action is missing. */
+private fun screenOpener(
+    sheets: SessionSheetEnv?,
+    target: CommandScreen,
+): (() -> Unit)? = sheets?.let { env -> { env.openScreen(target, "") } }
+
 /** A sheet opener for a session with sheets. Without sheets, the control has no action. */
 private fun sheetOpener(
     sheets: SessionSheetEnv?,
@@ -198,7 +221,9 @@ fun TranscriptContent(
     messages: List<MessageView>,
     failed: Boolean,
     title: String,
+    subtitle: String? = null,
     status: SessionStatus? = null,
+    modelName: String? = null,
     usage: SessionUsage? = null,
     turn: TurnState = TurnState(),
     provider: ProviderView? = null,
@@ -207,6 +232,9 @@ fun TranscriptContent(
     onModelClick: (() -> Unit)? = null,
     onModeClick: (() -> Unit)? = null,
     onMore: (() -> Unit)? = null,
+    onOpenDrawer: (() -> Unit)? = null,
+    onReviewChanges: (() -> Unit)? = null,
+    onOpenCost: (() -> Unit)? = null,
     onRetry: (() -> Unit)? = null,
     onOpenProviders: (() -> Unit)? = null,
     onDismissStopped: () -> Unit = {},
@@ -217,10 +245,13 @@ fun TranscriptContent(
     onOpenBudgets: () -> Unit = {},
 ) {
     val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    val reducedMotion = rememberReducedMotion()
     val visible = remember(messages) { messages.filterNot { it.isToolResultOnly() } }
     val live = agent?.liveSection().orEmpty()
     val footerRows = if (turn.hasFooter) 1 else 0
-    FollowTail(listState, visible, footerRows + live.size, liveKey = agent?.state?.calls)
+    val unseen =
+        FollowTail(listState, visible, footerRows + live.size, liveKey = agent?.state?.calls)
     val expanded = rememberSaveable(saver = expandedCardsSaver) { ExpandedCards() }
     val liveIds =
         agent
@@ -237,17 +268,13 @@ fun TranscriptContent(
     Scaffold(
         containerColor = TetherTheme.colors.bg,
         topBar = {
-            TetherTopBar(
+            SessionTopBar(
                 title = title,
-                navigationIcon = { BackButton(onBack) },
-                actions = {
-                    if (onMore != null) {
-                        TetherTextButton(
-                            label = stringResource(R.string.session_more),
-                            onClick = onMore,
-                        )
-                    }
-                },
+                subtitle = subtitle,
+                onBack = onBack,
+                onOpenDrawer = onOpenDrawer,
+                onReviewChanges = onReviewChanges,
+                onMore = onMore,
             )
         },
     ) { padding ->
@@ -268,9 +295,20 @@ fun TranscriptContent(
                     tools = tools,
                     onSendPlanEdit = onSendPlanEdit ?: {},
                 )
+                JumpToLatest(
+                    count = unseen,
+                    onClick = { scope.launch { scrollToLatest(listState, reducedMotion) } },
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(
+                                horizontal = TetherSpace.space4,
+                                vertical = TetherSpace.space3,
+                            ),
+                )
             }
             turn.proposedTool?.let { (tool, target) -> ProposedToolBar(tool, target) }
-            StatusLine(status, usage, onModelClick, onModeClick)
+            StatusLine(status, usage, modelName, onModelClick, onModeClick, onOpenCost)
             if (offline) {
                 InlineBanner(
                     text = stringResource(R.string.states_offline),
@@ -294,7 +332,7 @@ fun TranscriptContent(
  * after the messages: the live section and the turn footer. [liveKey] changes with each live
  * update, so a streaming tool card keeps the tail in view. The flag changes only when the scroll
  * position changes, so a streamed reply that grows below the viewport does not count as the
- * reader leaving the bottom.
+ * reader leaving the bottom. Returns the rows that arrived since the reader left the bottom.
  */
 @Composable
 private fun FollowTail(
@@ -302,11 +340,20 @@ private fun FollowTail(
     messages: List<MessageView>,
     trailing: Int,
     liveKey: Any?,
-) {
+): Int {
     var followTail by remember { mutableStateOf(true) }
+    var itemsWhenLeft by remember { mutableIntStateOf(0) }
+    var itemsNow by remember { mutableIntStateOf(0) }
     LaunchedEffect(listState) {
         snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
-            .collect { followTail = listState.isAtBottom() }
+            .collect {
+                val atBottom = listState.isAtBottom()
+                if (followTail && !atBottom) itemsWhenLeft = listState.layoutInfo.totalItemsCount
+                followTail = atBottom
+            }
+    }
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.layoutInfo.totalItemsCount }.collect { itemsNow = it }
     }
     LaunchedEffect(messages, trailing, liveKey) {
         val lastItem = messages.size + trailing - 1
@@ -315,6 +362,7 @@ private fun FollowTail(
             listState.scrollToItem(lastItem, Int.MAX_VALUE)
         }
     }
+    return newItemCount(itemsWhenLeft, itemsNow, followTail)
 }
 
 /** True when the last item is fully inside the viewport. */

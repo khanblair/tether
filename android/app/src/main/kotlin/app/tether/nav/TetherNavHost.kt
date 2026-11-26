@@ -225,6 +225,8 @@ private fun SessionRoute(
                             module.messages.show(newSessionFailed)
                         }
                     },
+                    openDrawer = nav::openDrawer,
+                    projects = module.home.projects,
                 ),
             onOpenBudgets = { nav.open(SETTINGS_BUDGETS_ROUTE) },
         )

@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
@@ -14,44 +15,56 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import app.tether.R
 import app.tether.design.TetherTheme
 import app.tether.design.tokens.TetherSize
 import app.tether.design.tokens.TetherSpace
-import app.tether.home.formatTokens
 import app.tether.session.notices.ContextMeter
 import app.tether.session.notices.CostMeter
 
 /**
- * Always visible between the transcript and composer. The model and mode segments open their
- * sheets when [onModelClick] and [onModeClick] are set. A Bypass session gets the danger fill.
- * Usage shows tokens and cost; the context percentage is left out until the core provides it.
- * When [onOpenBreakdown] is set, the usage becomes a [ContextMeter] and a [CostMeter] instead, with
- * [budgetMicros] as the cost limit. Without it the line is the same as before.
+ * The status line parts in the order they show. A Bypass session starts with the Bypass word in
+ * place of the mode. The context percentage and the cost show only when they are known.
+ */
+internal fun statusLineParts(
+    bypass: Boolean,
+    hasContext: Boolean,
+    hasCost: Boolean,
+): List<StatusPart> {
+    val head =
+        if (bypass) {
+            listOf(StatusPart.Bypass, StatusPart.Model)
+        } else {
+            listOf(StatusPart.Model, StatusPart.Mode)
+        }
+    val tail =
+        listOfNotNull(
+            StatusPart.Context.takeIf { hasContext },
+            StatusPart.Cost.takeIf { hasCost },
+        )
+    return head + tail
+}
+
+/**
+ * Always visible between the transcript and composer: model · mode · context · cost. The model
+ * shows [modelName] when it is known. The model and mode segments open their sheets, and the cost
+ * opens [onOpenCost] when it is set. A Bypass session fills the line with the danger tone and
+ * starts with the Bypass word.
  */
 @Composable
 fun StatusLine(
     status: SessionStatus?,
     usage: SessionUsage?,
+    modelName: String?,
     onModelClick: (() -> Unit)?,
     onModeClick: (() -> Unit)?,
-    onOpenBreakdown: (() -> Unit)? = null,
-    budgetMicros: Long? = null,
+    onOpenCost: (() -> Unit)? = null,
 ) {
-    val model = status?.modelId ?: stringResource(R.string.status_unknown)
-    val mode = modeLabel(status?.mode)
-    val tokens =
-        usage?.let {
-            stringResource(
-                R.string.status_tokens,
-                formatTokens(it.tokensIn),
-                formatTokens(it.tokensOut),
-            )
-        } ?: stringResource(R.string.status_unknown)
-    val cost =
-        usage?.let { costLabel(it.costMicros, stringResource(R.string.session_cost_none)) }
-            ?: stringResource(R.string.status_unknown)
-    val fill = if (status?.mode == BYPASS_MODE) TetherTheme.colors.dangerSoft else Color.Transparent
+    val bypass = status?.mode == BYPASS_MODE
+    val percent = status?.contextPercent
+    val parts = statusLineParts(bypass, hasContext = percent != null, hasCost = usage != null)
+    val fill = if (bypass) TetherTheme.colors.dangerSoft else Color.Transparent
     Row(
         modifier =
             Modifier
@@ -61,32 +74,42 @@ fun StatusLine(
                 .padding(horizontal = TetherSpace.space4),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        StatusSegment(model, onModelClick, R.string.session_change_model)
-        StatusText(" · ")
-        StatusSegment(mode, onModeClick, R.string.session_change_mode)
-        if (onOpenBreakdown != null) {
-            MeterSegments(status, usage, budgetMicros, onOpenBreakdown)
-        } else {
-            StatusText(stringResource(R.string.status_usage, tokens, cost))
+        parts.forEachIndexed { index, part ->
+            if (index > 0) StatusText(" · ", bypass)
+            when (part) {
+                StatusPart.Bypass ->
+                    StatusSegment(
+                        stringResource(R.string.status_mode_bypass),
+                        onModeClick,
+                        R.string.session_change_mode,
+                        bypass,
+                    )
+                StatusPart.Model ->
+                    StatusSegment(
+                        modelName ?: status?.modelId ?: stringResource(R.string.status_unknown),
+                        onModelClick,
+                        R.string.session_change_model,
+                        bypass,
+                    )
+                StatusPart.Mode ->
+                    StatusSegment(
+                        modeLabel(status?.mode),
+                        onModeClick,
+                        R.string.session_change_mode,
+                        bypass,
+                    )
+                StatusPart.Context ->
+                    percent?.let { ContextMeter(percent = it, inDanger = bypass) }
+                StatusPart.Cost ->
+                    usage?.let {
+                        CostMeter(
+                            costMicros = it.costMicros,
+                            onClick = onOpenCost,
+                            inDanger = bypass,
+                        )
+                    }
+            }
         }
-    }
-}
-
-/** The context meter and the cost meter, each with its separator. */
-@Composable
-private fun MeterSegments(
-    status: SessionStatus?,
-    usage: SessionUsage?,
-    budgetMicros: Long?,
-    onOpenBreakdown: () -> Unit,
-) {
-    status?.contextPercent?.let { percent ->
-        StatusText(" · ")
-        ContextMeter(percent = percent, onOpenBreakdown = onOpenBreakdown)
-    }
-    if (usage != null) {
-        StatusText(" · ")
-        CostMeter(costMicros = usage.costMicros, budgetMicros = budgetMicros)
     }
 }
 
@@ -98,6 +121,7 @@ private fun StatusSegment(
     text: String,
     onClick: (() -> Unit)?,
     actionLabel: Int,
+    bypass: Boolean,
 ) {
     val tap =
         if (onClick == null) {
@@ -111,15 +135,22 @@ private fun StatusSegment(
                     onClick = onClick,
                 )
         }
-    StatusText(text, tap)
+    StatusText(text, bypass, tap)
 }
 
 @Composable
 private fun StatusText(
     text: String,
+    bypass: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    Text(text = text, color = TetherTheme.colors.text3, modifier = modifier)
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelSmall,
+        color = if (bypass) TetherTheme.colors.danger else TetherTheme.colors.text3,
+        fontWeight = if (bypass) FontWeight.Medium else null,
+        modifier = modifier,
+    )
 }
 
 @Composable

@@ -364,7 +364,7 @@ fn provider_factory_reads_the_current_key_after_removal() {
     assert!(factory().is_ok());
 }
 
-fn ux_runtime() -> (
+pub(super) fn ux_runtime() -> (
     tempfile::TempDir,
     std::path::PathBuf,
     Arc<SessionRuntime>,

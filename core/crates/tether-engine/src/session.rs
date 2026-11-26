@@ -22,6 +22,7 @@ mod compact;
 mod dispatch;
 mod handle;
 mod prompt;
+mod reasoning;
 mod rewind;
 mod stream;
 mod turn;

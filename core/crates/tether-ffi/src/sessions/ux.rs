@@ -7,8 +7,8 @@ use tether_types::{ProjectId, SessionId};
 
 use super::{SessionRuntime, SessionRuntimeError};
 use crate::{
-    ModelView, PermissionModeView, ProviderView, SessionRecordView, SessionUsageView,
-    TranscriptHitView,
+    ModelView, PermissionModeView, ProviderView, ReasoningEffortView, SessionRecordView,
+    SessionUsageView, TranscriptHitView,
 };
 
 fn settings_error(error: &StoreError) -> SessionRuntimeError {
@@ -54,6 +54,25 @@ impl SessionRuntime {
                 &SessionId::new(session_id),
                 provider.into(),
                 model_id,
+                now_ms(),
+            )
+            .map_err(|error| settings_error(&error))?;
+        self.forget_runner(session_id)
+    }
+
+    /// Sets the saved reasoning effort, or clears it to use the model default.
+    ///
+    /// # Errors
+    /// Returns an error for an absent or busy session, or store failure.
+    pub fn set_session_reasoning(
+        &self,
+        session_id: &str,
+        effort: Option<ReasoningEffortView>,
+    ) -> Result<(), SessionRuntimeError> {
+        self.store()?
+            .set_session_reasoning(
+                &SessionId::new(session_id),
+                effort.map(Into::into),
                 now_ms(),
             )
             .map_err(|error| settings_error(&error))?;

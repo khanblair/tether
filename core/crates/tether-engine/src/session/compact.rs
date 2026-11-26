@@ -120,6 +120,7 @@ fn summary_call(
         messages: old.iter().map(shrink_message).collect(),
         tools: Vec::new(),
         max_output_tokens: 2048,
+        // A summary does not think, so the saved effort is not sent.
         reasoning: None,
     };
     Ok((provider, request))

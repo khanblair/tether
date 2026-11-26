@@ -1,7 +1,7 @@
 //! Saved session settings for the platform.
 
 use tether_store::{SessionRecord, SessionSearchHit};
-use tether_types::{ModelInfo, Support, UsageSnapshot};
+use tether_types::{ModelInfo, ReasoningEffort, Support, UsageSnapshot};
 
 use crate::{PermissionModeView, ProviderView, SessionStatusView};
 
@@ -124,6 +124,37 @@ impl From<SessionSearchHit> for TranscriptHitView {
     }
 }
 
+/// FFI view of [`ReasoningEffort`]. `None` on a session means the model default.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum ReasoningEffortView {
+    /// Little reasoning, fast.
+    Low,
+    /// The default balance.
+    Medium,
+    /// Deep reasoning, slower and dearer.
+    High,
+}
+
+impl From<ReasoningEffort> for ReasoningEffortView {
+    fn from(value: ReasoningEffort) -> Self {
+        match value {
+            ReasoningEffort::Low => Self::Low,
+            ReasoningEffort::Medium => Self::Medium,
+            ReasoningEffort::High => Self::High,
+        }
+    }
+}
+
+impl From<ReasoningEffortView> for ReasoningEffort {
+    fn from(view: ReasoningEffortView) -> Self {
+        match view {
+            ReasoningEffortView::Low => Self::Low,
+            ReasoningEffortView::Medium => Self::Medium,
+            ReasoningEffortView::High => Self::High,
+        }
+    }
+}
+
 /// Saved session settings and status for the platform.
 #[derive(Debug, Clone, uniffi::Record)]
 pub struct SessionRecordView {
@@ -145,6 +176,8 @@ pub struct SessionRecordView {
     pub created_at_ms: i64,
     /// Time of the last change, in Unix milliseconds.
     pub updated_at_ms: i64,
+    /// Saved reasoning effort. `None` means the model default.
+    pub reasoning_effort: Option<ReasoningEffortView>,
 }
 
 impl From<SessionRecord> for SessionRecordView {
@@ -159,6 +192,7 @@ impl From<SessionRecord> for SessionRecordView {
             status: session.status.into(),
             created_at_ms: session.created_at,
             updated_at_ms: session.updated_at,
+            reasoning_effort: session.reasoning_effort.map(ReasoningEffortView::from),
         }
     }
 }

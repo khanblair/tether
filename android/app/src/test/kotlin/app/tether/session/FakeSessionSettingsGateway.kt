@@ -94,6 +94,17 @@ class FakeSessionSettingsGateway(
         session = session.copy(effort = effort)
     }
 
+    override fun archive(
+        sessionId: String,
+        archived: Boolean,
+    ) {
+        record("archive:$archived")
+    }
+
+    override fun delete(sessionId: String) {
+        record("delete")
+    }
+
     override fun usage(sessionId: String): SessionUsage {
         record("usage")
         return usageValue

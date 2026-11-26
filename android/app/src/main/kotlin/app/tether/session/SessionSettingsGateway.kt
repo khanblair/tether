@@ -112,6 +112,15 @@ interface SessionSettingsGateway {
         effort: ThinkingEffort?,
     )
 
+    /** Hides the session from the lists (true) or shows it again. Refused while a turn runs. */
+    fun archive(
+        sessionId: String,
+        archived: Boolean,
+    )
+
+    /** Deletes the session with its messages and checkpoints. Refused while a turn runs. */
+    fun delete(sessionId: String)
+
     /** Whether in-memory Bypass is on for the open session. False when the session is not open. */
     fun bypassActive(sessionId: String): Boolean
 
@@ -206,6 +215,13 @@ class CoreSessionSettingsGateway(
         sessionId: String,
         effort: ThinkingEffort?,
     ) = coreCall { runtime.value.setSessionReasoning(sessionId, effort?.toCore()) }
+
+    override fun archive(
+        sessionId: String,
+        archived: Boolean,
+    ) = coreCall { runtime.value.archiveSession(sessionId, archived) }
+
+    override fun delete(sessionId: String) = coreCall { runtime.value.deleteSession(sessionId) }
 
     override fun bypassActive(sessionId: String): Boolean =
         try {

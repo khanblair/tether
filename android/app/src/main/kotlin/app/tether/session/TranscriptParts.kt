@@ -144,10 +144,17 @@ internal fun TranscriptList(
     agent: AgentScreenUi? = null,
     tools: ToolCardState = ToolCardState.Empty,
     onSendPlanEdit: (String) -> Unit = {},
+    onEditMessage: ((MessageView) -> Unit)? = null,
+    onRegenerate: (() -> Unit)? = null,
+    toasts: AppMessages? = null,
+    onPreviewHtml: ((String) -> Unit)? = null,
 ) {
     val footer = turn.hasFooter
     val rowModifier = Modifier.widthIn(max = TetherSize.transcriptMax).fillMaxWidth()
     val hasLive = agent?.liveSection()?.isNotEmpty() == true
+    val anchors = remember(messages, turn.running) { turnAnchors(messages, turn.running) }
+    val copy = rememberCopyMessage(toasts)
+    val liveId = if (turn.running) messages.lastOrNull()?.id else null
     if (messages.isEmpty() && !footer && !hasLive) {
         val emptyLabel = if (failed) R.string.transcript_load_failed else R.string.transcript_empty
         Text(
@@ -169,6 +176,12 @@ internal fun TranscriptList(
                 rowModifier,
                 onLongPress = longPressFor(message, onLongPress),
                 tools = tools,
+                anchor = anchors[message.id],
+                live = message.id == liveId,
+                onCopy = copy,
+                onEdit = onEditMessage,
+                onRegenerate = onRegenerate,
+                onPreviewHtml = if (message.id == liveId) null else onPreviewHtml,
             )
         }
         if (agent != null) agentLiveItems(agent, tools, rowModifier, onSendPlanEdit)
@@ -222,8 +235,9 @@ private fun providerLabel(provider: ProviderView?): String =
         ?: stringResource(R.string.states_provider_unknown)
 
 /**
- * One persisted message. A long press opens its actions when the caller passes [onLongPress].
- * The press carries a label, so TalkBack offers it as a named action.
+ * One persisted message. A user message is a bubble on the right. Other messages are plain text
+ * on the left, with their tool cards and reasoning blocks. A long press opens the message actions
+ * when the caller passes [onLongPress]. The press carries a label, so TalkBack offers it by name.
  */
 @Composable
 internal fun TranscriptMessage(
@@ -231,49 +245,149 @@ internal fun TranscriptMessage(
     modifier: Modifier = Modifier,
     onLongPress: (() -> Unit)? = null,
     tools: ToolCardState? = null,
+    anchor: TurnAnchor? = null,
+    live: Boolean = false,
+    onCopy: ((MessageView) -> Unit)? = null,
+    onEdit: ((MessageView) -> Unit)? = null,
+    onRegenerate: (() -> Unit)? = null,
+    onPreviewHtml: ((String) -> Unit)? = null,
 ) {
-    val label =
-        when (message.role) {
-            RoleView.USER -> R.string.transcript_you
-            RoleView.ASSISTANT -> R.string.transcript_agent
-            RoleView.TOOL -> R.string.transcript_tool
-            RoleView.SYSTEM_NOTE -> R.string.transcript_system
-        }
-    val longPressLabel = stringResource(R.string.states_message_actions)
+    if (message.role == RoleView.USER) {
+        UserBubble(
+            message = message,
+            modifier = modifier,
+            onLongPress = onLongPress,
+            onCopy = onCopy?.let { copyTo -> { copyTo(message) } },
+            onEdit = onEdit?.let { editTo -> { editTo(message) } },
+        )
+        return
+    }
     val pressModifier =
         if (onLongPress == null) {
             Modifier
         } else {
             Modifier.combinedClickable(
                 onClick = {},
-                onLongClickLabel = longPressLabel,
+                onLongClickLabel = stringResource(R.string.states_message_actions),
                 onLongClick = onLongPress,
             )
         }
+    val toolState = tools ?: ToolCardState.Empty
+    val pressed = modifier.then(pressModifier)
+    if (message.role == RoleView.SYSTEM_NOTE) {
+        SystemNote(message, pressed)
+    } else {
+        AgentMessage(message, pressed, toolState, live, anchor, onCopy, onRegenerate, onPreviewHtml)
+    }
+}
+
+/** A system note: one quiet line, without a label. */
+@Composable
+private fun SystemNote(
+    message: MessageView,
+    modifier: Modifier,
+) {
+    Text(
+        text = plainText(message),
+        style = MaterialTheme.typography.labelMedium,
+        color = TetherTheme.colors.text2,
+        modifier = modifier.padding(horizontal = TetherSpace.space4),
+    )
+}
+
+/**
+ * An assistant or tool message: its text as markdown, its reasoning as one block, its tool calls
+ * as cards. The last assistant message of a turn also carries the turn's actions.
+ */
+@Composable
+private fun AgentMessage(
+    message: MessageView,
+    modifier: Modifier,
+    tools: ToolCardState,
+    live: Boolean,
+    anchor: TurnAnchor?,
+    onCopy: ((MessageView) -> Unit)?,
+    onRegenerate: (() -> Unit)?,
+    onPreviewHtml: ((String) -> Unit)?,
+) {
     Column(
         verticalArrangement = Arrangement.spacedBy(TetherSpace.space2),
-        modifier = modifier.then(pressModifier).padding(horizontal = TetherSpace.space4),
+        modifier = modifier.padding(horizontal = TetherSpace.space4),
     ) {
-        Text(
-            stringResource(label),
-            style = MaterialTheme.typography.labelMedium,
-            color = TetherTheme.colors.text2,
-        )
-        val toolState = tools ?: ToolCardState.Empty
-        segmentParts(message.parts, toolState.persisted).forEach { segment ->
-            when (segment) {
-                is PartSegment.Calls -> ToolCallRows(segment.calls, toolState)
-                is PartSegment.Part -> MessagePartBody(segment.part)
+        val runs = thinkingRuns(segmentParts(message.parts, tools.persisted))
+        runs.forEachIndexed { index, run ->
+            if (isThinking(run.first())) {
+                ThinkingBlock(
+                    stateKey = "${message.id}#$index",
+                    text = thinkingText(run),
+                    live = live,
+                )
+            } else {
+                run.forEach { segment -> AgentSegment(segment, tools, onPreviewHtml) }
             }
         }
+        if (anchor != null) TurnActions(message, anchor, onCopy, onRegenerate)
     }
+}
+
+/** One segment that is not reasoning: a run of tool cards, or one message part. */
+@Composable
+private fun AgentSegment(
+    segment: PartSegment,
+    tools: ToolCardState,
+    onPreviewHtml: ((String) -> Unit)?,
+) {
+    when (segment) {
+        is PartSegment.Calls -> ToolCallRows(segment.calls, tools)
+        is PartSegment.Part -> MessagePartBody(segment.part, onPreviewHtml)
+    }
+}
+
+/**
+ * The Copy and Regenerate icons under the last reply of a turn. Copy takes the turn's reply text,
+ * so it leaves out thinking and tool calls. Regenerate shows only on the newest turn.
+ */
+@Composable
+private fun TurnActions(
+    message: MessageView,
+    anchor: TurnAnchor,
+    onCopy: ((MessageView) -> Unit)?,
+    onRegenerate: (() -> Unit)?,
+) {
+    val copy: (() -> Unit)? =
+        if (onCopy == null || anchor.replyText.isBlank()) {
+            null
+        } else {
+            replyCopy(message, anchor.replyText, onCopy)
+        }
+    val regenerate = if (anchor.newest) onRegenerate else null
+    if (copy != null || regenerate != null) {
+        MessageActionRow(
+            copyLabel = stringResource(R.string.chat_copy_reply),
+            onCopy = copy,
+            onRegenerate = regenerate,
+        )
+    }
+}
+
+/** A copy action for [text] as the message's only part. */
+private fun replyCopy(
+    message: MessageView,
+    text: String,
+    onCopy: (MessageView) -> Unit,
+): () -> Unit {
+    val reply = message.copy(parts = listOf(MessagePartView.Text(text)))
+    return { onCopy(reply) }
 }
 
 /** One message part that is not a tool call. */
 @Composable
-private fun MessagePartBody(part: MessagePartView) {
+internal fun MessagePartBody(
+    part: MessagePartView,
+    onPreviewHtml: ((String) -> Unit)? = null,
+) {
     when (part) {
-        is MessagePartView.Text -> MarkdownBlocks(part.text)
+        is MessagePartView.Text -> MarkdownBlocks(part.text, onPreviewHtml)
         is MessagePartView.Thinking -> Text(part.text, color = TetherTheme.colors.text2)
         is MessagePartView.CompactionSummary -> Text(part.text, color = TetherTheme.colors.text2)
         else ->

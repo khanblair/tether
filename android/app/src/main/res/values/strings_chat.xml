@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The reasoning block and the message actions under each message. -->
+    <string name="chat_thinking_label">Thinking</string>
+    <string name="chat_thinking_running">Thinking…</string>
+    <string name="chat_thinking_expanded">Expanded</string>
+    <string name="chat_thinking_collapsed">Collapsed</string>
+    <string name="chat_copy_message">Copy message</string>
+    <string name="chat_copy_reply">Copy reply</string>
+    <string name="chat_edit_message">Edit message</string>
+    <string name="chat_regenerate_reply">Regenerate reply</string>
+    <!-- The edit message sheet. -->
+    <string name="chat_edit_field">Message</string>
+    <string name="chat_edit_helper">Replies after this message are removed. Files stay as they are.</string>
+    <string name="chat_edit_send">Send</string>
+</resources>

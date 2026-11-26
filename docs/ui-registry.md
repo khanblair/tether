@@ -101,22 +101,29 @@ All components start as **Planned**. Screenshot tests start with the first featu
 | `PrCard` | Pull request status | `pr: PrView`, `onRefresh`, `onOpen` | open with checks pending, passing, failing, merged | P4 | Planned |
 | `SystemNote` | Compaction, rewind, mode change markers | `kind` (`SystemNoteKind`) | compaction, rewind, mode change, model change | P2 | Built |
 | `ErrorBlock` | Inline error with action | `title`, `body`, `action` | retryable, needs settings, budget reached, interrupted | P1 | Planned |
-| `JumpToLatest` | Floating button when scrolled up | `newCount`, `onClick` | hidden, visible with count | P1 | Planned |
+| `JumpToLatest` | Floating pill with an arrow and "N new" when the reader has scrolled up and rows arrived; tapping scrolls to the newest row. App module | `count`, `onClick` | hidden, visible with count | P1 | Built |
 
 ## Composer
 
 | Name | Purpose | Props | States | Phase | Status |
 |---|---|---|---|---|---|
-| `Composer` | Message input and controls | `modelId`, `running`, `onSend`, `onStop`, `sendBlocked`, `assist` | empty, typing, multiline at max, turn running (Stop), disabled offline | P1 | Built |
-| `ModeChip` | Shows and changes permission mode | `mode`, `onClick` | plan, ask, accept edits, auto, bypass | P3 | Planned |
-| `ModelChip` | Shows and changes model | `model`, `onClick` | default, model without tools (warning) | P1 | Planned |
-| `AttachmentRow` | Attached images and files | `attachments`, `onRemove` | none, one, many | P1 | Planned |
+| `Composer` | Message input with an inline placeholder, the bar (plus, mode chip, model chip, mic, send or stop), the staged photo row, and the `/` and `@` assist panel. App module | `modelLabel`, `mode`, `running`, `onSend`, `onStop`, `onOpenModel`, `onOpenMode`, `supportsImages`, `sendBlocked`, `assist` | empty, typing, multiline at max, turn running (Stop), Auto chip, Bypass chip, staged photo, send disabled | P1 | Built |
+| `ComposerBar` | The row under the field: plus button, the two chips, mic button, and the send or stop disc. App module | `mode`, `modelLabel`, `running`, `canSend`, `onPlus`, `onOpenMode`, `onOpenModel`, `onVoice`, `onStop`, `onSend` | send, send disabled, stop | P1 | Built |
+| `TetherChip` | Small pill with an optional leading icon and trailing chevron. Design system | `label`, `tone`, `leadingIcon`, `trailingChevron`, `onClick` | neutral, accent, danger | P1 | Built |
+| `PlusSheet` | Add to message: Photo, Camera, File, Mention a file, Commands. Camera is added by decision and is not in the prototype. File shows a reason because the core cannot attach files yet. App module | `draft`, `supportsImages`, `onDismiss`, `onPick` | each row enabled or off with its reason | P1 | Built |
+| `ListeningSheet` | Voice input bottom sheet: a 10 bar waveform, the live transcript, Cancel and Insert text. App module | `state`, `onAllow`, `onTryAgain`, `onInsert`, `onCancel` | requesting, listening, denied, unavailable, failed | P1 | Built |
+| `ModeChip` | Shows and changes permission mode. Built as a `TetherChip` in the composer bar: accent for Auto, danger outline for Bypass | `mode`, `onClick` | plan, ask, accept edits, auto, bypass | P3 | Built |
+| `ModelChip` | Shows and changes model. Built as a `TetherChip` with a chevron in the composer bar | `model`, `onClick` | default, model without tools (warning) | P1 | Built |
+| `AttachmentRow` | Attached images and files. Built for one staged photo inside `Composer`; sending images waits for core image input (issue #207) | `attachments`, `onRemove` | none, one, many | P1 | In progress |
 | `CommandSheet` | `/` command list with filter. The query comes from the view model | `commands`, `query`, `loaded`, `failed`, `onPick` | full, filtered, no match | P3 | Built |
 | `MentionSheet` | `@` file picker with filter. The query comes from the view model | `files`, `loading`, `failed`, `onPick` | full, filtered, no match, loading | P3 | Built |
 | `MentionChips` | Removable chips for the `@` files in the message | `paths`, `onRemove` | default | P3 | Built |
 | `ComposeAssistPanel` | Command and mention assist shown over the composer | `deps`, `text`, `cursor`, `onEdit` | command list, mention list, no match, loading | P3 | Built |
-| `VoiceInputButton` | Speech to text | `listening`, `onToggle` | idle, listening, unavailable | P1 | Planned |
-| `SendStopButton` | Send or interrupt | `running`, `enabled`, `onSend`, `onStop` | send enabled, send disabled, stop | P1 | Planned |
+| `VoiceInputButton` | Speech to text. Built as the mic icon button in `ComposerBar`, which opens `ListeningSheet` | `onVoice` | idle, sheet open | P1 | Built |
+| `SendStopButton` | Send or interrupt. Built as a 40 dp disc inside `ComposerBar`: arrow-up on accent, square while running | `running`, `enabled`, `onSend`, `onStop` | send enabled, send disabled, stop | P1 | Built |
+| `SessionTopBar` | Session top bar: menu icon (opens the drawer), title, project and branch subtitle, Review changes, Session menu. App module | `title`, `subtitle`, `onBack`, `onOpenDrawer`, `onReviewChanges`, `onMore` | with subtitle, title only | P1 | Built |
+| `EffortSection` | Thinking effort (Model default, Low, Medium, High) at the bottom of the model sheet; shown only for models that report reasoning. Added by decision, not in the prototype. App module | `effort`, `enabled`, `onChoose` | each level, disabled while a turn runs | P3 | Built |
+| `LastCrashCard` | The last crash report on About, with Copy and Clear. App module | `report`, `onCopy`, `onClear` | shown only when a report exists | P0 | Built |
 
 ## Approvals and modes
 
@@ -132,7 +139,7 @@ All components start as **Planned**. Screenshot tests start with the first featu
 
 | Name | Purpose | Props | States | Phase | Status |
 |---|---|---|---|---|---|
-| `StatusLine` | Model, mode, context, cost | `status`, `usage`, `budgetMicros`, `onModelClick`, `onModeClick`, `onOpenBreakdown` | normal, bypass, offline, near context limit | P1 | Built |
+| `StatusLine` | Model, mode, context, cost. In Bypass: Bypass, model, context, cost on the danger fill. The context breakdown sheet behind the percentage is not built | `status`, `usage`, `modelName`, `onModelClick`, `onModeClick`, `onOpenCost` | normal, bypass, offline, near context limit | P1 | Built |
 | `ContextMeter` | Context use with breakdown link | `percent`, `onOpenBreakdown` | under 60%, 60 to 80%, over 80% | P1 | Built |
 | `CostMeter` | Session cost with budget | `costMicros`, `budgetMicros` | no budget, under budget, near, reached | P1 | Built |
 | `CostScreen` | Cost over a chosen range, with a chart and tables | `state`, `onSelect`, `onRetry`, `onBack` | data, load failure | P9 | Built |

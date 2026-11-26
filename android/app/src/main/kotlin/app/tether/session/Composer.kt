@@ -1,10 +1,6 @@
 package app.tether.session
 
-import android.app.Activity
-import android.content.ActivityNotFoundException
-import android.content.Intent
 import android.net.Uri
-import android.speech.RecognizerIntent
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -48,6 +44,7 @@ import app.tether.session.compose.ComposeAssistDeps
 import app.tether.session.compose.ComposeAssistPanel
 import app.tether.session.compose.textAtEnd
 import app.tether.session.compose.toFieldValue
+import app.tether.session.voice.rememberVoiceSheet
 import java.io.File
 
 /**
@@ -74,7 +71,6 @@ fun Composer(
     val input = field.text
     var image by rememberSaveable { mutableStateOf<String?>(null) }
     var stagedCamera by rememberSaveable { mutableStateOf<String?>(null) }
-    var speechUnavailable by rememberSaveable { mutableStateOf(false) }
     var cameraUnavailable by rememberSaveable { mutableStateOf(false) }
     var plusOpen by rememberSaveable { mutableStateOf(false) }
     val picker =
@@ -91,11 +87,10 @@ fun Composer(
             },
             onUnavailable = { cameraUnavailable = true },
         )
-    val startVoice =
-        rememberVoiceInput(
-            onWords = { words -> field = textAtEnd(mergeVoiceDraft(input, words)) },
-            onUnavailable = { speechUnavailable = true },
-        )
+    val openVoice =
+        rememberVoiceSheet(onInsert = { words ->
+            field = textAtEnd(mergeVoiceDraft(field.text, words))
+        })
     val windowHeight = LocalWindowInfo.current.containerSize.height
     val maximum = with(LocalDensity.current) { windowHeight.toDp() * TetherRatio.composerMax }
     val onPick: (PlusRow) -> Unit = { row ->
@@ -136,7 +131,7 @@ fun Composer(
                 onPlus = { plusOpen = true },
                 onOpenMode = onOpenMode,
                 onOpenModel = onOpenModel,
-                onVoice = startVoice,
+                onVoice = openVoice,
                 onStop = onStop,
                 onSend = {
                     val text = outgoingText(input)
@@ -147,10 +142,7 @@ fun Composer(
                 },
             )
         }
-        ComposerNotices(
-            speechUnavailable = speechUnavailable,
-            cameraUnavailable = cameraUnavailable,
-        )
+        ComposerNotices(cameraUnavailable = cameraUnavailable)
     }
     if (plusOpen) {
         PlusSheet(
@@ -218,16 +210,10 @@ internal fun ComposerField(
     }
 }
 
-/** Short lines under the composer when voice input or the camera cannot be used. */
+/** A short line under the composer when the camera cannot be used. */
 @Composable
-private fun ComposerNotices(
-    speechUnavailable: Boolean,
-    cameraUnavailable: Boolean,
-) {
+private fun ComposerNotices(cameraUnavailable: Boolean) {
     val modifier = Modifier.padding(horizontal = TetherSpace.space3)
-    if (speechUnavailable) {
-        Text(stringResource(R.string.composer_voice_unavailable), modifier = modifier)
-    }
     if (cameraUnavailable) {
         Text(stringResource(R.string.compose_camera_unavailable), modifier = modifier)
     }
@@ -300,43 +286,6 @@ private fun rememberImagePicker(
         }
     }
 }
-
-/**
- * Starts the speech recognizer and adds its first result through [onWords]. [onUnavailable] runs
- * when the device has no recognizer, so the caller can say voice input is unavailable.
- */
-@Composable
-private fun rememberVoiceInput(
-    onWords: (String) -> Unit,
-    onUnavailable: () -> Unit,
-): () -> Unit {
-    val speech =
-        rememberLauncherForActivityResult(
-            ActivityResultContracts.StartActivityForResult(),
-        ) { result ->
-            if (result.resultCode == Activity.RESULT_OK) {
-                result.data
-                    ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
-                    ?.firstOrNull()
-                    ?.let(onWords)
-            }
-        }
-    return {
-        try {
-            speech.launch(speechIntent())
-        } catch (_: ActivityNotFoundException) {
-            onUnavailable()
-        }
-    }
-}
-
-private fun speechIntent(): Intent =
-    Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-        putExtra(
-            RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-            RecognizerIntent.LANGUAGE_MODEL_FREE_FORM,
-        )
-    }
 
 /** Blank input never starts a turn. Preserve line breaks inside a message. */
 internal fun outgoingText(input: String): String? = input.trim().takeIf(String::isNotEmpty)

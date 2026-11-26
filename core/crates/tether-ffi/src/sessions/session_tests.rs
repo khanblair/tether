@@ -194,6 +194,10 @@ fn reopening_recovers_an_active_turn_and_reuses_its_actor() {
     let dir = tempfile::tempdir().unwrap();
     let db = dir.path().join("tether.db");
     let session_id = seeded_session(&db);
+    assert_eq!(
+        recover_interrupted_sessions(db.to_str().unwrap()).unwrap(),
+        1
+    );
 
     let vault = SecretVault::new(
         dir.path().join("secrets").to_string_lossy().into_owned(),
@@ -704,4 +708,60 @@ fn rewind_errors_keep_corrupt_snapshot_and_invalid_path() {
         ))),
         SessionRuntimeError::Unavailable
     ));
+}
+
+fn set_status(db: &Path, id: &SessionId, status: &str) {
+    rusqlite::Connection::open(db)
+        .unwrap()
+        .execute(
+            "UPDATE sessions SET status = ?1 WHERE id = ?2",
+            [status, id.as_str()],
+        )
+        .unwrap();
+}
+
+fn saved_status(db: &Path, id: &SessionId) -> SessionStatus {
+    Store::open(db)
+        .unwrap()
+        .load_session(id)
+        .unwrap()
+        .unwrap()
+        .status
+}
+
+#[test]
+fn building_runtimes_does_not_change_a_streaming_turn() {
+    let dir = tempfile::tempdir().unwrap();
+    let db = dir.path().join("tether.db");
+    let session_id = seeded_session(&db);
+    set_status(&db, &session_id, "streaming");
+    let vault = SecretVault::new(
+        dir.path().join("secrets").to_string_lossy().into_owned(),
+        Arc::new(PlainPlatform),
+    );
+
+    let _first =
+        SessionRuntime::new(db.to_str().unwrap(), Arc::clone(&vault), Arc::new(NoopSink)).unwrap();
+    let _second =
+        SessionRuntime::new(db.to_str().unwrap(), Arc::clone(&vault), Arc::new(NoopSink)).unwrap();
+
+    assert_eq!(saved_status(&db, &session_id), SessionStatus::Streaming);
+}
+
+#[test]
+fn recovery_reports_the_changed_count_once() {
+    let dir = tempfile::tempdir().unwrap();
+    let db = dir.path().join("tether.db");
+    let session_id = seeded_session(&db);
+    set_status(&db, &session_id, "streaming");
+
+    assert_eq!(
+        recover_interrupted_sessions(db.to_str().unwrap()).unwrap(),
+        1
+    );
+    assert_eq!(saved_status(&db, &session_id), SessionStatus::Interrupted);
+    assert_eq!(
+        recover_interrupted_sessions(db.to_str().unwrap()).unwrap(),
+        0
+    );
 }

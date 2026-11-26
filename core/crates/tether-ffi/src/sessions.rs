@@ -25,10 +25,13 @@ use provider::{provider_key, session_provider_factory};
 mod open;
 #[path = "sessions/prompt.rs"]
 mod prompt;
+#[path = "sessions/recovery.rs"]
+mod recovery;
 #[path = "sessions/user_runs.rs"]
 mod user_runs;
 #[path = "sessions/ux.rs"]
 mod ux;
+pub use recovery::recover_interrupted_sessions;
 use ux::now_ms;
 
 /// A session could not be created, opened, or updated.
@@ -66,7 +69,8 @@ pub enum SessionRuntimeError {
     InvalidWorkingMode,
 }
 
-/// Owns the process runtime. Reopening it marks unfinished turns as interrupted.
+/// Owns the process runtime. Building it does not change saved turn status;
+/// call `recover_interrupted_sessions` once at process start instead.
 #[derive(uniffi::Object)]
 pub struct SessionRuntime {
     database_path: String,
@@ -96,9 +100,6 @@ impl SessionRuntime {
     ) -> Result<Arc<Self>, SessionRuntimeError> {
         let store =
             Store::open(Path::new(database_path)).map_err(|_| SessionRuntimeError::Unavailable)?;
-        store
-            .recover_active_sessions()
-            .map_err(|_| SessionRuntimeError::Unavailable)?;
         let mcp_manager = crate::mcp::manager_from_store(&store, &vault)
             .map_err(|_| SessionRuntimeError::Unavailable)?;
         let runtime = tokio::runtime::Builder::new_multi_thread()

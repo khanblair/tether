@@ -923,6 +923,8 @@ internal object IntegrityCheckingUniffiLib {
     internal fun ensureInitialized() = Unit
     external fun uniffi_tether_core_checksum_func_version(
     ): Int
+    external fun uniffi_tether_core_checksum_func_recover_interrupted_sessions(
+    ): Int
     external fun uniffi_tether_core_checksum_method_tethercore_emit_test_event(
     ): Int
     external fun uniffi_tether_core_checksum_method_eventsink_on_event(
@@ -1840,6 +1842,8 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_tether_core_fn_func_version(uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_tether_core_fn_func_recover_interrupted_sessions(`databasePath`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Int
     external fun ffi_tether_core_rustbuffer_alloc(`size`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun ffi_tether_core_rustbuffer_from_bytes(`bytes`: ForeignBytes.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -1960,6 +1964,9 @@ private fun uniffiCheckContractApiVersion(lib: IntegrityCheckingUniffiLib) {
 @Suppress("UNUSED_PARAMETER")
 private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_tether_core_checksum_func_version() and 0xFFFF) != 3831) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_func_recover_interrupted_sessions() and 0xFFFF) != 20822) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_method_tethercore_emit_test_event() and 0xFFFF) != 57350) {
@@ -10417,7 +10424,8 @@ public object FfiConverterTypeSessionRunner: FfiConverter<SessionRunner, Long> {
 
 
 /**
- * Owns the process runtime. Reopening it marks unfinished turns as interrupted.
+ * Owns the process runtime. Building it does not change saved turn status;
+ * call `recover_interrupted_sessions` once at process start instead.
  */
 public interface SessionRuntimeInterface {
     
@@ -10951,7 +10959,8 @@ public interface SessionRuntimeInterface {
 }
 
 /**
- * Owns the process runtime. Reopening it marks unfinished turns as interrupted.
+ * Owns the process runtime. Building it does not change saved turn status;
+ * call `recover_interrupted_sessions` once at process start instead.
  */
 open class SessionRuntime: Disposable, AutoCloseable, SessionRuntimeInterface
 {
@@ -26676,6 +26685,31 @@ public object FfiConverterMapStringString: FfiConverterRustBuffer<Map<kotlin.Str
     UniffiLib.uniffi_tether_core_fn_func_version(
     
         _status)
+}
+    )
+    }
+    
+
+        /**
+         * Marks every session left mid-turn by a dead process as interrupted.
+         *
+         * Call this once when the app process starts, before any runtime is built.
+         * Building a `SessionRuntime` never does this, so a runtime built while a
+         * turn streams leaves that turn's status alone.
+         *
+         * Returns the number of sessions that changed status. Calling it again
+         * returns 0 when nothing is left active.
+         *
+         * # Errors
+         * Returns `Unavailable` when the database cannot be opened or SQLite fails.
+         */
+    @Throws(SessionRuntimeException::class) fun `recoverInterruptedSessions`(`databasePath`: kotlin.String): kotlin.UInt {
+            return FfiConverterUInt.lift(
+    uniffiRustCallWithError(SessionRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_func_recover_interrupted_sessions(
+    
+        
+        FfiConverterString.lower(`databasePath`),_status)
 }
     )
     }

@@ -8,6 +8,7 @@
     <!-- Cost meter in the status line. -->
     <string name="notices_cost_under_cent">less than $0.01</string>
     <string name="notices_cost_no_price">No price</string>
+    <string name="notices_cost_open">Open cost details</string>
     <string name="notices_cost_budget">%1$s of %2$s</string>
     <string name="notices_cost_near">%1$s of %2$s, near the limit</string>
     <string name="notices_cost_reached">%1$s of %2$s, limit reached</string>

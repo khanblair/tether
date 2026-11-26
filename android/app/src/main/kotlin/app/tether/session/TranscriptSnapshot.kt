@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import app.tether.core.generated.CoreEventView
 import app.tether.core.generated.MessageView
+import app.tether.core.generated.ProviderView
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
@@ -19,6 +20,10 @@ internal data class TranscriptSnapshot(
     val messages: List<MessageView>,
     val status: SessionStatus,
     val details: SessionDetails,
+    /** The model's display name, or its raw id when the name is not known. */
+    val modelName: String,
+    /** Whether the model reads images. Unknown counts as no. */
+    val supportsImages: Boolean,
     val usage: SessionUsage,
     /** Whether Bypass is on in the open session. A failed read counts as off. */
     val bypass: Boolean,
@@ -28,15 +33,62 @@ internal data class TranscriptSnapshot(
 internal fun SessionStatus.shownWith(bypass: Boolean): SessionStatus =
     if (bypass) copy(mode = BYPASS_STATUS_MODE) else this
 
+/** The mode the composer chip shows: Bypass while it is on, else the saved mode. */
+internal fun composerMode(snapshot: TranscriptSnapshot?): SessionMode =
+    when {
+        snapshot == null -> SessionMode.ACCEPT_EDITS
+        snapshot.bypass -> SessionMode.BYPASS
+        else -> snapshot.details.mode
+    }
+
 /** The status mode name the status line reads as Bypass. */
 private const val BYPASS_STATUS_MODE = "bypass"
 
+/** The display name of the model with [id] in [models], or the id itself when it is not there. */
+internal fun modelDisplayName(
+    id: String,
+    models: List<ModelChoice>,
+): String = models.firstOrNull { it.id == id }?.displayName ?: id
+
+/**
+ * Remembers the model found for the last provider and id, so a streamed reply, which reloads the
+ * snapshot on every event, does not read the whole model list each time. A failed read is not
+ * remembered, so the next reload tries again.
+ */
+internal class ModelLookup {
+    private var key: Pair<ProviderView, String>? = null
+    private var found: ModelChoice? = null
+
+    @Synchronized
+    fun find(
+        provider: ProviderView,
+        id: String,
+        load: () -> List<ModelChoice>,
+    ): ModelChoice? {
+        val wanted = provider to id
+        if (key != wanted) {
+            runCatching(load).getOrNull()?.let { models ->
+                found = models.firstOrNull { it.id == id }
+                key = wanted
+            }
+        }
+        return if (key == wanted) found else null
+    }
+}
+
 internal suspend fun SessionConnection.snapshot(): TranscriptSnapshot =
     withContext(Dispatchers.IO) {
+        val details = settings.details(sessionId)
+        val model =
+            modelLookup.find(details.provider, details.modelId) {
+                settings.models(details.provider)
+            }
         TranscriptSnapshot(
             messages = transcript().filterNot(MessageView::rewound).sortedBy(MessageView::seq),
             status = status(),
-            details = settings.details(sessionId),
+            details = details,
+            modelName = modelDisplayName(details.modelId, listOfNotNull(model)),
+            supportsImages = model?.images == true,
             usage = settings.usage(sessionId),
             bypass =
                 sessionCall(Dispatchers.IO) { settings.bypassActive(sessionId) }

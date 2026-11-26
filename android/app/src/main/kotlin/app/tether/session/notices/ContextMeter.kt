@@ -14,6 +14,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import app.tether.R
 import app.tether.design.TetherTheme
 import app.tether.design.tokens.TetherSpace
@@ -21,16 +22,18 @@ import app.tether.design.tokens.TetherSpace
 /**
  * The context use of the session, as a percentage in the status line. The tone follows the
  * [contextBand]: neutral, warning, then danger, and the number is always shown. A tap calls
- * [onOpenBreakdown], which opens the context breakdown.
+ * [onOpenBreakdown] when it is set. Without it the text is not tappable. [inDanger] draws the
+ * text in the danger tone for the Bypass line.
  */
 @Composable
 fun ContextMeter(
     percent: Int,
-    onOpenBreakdown: () -> Unit,
     modifier: Modifier = Modifier,
+    onOpenBreakdown: (() -> Unit)? = null,
+    inDanger: Boolean = false,
 ) {
     val band = contextBand(percent)
-    val tone = bandColor(band)
+    val tone = if (inDanger) TetherTheme.colors.danger else bandColor(band)
     val text =
         if (band == ContextBand.Danger) {
             stringResource(R.string.notices_context_danger_label, percent)
@@ -38,22 +41,27 @@ fun ContextMeter(
             stringResource(R.string.notices_context_label, percent)
         }
     val description = stringResource(R.string.notices_context_description, percent)
-    Row(
-        modifier =
-            modifier
+    val tap =
+        if (onOpenBreakdown == null) {
+            Modifier
+        } else {
+            Modifier
                 .minimumInteractiveComponentSize()
                 .clickable(
                     role = Role.Button,
                     onClickLabel = description,
                     onClick = onOpenBreakdown,
                 ).semantics { contentDescription = description }
-                .padding(horizontal = TetherSpace.space1),
+        }
+    Row(
+        modifier = modifier.then(tap).padding(horizontal = TetherSpace.space1),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = text,
             style = MaterialTheme.typography.labelSmall,
             color = tone,
+            fontWeight = if (inDanger) FontWeight.Medium else null,
         )
     }
 }

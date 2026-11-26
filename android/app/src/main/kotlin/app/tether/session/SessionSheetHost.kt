@@ -13,6 +13,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import app.tether.MainActivity
 import app.tether.R
 import app.tether.files.FilesGateway
+import app.tether.home.ProjectsSource
 import app.tether.messages.AppMessages
 import app.tether.providers.ProviderGateway
 import app.tether.session.compose.CommandScreen
@@ -59,8 +60,9 @@ class SessionSheetControl {
 /**
  * What the session sheets need from the app: the saved keys, the snackbar host, and the way to
  * the Providers screen, the project files the composer's `@` picker searches, and the screens
- * and new session a slash command opens. The session
- * screen builds it from the app module.
+ * and new session a slash command opens. It also opens the navigation drawer from the top bar,
+ * and reads the project name and branch for the top bar subtitle. The session screen builds it
+ * from the app module.
  */
 class SessionSheetEnv(
     val providers: ProviderGateway,
@@ -69,6 +71,8 @@ class SessionSheetEnv(
     val files: FilesGateway? = null,
     val openScreen: (CommandScreen, String) -> Unit = { _, _ -> },
     val newSession: () -> Unit = {},
+    val openDrawer: () -> Unit = {},
+    val projects: ProjectsSource? = null,
 )
 
 /**

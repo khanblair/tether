@@ -60,9 +60,16 @@ fun ModeSheet(
                 modifier = Modifier.padding(horizontal = TetherSpace.space4),
             )
         }
-        if (state.failure != null) {
+        if (state.failure != null || state.bypassFailed) {
             InlineBanner(
-                text = stringResource(R.string.session_error_settings),
+                text =
+                    stringResource(
+                        if (state.bypassFailed) {
+                            R.string.session_bypass_failed
+                        } else {
+                            R.string.session_error_settings
+                        },
+                    ),
                 tone = BannerTone.Danger,
                 modifier = Modifier.padding(horizontal = TetherSpace.space4),
             )

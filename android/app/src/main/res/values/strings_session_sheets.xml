@@ -36,6 +36,7 @@
     <string name="session_bypass_confirm">Confirm with fingerprint</string>
     <string name="session_bypass_cancel">Cancel</string>
     <string name="session_bypass_denied">Bypass was not turned on.</string>
+    <string name="session_bypass_failed">Bypass could not be turned on. It needs a project session that is open.</string>
     <string name="session_bypass_auth_title">Turn on Bypass</string>
 
     <!-- Session menu and the rename sheet. -->

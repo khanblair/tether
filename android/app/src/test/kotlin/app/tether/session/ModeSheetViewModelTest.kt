@@ -77,17 +77,53 @@ class ModeSheetViewModelTest {
         }
 
     @Test
-    fun bypass_is_set_after_the_biometric_check_is_granted() =
+    fun bypass_is_turned_on_in_the_open_session_without_saving_or_reopening() =
         runTest(dispatcher) {
             biometric = BiometricOutcome.Granted
             val vm = model()
             vm.choose(SessionMode.BYPASS)
             vm.confirmBypass()
             advanceUntilIdle()
-            assertEquals(SessionMode.BYPASS, fixture.settings.session.mode)
+            assertTrue(fixture.settings.bypass)
+            assertTrue(fixture.settings.calls.contains("enableBypass"))
+            assertTrue(fixture.settings.calls.none { it.startsWith("setMode") })
+            assertEquals(0, fixture.reopenCount)
+            assertEquals(1, applied)
+            assertEquals(SessionMode.BYPASS, vm.state.value.current)
+            assertFalse(vm.state.value.confirming)
+        }
+
+    @Test
+    fun bypass_that_is_on_is_shown_as_the_current_mode() =
+        runTest(dispatcher) {
+            fixture.settings.bypass = true
+            assertEquals(SessionMode.BYPASS, model().state.value.current)
+        }
+
+    @Test
+    fun a_failed_enable_shows_the_failure_and_stays_on_the_confirmation() =
+        runTest(dispatcher) {
+            val vm = model()
+            vm.choose(SessionMode.BYPASS)
+            fixture.settings.failNext = SessionSettingsException(SessionFailure.NOT_FOUND)
+            vm.confirmBypass()
+            advanceUntilIdle()
+            assertTrue(vm.state.value.bypassFailed)
+            assertTrue(vm.state.value.confirming)
+            assertFalse(fixture.settings.bypass)
+            assertEquals(0, applied)
+        }
+
+    @Test
+    fun choosing_another_mode_while_bypass_is_on_saves_it_and_reopens_the_runner() =
+        runTest(dispatcher) {
+            fixture.settings.bypass = true
+            val vm = model()
+            vm.choose(SessionMode.PLAN)
+            advanceUntilIdle()
+            assertEquals(SessionMode.PLAN, fixture.settings.session.mode)
             assertEquals(1, fixture.reopenCount)
             assertEquals(1, applied)
-            assertFalse(vm.state.value.confirming)
         }
 
     @Test

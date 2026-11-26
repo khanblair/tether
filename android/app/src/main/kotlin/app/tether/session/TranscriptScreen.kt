@@ -112,7 +112,7 @@ fun TranscriptScreen(
         messages = messages,
         failed = failed,
         title = topBarTitle(snapshot?.details?.title),
-        status = snapshot?.status,
+        status = snapshot?.let { it.status.shownWith(it.bypass) },
         usage = snapshot?.usage,
         turn = turn,
         provider = snapshot?.details?.provider,

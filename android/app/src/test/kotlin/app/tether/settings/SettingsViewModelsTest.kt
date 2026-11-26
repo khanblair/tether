@@ -5,6 +5,7 @@ import app.tether.home.FakeProjectGateway
 import app.tether.home.ProjectInfo
 import app.tether.providers.FakeProviderGateway
 import app.tether.session.SessionMode
+import app.tether.session.ThinkingEffort
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -128,6 +129,56 @@ class ModelDefaultsViewModelTest {
                 .isEmpty(),
         )
         assertFalse(vm.state.value.failed)
+    }
+
+    @Test
+    fun the_app_effort_starts_at_the_saved_level_and_medium_when_never_set() {
+        assertEquals(ThinkingEffort.MEDIUM, viewModel().state.value.effort)
+        assertEquals(
+            ThinkingEffort.HIGH,
+            viewModel(FakeSettingsStore(effort = ThinkingEffort.HIGH)).state.value.effort,
+        )
+    }
+
+    @Test
+    fun choosing_an_app_effort_saves_it_and_closes_the_picker() {
+        val store = FakeSettingsStore()
+        val vm = viewModel(store)
+
+        vm.openEffort()
+        assertTrue(vm.state.value.pickingEffort)
+        vm.chooseEffort(ThinkingEffort.HIGH)
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(ThinkingEffort.HIGH, store.effort)
+        assertEquals(ThinkingEffort.HIGH, vm.state.value.effort)
+        assertFalse(vm.state.value.pickingEffort)
+    }
+
+    @Test
+    fun choosing_the_model_default_saves_null() {
+        val store = FakeSettingsStore()
+        val vm = viewModel(store)
+
+        vm.openEffort()
+        vm.chooseEffort(null)
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertNull(store.effort)
+        assertNull(vm.state.value.effort)
+    }
+
+    @Test
+    fun closing_the_effort_picker_changes_nothing() {
+        val store = FakeSettingsStore()
+        val vm = viewModel(store)
+
+        vm.openEffort()
+        vm.close()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertFalse(vm.state.value.pickingEffort)
+        assertEquals(ThinkingEffort.MEDIUM, store.effort)
     }
 
     @Test

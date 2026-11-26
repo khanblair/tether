@@ -7,6 +7,7 @@ use tokio::sync::mpsc;
 
 use super::{OUTPUT_HEAD, OUTPUT_TAIL, PreparedCall, RunContext, RunReport};
 use crate::executors::RunStatus;
+use crate::path_utils::lexical_path;
 use crate::tool_loop::PrepareContext;
 
 pub(super) fn parse_executor(value: &Value) -> Result<Executor, String> {
@@ -26,11 +27,16 @@ pub(super) fn parse_cwd(
         return Ok(String::new());
     };
     let cwd = value.as_str().ok_or("cwd must be a string")?;
+    let path = lexical_path(cwd).map_err(|_| "cwd must stay inside the workspace")?;
+    if path.as_os_str().is_empty() {
+        return Ok(String::new());
+    }
+    let normalized = path.to_string_lossy().replace('\\', "/");
     context
         .guard
-        .resolve(cwd)
-        .map_err(|error| error.to_string())?;
-    Ok(cwd.to_owned())
+        .resolve(&normalized)
+        .map_err(|_| "cwd must stay inside the workspace")?;
+    Ok(normalized)
 }
 
 pub(super) fn parse_timeout(

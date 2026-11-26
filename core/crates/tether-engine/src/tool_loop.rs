@@ -30,6 +30,8 @@ pub use registry::{
 };
 use stream::response;
 #[cfg(test)]
+mod path_tests;
+#[cfg(test)]
 mod review_tests;
 #[cfg(test)]
 mod tests;

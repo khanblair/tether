@@ -159,6 +159,9 @@ impl ToolHandler for RunTools {
         let payload_object = payload
             .as_object_mut()
             .ok_or("tool arguments must be an object")?;
+        if let Some(entry) = payload_object.get_mut("cwd") {
+            *entry = Value::String(cwd.clone());
+        }
         payload_object.insert("_cwd".into(), Value::String(cwd));
         payload_object.insert(
             "_timeout".into(),

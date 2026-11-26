@@ -176,6 +176,17 @@ impl SessionRuntime {
             .map_err(|_| SessionRuntimeError::Unavailable)
     }
 
+    /// Reports whether in-memory Bypass is on for an opened session.
+    ///
+    /// # Errors
+    /// Returns `NotFound` when the session is not open or `Unavailable` when its actor stopped.
+    pub fn bypass_active(&self, session_id: &str) -> Result<bool, SessionRuntimeError> {
+        let runner = self.runner(session_id)?;
+        self.runtime
+            .block_on(runner.handle.bypass_active())
+            .map_err(|_| SessionRuntimeError::Unavailable)
+    }
+
     /// Answers a pending approval with Allow.
     ///
     /// # Errors
@@ -311,6 +322,10 @@ impl SessionRuntime {
         self.broker.questions().set_interactive(enabled);
     }
 }
+
+#[cfg(test)]
+#[path = "approvals_tests.rs"]
+mod tests;
 
 impl SessionRuntime {
     pub(crate) fn runner(

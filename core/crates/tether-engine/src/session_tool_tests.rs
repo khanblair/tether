@@ -15,6 +15,7 @@ use tether_workspace::PathGuard;
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 
+use crate::session_tests::seeded_store;
 use crate::{EventSink, ProviderFactory, SessionActor, ToolRuntime};
 
 struct ReadThenFinish(AtomicUsize);
@@ -174,4 +175,51 @@ async fn session_actor_runs_read_tool_and_reopens_saved_exchange() {
             text: "Done".into()
         }]
     );
+}
+
+#[tokio::test]
+async fn bypass_active_follows_enable_and_disable_for_tool_sessions() {
+    let root = tempfile::tempdir().unwrap();
+    let workspace = root.path().join("workspace");
+    fs::create_dir(&workspace).unwrap();
+    let (store, id) = seeded_store(&root.path().join("store.db"));
+    let provider: Arc<dyn ChatProvider> = Arc::new(ReadThenFinish(AtomicUsize::new(0)));
+    let factory: ProviderFactory = Arc::new(move || Ok(Arc::clone(&provider)));
+    let (tx, _rx) = mpsc::unbounded_channel();
+    let (actor, handle) = SessionActor::new_with_tool_runtime(
+        store,
+        &id,
+        factory,
+        Arc::new(Recorder(tx)),
+        ToolRuntime {
+            guard: PathGuard::new(&workspace).unwrap(),
+            blobs: BlobStore::open(root.path().join("blobs")).unwrap(),
+            approver: Arc::new(|_: &str, _: &str| false),
+            mode: Arc::new(std::sync::Mutex::new(PermissionMode::Ask)),
+            handlers: Vec::new(),
+        },
+    )
+    .unwrap();
+    let task = tokio::spawn(actor.run());
+    assert!(!handle.bypass_active().await.unwrap());
+    handle.enable_bypass().await.unwrap();
+    assert!(handle.bypass_active().await.unwrap());
+    handle.disable_bypass().await.unwrap();
+    assert!(!handle.bypass_active().await.unwrap());
+    drop(handle);
+    task.await.unwrap();
+}
+
+#[tokio::test]
+async fn bypass_active_is_false_for_a_plain_session() {
+    let root = tempfile::tempdir().unwrap();
+    let (store, id) = seeded_store(&root.path().join("store.db"));
+    let provider: Arc<dyn ChatProvider> = Arc::new(ReadThenFinish(AtomicUsize::new(0)));
+    let (tx, _rx) = mpsc::unbounded_channel();
+    let (actor, handle) =
+        crate::SessionActor::new(store, &id, provider, Arc::new(Recorder(tx))).unwrap();
+    let task = tokio::spawn(actor.run());
+    assert!(!handle.bypass_active().await.unwrap());
+    drop(handle);
+    task.await.unwrap();
 }

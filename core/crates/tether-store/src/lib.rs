@@ -37,6 +37,7 @@ mod session_plans;
 #[cfg(test)]
 mod session_plans_tests;
 mod session_search;
+mod session_title;
 mod sessions;
 #[cfg(test)]
 mod sessions_rules_tests;

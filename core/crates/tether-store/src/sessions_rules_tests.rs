@@ -263,3 +263,60 @@ fn rename_changes_the_title_without_losing_searchable_messages() {
         Err(crate::StoreError::EmptySessionTitle)
     ));
 }
+
+#[test]
+fn a_multi_line_first_message_gives_a_one_line_title() {
+    let mut store = Store::open_in_memory().unwrap();
+    let project = seed_project(&store);
+    let session = store
+        .create_session(&project, &anthropic(), PermissionMode::Ask, 1)
+        .unwrap();
+    store
+        .begin_turn(&session.id, "  Fix the\tlogin\n\n  bug\r\nnow  ", 2)
+        .unwrap();
+    assert_eq!(
+        store.load_session(&session.id).unwrap().unwrap().title,
+        "Fix the login bug now"
+    );
+}
+
+#[test]
+fn a_long_multi_line_title_is_cut_to_80_characters_after_collapsing() {
+    let mut store = Store::open_in_memory().unwrap();
+    let project = seed_project(&store);
+    let session = store
+        .create_session(&project, &anthropic(), PermissionMode::Ask, 1)
+        .unwrap();
+    let message = format!("{}\n\n", "é".repeat(50)).repeat(3);
+    store.begin_turn(&session.id, &message, 2).unwrap();
+    let title = store.load_session(&session.id).unwrap().unwrap().title;
+    assert_eq!(title.chars().count(), 80);
+    assert!(!title.contains('\n'));
+    assert_eq!(title, format!("{} {}", "é".repeat(50), "é".repeat(29)));
+}
+
+#[test]
+fn a_whitespace_only_first_message_leaves_the_title_empty() {
+    let mut store = Store::open_in_memory().unwrap();
+    let project = seed_project(&store);
+    let session = store
+        .create_session(&project, &anthropic(), PermissionMode::Ask, 1)
+        .unwrap();
+    store.begin_turn(&session.id, " \t\n ", 2).unwrap();
+    assert_eq!(store.load_session(&session.id).unwrap().unwrap().title, "");
+}
+
+#[test]
+fn an_existing_title_is_not_replaced_by_the_first_message() {
+    let mut store = Store::open_in_memory().unwrap();
+    let project = seed_project(&store);
+    let session = store
+        .create_session(&project, &anthropic(), PermissionMode::Ask, 1)
+        .unwrap();
+    store.rename_session(&session.id, "Alpha").unwrap();
+    store.begin_turn(&session.id, "First\nmessage", 2).unwrap();
+    assert_eq!(
+        store.load_session(&session.id).unwrap().unwrap().title,
+        "Alpha"
+    );
+}

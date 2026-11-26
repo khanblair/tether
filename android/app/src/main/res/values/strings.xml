@@ -335,8 +335,7 @@
     <string name="transcript_tool">Tool</string>
     <string name="transcript_system">System</string>
     <string name="transcript_attachment">Attachment</string>
-    <string name="composer_hint">Message</string>
-    <string name="composer_attachments">Attachments</string>
+    <string name="composer_hint">Message, / for commands, @ for files</string>
     <string name="composer_send">Send</string>
     <string name="composer_stop">Stop</string>
     <string name="status_mode_plan">Plan</string>
@@ -347,6 +346,6 @@
     <string name="status_unknown">Unknown</string>
     <string name="composer_image_staged">Image selected. Sending images is not available yet.</string>
     <string name="composer_image_remove">Remove image</string>
-    <string name="composer_voice">Speak</string>
+    <string name="composer_voice_input">Voice input</string>
     <string name="composer_voice_unavailable">Speech input is not available on this device.</string>
 </resources>

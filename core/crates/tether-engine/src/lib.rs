@@ -10,6 +10,7 @@ pub mod context;
 pub mod executors;
 pub mod network;
 pub mod notify;
+mod path_utils;
 pub mod permissions;
 pub mod prompt;
 mod provider_connection;

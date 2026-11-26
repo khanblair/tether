@@ -85,3 +85,42 @@ fn a_run_target_is_the_bare_command_so_a_saved_rule_names_the_program() {
     assert_eq!(rule.pattern, "echo");
     std::fs::remove_dir_all(root).unwrap();
 }
+
+fn run_tools(root: &std::path::Path) -> (RunTools, PathGuard) {
+    let guard = PathGuard::new(root).unwrap();
+    let tools = RunTools::new(root.join("packs")).unwrap().with_executors(
+        None,
+        Arc::new(TestCi),
+        None,
+        Arc::new(|_| false),
+    );
+    (tools, guard)
+}
+
+#[test]
+fn run_cwd_normalizes_the_root_and_clean_relative_folders() {
+    let root = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(root.path().join("web")).unwrap();
+    let (tools, guard) = run_tools(root.path());
+    for (cwd, expected) in [(".", ""), ("", ""), ("./web", "web"), ("web/", "web")] {
+        let args = serde_json::json!({"command": "echo hello", "executor": "ci", "cwd": cwd});
+        let call = tools
+            .prepare("run", &args.to_string(), &PrepareContext { guard: &guard })
+            .unwrap();
+        assert_eq!(call.payload["_cwd"].as_str(), Some(expected), "cwd {cwd:?}");
+    }
+}
+
+#[test]
+fn run_cwd_rejects_escapes_and_absolute_paths() {
+    let root = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(root.path().join("web")).unwrap();
+    let (tools, guard) = run_tools(root.path());
+    for cwd in ["..", "/etc", "web/../..", "../web"] {
+        let args = serde_json::json!({"command": "echo hello", "executor": "ci", "cwd": cwd});
+        let error = tools
+            .prepare("run", &args.to_string(), &PrepareContext { guard: &guard })
+            .unwrap_err();
+        assert_eq!(error, "cwd must stay inside the workspace", "cwd {cwd:?}");
+    }
+}

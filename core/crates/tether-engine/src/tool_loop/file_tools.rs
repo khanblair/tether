@@ -1,12 +1,11 @@
 //! The guarded file tool handler.
 
-use std::path::{Component, Path, PathBuf};
-
 use serde_json::{Value, json};
 use tether_providers::{BoxFuture, ToolSpec};
 use tether_tools::{EditTools, ReadTools};
 
 use super::registry::{ExecuteContext, PrepareContext, PreparedCall, ToolHandler, ToolOutput};
+use crate::path_utils::lexical_path;
 use crate::permissions::Effect;
 
 mod file_execute;
@@ -205,7 +204,9 @@ fn schema_field(key: &str, kind: &Value) -> Value {
 
 fn prepare_directory(payload: &mut Value, context: &PrepareContext<'_>) -> Result<String, String> {
     let raw = optional_string(payload, "path")?.unwrap_or_default();
-    if raw.is_empty() {
+    let lexical = lexical_path(raw)?;
+    if lexical.as_os_str().is_empty() {
+        set_string(payload, "path", "");
         return Ok(".".to_owned());
     }
     let path = normalized_path(context, raw)?;
@@ -229,6 +230,9 @@ fn allowed_fields(name: &str) -> Option<&'static [&'static str]> {
 
 fn normalized_path(context: &PrepareContext<'_>, raw: &str) -> Result<String, String> {
     let path = lexical_path(raw)?;
+    if path.as_os_str().is_empty() {
+        return Err("path is empty".into());
+    }
     let resolved = context
         .guard
         .resolve(&path)
@@ -242,29 +246,6 @@ fn normalized_path(context: &PrepareContext<'_>, raw: &str) -> Result<String, St
                 .then_some(value)
                 .ok_or_else(|| "path is empty".to_owned())
         })
-}
-
-fn lexical_path(raw: &str) -> Result<PathBuf, String> {
-    let mut output = PathBuf::new();
-    for component in Path::new(raw).components() {
-        push_component(&mut output, component)?;
-    }
-    if output.as_os_str().is_empty() {
-        return Err("path is empty".into());
-    }
-    Ok(output)
-}
-
-fn push_component(output: &mut PathBuf, component: Component<'_>) -> Result<(), String> {
-    match component {
-        Component::Normal(value) => output.push(value),
-        Component::CurDir => {}
-        Component::ParentDir if output.pop() => {}
-        Component::ParentDir | Component::RootDir | Component::Prefix(_) => {
-            return Err("path leaves the workspace".into());
-        }
-    }
-    Ok(())
 }
 
 fn line_range(value: &Value) -> Result<(), String> {
@@ -312,9 +293,11 @@ fn string<'a>(value: &'a Value, key: &str) -> Result<&'a str, String> {
 }
 
 fn optional_string<'a>(value: &'a Value, key: &str) -> Result<Option<&'a str>, String> {
-    value
-        .get(key)
-        .map_or(Ok(None), |value| string(value, key).map(Some))
+    value.get(key).map_or(Ok(None), |item| {
+        item.as_str()
+            .map(Some)
+            .ok_or_else(|| format!("{key} must be a string"))
+    })
 }
 
 fn optional_usize(value: &Value, key: &str) -> Result<Option<usize>, String> {

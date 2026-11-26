@@ -15,6 +15,14 @@
     <string name="session_change_model">Change model</string>
     <string name="session_change_mode">Change permission mode</string>
 
+    <!-- Thinking effort: the section in the model sheet, and the choices in Settings. -->
+    <string name="session_effort_title">Thinking</string>
+    <string name="session_effort_helper">How much the model thinks before it answers. Models that do not reason ignore it.</string>
+    <string name="session_effort_default">Default</string>
+    <string name="session_effort_low">Low</string>
+    <string name="session_effort_medium">Medium</string>
+    <string name="session_effort_high">High</string>
+
     <!-- Session top bar and the jump to latest pill. -->
     <string name="session_review_changes">Review changes</string>
     <string name="session_menu_action">Session menu</string>

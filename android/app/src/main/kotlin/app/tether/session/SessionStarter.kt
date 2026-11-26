@@ -31,7 +31,8 @@ sealed interface StartResult {
  * and has a saved key: the project's default, the app default, then the first provider in
  * [ProviderView] order that has a key, with that provider's first saved model. A default whose
  * provider has no key is skipped. The permission mode is the project's default, else the app's;
- * when neither is saved the core's own mode stays. Blocking: call it off the main thread.
+ * when neither is saved the core's own mode stays. The app's thinking effort is applied when it is
+ * not the model default. Blocking: call it off the main thread.
  */
 class SessionStarter(
     private val providers: ProviderGateway,
@@ -45,11 +46,12 @@ class SessionStarter(
         try {
             val project = projectDefaults?.load(projectId)
             val mode = project?.mode ?: appDefaults?.savedDefaultMode()
+            val effort = appDefaults?.savedDefaultEffort()
             val chosen = savedChoice(project?.model()) ?: savedChoice(appDefaults?.defaultModel())
             if (chosen != null) {
-                createStarted(projectId, chosen.provider, chosen.modelId, mode)
+                createStarted(projectId, chosen.provider, chosen.modelId, mode, effort)
             } else {
-                firstKeyedStart(projectId, mode)
+                firstKeyedStart(projectId, mode, effort)
             }
         } catch (_: Exception) {
             StartResult.Failed
@@ -58,6 +60,7 @@ class SessionStarter(
     private fun firstKeyedStart(
         projectId: String,
         mode: SessionMode?,
+        effort: ThinkingEffort?,
     ): StartResult {
         val provider =
             ProviderView.entries.firstOrNull { providers.hasKey(it) } ?: return StartResult.NoKey
@@ -65,24 +68,41 @@ class SessionStarter(
         return if (model == null) {
             StartResult.NoModels
         } else {
-            createStarted(projectId, provider, model, mode)
+            createStarted(projectId, provider, model, mode, effort)
         }
     }
 
     /**
-     * Creates the session, then applies [mode]. Bypass is never applied from a saved default, so
-     * the core's own mode stays. A refused mode call does not fail the start: the session exists
-     * and runs in the core's own mode.
+     * Creates the session, then applies [mode] and [effort]. Bypass is never applied from a saved
+     * default, so the core's own mode stays. A null [effort] is the model default and makes no
+     * call. A refused mode or effort call does not fail the start: the session still exists.
      */
     private fun createStarted(
         projectId: String,
         provider: ProviderView,
         modelId: String,
         mode: SessionMode?,
+        effort: ThinkingEffort?,
     ): StartResult {
         val sessionId = sessions.createSession(projectId, provider, modelId)
         if (mode != null && mode != SessionMode.BYPASS) applyMode(sessionId, mode)
+        if (effort != null) applyEffort(sessionId, effort)
         return StartResult.Started(sessionId)
+    }
+
+    /** Sets [effort] on a new session. A refused call is ignored, and the model default stays. */
+    @Suppress("TooGenericExceptionCaught")
+    private fun applyEffort(
+        sessionId: String,
+        effort: ThinkingEffort,
+    ) {
+        try {
+            sessions.setEffort(sessionId, effort)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            // The session keeps the model's own default effort.
+        }
     }
 
     /** Sets [mode] on a new session. A refused call is ignored, and the core's mode stays. */

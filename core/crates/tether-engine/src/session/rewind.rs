@@ -1,6 +1,8 @@
 //! Serialized actor handling for checkpoint restore.
 
-use crate::{rewind_checkpoint, rewind_conversation_only};
+use tether_types::MessageId;
+
+use crate::{RewindError, rewind_checkpoint, rewind_conversation_only};
 
 use super::{CoreEvent, RewindScope, SessionActor, SessionActorError, SessionStatus, now_ms};
 
@@ -24,6 +26,20 @@ impl SessionActor {
         } else {
             return Err(SessionActorError::NoWorkspace);
         }
+        self.finish_rewind()
+    }
+
+    /// Hides a message and every later one. Needs no workspace runtime.
+    pub(super) fn rewind_to_message(&mut self, message_id: &str) -> Result<(), SessionActorError> {
+        let anchor = MessageId::new(message_id);
+        self.store
+            .rewind_conversation(&self.session.id, &anchor)
+            .map_err(|error| SessionActorError::Rewind(RewindError::Store(error)))?;
+        self.finish_rewind()
+    }
+
+    /// Sets the session idle and tells the caller the transcript changed.
+    fn finish_rewind(&mut self) -> Result<(), SessionActorError> {
         self.store
             .set_session_status(&self.session.id, SessionStatus::Idle, now_ms())?;
         self.emit_status(SessionStatus::Idle);

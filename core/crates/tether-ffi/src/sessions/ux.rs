@@ -247,7 +247,8 @@ pub(super) fn map_rewind_error(error: &tether_engine::SessionActorError) -> Sess
     use tether_engine::{RewindError, SessionActorError};
     match error {
         SessionActorError::Rewind(RewindError::Store(
-            tether_store::StoreError::MissingCheckpoint,
+            tether_store::StoreError::MissingCheckpoint
+            | tether_store::StoreError::MissingCheckpointMessage,
         )) => SessionRuntimeError::NotFound,
         SessionActorError::Rewind(RewindError::CorruptSnapshot) => {
             SessionRuntimeError::CorruptSnapshot

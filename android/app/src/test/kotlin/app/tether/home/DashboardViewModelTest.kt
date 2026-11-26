@@ -42,6 +42,8 @@ class DashboardViewModelTest {
                 object : SessionsSource {
                     override fun sessions() =
                         listOf(SessionSummary("s", "t", "p", SessionState.Waiting, now))
+
+                    override fun archivedSessions() = emptyList<SessionSummary>()
                 },
             usage =
                 object : UsageSource {

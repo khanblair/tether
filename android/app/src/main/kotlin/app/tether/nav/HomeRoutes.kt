@@ -68,6 +68,9 @@ private fun NavGraphBuilder.dashboardRoute(
             onRenameSession = { rename.start(it.id, it.title) },
         )
         SessionRenameHost(rename = rename, onRenamed = dashboard::refresh)
+        LaunchedEffect(dashboard) {
+            module.sessionChanges.changes.collect { dashboard.refresh() }
+        }
     }
 }
 
@@ -117,6 +120,7 @@ private fun NavGraphBuilder.projectHomeRoute(
         LaunchedEffect(home) {
             home.openedSessions.collect { nav.open("session/${Uri.encode(it)}") }
         }
+        LaunchedEffect(home) { module.sessionChanges.changes.collect { home.refresh() } }
         var exporting by rememberSaveable { mutableStateOf(false) }
         val rename = sessionRenameViewModel(module.sessionGateway)
         ProjectHomeScreen(

@@ -81,9 +81,48 @@ class CoreHomeSourcesTest {
     }
 
     @Test
+    fun archived_sessions_map_their_fields_and_project_per_project() {
+        sessions.archivedByProject["api"] =
+            listOf(
+                sessionInfo("a", SessionStatusView.FAILED, title = "Old fix", updatedAtMs = 4_000L),
+            )
+        sessions.archivedByProject["blog"] =
+            listOf(
+                sessionInfo("c", SessionStatusView.IDLE, title = "Old post", updatedAtMs = 2_000L),
+            )
+
+        val archived = CoreSessionsSource(projects, sessions).archivedSessions()
+
+        assertEquals(listOf("a", "c"), archived.map { it.id })
+        val first = archived[0]
+        assertEquals("Old fix", first.title)
+        assertEquals("acme-api", first.projectName)
+        assertEquals("api", first.projectId)
+        assertEquals(SessionState.Failed, first.state)
+        assertEquals(4_000L, first.updatedAt)
+        assertEquals("blog", archived[1].projectId)
+    }
+
+    @Test
+    fun archived_sessions_are_not_in_the_active_list() {
+        sessions.sessionsByProject["blog"] = listOf(sessionInfo("live", SessionStatusView.IDLE))
+        sessions.archivedByProject["blog"] = listOf(sessionInfo("old", SessionStatusView.IDLE))
+
+        val active = CoreSessionsSource(projects, sessions).sessions()
+
+        assertEquals(listOf("live"), active.map { it.id })
+    }
+
+    @Test
+    fun no_archived_sessions_gives_an_empty_list() {
+        assertTrue(CoreSessionsSource(projects, sessions).archivedSessions().isEmpty())
+    }
+
+    @Test
     fun a_fresh_install_has_no_projects_and_no_sessions() {
         val empty = FakeProjectGateway()
         assertTrue(CoreProjectsSource(empty, sessions).projects().isEmpty())
         assertTrue(CoreSessionsSource(empty, sessions).sessions().isEmpty())
+        assertTrue(CoreSessionsSource(empty, sessions).archivedSessions().isEmpty())
     }
 }

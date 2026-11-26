@@ -72,6 +72,8 @@ class ProjectHomeViewModelTest {
     private fun fixedSessions(items: List<SessionSummary>) =
         object : SessionsSource {
             override fun sessions(): List<SessionSummary> = items
+
+            override fun archivedSessions(): List<SessionSummary> = emptyList()
         }
 
     @Test

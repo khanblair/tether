@@ -10,6 +10,9 @@ interface ProjectsSource {
 interface SessionsSource {
     /** Every session, in any order. The screens sort them. */
     fun sessions(): List<SessionSummary>
+
+    /** Every archived session, in any order. They are hidden from [sessions] until restored. */
+    fun archivedSessions(): List<SessionSummary>
 }
 
 /** The usage the Home dashboard charts. */

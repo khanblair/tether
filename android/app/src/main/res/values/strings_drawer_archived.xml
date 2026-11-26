@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The archived sessions block at the foot of the drawer list. -->
+    <plurals name="drawer_archived_show">
+        <item quantity="one">%1$d archived session · Show</item>
+        <item quantity="other">%1$d archived sessions · Show</item>
+    </plurals>
+    <string name="drawer_archived_hide">Hide archived sessions</string>
+    <string name="drawer_archived_title">Archived</string>
+    <string name="drawer_archived_unarchive">Unarchive</string>
+    <string name="drawer_archived_restored">Session restored</string>
+    <string name="drawer_archived_restore_failed">Could not restore the session</string>
+    <string name="drawer_archived_subtitle">%1$s · %2$s</string>
+</resources>

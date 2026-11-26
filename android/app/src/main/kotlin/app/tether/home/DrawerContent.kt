@@ -7,8 +7,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
@@ -73,6 +75,10 @@ private val DESTINATIONS =
 @Composable
 fun HomeDrawer(
     sessions: List<SessionSummary>,
+    archived: List<SessionSummary>,
+    showArchived: Boolean,
+    onToggleArchived: () -> Unit,
+    onUnarchive: (SessionSummary) -> Unit,
     query: String,
     onQueryChange: (String) -> Unit,
     currentRoute: String?,
@@ -93,10 +99,20 @@ fun HomeDrawer(
         drawerContainerColor = TetherTheme.colors.surface,
         drawerContentColor = TetherTheme.colors.text,
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        // The footer pads the navigation bar itself, so only the keyboard space above it is added.
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .windowInsetsPadding(WindowInsets.ime.exclude(WindowInsets.navigationBars)),
+        ) {
             DrawerHeader(themeMode = themeMode, onToggleTheme = onToggleTheme)
             DrawerList(
                 sessions = sessions,
+                archived = archived,
+                showArchived = showArchived,
+                onToggleArchived = onToggleArchived,
+                onUnarchive = onUnarchive,
                 query = query,
                 onQueryChange = onQueryChange,
                 currentRoute = currentRoute,
@@ -160,6 +176,10 @@ private fun DrawerHeader(
 @Composable
 private fun DrawerList(
     sessions: List<SessionSummary>,
+    archived: List<SessionSummary>,
+    showArchived: Boolean,
+    onToggleArchived: () -> Unit,
+    onUnarchive: (SessionSummary) -> Unit,
     query: String,
     onQueryChange: (String) -> Unit,
     currentRoute: String?,
@@ -213,6 +233,15 @@ private fun DrawerList(
                     onLongClick = { onRenameSession(session) },
                 )
             }
+        }
+        if (query.isBlank()) {
+            archivedItems(
+                archived = archived,
+                showArchived = showArchived,
+                now = now,
+                onToggle = onToggleArchived,
+                onUnarchive = onUnarchive,
+            )
         }
     }
 }

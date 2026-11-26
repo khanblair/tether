@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -65,12 +64,15 @@ internal fun ComposerBar(
             leadingIcon = modeIcon(mode),
             onClick = onOpenMode,
         )
-        TetherChip(
-            label = modelLabel,
-            trailingChevron = true,
-            onClick = onOpenModel,
-        )
-        Spacer(Modifier.weight(1f))
+        // The model chip takes the space the voice and send buttons leave, so a long name is cut
+        // with an ellipsis and the buttons stay on screen.
+        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+            TetherChip(
+                label = modelLabel,
+                trailingChevron = true,
+                onClick = onOpenModel,
+            )
+        }
         TetherIconButton(
             icon = TetherInputIcons.Mic,
             contentDescription = stringResource(R.string.composer_voice_input),

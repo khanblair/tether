@@ -5,7 +5,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -73,8 +75,12 @@ internal fun AddMcpServerForm(
     onDone: () -> Unit,
 ) {
     val editable = state.addedId == null && !state.adding
+    // The sheet can be shorter than the form at large font sizes, so the form scrolls.
     Column(
-        modifier = Modifier.padding(horizontal = TetherSpace.space4),
+        modifier =
+            Modifier
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = TetherSpace.space4),
         verticalArrangement = Arrangement.spacedBy(TetherSpace.space3),
     ) {
         if (state.problem != null) {

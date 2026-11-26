@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -355,7 +356,12 @@ private fun followTail(
     LaunchedEffect(listState) {
         snapshotFlow { listState.layoutInfo.totalItemsCount }.collect { itemsNow = it }
     }
-    LaunchedEffect(messages, trailing, liveKey) {
+    // The keyboard shrinks the viewport without moving the scroll position, so a height change
+    // also runs the effect below. It scrolls only while the reader is following the tail.
+    val viewportHeight by remember(listState) {
+        derivedStateOf { listState.layoutInfo.viewportSize.height }
+    }
+    LaunchedEffect(messages, trailing, liveKey, viewportHeight) {
         val lastItem = messages.size + trailing - 1
         if (lastItem >= 0 && shouldFollow(followTail, hasNewContent = true)) {
             // A large offset clamps to the list end, so a growing reply stays in view.

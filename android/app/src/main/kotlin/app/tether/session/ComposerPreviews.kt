@@ -3,11 +3,15 @@ package app.tether.session
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import app.tether.design.TetherTheme
@@ -17,6 +21,10 @@ import app.tether.design.tokens.TetherSpace
 private const val SAMPLE_MODEL = "Sonnet 5.5"
 private const val SAMPLE_DRAFT = "Fix the failing login test and add a regression test"
 private const val SAMPLE_LINES = 6
+private const val LONG_MODEL = "inclusionAI: Ling 3.2 Flash (free)"
+private const val VERY_LONG_MODEL = "inclusionAI: Ling 3.2 Flash Extended Context (free preview)"
+private const val LARGE_FONT_SCALE = 2f
+private const val NARROW_WIDTH = 320
 
 @Composable
 private fun ComposerPreview(
@@ -26,28 +34,35 @@ private fun ComposerPreview(
     canSend: Boolean = text.isNotBlank(),
     staged: Boolean = false,
     maxHeight: Dp = 240.dp,
+    modelLabel: String = SAMPLE_MODEL,
+    fontScale: Float = 1f,
+    widthDp: Int? = null,
 ) {
+    val density = LocalDensity.current
+    val frame = if (widthDp == null) Modifier.fillMaxWidth() else Modifier.width(widthDp.dp)
     TetherTheme(mode = ThemeMode.Light) {
-        Column(modifier = Modifier.fillMaxWidth().padding(TetherSpace.space4)) {
-            ComposerFrame {
-                if (staged) StagedImageRow(onRemove = {})
-                ComposerField(
-                    value = TextFieldValue(text, TextRange(text.length)),
-                    onValueChange = {},
-                    maxHeight = maxHeight,
-                )
-                ComposerBar(
-                    mode = mode,
-                    modelLabel = SAMPLE_MODEL,
-                    running = running,
-                    canSend = canSend,
-                    onPlus = {},
-                    onOpenMode = {},
-                    onOpenModel = {},
-                    onVoice = {},
-                    onStop = {},
-                    onSend = {},
-                )
+        CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale)) {
+            Column(modifier = frame.padding(TetherSpace.space4)) {
+                ComposerFrame {
+                    if (staged) StagedImageRow(onRemove = {})
+                    ComposerField(
+                        value = TextFieldValue(text, TextRange(text.length)),
+                        onValueChange = {},
+                        maxHeight = maxHeight,
+                    )
+                    ComposerBar(
+                        mode = mode,
+                        modelLabel = modelLabel,
+                        running = running,
+                        canSend = canSend,
+                        onPlus = {},
+                        onOpenMode = {},
+                        onOpenModel = {},
+                        onVoice = {},
+                        onStop = {},
+                        onSend = {},
+                    )
+                }
             }
         }
     }
@@ -78,6 +93,24 @@ internal fun ComposerMultiLinePreview() {
 @Composable
 internal fun ComposerRunningPreview() {
     ComposerPreview(text = "", running = true)
+}
+
+@Preview(name = "Long model name, light", showBackground = true)
+@Composable
+internal fun ComposerLongModelPreview() {
+    ComposerPreview(text = SAMPLE_DRAFT, modelLabel = LONG_MODEL)
+}
+
+@Preview(name = "Very long model name at 200% font, light", showBackground = true)
+@Composable
+internal fun ComposerLargeFontPreview() {
+    ComposerPreview(text = SAMPLE_DRAFT, modelLabel = VERY_LONG_MODEL, fontScale = LARGE_FONT_SCALE)
+}
+
+@Preview(name = "320 dp wide, long model name, light", showBackground = true)
+@Composable
+internal fun ComposerNarrowPreview() {
+    ComposerPreview(text = SAMPLE_DRAFT, modelLabel = LONG_MODEL, widthDp = NARROW_WIDTH)
 }
 
 @Preview(name = "Auto chip, light", showBackground = true)

@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import app.tether.R
 import app.tether.design.TetherTheme
 import app.tether.design.tokens.TetherSize
@@ -90,6 +91,8 @@ fun StatusLine(
                         onModelClick,
                         R.string.session_change_model,
                         bypass,
+                        // Weighted, so the other parts keep their width and the name is cut.
+                        modifier = Modifier.weight(1f, fill = false),
                     )
                 StatusPart.Mode ->
                     StatusSegment(
@@ -122,12 +125,13 @@ private fun StatusSegment(
     onClick: (() -> Unit)?,
     actionLabel: Int,
     bypass: Boolean,
+    modifier: Modifier = Modifier,
 ) {
     val tap =
         if (onClick == null) {
-            Modifier
+            modifier
         } else {
-            Modifier
+            modifier
                 .minimumInteractiveComponentSize()
                 .clickable(
                     role = Role.Button,
@@ -149,6 +153,8 @@ private fun StatusText(
         style = MaterialTheme.typography.labelSmall,
         color = if (bypass) TetherTheme.colors.danger else TetherTheme.colors.text3,
         fontWeight = if (bypass) FontWeight.Medium else null,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
         modifier = modifier,
     )
 }

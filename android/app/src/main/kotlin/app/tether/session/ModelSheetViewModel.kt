@@ -41,7 +41,7 @@ data class ModelRef(
 /**
  * The model sheet's state. [failure] is null when the last call worked. [effort] is the session's
  * thinking effort, null for the model default. [showsEffort] is true only when the current model
- * reports reasoning support.
+ * reports reasoning support. [query] is the search text that filters the model list.
  */
 data class ModelSheetState(
     val loading: Boolean = true,
@@ -51,7 +51,54 @@ data class ModelSheetState(
     val failure: SessionFailure? = null,
     val effort: ThinkingEffort? = null,
     val showsEffort: Boolean = false,
+    val query: String = "",
 )
+
+private val WORD_BREAK = Regex("\\s+")
+
+/**
+ * The groups that match [query]. Every word of the query must appear in a model's display name or
+ * id, ignoring case. An empty query keeps every group, and a provider with no match is dropped.
+ */
+internal fun filterModelGroups(
+    groups: List<ModelGroup>,
+    query: String,
+): List<ModelGroup> {
+    val words =
+        query
+            .trim()
+            .lowercase()
+            .split(WORD_BREAK)
+            .filter { it.isNotEmpty() }
+    if (words.isEmpty()) return groups
+    return groups.mapNotNull { group ->
+        val models = group.models.filter { model -> model.matches(words) }
+        if (models.isEmpty()) null else group.copy(models = models)
+    }
+}
+
+private fun ModelChoice.matches(words: List<String>): Boolean {
+    val text = "$displayName $id".lowercase()
+    return words.all { it in text }
+}
+
+/**
+ * The thinking section shows while the query is empty, or while the current model is still in
+ * [visible]. A model that cannot reason never shows it.
+ */
+internal fun showsEffortSection(
+    state: ModelSheetState,
+    visible: List<ModelGroup>,
+): Boolean {
+    val current = state.current
+    val currentVisible =
+        current != null &&
+            visible.any { group ->
+                group.provider == current.provider &&
+                    group.models.any { it.id == current.modelId }
+            }
+    return state.showsEffort && (state.query.isBlank() || currentVisible)
+}
 
 /** What the sheet reads when it opens: the session's model and effort, and the saved models. */
 private data class SheetCatalog(
@@ -114,6 +161,11 @@ class ModelSheetViewModel(
             deps.settings.setModel(deps.sessionId, provider, model.id)
             deps.reopen()
         }
+    }
+
+    /** Sets the search text that filters the model list. */
+    fun onQueryChange(query: String) {
+        mutableState.update { it.copy(query = query) }
     }
 
     /**

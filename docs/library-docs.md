@@ -119,6 +119,7 @@ GitHub REST and GraphQL calls use `reqwest` directly with typed request and resp
 | AndroidX Biometric | Not used yet | The platform `BiometricPrompt` covers minSdk 29; add this library only if a feature needs what the platform API lacks | Official |
 | AndroidX Core and Activity Compose | Core 1.19.x, Activity 1.13.x | `NotificationCompat`, `ServiceCompat`, edge-to-edge | Official |
 | AndroidX ProfileInstaller | Latest stable | Baseline profiles for startup | Cold start budget |
+| Android System WebView (platform `android.webkit`) | Platform | The Preview screen only, to show the user's own project pages. Never for core screens. JavaScript on, no JavaScript interface, file and content access off, every request answered by the app (decision D40) | The only way to render a page; the rules are in `docs/specs/preview.md` |
 
 Fonts: IBM Plex Sans (Regular, Medium, SemiBold) and IBM Plex Mono (Regular, Medium), SIL Open Font License, bundled in `designsystem/src/main/res/font/` with the license in `designsystem/FONTS-LICENSE.txt`.
 
@@ -186,7 +187,7 @@ Icons: Lucide (ISC), converted to Compose `ImageVector`s in `designsystem/Icons.
 | Termux packages or its app code | GPL licensing; we own the Linux layer | Our PRoot build and Alpine |
 | Accompanist modules with official replacements | Deprecated | Official AndroidX APIs |
 | Compose Multiplatform for app UI | Conflicts with decision D2 | Jetpack Compose now, SwiftUI later |
-| Any WebView-based UI for core screens | Slow, inconsistent | Compose |
+| Any WebView-based UI for core screens | Slow, inconsistent. The Preview screen is the one allowed WebView (D40) | Compose |
 
 ## 6. Open library decisions
 

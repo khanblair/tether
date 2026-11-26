@@ -72,7 +72,7 @@ All components start as **Planned**. Screenshot tests start with the first featu
 | `FilesScreen` | Lazy file tree with name and text search and an ignored-files toggle. App module | `viewModel`, `onOpenFile` | loading, tree, empty folder, folder error, truncated listing, ignored shown | P2 | Built |
 | `FileViewScreen` | Read-only file text with line numbers, horizontal scroll, and Copy path. App module | `viewModel`, `path` | text, truncated, binary, error | P2 | Built |
 | `TurnFooter` | The blocks under the transcript: rejected key, rate limit, other failure, stopped, and the thinking label. App module | `turn`, `providerName`, `onRetry`, `onOpenProviders`, `onDismissStopped` | each problem, stopped, thinking | P1 | Built |
-| `MessageActionsSheet` | Long press on a message opens it; Copy only for now. App module | `onCopy` | default | P1 | Built |
+| `MessageActionsSheet` | Long press on a message opens it; Copy only. The visible action row is the main path. App module | `onCopy` | default | P1 | Built |
 | `OfflineBanner` | Banner under the status line while the phone has no network. App module. Code name: `NetworkBanner` | none | hidden, visible | P1 | Built |
 | `SearchScreen` | Message search with scope chips and the match in bold. App module | `viewModel`, `hasProject`, `onBack`, `onOpenSession` | idle, loading, hits, nothing found | P1 | Built |
 | `ImportProjectScreen` | Import a project ZIP: pick a file, name the project, import | `state`, `onChooseFile`, `onNameChange`, `onImport`, `onCancel`, `onImported` | idle, picked, importing, done, failed, name too long, too large | P2 | Built |
@@ -88,7 +88,10 @@ All components start as **Planned**. Screenshot tests start with the first featu
 | `UserMessage` | User's message, inset | `text`, `attachments`, `onLongPress` | default, with images, rewound (dimmed) | P1 | Planned |
 | `AgentText` | Streamed Markdown text from the agent | `blocks` (parsed in core), `streaming` | complete, streaming with caret | P1 | Planned |
 | `CodeBlock` | Highlighted code with copy | `code`, `language`, `spans` | default, long (scrolls), copied | P1 | Planned |
-| `ThinkingBlock` | Collapsed model reasoning | `text`, `durationMs` | collapsed, expanded, streaming | P1 | Planned |
+| `ThinkingBlock` | The reasoning of one message as one collapsed row (brain icon, "Thinking" or "Thinking…" while it streams, chevron); tapping shows the text. State is kept per message. App module | `stateKey`, `text`, `live`, `startOpen` | collapsed, expanded, streaming | P1 | Built |
+| `UserBubble` | The user's message as a bubble on the end side, at most 85% of the row, with Copy and Edit below it. App module | `message`, `onEdit`, `onCopy`, `onLongPress` | short, long, no text | P1 | Built |
+| `MessageActionRow` | Icon row of 48 dp buttons under a message: Copy, Edit, Regenerate. App module | `onCopy`, `onEdit`, `onRegenerate` | user, agent, newest turn | P1 | Built |
+| `EditMessageSheet` | Sheet with the message text and Send; replies after the message are removed and files stay as they are. App module | `text`, `onSend`, `onDismiss` | default, blank, unchanged | P1 | Built |
 | `ToolCallCard` | One tool call with status and output | `call: ToolCallUi`, `expanded`, `onToggle`, `onRunElsewhere` | proposed, awaiting approval, running, succeeded, failed, timed out, denied, blocked | P2 | Built |
 | `ToolGroupCard` | Collapsed group of read-only calls | `calls`, `expanded`, `onToggleGroup`, `onToggleCall` | collapsed, expanded | P2 | Built |
 | `DiffCard` | Summary of an edit batch | `summary: DiffSummary`, `quality`, `onOpen`, `onReview` | clean, warnings, blocking | P2 | Planned |
@@ -102,7 +105,7 @@ All components start as **Planned**. Screenshot tests start with the first featu
 | `PrCard` | Pull request status | `pr: PrView`, `onRefresh`, `onOpen` | open with checks pending, passing, failing, merged | P4 | Planned |
 | `SystemNote` | Compaction, rewind, mode change markers | `kind` (`SystemNoteKind`) | compaction, rewind, mode change, model change | P2 | Built |
 | `ErrorBlock` | Inline error with action | `title`, `body`, `action` | retryable, needs settings, budget reached, interrupted | P1 | Planned |
-| `JumpToLatest` | Floating pill with an arrow and "N new" when the reader has scrolled up and rows arrived; tapping scrolls to the newest row. App module | `count`, `onClick` | hidden, visible with count | P1 | Built |
+| `JumpToLatest` | Floating button shown whenever the last row is out of view: a round arrow button, or a pill with "N new" when rows arrived since the reader scrolled up; tapping scrolls to the newest row. App module | `pill`, `onClick` | hidden, icon, count | P1 | Built |
 
 ## Composer
 

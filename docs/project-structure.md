@@ -51,7 +51,7 @@ tether/
 │       ├── tether-providers/  lib.rs (ChatProvider, ModelCatalog), catalog.rs, pricing/ and data/prices/, request.rs, event.rs, error.rs, sse.rs (SseParser), client.rs (shared HTTP client), anthropic/ (adapter), openai/ (adapter), gemini/ (adapter), openai_compat/ (adapter), deepseek.rs, openrouter.rs, transport.rs (shared request and stream code)
 │       ├── tether-ffi/        UniFFI surface, builds libtether_core.so
 │       │   ├── uniffi.toml
-│       │   └── src/{lib,approvals,archive,callbacks,ci,ci_service,ci_types,commands,config,context,executors,executors_download,executors_http,files,git,git_clone,git_support,git_types,github,knowledge,mcp,mcp_support,mcp_types,memory,network,notify,projects,provider_settings,quality,questions,resume,secrets,session_control,sessions,skills,skills_install,updater,usage,vault,vault_archive,vault_manifest,vault_sync}.rs; folders sessions/ (open, prompt, provider, recovery, user_runs, ux), skills_install/ (api, download, github_url, preview, quarantine, scope, tree, upkeep, views), views/ (approval, checkpoint, context, error, event, event_from, plan, project, question, session, todo, types, usage), bin/ (uniffi-bindgen); test modules
+│       │   └── src/{lib,approvals,archive,callbacks,ci,ci_service,ci_types,commands,config,context,executors,executors_download,executors_http,files,files_bytes,git,git_clone,git_support,git_types,github,knowledge,mcp,mcp_support,mcp_types,memory,network,notify,projects,provider_settings,quality,questions,resume,secrets,session_control,sessions,skills,skills_install,updater,usage,vault,vault_archive,vault_manifest,vault_sync}.rs; folders sessions/ (open, prompt, provider, recovery, user_runs, ux), skills_install/ (api, download, github_url, preview, quarantine, scope, tree, upkeep, views), views/ (approval, checkpoint, context, error, event, event_from, plan, project, question, session, todo, types, usage), bin/ (uniffi-bindgen); test modules
 │       ├── tether-quality/    Quality gate: smell and slop rules, prose checks, review parsing, highlighting
 │       │   ├── data/{generic_names.txt,slop_patterns.toml,slop_words.txt} (shared with slop-lint)
 │       │   └── src/{lib,highlight,language,manifest,model,prose,registry,report,review,thresholds}.rs; rules/{mod,slop,smell,smell_text,tests_rules,util}.rs; tests/ (integration tests, Markdown and Rust fixtures)
@@ -218,6 +218,7 @@ core/
     │       ├── executors_download.rs  Runtime pack and Linux root filesystem downloads
     │       ├── executors_http.rs      HTTPS fetchers shared by executor installers
     │       ├── files.rs       Read-only project files for the tree, viewer, and search
+    │       ├── files_bytes.rs Raw bytes of one project file for the Preview, never under .git (tests in files_bytes_tests.rs)
     │       ├── git.rs         UniFFI runtime for local Git repositories and clone operations
     │       ├── git_clone.rs   Clone runs, cancellation, and the clone factory for the Git runtime
     │       ├── git_support.rs Factories that connect the Git runtime to the engine's Git tools

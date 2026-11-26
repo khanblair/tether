@@ -95,12 +95,15 @@ Compact (phone portrait), from top to bottom:
 - A key is saved but its model list is empty: no session is created. The block says "Test the connection in Providers so the model list is saved." with **Open Providers**.
 
 ### Session
-- User messages: inset from the left by `space.8`, `surface` background, `radius.md`.
-- Agent text: full width, no background, `type.body-l`.
+- The transcript reads like a chat, with no "You" or "Agent" labels: the side says who wrote it (decision D39, which replaces the prototype's inset user message).
+- User messages: a bubble aligned to the end, at most 85% of the row, `surface-sunken` background, `radius.lg`, plain text. The accent color is never used for it.
+- Agent text: full width, aligned to the start, no background and no bubble, `type.body-m`, with Markdown (bold, italic, inline code, headings, lists, fenced code).
+- Reasoning is one collapsed row, "Thinking" with a chevron, also while the reply streams. Tapping it shows the text. The state is kept per message.
+- Under a user bubble: Copy and Edit. Under the last message of each finished agent turn: Copy, and Regenerate on the newest turn only. Edit and Regenerate are off while a turn runs. Edit rewinds the conversation to that message and sends the new text; files are not restored.
 - Tool calls, diffs, runs, plans, and reports are cards: full width, `surface-sunken` in light mode or `surface` in dark mode, `radius.md`, no border.
 - Consecutive read-only tool calls (read, list, glob, grep) group into one collapsed card: "Read 6 files, searched 2 times." Tapping expands the list.
 - The newest running card shows a running indicator in its header. Nothing else animates.
-- A "Jump to latest" button appears when the user scrolls up during streaming, showing the count of new items.
+- A "Jump to latest" button appears whenever the last row is out of view, in any session. It is a round arrow button, and it becomes a pill with the count of new items when rows arrived since the reader scrolled up.
 
 ### Diff view
 - Unified diff on compact and medium widths; side-by-side only on expanded and wider.

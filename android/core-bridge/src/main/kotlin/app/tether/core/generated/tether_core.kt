@@ -965,6 +965,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_tether_core_checksum_method_filesruntime_search_file_text(
     ): Int
+    external fun uniffi_tether_core_checksum_method_filesruntime_read_file_bytes(
+    ): Int
     external fun uniffi_tether_core_checksum_method_gitruntime_cancel_clone(
     ): Int
     external fun uniffi_tether_core_checksum_method_gitruntime_clone_repository(
@@ -1086,6 +1088,8 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_tether_core_checksum_method_sessionrunner_send_message(
     ): Int
     external fun uniffi_tether_core_checksum_method_sessionrunner_send_message_with_outcome(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_sessionrunner_rewind_to_message(
     ): Int
     external fun uniffi_tether_core_checksum_method_sessionruntime_approve(
     ): Int
@@ -1436,6 +1440,8 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_tether_core_fn_method_filesruntime_search_file_text(`ptr`: Long,`projectId`: RustBuffer.ByValue,`text`: RustBuffer.ByValue,`limit`: Int,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_tether_core_fn_method_filesruntime_read_file_bytes(`ptr`: Long,`projectId`: RustBuffer.ByValue,`path`: RustBuffer.ByValue,`limitBytes`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_tether_core_fn_clone_gitruntime(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
     external fun uniffi_tether_core_fn_free_gitruntime(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1616,6 +1622,8 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_tether_core_fn_method_sessionrunner_send_message_with_outcome(`ptr`: Long,`text`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_tether_core_fn_method_sessionrunner_rewind_to_message(`ptr`: Long,`messageId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_tether_core_fn_clone_sessionruntime(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
     external fun uniffi_tether_core_fn_free_sessionruntime(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -2049,6 +2057,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_tether_core_checksum_method_filesruntime_search_file_text() and 0xFFFF) != 52457) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_tether_core_checksum_method_filesruntime_read_file_bytes() and 0xFFFF) != 52256) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_tether_core_checksum_method_gitruntime_cancel_clone() and 0xFFFF) != 16209) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -2230,6 +2241,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_method_sessionrunner_send_message_with_outcome() and 0xFFFF) != 36200) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_sessionrunner_rewind_to_message() and 0xFFFF) != 11699) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_method_sessionruntime_approve() and 0xFFFF) != 12228) {
@@ -4829,6 +4843,18 @@ public interface FilesRuntimeInterface {
      */
     fun `searchFileText`(`projectId`: kotlin.String, `text`: kotlin.String, `limit`: kotlin.UInt): List<FileTextHitView>
     
+    /**
+     * Reads the bytes of one regular project file for the Preview.
+     *
+     * At most `min(limit_bytes, 10 MiB)` bytes come back. A zero limit reads the 10 MiB cap.
+     * Paths with a `.git` component are never read.
+     *
+     * # Errors
+     * Returns `InvalidPath` for a folder, a symlink, a `.git` path, or an unsafe path.
+     * Returns `NotFound` for a missing file or project, and `Unavailable` for storage failure.
+     */
+    fun `readFileBytes`(`projectId`: kotlin.String, `path`: kotlin.String, `limitBytes`: kotlin.ULong): FileBytesView
+    
     companion object
 }
 
@@ -5037,6 +5063,33 @@ open class FilesRuntime: Disposable, AutoCloseable, FilesRuntimeInterface
         FfiConverterString.lower(`projectId`),
         FfiConverterString.lower(`text`),
         FfiConverterUInt.lower(`limit`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Reads the bytes of one regular project file for the Preview.
+     *
+     * At most `min(limit_bytes, 10 MiB)` bytes come back. A zero limit reads the 10 MiB cap.
+     * Paths with a `.git` component are never read.
+     *
+     * # Errors
+     * Returns `InvalidPath` for a folder, a symlink, a `.git` path, or an unsafe path.
+     * Returns `NotFound` for a missing file or project, and `Unavailable` for storage failure.
+     */
+    @Throws(FilesRuntimeException::class)override fun `readFileBytes`(`projectId`: kotlin.String, `path`: kotlin.String, `limitBytes`: kotlin.ULong): FileBytesView {
+            return FfiConverterTypeFileBytesView.lift(
+    callWithHandle {
+    uniffiRustCallWithError(FilesRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_filesruntime_read_file_bytes(
+        it,
+        
+        FfiConverterString.lower(`projectId`),
+        FfiConverterString.lower(`path`),
+        FfiConverterULong.lower(`limitBytes`),_status)
 }
     }
     )
@@ -10119,6 +10172,16 @@ public interface SessionRunnerInterface {
      */
     fun `sendMessageWithOutcome`(`text`: kotlin.String): SendOutcomeView
     
+    /**
+     * Stops a running turn and hides the given message and every later one.
+     * Files are not restored. Call from a background thread.
+     *
+     * # Errors
+     * Returns an error when the runner is stale, the message is not in this session,
+     * or the store cannot be updated.
+     */
+    fun `rewindToMessage`(`messageId`: kotlin.String)
+    
     companion object
 }
 
@@ -10322,6 +10385,28 @@ open class SessionRunner: Disposable, AutoCloseable, SessionRunnerInterface
     }
     )
     }
+    
+
+    
+    /**
+     * Stops a running turn and hides the given message and every later one.
+     * Files are not restored. Call from a background thread.
+     *
+     * # Errors
+     * Returns an error when the runner is stale, the message is not in this session,
+     * or the store cannot be updated.
+     */
+    @Throws(SessionRuntimeException::class)override fun `rewindToMessage`(`messageId`: kotlin.String)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(SessionRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_sessionrunner_rewind_to_message(
+        it,
+        
+        FfiConverterString.lower(`messageId`),_status)
+}
+    }
+    
     
 
     
@@ -16435,6 +16520,69 @@ public object FfiConverterTypeExecutorPathsView: FfiConverterRustBuffer<Executor
             FfiConverterOptionalString.write(value.`prootLoaderPath`, buf)
             FfiConverterOptionalString.write(value.`packVerifyingKeyHex`, buf)
             FfiConverterOptionalString.write(value.`rootfsVerifyingKeyHex`, buf)
+    }
+}
+
+
+
+/**
+ * The bytes of one project file, cut at the caller's limit.
+ */
+data class FileBytesView (
+    /**
+     * Project-relative path with slash separators.
+     */
+    var `path`: kotlin.String
+    , 
+    /**
+     * Full file size in bytes.
+     */
+    var `sizeBytes`: kotlin.ULong
+    , 
+    /**
+     * The first bytes of the file, up to the read limit.
+     */
+    var `bytes`: kotlin.ByteArray
+    , 
+    /**
+     * Whether the file is longer than `bytes`.
+     */
+    var `truncated`: kotlin.Boolean
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFileBytesView: FfiConverterRustBuffer<FileBytesView> {
+    override fun read(buf: ByteBuffer): FileBytesView {
+        return FileBytesView(
+            FfiConverterString.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterByteArray.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FileBytesView) = (
+            FfiConverterString.allocationSize(value.`path`) +
+            FfiConverterULong.allocationSize(value.`sizeBytes`) +
+            FfiConverterByteArray.allocationSize(value.`bytes`) +
+            FfiConverterBoolean.allocationSize(value.`truncated`)
+    )
+
+    override fun write(value: FileBytesView, buf: ByteBuffer) {
+            FfiConverterString.write(value.`path`, buf)
+            FfiConverterULong.write(value.`sizeBytes`, buf)
+            FfiConverterByteArray.write(value.`bytes`, buf)
+            FfiConverterBoolean.write(value.`truncated`, buf)
     }
 }
 

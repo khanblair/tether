@@ -239,7 +239,7 @@ fn glob_file_names(index: &FileIndex, pattern: &str, cap: usize) -> Vec<String> 
 }
 
 impl FilesRuntime {
-    fn project_guard(&self, project_id: &str) -> Result<PathGuard, FilesRuntimeError> {
+    pub(crate) fn project_guard(&self, project_id: &str) -> Result<PathGuard, FilesRuntimeError> {
         let store = Store::open(Path::new(&self.database_path))
             .map_err(|_| FilesRuntimeError::Unavailable)?;
         let project_path = store
@@ -306,7 +306,7 @@ fn path_string(path: &Path) -> String {
         .join("/")
 }
 
-fn relative_path(root: &Path, path: &Path) -> String {
+pub(crate) fn relative_path(root: &Path, path: &Path) -> String {
     path.strip_prefix(root).map(path_string).unwrap_or_default()
 }
 
@@ -318,7 +318,7 @@ fn path_kind_error(path: &Path) -> FilesRuntimeError {
     }
 }
 
-fn map_path_error(error: &io::Error) -> FilesRuntimeError {
+pub(crate) fn map_path_error(error: &io::Error) -> FilesRuntimeError {
     match error.kind() {
         io::ErrorKind::NotFound => FilesRuntimeError::NotFound,
         io::ErrorKind::PermissionDenied | io::ErrorKind::NotADirectory => {
@@ -328,7 +328,7 @@ fn map_path_error(error: &io::Error) -> FilesRuntimeError {
     }
 }
 
-fn map_io_error(error: &io::Error) -> FilesRuntimeError {
+pub(crate) fn map_io_error(error: &io::Error) -> FilesRuntimeError {
     if error.kind() == io::ErrorKind::NotFound {
         FilesRuntimeError::NotFound
     } else {

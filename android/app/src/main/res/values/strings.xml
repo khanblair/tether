@@ -330,10 +330,7 @@
     <string name="transcript_load_failed">Could not load this session.</string>
     <string name="transcript_turn_failed">The reply failed.</string>
     <string name="transcript_send_failed">The message could not be sent.</string>
-    <string name="transcript_you">You</string>
-    <string name="transcript_agent">Agent</string>
     <string name="transcript_tool">Tool</string>
-    <string name="transcript_system">System</string>
     <string name="transcript_attachment">Attachment</string>
     <string name="composer_hint">Message, / for commands, @ for files</string>
     <string name="composer_send">Send</string>

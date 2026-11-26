@@ -168,6 +168,7 @@ private fun ModelSheetHost(
         state = state,
         running = running,
         onChoose = viewModel::choose,
+        onChooseEffort = viewModel::chooseEffort,
         onOpenProviders = {
             onDismiss()
             env.openProviders()

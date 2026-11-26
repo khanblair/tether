@@ -23,6 +23,8 @@ import app.tether.design.components.TetherSheet
 import app.tether.design.components.TetherTextButton
 import app.tether.design.tokens.TetherSpace
 import app.tether.providers.providerNameRes
+import app.tether.session.ThinkingEffort
+import app.tether.session.labelRes
 
 /** The app default model, the per-project models, and the two models the app cannot use yet. */
 @Composable
@@ -48,6 +50,12 @@ fun ModelDefaultsScreen(
                         ?: stringResource(R.string.settings_area_default_model_unset),
                 trailing = { ChevronTrailing() },
                 onClick = { viewModel.open(ModelTarget.App) },
+            )
+            ListRow(
+                title = stringResource(R.string.settings_area_thinking_effort),
+                subtitle = stringResource(state.effort.settingsLabelRes()),
+                trailing = { ChevronTrailing() },
+                onClick = viewModel::openEffort,
             )
             NotAvailableRow(
                 title = stringResource(R.string.settings_area_reviewer_model),
@@ -82,6 +90,40 @@ fun ModelDefaultsScreen(
             onOpenProviders = onOpenProviders,
             onDismiss = viewModel::close,
         )
+    }
+    if (state.pickingEffort) {
+        EffortPickSheet(
+            current = state.effort,
+            onPick = viewModel::chooseEffort,
+            onDismiss = viewModel::close,
+        )
+    }
+}
+
+/** The app default thinking effort. Null is the model default, which says so in words. */
+private fun ThinkingEffort?.settingsLabelRes(): Int =
+    if (this == null) R.string.settings_area_effort_model_default else labelRes()
+
+/** The picker: the model default and the three levels. Saving it sets the app default. */
+@Composable
+private fun EffortPickSheet(
+    current: ThinkingEffort?,
+    onPick: (ThinkingEffort?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    TetherSheet(
+        title = stringResource(R.string.settings_area_thinking_effort),
+        onDismiss = onDismiss,
+    ) {
+        ListGroup {
+            (listOf(null) + ThinkingEffort.entries).forEach { effort ->
+                ListRow(
+                    title = stringResource(effort.settingsLabelRes()),
+                    trailing = selectedTrailing(effort == current),
+                    onClick = { onPick(effort) },
+                )
+            }
+        }
     }
 }
 

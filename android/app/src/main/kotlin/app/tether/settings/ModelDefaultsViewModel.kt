@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import app.tether.core.generated.ProviderView
 import app.tether.home.ProjectGateway
 import app.tether.providers.ProviderGateway
+import app.tether.session.ThinkingEffort
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,6 +44,8 @@ sealed interface ModelTarget {
 
 /**
  * What the models screen shows. [failed] is true when a saved list or project could not be read.
+ * [effort] is the app default thinking effort, null for the model default. [pickingEffort] is true
+ * while the thinking effort picker is open.
  */
 @Immutable
 data class ModelDefaultsUiState(
@@ -52,6 +55,8 @@ data class ModelDefaultsUiState(
     val projects: List<ProjectModelRow> = emptyList(),
     val failed: Boolean = false,
     val picking: ModelTarget? = null,
+    val effort: ThinkingEffort? = null,
+    val pickingEffort: Boolean = false,
 )
 
 /**
@@ -67,7 +72,9 @@ class ModelDefaultsViewModel(
     private val io: CoroutineDispatcher = Dispatchers.IO,
 ) : ViewModel() {
     private val mutableState =
-        MutableStateFlow(ModelDefaultsUiState(appDefault = store.defaultModel()))
+        MutableStateFlow(
+            ModelDefaultsUiState(appDefault = store.defaultModel(), effort = store.defaultEffort()),
+        )
 
     /** The screen state. */
     val state: StateFlow<ModelDefaultsUiState> = mutableState.asStateFlow()
@@ -78,12 +85,23 @@ class ModelDefaultsViewModel(
 
     /** Opens the picker for [target]. */
     fun open(target: ModelTarget) {
-        mutableState.update { it.copy(picking = target) }
+        mutableState.update { it.copy(picking = target, pickingEffort = false) }
+    }
+
+    /** Opens the app default thinking effort picker. */
+    fun openEffort() {
+        mutableState.update { it.copy(pickingEffort = true, picking = null) }
     }
 
     /** Closes the picker without a change. */
     fun close() {
-        mutableState.update { it.copy(picking = null) }
+        mutableState.update { it.copy(picking = null, pickingEffort = false) }
+    }
+
+    /** Saves [effort] as the app default thinking effort. Null saves the model default. */
+    fun chooseEffort(effort: ThinkingEffort?) {
+        mutableState.update { it.copy(pickingEffort = false, effort = effort) }
+        viewModelScope.launch(io) { store.saveDefaultEffort(effort) }
     }
 
     /** Saves [model] for the picked target. Null means the app default, for a project. */

@@ -39,7 +39,8 @@ import app.tether.home.formatTokens
 
 /**
  * The model picker. Models are grouped by provider, the session's model is marked, and a turn in
- * progress disables every row with the reason.
+ * progress disables every row with the reason. A model that reasons also shows the thinking
+ * section below the list.
  */
 @Composable
 fun ModelSheet(
@@ -48,6 +49,7 @@ fun ModelSheet(
     onChoose: (ProviderView, ModelChoice) -> Unit,
     onOpenProviders: () -> Unit,
     onDismiss: () -> Unit,
+    onChooseEffort: (ThinkingEffort?) -> Unit = {},
 ) {
     TetherSheet(title = stringResource(R.string.session_model_title), onDismiss = onDismiss) {
         if (running) {
@@ -67,7 +69,34 @@ fun ModelSheet(
         when {
             state.loading -> LoadingLine()
             state.groups.isEmpty() -> NoModels(onOpenProviders)
-            else -> ModelGroups(state, enabled = !running && !state.saving, onChoose = onChoose)
+            else -> ModelBody(state, running, onChoose, onChooseEffort)
+        }
+    }
+}
+
+/** The model list and, for a reasoning model, the thinking section, in one scrolling column. */
+@Composable
+private fun ModelBody(
+    state: ModelSheetState,
+    running: Boolean,
+    onChoose: (ProviderView, ModelChoice) -> Unit,
+    onChooseEffort: (ThinkingEffort?) -> Unit,
+) {
+    val enabled = !running && !state.saving
+    Column(
+        modifier =
+            Modifier
+                .verticalScroll(rememberScrollState())
+                .padding(bottom = TetherSpace.space2),
+    ) {
+        ModelGroups(state, enabled = enabled, onChoose = onChoose)
+        if (state.showsEffort) {
+            EffortSection(
+                effort = state.effort,
+                enabled = enabled,
+                onChoose = onChooseEffort,
+                modifier = Modifier.padding(top = TetherSpace.space3),
+            )
         }
     }
 }
@@ -107,12 +136,7 @@ private fun ModelGroups(
     enabled: Boolean,
     onChoose: (ProviderView, ModelChoice) -> Unit,
 ) {
-    Column(
-        modifier =
-            Modifier
-                .verticalScroll(rememberScrollState())
-                .padding(bottom = TetherSpace.space2),
-    ) {
+    Column {
         state.groups.forEach { group ->
             SectionTitle(text = stringResource(group.provider.nameRes()))
             group.models.forEach { model ->

@@ -37,6 +37,8 @@
     <string name="settings_area_models_defaults">Defaults for new sessions</string>
     <string name="settings_area_default_model">Default model</string>
     <string name="settings_area_default_model_unset">Not set. New sessions use the first saved key.</string>
+    <string name="settings_area_thinking_effort">Thinking effort</string>
+    <string name="settings_area_effort_model_default">Model default</string>
     <string name="settings_area_reviewer_model">Reviewer model</string>
     <string name="settings_area_reviewer_model_na">Not available yet. Needs /review, which ships in phase P8.</string>
     <string name="settings_area_summary_model">Summary model</string>

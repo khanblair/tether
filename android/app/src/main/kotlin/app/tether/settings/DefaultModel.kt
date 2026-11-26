@@ -2,6 +2,7 @@ package app.tether.settings
 
 import app.tether.core.generated.ProviderView
 import app.tether.session.SessionMode
+import app.tether.session.ThinkingEffort
 
 /**
  * The model a new session starts with when the user has chosen one: a provider and its model id.
@@ -18,4 +19,7 @@ interface AppDefaultSource {
 
     /** The saved app default permission mode, or null when none is saved. */
     fun savedDefaultMode(): SessionMode?
+
+    /** The saved app default thinking effort. Null is the model default; Medium when never set. */
+    fun savedDefaultEffort(): ThinkingEffort?
 }

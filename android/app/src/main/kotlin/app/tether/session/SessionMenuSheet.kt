@@ -32,6 +32,7 @@ import app.tether.design.components.PrimaryButton
 import app.tether.design.components.TetherIcon
 import app.tether.design.components.TetherSheet
 import app.tether.design.tokens.TetherSpace
+import app.tether.preview.INDEX_FILE
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -104,7 +105,7 @@ suspend fun restoreArchivedSession(
     sessionId: String,
 ): Result<Unit> = sessionCall(Dispatchers.IO) { gateway.archive(sessionId, false) }
 
-/** The session menu: Rename, Export, Checkpoints, Archive, and Delete, in that order. */
+/** The session menu: Rename, Export, Checkpoints, Preview, Archive, and Delete, in that order. */
 @Composable
 fun SessionMenuSheet(
     state: SessionMenuState,
@@ -112,6 +113,7 @@ fun SessionMenuSheet(
     onRename: () -> Unit,
     onExport: () -> Unit,
     onCheckpoints: () -> Unit,
+    onPreview: () -> Unit,
     onArchive: () -> Unit,
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
@@ -139,6 +141,12 @@ fun SessionMenuSheet(
                     subtitle = checkpointSubtitle(state.checkpoints),
                     leading = { MenuIcon(TetherIcons.History, TetherTheme.colors.text2) },
                     onClick = onCheckpoints,
+                )
+                ListRow(
+                    title = stringResource(R.string.session_menu_preview),
+                    subtitle = INDEX_FILE,
+                    leading = { MenuIcon(TetherIcons.Eye, TetherTheme.colors.text2) },
+                    onClick = onPreview,
                 )
                 ListRow(
                     title = stringResource(R.string.session_menu_archive),

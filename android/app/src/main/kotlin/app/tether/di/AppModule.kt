@@ -12,6 +12,7 @@ import app.tether.core.keystoreSecretVault
 import app.tether.design.ThemeMode
 import app.tether.files.FilesGateway
 import app.tether.files.createFilesGateway
+import app.tether.files.createPreviewFilesGateway
 import app.tether.git.GitGateway
 import app.tether.git.createGitGateway
 import app.tether.home.CoreProjectGateway
@@ -21,6 +22,8 @@ import app.tether.home.createHomeSources
 import app.tether.memory.MemoryAreaGateways
 import app.tether.memory.createMemoryAreaGateways
 import app.tether.messages.AppMessages
+import app.tether.preview.InlinePreviews
+import app.tether.preview.PreviewFilesGateway
 import app.tether.projectarchive.ProjectArchiveGateway
 import app.tether.projectarchive.createProjectArchiveGateway
 import app.tether.providers.CoreProviderGateway
@@ -118,6 +121,14 @@ class AppModule(
 
     /** Browsing, previewing, and searching a project's files. */
     val filesGateway: FilesGateway by lazy { createFilesGateway(databasePath, workspacesRoot) }
+
+    /** The file bytes the preview reads. The runtime opens on the first read. */
+    val previewFiles: PreviewFilesGateway by lazy {
+        createPreviewFilesGateway(databasePath, workspacesRoot)
+    }
+
+    /** HTML of the inline previews opened from a session, held in memory only. */
+    val inlinePreviews = InlinePreviews()
 
     /** Model, mode, rename, usage, rewind, and message search for the session screens. */
     val sessionSettings: SessionSettingsGateway by lazy {

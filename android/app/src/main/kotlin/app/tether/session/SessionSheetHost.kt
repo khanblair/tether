@@ -15,6 +15,7 @@ import app.tether.R
 import app.tether.files.FilesGateway
 import app.tether.home.ProjectsSource
 import app.tether.messages.AppMessages
+import app.tether.preview.INDEX_FILE
 import app.tether.providers.ProviderGateway
 import app.tether.session.compose.CommandScreen
 
@@ -79,6 +80,10 @@ class SessionSheetEnv(
     val undoArchive: (String) -> Unit = {},
     /** Tells the project and dashboard lists that sessions changed, so they read again. */
     val sessionsChanged: () -> Unit = {},
+    /** Opens the preview of a file in the session's project. The argument is the file's path. */
+    val openPreview: (String) -> Unit = {},
+    /** Opens an inline preview of the HTML given. Its network stays off. */
+    val openInlinePreview: (String) -> Unit = {},
 )
 
 /**
@@ -192,6 +197,10 @@ private fun SessionMenuHost(
             onExport()
         },
         onCheckpoints = { onOpen(SessionSheetKind.Rewind) },
+        onPreview = {
+            onDismiss()
+            env.openPreview(INDEX_FILE)
+        },
         onArchive = viewModel::archive,
         onDelete = { onOpen(SessionSheetKind.Delete) },
         onDismiss = onDismiss,

@@ -64,6 +64,7 @@
     <string name="session_menu_rename">Rename</string>
     <string name="session_menu_export">Export as Markdown</string>
     <string name="session_menu_checkpoints">Checkpoints</string>
+    <string name="session_menu_preview">Preview</string>
     <string name="session_menu_no_batches">No edit batches yet</string>
     <plurals name="session_menu_batches">
         <item quantity="one">%1$d edit batch</item>

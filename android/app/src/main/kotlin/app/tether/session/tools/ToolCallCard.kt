@@ -20,6 +20,7 @@ import app.tether.design.TetherTheme
 import app.tether.design.tokens.TetherRadius
 import app.tether.design.tokens.TetherSize
 import app.tether.design.tokens.TetherSpace
+import app.tether.preview.PreviewButton
 import app.tether.session.agent.ToolCallUi
 
 /** The name of the run tool. Its calls use [RunCard] instead of the generic card. */
@@ -38,6 +39,7 @@ fun ToolCallCard(
     modifier: Modifier = Modifier,
     animateRunning: Boolean = false,
     onRunElsewhere: (String) -> Unit = {},
+    preview: (() -> Unit)? = null,
 ) {
     if (call.tool == RUN_TOOL) {
         RunCard(
@@ -56,6 +58,7 @@ fun ToolCallCard(
                 expandable = call.output.isNotEmpty(),
                 expanded = expanded,
                 onToggle = onToggle,
+                trailing = if (preview == null) null else ({ PreviewButton(preview) }),
             ) {
                 ToolTitleText(title = title)
                 ToolStatusLine(status = call.status, animateRunning = animateRunning)

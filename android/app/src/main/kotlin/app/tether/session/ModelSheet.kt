@@ -121,7 +121,7 @@ private fun ModelGroups(
                 ModelRow(
                     model = model,
                     selected = selected,
-                    enabled = enabled,
+                    enabled = enabled && model.canRunAgents,
                     onClick = { onChoose(group.provider, model) },
                 )
             }
@@ -129,7 +129,10 @@ private fun ModelGroups(
     }
 }
 
-/** One model. The selected row shows a check icon and says so to TalkBack. */
+/**
+ * One model. The selected row shows a check icon and says so to TalkBack. A model that cannot run
+ * agent sessions is shown disabled, with the reason under its name.
+ */
 @Composable
 private fun ModelRow(
     model: ModelChoice,
@@ -138,6 +141,7 @@ private fun ModelRow(
     onClick: () -> Unit,
 ) {
     val meta = modelMeta(model)
+    val nameColor = if (enabled) TetherTheme.colors.text else TetherTheme.colors.textDisabled
     Row(
         modifier =
             Modifier
@@ -152,8 +156,15 @@ private fun ModelRow(
             Text(
                 text = model.displayName,
                 style = MaterialTheme.typography.bodyLarge,
-                color = if (enabled) TetherTheme.colors.text else TetherTheme.colors.textDisabled,
+                color = nameColor,
             )
+            if (!model.canRunAgents) {
+                Text(
+                    text = stringResource(R.string.session_model_no_tools),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TetherTheme.colors.text2,
+                )
+            }
             if (meta.isNotEmpty()) {
                 Text(
                     text = meta,

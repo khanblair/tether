@@ -111,7 +111,7 @@ fun TranscriptScreen(
     TranscriptContent(
         messages = messages,
         failed = failed,
-        title = snapshot?.details?.title ?: stringResource(R.string.route_session_title),
+        title = topBarTitle(snapshot?.details?.title),
         status = snapshot?.status,
         usage = snapshot?.usage,
         turn = turn,
@@ -160,6 +160,11 @@ fun TranscriptScreen(
         isRunning = { turn.running },
     )
 }
+
+/** The top bar title: the session's title, or the route title while the snapshot is loading. */
+@Composable
+private fun topBarTitle(title: String?): String =
+    if (title == null) stringResource(R.string.route_session_title) else sessionTitleText(title)
 
 /** The sheet for the message a long press chose. It is hidden while [message] is null. */
 @Composable

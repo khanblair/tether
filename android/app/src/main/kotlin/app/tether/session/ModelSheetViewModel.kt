@@ -19,6 +19,10 @@ data class ModelGroup(
     val models: List<ModelChoice>,
 )
 
+/** A model can run agent sessions unless its catalog entry says it has no tool support. */
+val ModelChoice.canRunAgents: Boolean
+    get() = tools != false
+
 /** The provider and model the session uses now. */
 data class ModelRef(
     val provider: ProviderView,
@@ -69,12 +73,15 @@ class ModelSheetViewModel(
         }
     }
 
-    /** Sets [model] of [provider] for the session. Ignored while a turn or a save is running. */
+    /**
+     * Sets [model] of [provider] for the session. Ignored while a turn or a save is running, and
+     * for a model that cannot run agent sessions.
+     */
     fun choose(
         provider: ProviderView,
         model: ModelChoice,
     ) {
-        if (deps.isRunning() || mutableState.value.saving) return
+        if (deps.isRunning() || mutableState.value.saving || !model.canRunAgents) return
         mutableState.update { it.copy(saving = true, failure = null) }
         viewModelScope.launch {
             sessionCall(io) {

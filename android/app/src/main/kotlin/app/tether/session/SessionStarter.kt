@@ -7,6 +7,7 @@ import app.tether.settings.AppDefaultSource
 import app.tether.settings.DefaultModel
 import app.tether.settings.ProjectDefaults
 import app.tether.settings.ProjectDefaultsGateway
+import kotlinx.coroutines.CancellationException
 
 /** The outcome of [SessionStarter.start]. */
 sealed interface StartResult {
@@ -21,10 +22,7 @@ sealed interface StartResult {
     /** The first provider with a key has no saved model. No session was created. */
     data object NoModels : StartResult
 
-    /**
-     * A gateway call threw. Either no session was created, or the session was created and its
-     * permission mode could not be set, so the session exists in the core but was not started.
-     */
+    /** A gateway call threw before a session was created. No session was created. */
     data object Failed : StartResult
 }
 
@@ -72,9 +70,9 @@ class SessionStarter(
     }
 
     /**
-     * Creates the session, then sets [mode] when one is set. A throw from [SessionGateway.setMode]
-     * reaches [start], which returns [StartResult.Failed]. The session stays in the core, not
-     * started.
+     * Creates the session, then applies [mode]. Bypass is never applied from a saved default, so
+     * the core's own mode stays. A refused mode call does not fail the start: the session exists
+     * and runs in the core's own mode.
      */
     private fun createStarted(
         projectId: String,
@@ -83,8 +81,23 @@ class SessionStarter(
         mode: SessionMode?,
     ): StartResult {
         val sessionId = sessions.createSession(projectId, provider, modelId)
-        if (mode != null) sessions.setMode(sessionId, PermissionModeView.valueOf(mode.name))
+        if (mode != null && mode != SessionMode.BYPASS) applyMode(sessionId, mode)
         return StartResult.Started(sessionId)
+    }
+
+    /** Sets [mode] on a new session. A refused call is ignored, and the core's mode stays. */
+    @Suppress("TooGenericExceptionCaught")
+    private fun applyMode(
+        sessionId: String,
+        mode: SessionMode,
+    ) {
+        try {
+            sessions.setMode(sessionId, PermissionModeView.valueOf(mode.name))
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            // The core keeps its own default mode, which is the safest one to run in.
+        }
     }
 
     /**

@@ -102,6 +102,32 @@ class OnboardingViewModelTest {
     }
 
     @Test
+    fun choosing_clone_saves_done_and_opens_the_clone_screen() {
+        val settings = FakeSettingsStore()
+        val vm = OnboardingViewModel(settings)
+        vm.next()
+        vm.next()
+
+        vm.openClone()
+
+        assertTrue(settings.finished)
+        assertEquals(OnboardingExit.Clone, vm.state.value.exit)
+    }
+
+    @Test
+    fun choosing_import_saves_done_and_opens_the_import_screen() {
+        val settings = FakeSettingsStore()
+        val vm = OnboardingViewModel(settings)
+        vm.next()
+        vm.next()
+
+        vm.openImport()
+
+        assertTrue(settings.finished)
+        assertEquals(OnboardingExit.Import, vm.state.value.exit)
+    }
+
+    @Test
     fun a_step_change_alone_does_not_finish_the_flow() {
         val settings = FakeSettingsStore()
         val vm = OnboardingViewModel(settings)

@@ -24,6 +24,12 @@ enum class OnboardingExit {
 
     /** New empty project was chosen. Opens the new project screen. */
     NewProject,
+
+    /** Clone from GitHub was chosen. Opens the clone screen. */
+    Clone,
+
+    /** Import a zip was chosen. Opens the zip import screen. */
+    Import,
 }
 
 /** What the onboarding screens show. [exit] is set once the flow has ended. */
@@ -74,6 +80,16 @@ class OnboardingViewModel(
     /** The user chose New empty project. The flow is done, and the app opens that screen. */
     fun openNewProject() {
         finish(OnboardingExit.NewProject)
+    }
+
+    /** The user chose Clone from GitHub. The flow is done, and the app opens the clone screen. */
+    fun openClone() {
+        finish(OnboardingExit.Clone)
+    }
+
+    /** The user chose Import a zip. The flow is done, and the app opens the import screen. */
+    fun openImport() {
+        finish(OnboardingExit.Import)
     }
 
     private fun finish(exit: OnboardingExit) {

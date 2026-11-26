@@ -216,13 +216,13 @@ private fun failureRes(message: ProviderMessage?): Int? =
         else -> null
     }
 
-/** The open-project step: a new empty project, or two sources that are not built yet. */
+/** The open-project step: a new empty project, a GitHub clone, or a zip import. */
 @Composable
 internal fun OpenProjectStep(
     onBack: () -> Unit,
     onNewProject: () -> Unit,
-    onOpenGitHub: () -> Unit,
-    onOpenArchive: () -> Unit,
+    onClone: () -> Unit,
+    onImport: () -> Unit,
     onSkip: () -> Unit,
 ) {
     OnboardingPage(step = OnboardingStep.OpenProject, onBack = onBack) {
@@ -242,7 +242,7 @@ internal fun OpenProjectStep(
                 subtitle = stringResource(R.string.onboarding_clone_sub),
                 leading = { SourceIcon(TetherIcons.GitBranch) },
                 trailing = { ChevronTrailing() },
-                onClick = onOpenGitHub,
+                onClick = onClone,
             )
             HorizontalDivider(thickness = TetherBorder.hairline, color = TetherTheme.colors.line)
             ListRow(
@@ -250,7 +250,7 @@ internal fun OpenProjectStep(
                 subtitle = stringResource(R.string.onboarding_import_sub),
                 leading = { SourceIcon(TetherIcons.Package) },
                 trailing = { ChevronTrailing() },
-                onClick = onOpenArchive,
+                onClick = onImport,
             )
         }
         SkipButton(onSkip)

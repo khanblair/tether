@@ -177,6 +177,14 @@ fn dialect_reasoning_fields_are_exact() {
         body(&chat, Dialect::OpenRouter)["reasoning"],
         json!({"effort":"high"})
     );
+    assert_eq!(body(&chat, Dialect::DeepSeek)["reasoning_effort"], "high");
+    assert_eq!(body(&chat, Dialect::DeepSeek).get("reasoning"), None);
+    chat.reasoning = Some(ReasoningEffort::Low);
+    assert_eq!(body(&chat, Dialect::DeepSeek)["reasoning_effort"], "low");
+    chat.reasoning = Some(ReasoningEffort::Medium);
+    assert_eq!(body(&chat, Dialect::DeepSeek)["reasoning_effort"], "medium");
+    assert_eq!(body(&chat, Dialect::DeepSeek).get("reasoning"), None);
+    chat.reasoning = None;
     assert_eq!(body(&chat, Dialect::DeepSeek).get("reasoning_effort"), None);
     assert_eq!(body(&chat, Dialect::DeepSeek).get("reasoning"), None);
     assert_eq!(

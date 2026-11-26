@@ -23,7 +23,7 @@ pub(super) fn build_body(
     }
     if let Some(effort) = request.reasoning {
         match dialect {
-            super::Dialect::Plain => {
+            super::Dialect::Plain | super::Dialect::DeepSeek => {
                 body.insert("reasoning_effort".to_owned(), json!(effort_name(effort)));
             }
             super::Dialect::OpenRouter => {
@@ -32,7 +32,6 @@ pub(super) fn build_body(
                     json!({"effort": effort_name(effort)}),
                 );
             }
-            super::Dialect::DeepSeek => {}
         }
     }
     if dialect == super::Dialect::OpenRouter {

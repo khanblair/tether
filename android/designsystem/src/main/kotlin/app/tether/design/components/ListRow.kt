@@ -1,7 +1,7 @@
 package app.tether.design.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Column
@@ -27,7 +27,7 @@ import app.tether.design.tokens.TetherSpace
 
 /**
  * A list row with an optional leading and trailing slot. It is clickable when [onClick] is set,
- * and a pressed row turns the sunken surface color.
+ * and a pressed row turns the sunken surface color. [onLongClick] needs [onClick] to be set too.
  */
 @Composable
 fun ListRow(
@@ -38,6 +38,7 @@ fun ListRow(
     trailing: (@Composable () -> Unit)? = null,
     onClick: (() -> Unit)? = null,
     enabled: Boolean = true,
+    onLongClick: (() -> Unit)? = null,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
@@ -46,11 +47,12 @@ fun ListRow(
         if (isPressed) TetherTheme.colors.surfaceSunken else Color.Transparent
     val clickModifier =
         if (onClick != null) {
-            Modifier.clickable(
+            Modifier.combinedClickable(
                 interactionSource = interactionSource,
                 enabled = enabled,
                 role = Role.Button,
                 onClick = onClick,
+                onLongClick = onLongClick,
             )
         } else {
             Modifier

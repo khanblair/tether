@@ -5,7 +5,7 @@ import androidx.compose.ui.Modifier
 
 /**
  * A session in the drawer: a [StatusMark], the title, and a subtitle such as "Needs approval".
- * The row is one button for TalkBack, and the mark is decorative.
+ * The row is one button for TalkBack, and the mark is decorative. [onLongClick] is optional.
  */
 @Composable
 fun SessionRow(
@@ -14,6 +14,7 @@ fun SessionRow(
     state: SessionState,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null,
 ) {
     ListRow(
         title = title,
@@ -21,5 +22,6 @@ fun SessionRow(
         modifier = modifier,
         leading = { StatusMark(state = state) },
         onClick = onClick,
+        onLongClick = onLongClick,
     )
 }

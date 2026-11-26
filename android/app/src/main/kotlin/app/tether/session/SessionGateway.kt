@@ -39,6 +39,12 @@ interface SessionGateway {
         sessionId: String,
         mode: PermissionModeView,
     )
+
+    /** Renames [sessionId] to [title]. The caller trims the title and never sends a blank one. */
+    fun rename(
+        sessionId: String,
+        title: String,
+    )
 }
 
 /**
@@ -75,6 +81,11 @@ class CoreSessionGateway(
         sessionId: String,
         mode: PermissionModeView,
     ) = runtime.setSessionMode(sessionId, mode)
+
+    override fun rename(
+        sessionId: String,
+        title: String,
+    ) = coreCall { runtime.renameSession(sessionId, title) }
 }
 
 /** The event sink for list and create calls. No turn runs through it, so events are dropped. */

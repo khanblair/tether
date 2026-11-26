@@ -7,6 +7,8 @@
     <string name="session_model_context">%1$s context</string>
     <string name="session_model_price">%1$s in, %2$s out per million tokens</string>
     <string name="session_badge_tools">Tools</string>
+    <string name="session_model_no_tools">No tool support, so it cannot run agent sessions.</string>
+    <string name="session_untitled">New session</string>
     <string name="session_badge_vision">Vision</string>
     <string name="session_badge_reasoning">Reasoning</string>
     <string name="session_selected">Selected</string>

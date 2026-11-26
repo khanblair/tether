@@ -1,6 +1,7 @@
 package app.tether.di
 
 import android.content.Context
+import android.util.Log
 import app.tether.core.CoreClient
 import app.tether.core.generated.CiRuntime
 import app.tether.core.generated.ProjectRuntime
@@ -51,6 +52,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
 /** Hand-wired dependencies. A DI library arrives only when this grows past a screenful. */
 class AppModule(
@@ -131,6 +133,16 @@ class AppModule(
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
+    /**
+     * Runs [block] off the main thread, for native work such as closing a runtime. A failure is
+     * logged by its class name and does not escape.
+     */
+    fun closeInBackground(block: () -> Unit) {
+        appScope.launch(Dispatchers.IO) {
+            runQuietly(block) { Log.w(TAG, "close failed: ${it.javaClass.simpleName}") }
+        }
+    }
+
     /** The data behind the home screens: projects and sessions. Debug and release builds differ. */
     val home: HomeSources = createHomeSources(projectGateway, sessionGateway)
 
@@ -166,4 +178,19 @@ class AppModule(
 
     /** Messages for the snackbar host, such as the toast after a test event. */
     val messages = AppMessages()
+}
+
+private const val TAG = "Tether"
+
+/** Runs [block]. A failure goes to [onFailure] and does not escape. */
+@Suppress("TooGenericExceptionCaught")
+internal fun runQuietly(
+    block: () -> Unit,
+    onFailure: (Exception) -> Unit,
+) {
+    try {
+        block()
+    } catch (failure: Exception) {
+        onFailure(failure)
+    }
 }

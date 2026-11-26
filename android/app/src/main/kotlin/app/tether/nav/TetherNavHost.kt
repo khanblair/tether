@@ -1,6 +1,7 @@
 package app.tether.nav
 
 import android.net.Uri
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
@@ -47,6 +48,7 @@ import app.tether.session.SessionSheetEnv
 import app.tether.session.SessionUnavailableScreen
 import app.tether.session.TranscriptScreen
 import app.tether.share.ShareProjectScreen
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -181,29 +183,25 @@ private fun SessionRoute(
     val newSessionFailed = stringResource(R.string.compose_command_new_failed)
     var connection by remember(sessionId) { mutableStateOf<SessionConnection?>(null) }
     var unavailable by remember(sessionId) { mutableStateOf(sessionId == null) }
+    var reason by remember(sessionId) { mutableStateOf<String?>(null) }
     LaunchedEffect(sessionId) {
         if (sessionId != null) {
-            try {
-                connection =
-                    withContext(Dispatchers.IO) {
-                        SessionConnection(
-                            module.databasePath,
-                            module.vault,
-                            sessionId,
-                            workspacesRoot = module.workspacesRoot,
-                        )
-                    }
-            } catch (_: SessionRuntimeException) {
-                unavailable = true
+            when (val result = openSession(module, sessionId)) {
+                is OpenResult.Opened -> connection = result.connection
+                is OpenResult.Unavailable -> {
+                    reason = result.reason
+                    unavailable = true
+                }
             }
         }
     }
     DisposableEffect(connection) {
-        onDispose { connection?.close() }
+        val opened = connection
+        onDispose { opened?.let { module.closeInBackground(it::close) } }
     }
     val projectId = connection?.projectId
     if (unavailable) {
-        SessionUnavailableScreen(onBack = onBack)
+        SessionUnavailableScreen(onBack = onBack, reason = reason)
     } else {
         TranscriptScreen(
             connection = connection,
@@ -229,6 +227,53 @@ private fun SessionRoute(
         )
     }
 }
+
+/** What opening a session gave back: the connection, or the reason it could not open. */
+private sealed interface OpenResult {
+    class Opened(
+        val connection: SessionConnection,
+    ) : OpenResult
+
+    /**
+     * [reason] is the exception's simple class name. It is null when the core reports the session
+     * as unavailable, which is the same case as before.
+     */
+    class Unavailable(
+        val reason: String?,
+    ) : OpenResult
+}
+
+/**
+ * Opens the connection off the main thread. A [SessionRuntimeException] means the session cannot be
+ * opened. Any other failure, such as a native panic, is logged by its class name and shown the same
+ * way, so the app does not end. A cancellation is rethrown.
+ */
+private suspend fun openSession(
+    module: AppModule,
+    sessionId: String,
+): OpenResult =
+    withContext(Dispatchers.IO) {
+        try {
+            OpenResult.Opened(
+                SessionConnection(
+                    module.databasePath,
+                    module.vault,
+                    sessionId,
+                    workspacesRoot = module.workspacesRoot,
+                ),
+            )
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: SessionRuntimeException) {
+            OpenResult.Unavailable(reason = null)
+        } catch (
+            @Suppress("TooGenericExceptionCaught") error: Exception,
+        ) {
+            val name = error.javaClass.simpleName
+            Log.w(TAG, "session open failed: $name")
+            OpenResult.Unavailable(reason = name)
+        }
+    }
 
 /** The drawer's content. Its query and session list live here, and every item closes the drawer. */
 @Composable
@@ -262,3 +307,5 @@ private fun DrawerHost(
         onSearchMessages = { query -> nav.closeThen { nav.open(searchPath(query)) } },
     )
 }
+
+private const val TAG = "Tether"

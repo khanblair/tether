@@ -6,6 +6,7 @@ import android.security.keystore.StrongBoxUnavailableException
 import app.tether.core.generated.SecretVault
 import app.tether.core.generated.SecretsPlatform
 import app.tether.core.generated.SecretsPlatformFailure
+import kotlinx.coroutines.CancellationException
 import java.io.File
 import java.security.GeneralSecurityException
 import java.security.KeyStore
@@ -90,18 +91,12 @@ class KeystoreSecretsPlatform(
         try {
             block()
         } catch (e: GeneralSecurityException) {
-            throw failure(action, e)
-        } catch (e: IllegalArgumentException) {
-            throw failure(action, e)
+            throw keystoreFailure(action, e)
+        } catch (
+            @Suppress("TooGenericExceptionCaught") e: RuntimeException,
+        ) {
+            throw keystoreFailure(action, e)
         }
-
-    private fun failure(
-        action: String,
-        cause: Exception,
-    ): SecretsPlatformFailure =
-        SecretsPlatformFailure
-            .Failed("keystore $action failed: ${cause.javaClass.simpleName}")
-            .apply { initCause(cause) }
 
     companion object {
         /** Keystore alias of the key that wraps every secret. */
@@ -115,6 +110,21 @@ class KeystoreSecretsPlatform(
         private const val TAG_BYTES = TAG_BITS / 8
         private const val IV_BYTES = 12
     }
+}
+
+/**
+ * The error to throw for a Keystore [cause] during [action]. It names the action and the
+ * exception's simple class name only, never the Keystore message. A cancellation passes through
+ * unchanged.
+ */
+internal fun keystoreFailure(
+    action: String,
+    cause: Exception,
+): Exception {
+    if (cause is CancellationException) return cause
+    return SecretsPlatformFailure
+        .Failed("keystore $action failed: ${cause.javaClass.simpleName}")
+        .apply { initCause(cause) }
 }
 
 /** Opens the secret vault over [secretsDir] (the app's private `files/secrets` folder). */

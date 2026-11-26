@@ -45,7 +45,10 @@
     <string name="project_home_sessions_empty">No sessions yet.</string>
     <string name="project_home_no_key">No provider key yet. Add one to start a session.</string>
     <string name="project_home_add_key">Add a key</string>
-    <string name="project_home_no_models">Test the connection in Providers so the model list is saved.</string>
+    <string name="project_home_no_models">Test the connection so the model list is saved.</string>
+    <string name="project_home_test_connection">Test connection</string>
+    <string name="project_home_testing">Testing the connection with the provider.</string>
+    <string name="project_home_test_failed">The connection test could not run. Try again.</string>
     <string name="project_home_open_providers">Open Providers</string>
     <string name="project_home_start_failed">The session could not be started.</string>
     <string name="project_home_try_again">Try again</string>
@@ -64,6 +67,7 @@
     <string name="nav_back_label">Back</string>
     <string name="session_unavailable_title">Session</string>
     <string name="session_unavailable_body">This session is not available. It may have been deleted.</string>
+    <string name="session_unavailable_reason">Reason: %1$s</string>
     <string name="placeholder_body">This screen arrives in a later phase. See the build plan.</string>
 
     <!-- Rust core card (About, debug builds only) -->

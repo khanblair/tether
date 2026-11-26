@@ -79,7 +79,11 @@ impl Store {
         self.check_settings_update(id, changed)
     }
 
-    fn check_settings_update(&self, id: &SessionId, changed: usize) -> Result<(), StoreError> {
+    pub(crate) fn check_settings_update(
+        &self,
+        id: &SessionId,
+        changed: usize,
+    ) -> Result<(), StoreError> {
         if changed != 0 {
             return Ok(());
         }

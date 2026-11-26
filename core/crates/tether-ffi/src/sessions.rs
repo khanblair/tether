@@ -391,3 +391,7 @@ mod tests;
 #[cfg(test)]
 #[path = "sessions/reasoning_tests.rs"]
 mod reasoning_tests;
+
+#[cfg(test)]
+#[path = "sessions/archive_tests.rs"]
+mod archive_tests;

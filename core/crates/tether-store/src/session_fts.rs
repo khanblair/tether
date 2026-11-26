@@ -54,7 +54,7 @@ impl Store {
             "SELECT m.id, m.session_id, s.title, m.created_at, m.role, message_fts.body \
              FROM message_fts JOIN messages m ON m.id = message_fts.message_id \
              JOIN sessions s ON s.id = m.session_id \
-             WHERE message_fts MATCH ?1 AND m.rewound = 0 \
+             WHERE message_fts MATCH ?1 AND m.rewound = 0 AND s.archived = 0 \
              AND (?3 IS NULL OR m.session_id <> ?3) \
              ORDER BY bm25(message_fts) LIMIT ?2",
         )?;

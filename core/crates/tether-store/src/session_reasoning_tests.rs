@@ -39,7 +39,7 @@ fn migration_fourteen_keeps_existing_sessions_without_an_effort() {
          VALUES ('s', 'p', 'openai', 'm', 'ask', 'idle', 1, 1);",
     )
     .unwrap();
-    assert_eq!(apply(&mut conn, MIGRATIONS).unwrap(), 14);
+    assert_eq!(apply(&mut conn, &MIGRATIONS[..14]).unwrap(), 14);
     let effort: Option<String> = conn
         .query_row(
             "SELECT reasoning_effort FROM sessions WHERE id = 's'",

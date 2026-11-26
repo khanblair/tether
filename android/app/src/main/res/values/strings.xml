@@ -347,5 +347,4 @@
     <string name="composer_image_staged">Image selected. Sending images is not available yet.</string>
     <string name="composer_image_remove">Remove image</string>
     <string name="composer_voice_input">Voice input</string>
-    <string name="composer_voice_unavailable">Speech input is not available on this device.</string>
 </resources>

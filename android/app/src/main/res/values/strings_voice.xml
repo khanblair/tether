@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Voice sheet: speech input from the composer. Nothing is sent until the user sends it. -->
+    <string name="voice_sheet_title">Listening</string>
+    <string name="voice_hint">Say what you want to ask</string>
+    <string name="voice_cancel">Cancel</string>
+    <string name="voice_insert">Insert text</string>
+    <string name="voice_denied">Tether needs the microphone to listen.</string>
+    <string name="voice_allow_mic">Allow microphone</string>
+    <string name="voice_open_settings">Open app settings</string>
+    <string name="voice_unavailable">Speech input is not available on this device.</string>
+    <string name="voice_try_again">Try again</string>
+    <string name="voice_fail_no_match">No speech was recognized. Try again and speak clearly.</string>
+    <string name="voice_fail_network">Speech recognition needs a network connection.</string>
+    <string name="voice_fail_busy">The speech recognizer is busy. Try again in a moment.</string>
+    <string name="voice_fail_other">Speech input stopped unexpectedly.</string>
+</resources>

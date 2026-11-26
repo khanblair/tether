@@ -92,8 +92,9 @@ Status: planned. The P0 manifest declares none of these; `INTERNET` arrives with
 | `WAKE_LOCK` | Partial wake lock during turns | Install time |
 | `USE_BIOMETRIC` | Key reveal, Bypass, app lock | Install time |
 | `REQUEST_INSTALL_PACKAGES` (`full` only) | Install a downloaded update through `PackageInstaller` (P1-20); `play` never declares it | First tap on Install update, through the system settings screen |
+| `RECORD_AUDIO` | Voice input in the composer. The device speech recognizer does the work; Tether records and stores no audio | First tap on the mic in the composer |
 
-Voice input launches the device speech recognizer. That app handles microphone permission; Tether does not request `RECORD_AUDIO`.
+Voice input shows a "Listening" sheet that fills the composer with the words it hears. Nothing is sent automatically.
 
 No location, contacts, or broad storage permissions.
 

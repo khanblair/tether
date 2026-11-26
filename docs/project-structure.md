@@ -42,8 +42,8 @@ tether/
 │   └── crates/
 │       ├── tether-types/      ids, message, model catalog, session, text, usage, error, event (CoreEvent); no UniFFI code
 │       ├── tether-store/      SQLite storage: schema, migrations, sessions, projects, checkpoints, approvals, budgets, MCP servers, skills
-│       │   ├── migrations/{0001_init,0002_message_fts,0003_checkpoints,0004_approvals,0005_prompt_snapshot,0006_session_todos,0007_project_trust,0008_project_network,0009_git_identity,0010_budgets,0011_context,0012_mcp_servers,0013_skills_memory,0014_session_reasoning}.sql
-│       │   └── src/{lib,db,error,migrations,models,projects,sessions,session_rows,session_load,session_search,session_fts,session_context,session_plans,checkpoints,approvals,permission_rules,project_trust,project_network,prompt_snapshots,provider_configs,todos,usage,budgets,context,mcp_servers,skill_settings}.rs; test modules (*_tests.rs, tests.rs)
+│       │   ├── migrations/{0001_init,0002_message_fts,0003_checkpoints,0004_approvals,0005_prompt_snapshot,0006_session_todos,0007_project_trust,0008_project_network,0009_git_identity,0010_budgets,0011_context,0012_mcp_servers,0013_skills_memory,0014_session_reasoning,0015_session_archive}.sql
+│       │   └── src/{lib,db,error,migrations,models,projects,sessions,session_rows,session_load,session_search,session_archive,session_fts,session_context,session_plans,checkpoints,approvals,permission_rules,project_trust,project_network,prompt_snapshots,provider_configs,todos,usage,budgets,context,mcp_servers,skill_settings}.rs; test modules (*_tests.rs, tests.rs)
 │       ├── tether-engine/     Sessions, turn loop, permissions, executors, tool loop, checkpoints, prompts, config, quality gate, updates
 │       │   ├── src/{lib,budget,checkpoint_capture,context,network,notify,provider_connection,rewind,session,session_provider,tool_loop,usage}.rs; folders commands/, config/, executors/, permissions/, prompt/, quality/, session/, updates/; test modules (*_tests.rs, tests.rs)
 │       │   └── src/tool_loop/     Folders ci_tools/, git_tools/, knowledge_tools/, mcp_tools/, session_tools/; file_tools.rs, registry.rs, stream.rs
@@ -238,7 +238,7 @@ core/
     │       ├── secrets.rs     Secret store platform callback and vault calls
     │       ├── session_control.rs    Checklist, plan, and plan execution calls
     │       ├── sessions.rs    Session creation, transcript reads, plain chat turns
-    │       ├── sessions/      open.rs, prompt.rs (session prompt sections, global instructions), provider.rs (provider key lookup and factory), recovery.rs (one-time recovery of interrupted sessions), user_runs.rs (user command runs and reruns), ux.rs (saved settings, model catalog, usage, search)
+    │       ├── sessions/      open.rs, prompt.rs (session prompt sections, global instructions), provider.rs (provider key lookup and factory), recovery.rs (one-time recovery of interrupted sessions), user_runs.rs (user command runs and reruns), ux.rs (saved settings, model catalog, usage, search, archive and delete)
     │       ├── skills.rs      Read-only skill discovery
     │       ├── skills_install.rs  Skill quarantine, installation, and prune-only upkeep
     │       ├── skills_install/    api.rs (install entry points), download.rs (validated codeload ZIP), github_url.rs (URL parsing), preview.rs (quarantine preview), quarantine.rs (quarantine folders), scope.rs (storage roots, name checks), tree.rs (skill tree walk), upkeep.rs (usage scan, archive moves), views.rs (install records)

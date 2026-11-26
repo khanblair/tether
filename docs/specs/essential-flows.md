@@ -163,9 +163,10 @@ Built and checked (`just check` passes, 1,000+ app tests, store, engine, FFI, an
 - S2: Bypass inside the session, one-line titles, New session label, rename by long press, models without tools disabled with a reason.
 - S3: thinking effort end to end, default Medium, DeepSeek sends it.
 - Beyond the original scope, at Blair's request: the composer, top bar, status line, jump pill, plus sheet (with Camera, by decision), and the Listening voice sheet follow the prototype and `docs/ui-rules.md`. The prototype was not edited. The thinking effort control is not in the prototype and was added by decision.
+- After the first emulator run: the composer row keeps the send icon in view (the model chip shortens its label), the model sheet has a search field (as in the prototype), the session menu has Rename, Export as Markdown, Checkpoints, Archive with Undo, and Delete with a named confirmation (as in the prototype), the drawer lists archived sessions (chosen by Blair, not in the prototype), and the nav host, drawer, and sheets rise above the keyboard. Not built: swipe to archive on list rows, which the prototype shows.
 
 Not done:
 - **The crash cause (section 4) is still unknown.** No stack trace was available. The next crash writes one to About, Last crash.
 - `SessionFlowTest` needs a device: `just test-device`.
-- Not in the prototype or not built: the context breakdown sheet behind the status line percentage, archive and delete in the session menu, sending images and files (the core has no image input yet, issue #207), custom commands.
+- Not in the prototype or not built: the context breakdown sheet behind the status line percentage, sending images and files (the core has no image input yet, issue #207), custom commands.
 - A model list read on every event is cached per model; a changed catalog shows after the model changes.

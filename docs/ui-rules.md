@@ -35,6 +35,7 @@ Compact (phone portrait), from top to bottom:
 - The system action bar is off. Every screen draws its own top bar.
 - Screen padding is `space.4` horizontally. The transcript caps at `layout.transcript-max` wide.
 - The keyboard pushes the composer and approval bar up; the transcript stays scrolled to the newest item if it was already at the bottom.
+- Every screen, sheet, and the drawer keeps its text fields above the keyboard. A sheet opens fully expanded and lifts its content by the keyboard height. A form that can be taller than the space above the keyboard scrolls.
 
 ## 3. Rules per view
 

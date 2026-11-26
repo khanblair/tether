@@ -135,6 +135,7 @@ Predictive back is supported. Back from a running session leaves the turn runnin
 
 - Primary actions in the bottom 40% of the screen.
 - The composer and approval bar stay above the keyboard; the transcript keeps its scroll anchor when the keyboard opens.
+- The app is edge-to-edge with `adjustResize`, which does not resize an edge-to-edge window, so the nav host, the drawer, and `TetherSheet` apply the keyboard inset themselves. The keyboard inset includes the navigation bar, so each layer takes it off before adding the bar padding.
 - Edge-to-edge display with system bar insets applied to the top bar and composer.
 - Dense information in monospace captions, but never below 12 sp.
 - Horizontal orientation on phones: transcript only, composer collapses to one line until focused.

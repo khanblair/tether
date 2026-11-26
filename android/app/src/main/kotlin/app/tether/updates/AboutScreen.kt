@@ -36,6 +36,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.tether.R
 import app.tether.core.CoreClient
+import app.tether.crash.LastCrashSection
 import app.tether.design.TetherIcons
 import app.tether.design.TetherTheme
 import app.tether.design.components.BannerTone
@@ -79,19 +80,21 @@ fun AboutScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     val coreCard: @Composable () -> Unit = { CoreCard(core = core, messages = messages) }
+    val crashCard: @Composable () -> Unit = { LastCrashSection(messages = messages) }
     AboutContent(
         state = state,
         onAction = { action -> controller.perform(action) },
         onBack = onBack,
         coreCard = if (showCoreCard) coreCard else null,
         onShowWelcome = onShowWelcome,
+        crashCard = crashCard,
     )
 }
 
 /**
  * The stateless About screen. [AboutScreen] supplies the state and the actions. [coreCard] is an
  * optional card shown below the updates card. [onShowWelcome] adds the row that replays the
- * first-run flow.
+ * first-run flow. [crashCard] draws the last crash, if there is one, under the updates card.
  */
 @Composable
 fun AboutContent(
@@ -100,6 +103,7 @@ fun AboutContent(
     onBack: () -> Unit,
     coreCard: (@Composable () -> Unit)? = null,
     onShowWelcome: (() -> Unit)? = null,
+    crashCard: (@Composable () -> Unit)? = null,
 ) {
     Scaffold(
         containerColor = TetherTheme.colors.bg,
@@ -125,6 +129,7 @@ fun AboutContent(
             ) {
                 AppHeader(version = state.currentVersion)
                 UpdateCard(state = state, card = updateCardFor(state), onAction = onAction)
+                crashCard?.invoke()
                 onShowWelcome?.let { ShowWelcomeRow(onShow = it) }
                 coreCard?.invoke()
             }

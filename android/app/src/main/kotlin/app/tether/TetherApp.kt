@@ -2,7 +2,11 @@ package app.tether
 
 import android.app.Application
 import android.os.SystemClock
+import android.util.Log
+import app.tether.core.generated.recoverInterruptedSessions
+import app.tether.crash.CrashRecorder
 import app.tether.di.AppModule
+import app.tether.di.runQuietly
 import app.tether.settings.AppLock
 import app.tether.settings.SettingsDeps
 import app.tether.settings.createTetherChannels
@@ -22,6 +26,8 @@ class TetherApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        CrashRecorder.install(this)
+        recoverInterruptedTurns()
         module = AppModule(this)
         settings = SettingsDeps(this, module)
         appLock =
@@ -33,5 +39,16 @@ class TetherApp : Application() {
         module.core.start()
         module.updates.restore()
         module.updates.checkIfDue()
+    }
+
+    /**
+     * Marks turns that were running when the last process died as interrupted. It runs once per
+     * process, before any session runtime exists, so a runtime built later never changes the
+     * status of a turn that is running now.
+     */
+    private fun recoverInterruptedTurns() {
+        runQuietly({ recoverInterruptedSessions(getDatabasePath("tether.db").absolutePath) }) {
+            Log.w("Tether", "recovery failed: ${it.javaClass.simpleName}")
+        }
     }
 }

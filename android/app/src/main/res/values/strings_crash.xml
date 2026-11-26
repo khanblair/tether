@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="crash_card_title">Last crash</string>
+    <string name="crash_card_body">The app closed unexpectedly last time. The report stays on this phone until you clear it.</string>
+    <string name="crash_copy_action">Copy report</string>
+    <string name="crash_clear_action">Clear report</string>
+    <string name="crash_copied">Crash report copied.</string>
+</resources>

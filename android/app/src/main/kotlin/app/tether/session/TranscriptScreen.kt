@@ -4,20 +4,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -41,6 +37,7 @@ import app.tether.session.agent.isToolResultOnly
 import app.tether.session.agent.liveSection
 import app.tether.session.agent.rememberAgentLoop
 import app.tether.session.agent.rememberAgentScreen
+import app.tether.session.agent.savedPreviewPaths
 import app.tether.session.agent.toolCallsFromMessages
 import app.tether.session.compose.CommandScreen
 import app.tether.session.compose.commandHooksOf
@@ -96,6 +93,14 @@ fun TranscriptScreen(
         })
     }
 
+    val chat =
+        rememberChatActions(
+            connection = connection,
+            messages = messages,
+            busy = sessionBusy(turn, agentUi),
+            onStart = { startTurn() },
+            onFailed = { turn = turn.onSendFailed() },
+        )
     LaunchedEffect(agent) { agent?.hydrate() }
     SnapshotReload(
         connection = connection,
@@ -139,6 +144,11 @@ fun TranscriptScreen(
         onOpenProviders = sheets?.openProviders,
         onDismissStopped = { turn = turn.onDismissStopped() },
         onLongPress = { actionsFor = it },
+        onEditMessage = chat.onEditMessage,
+        onRegenerate = chat.onRegenerate,
+        toasts = sheets?.messages,
+        onPreviewFile = sheets?.openPreview,
+        onPreviewHtml = sheets?.openInlinePreview,
         agent = agentUi,
         onSendPlanEdit =
             connection?.let { active ->
@@ -171,6 +181,7 @@ fun TranscriptScreen(
         toasts = sheets?.messages,
         onDone = { actionsFor = null },
     )
+    ChatEditSlot(chat)
     SessionSheetsSlot(
         connection = connection,
         sheets = sheets,
@@ -240,6 +251,11 @@ fun TranscriptContent(
     onOpenProviders: (() -> Unit)? = null,
     onDismissStopped: () -> Unit = {},
     onLongPress: ((MessageView) -> Unit)? = null,
+    onEditMessage: ((MessageView) -> Unit)? = null,
+    onRegenerate: (() -> Unit)? = null,
+    toasts: AppMessages? = null,
+    onPreviewFile: ((String) -> Unit)? = null,
+    onPreviewHtml: ((String) -> Unit)? = null,
     composer: (@Composable () -> Unit)? = null,
     agent: AgentScreenUi? = null,
     onSendPlanEdit: ((String) -> Unit)? = null,
@@ -251,7 +267,7 @@ fun TranscriptContent(
     val visible = remember(messages) { messages.filterNot { it.isToolResultOnly() } }
     val live = agent?.liveSection().orEmpty()
     val footerRows = if (turn.hasFooter) 1 else 0
-    val unseen =
+    val jump =
         followTail(listState, visible, footerRows + live.size, liveKey = agent?.state?.calls)
     val expanded = rememberSaveable(saver = expandedCardsSaver) { ExpandedCards() }
     val liveIds =
@@ -265,7 +281,9 @@ fun TranscriptContent(
         remember(messages, liveIds) {
             toolCallsFromMessages(messages).filterKeys { id -> id !in liveIds }
         }
-    val tools = ToolCardState(persisted, expanded.ids, expanded::toggle)
+    val previewPaths = remember(messages, liveIds) { savedPreviewPaths(messages) }
+    val tools =
+        ToolCardState(persisted, expanded.ids, expanded::toggle, onPreviewFile, previewPaths)
     Scaffold(
         containerColor = TetherTheme.colors.bg,
         topBar = {
@@ -295,9 +313,13 @@ fun TranscriptContent(
                     agent = agent,
                     tools = tools,
                     onSendPlanEdit = onSendPlanEdit ?: {},
+                    onEditMessage = onEditMessage,
+                    onRegenerate = onRegenerate,
+                    toasts = toasts,
+                    onPreviewHtml = onPreviewHtml,
                 )
                 JumpToLatest(
-                    count = unseen,
+                    pill = jump,
                     onClick = { scope.launch { scrollToLatest(listState, reducedMotion) } },
                     modifier =
                         Modifier
@@ -327,63 +349,6 @@ fun TranscriptContent(
         }
     }
 }
-
-/**
- * Keeps the newest item in view while the reader is at the bottom. [trailing] counts the items
- * after the messages: the live section and the turn footer. [liveKey] changes with each live
- * update, so a streaming tool card keeps the tail in view. The flag changes only when the scroll
- * position changes, so a streamed reply that grows below the viewport does not count as the
- * reader leaving the bottom. Returns the rows that arrived since the reader left the bottom.
- */
-@Composable
-private fun followTail(
-    listState: LazyListState,
-    messages: List<MessageView>,
-    trailing: Int,
-    liveKey: Any?,
-): Int {
-    var followTail by remember { mutableStateOf(true) }
-    var itemsWhenLeft by remember { mutableIntStateOf(0) }
-    var itemsNow by remember { mutableIntStateOf(0) }
-    LaunchedEffect(listState) {
-        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
-            .collect {
-                val atBottom = listState.isAtBottom()
-                if (followTail && !atBottom) itemsWhenLeft = listState.layoutInfo.totalItemsCount
-                followTail = atBottom
-            }
-    }
-    LaunchedEffect(listState) {
-        snapshotFlow { listState.layoutInfo.totalItemsCount }.collect { itemsNow = it }
-    }
-    // The keyboard shrinks the viewport without moving the scroll position, so a height change
-    // also runs the effect below. It scrolls only while the reader is following the tail.
-    val viewportHeight by remember(listState) {
-        derivedStateOf { listState.layoutInfo.viewportSize.height }
-    }
-    LaunchedEffect(messages, trailing, liveKey, viewportHeight) {
-        val lastItem = messages.size + trailing - 1
-        if (lastItem >= 0 && shouldFollow(followTail, hasNewContent = true)) {
-            // A large offset clamps to the list end, so a growing reply stays in view.
-            listState.scrollToItem(lastItem, Int.MAX_VALUE)
-        }
-    }
-    return newItemCount(itemsWhenLeft, itemsNow, followTail)
-}
-
-/** True when the last item is fully inside the viewport. */
-internal fun LazyListState.isAtBottom(): Boolean {
-    val info = layoutInfo
-    val last = info.visibleItemsInfo.lastOrNull() ?: return true
-    return last.index == info.totalItemsCount - 1 &&
-        last.offset + last.size <= info.viewportEndOffset
-}
-
-/** Scroll to the newest content only when the reader was already at the bottom. */
-internal fun shouldFollow(
-    wasAtBottom: Boolean,
-    hasNewContent: Boolean,
-): Boolean = wasAtBottom && hasNewContent
 
 /** Events that end a turn, including a stopped one. Each one clears the running state. */
 internal fun CoreEventView.endsTurn(): Boolean =

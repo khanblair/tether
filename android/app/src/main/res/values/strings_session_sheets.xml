@@ -3,6 +3,9 @@
     <!-- Model sheet: the picker of models with saved keys. -->
     <string name="session_model_title">Model</string>
     <string name="session_model_loading">Loading models</string>
+    <string name="session_model_search">Search models</string>
+    <string name="session_model_search_clear">Clear search</string>
+    <string name="session_model_no_match">No model matches.</string>
     <string name="session_model_none">No models saved. Test the connection in Providers.</string>
     <string name="session_model_context">%1$s context</string>
     <string name="session_model_price">%1$s in, %2$s out per million tokens</string>
@@ -59,8 +62,23 @@
     <!-- Session menu and the rename sheet. -->
     <string name="session_menu_title">Session</string>
     <string name="session_menu_rename">Rename</string>
-    <string name="session_menu_rewind">Rewind</string>
-    <string name="session_menu_rewind_sub">Restore files, the conversation, or both</string>
+    <string name="session_menu_export">Export as Markdown</string>
+    <string name="session_menu_checkpoints">Checkpoints</string>
+    <string name="session_menu_no_batches">No edit batches yet</string>
+    <plurals name="session_menu_batches">
+        <item quantity="one">%1$d edit batch</item>
+        <item quantity="other">%1$d edit batches</item>
+    </plurals>
+    <string name="session_menu_archive">Archive</string>
+    <string name="session_menu_delete">Delete this session</string>
+    <string name="session_menu_busy">Wait for the reply to finish</string>
+    <string name="session_archived_toast">Session archived</string>
+    <string name="session_undo">Undo</string>
+    <string name="session_deleted_toast">Session deleted</string>
+    <string name="session_delete_title">Delete \"%1$s\"?</string>
+    <string name="session_delete_body">This removes its messages and checkpoints from this phone. It cannot be undone.</string>
+    <string name="session_delete_confirm">Delete</string>
+    <string name="session_delete_cancel">Cancel</string>
     <string name="session_rename_title">Rename session</string>
     <string name="session_rename_label">Title</string>
     <string name="session_rename_save">Save</string>

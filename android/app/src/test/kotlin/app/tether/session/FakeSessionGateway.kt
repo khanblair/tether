@@ -39,6 +39,25 @@ class FakeSessionGateway : SessionGateway {
         return sessionsByProject[projectId].orEmpty()
     }
 
+    /** The archived sessions the fake lists, by project. */
+    val archivedByProject = mutableMapOf<String, List<SessionInfo>>()
+
+    /** The archive calls, in order: the session id and whether it was archived. */
+    val archiveCalls = mutableListOf<Pair<String, Boolean>>()
+
+    override fun listArchived(projectId: String): List<SessionInfo> {
+        maybeFail()
+        return archivedByProject[projectId].orEmpty()
+    }
+
+    override fun archive(
+        sessionId: String,
+        archived: Boolean,
+    ) {
+        maybeFail()
+        archiveCalls += sessionId to archived
+    }
+
     override fun defaultModel(provider: ProviderView): String? {
         maybeFail()
         return models[provider]

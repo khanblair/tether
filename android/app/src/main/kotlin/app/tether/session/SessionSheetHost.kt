@@ -19,7 +19,7 @@ import app.tether.providers.ProviderGateway
 import app.tether.session.compose.CommandScreen
 
 /** The sheets a session screen can open. */
-enum class SessionSheetKind { Model, Mode, Menu, Rename, Rewind }
+enum class SessionSheetKind { Model, Mode, Menu, Rename, Rewind, Delete }
 
 /** One open sheet. [token] is new for each opening, so its view model starts fresh. */
 data class OpenSheet(
@@ -73,6 +73,12 @@ class SessionSheetEnv(
     val newSession: () -> Unit = {},
     val openDrawer: () -> Unit = {},
     val projects: ProjectsSource? = null,
+    /** Leaves the session screen, after an archive or a delete. */
+    val leaveSession: () -> Unit = {},
+    /** Puts an archived session back. The id is the session to restore. */
+    val undoArchive: (String) -> Unit = {},
+    /** Tells the project and dashboard lists that sessions changed, so they read again. */
+    val sessionsChanged: () -> Unit = {},
 )
 
 /**
@@ -89,8 +95,9 @@ fun SessionSheetsSlot(
 ) {
     val activity = LocalActivity.current as? MainActivity
     val bypassTitle = stringResource(R.string.session_bypass_auth_title)
-    val open = control.current
-    if (open == null || sheets == null || connection == null) return
+    if (connection == null || sheets == null) return
+    val exportMarkdown = rememberExportMarkdown(connection, sheets.messages)
+    val open = control.current ?: return
     SessionSheetHost(
         open = open,
         deps =
@@ -112,6 +119,7 @@ fun SessionSheetsSlot(
             }
         },
         onOpen = control::openSheet,
+        onExport = exportMarkdown,
         onApplied = control::applied,
         onDismiss = control::dismiss,
     )
@@ -129,6 +137,7 @@ fun SessionSheetHost(
     running: Boolean,
     authenticate: (onSuccess: () -> Unit, onError: () -> Unit) -> Unit,
     onOpen: (SessionSheetKind) -> Unit,
+    onExport: () -> Unit,
     onApplied: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -138,15 +147,79 @@ fun SessionSheetHost(
         SessionSheetKind.Mode ->
             ModeSheetHost(open, deps, running, authenticate, onApplied, onDismiss)
         SessionSheetKind.Menu ->
-            SessionMenuSheet(
-                onRename = { onOpen(SessionSheetKind.Rename) },
-                onRewind = { onOpen(SessionSheetKind.Rewind) },
-                onDismiss = onDismiss,
-            )
+            SessionMenuHost(open, deps, env, running, onOpen, onExport, onDismiss)
         SessionSheetKind.Rename -> RenameSheetHost(open, deps, onApplied, onDismiss)
         SessionSheetKind.Rewind ->
             RewindSheetHost(open, deps, env, onApplied, onDismiss)
+        SessionSheetKind.Delete -> SessionDeleteHost(open, deps, env, onDismiss)
     }
+}
+
+/**
+ * The session menu. Archive closes the sheet, leaves the session, and offers Undo. Export closes
+ * the sheet before the save picker opens.
+ */
+@Composable
+private fun SessionMenuHost(
+    open: OpenSheet,
+    deps: SessionSheetDeps,
+    env: SessionSheetEnv,
+    running: Boolean,
+    onOpen: (SessionSheetKind) -> Unit,
+    onExport: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val archived = stringResource(R.string.session_archived_toast)
+    val undo = stringResource(R.string.session_undo)
+    val viewModel: SessionMenuViewModel =
+        viewModel(
+            key = "menu-${open.token}",
+            factory =
+                SessionMenuViewModel.factory(deps) {
+                    onDismiss()
+                    env.messages.show(archived, undo) { env.undoArchive(deps.sessionId) }
+                    env.sessionsChanged()
+                    env.leaveSession()
+                },
+        )
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    SessionMenuSheet(
+        state = state,
+        running = running,
+        onRename = { onOpen(SessionSheetKind.Rename) },
+        onExport = {
+            onDismiss()
+            onExport()
+        },
+        onCheckpoints = { onOpen(SessionSheetKind.Rewind) },
+        onArchive = viewModel::archive,
+        onDelete = { onOpen(SessionSheetKind.Delete) },
+        onDismiss = onDismiss,
+    )
+}
+
+/** The delete confirmation. A deleted session closes the sheet, leaves the screen, and says so. */
+@Composable
+private fun SessionDeleteHost(
+    open: OpenSheet,
+    deps: SessionSheetDeps,
+    env: SessionSheetEnv,
+    onDismiss: () -> Unit,
+) {
+    val deleted = stringResource(R.string.session_deleted_toast)
+    val viewModel: SessionDeleteViewModel =
+        viewModel(
+            key = "delete-${open.token}",
+            factory =
+                SessionDeleteViewModel.factory(deps) {
+                    onDismiss()
+                    env.messages.show(deleted)
+                    env.sessionsChanged()
+                    env.leaveSession()
+                },
+        )
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    SessionDeleteSheet(state = state, onConfirm = viewModel::delete, onDismiss = onDismiss)
 }
 
 @Composable
@@ -169,6 +242,7 @@ private fun ModelSheetHost(
         running = running,
         onChoose = viewModel::choose,
         onChooseEffort = viewModel::chooseEffort,
+        onQueryChange = viewModel::onQueryChange,
         onOpenProviders = {
             onDismiss()
             env.openProviders()

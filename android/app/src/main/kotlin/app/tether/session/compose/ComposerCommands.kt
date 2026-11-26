@@ -1,9 +1,6 @@
 package app.tether.session.compose
 
 import android.content.Context
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -13,7 +10,7 @@ import androidx.compose.ui.platform.LocalContext
 import app.tether.R
 import app.tether.messages.AppMessages
 import app.tether.session.SessionConnection
-import kotlinx.coroutines.CoroutineScope
+import app.tether.session.rememberExportMarkdown
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -37,12 +34,7 @@ internal fun rememberCommandSend(
     val runWords = remember(context) { runWordsFrom(context) }
     val dispatcher = remember(connection) { CommandDispatcher(connection.commands) }
     val send by rememberUpdatedState(sendPlain)
-    val exporter =
-        rememberLauncherForActivityResult(
-            ActivityResultContracts.CreateDocument("text/markdown"),
-        ) { uri ->
-            uri?.let { scope.saveExport(context, connection, it, messages, runWords) }
-        }
+    val exportMarkdown = rememberExportMarkdown(connection, messages)
     val ui =
         object : CommandUi {
             override fun notify(text: String) {
@@ -51,7 +43,7 @@ internal fun rememberCommandSend(
 
             override fun sendPrompt(text: String) = send(text)
 
-            override fun chooseExportFile() = exporter.launch(EXPORT_FILE_NAME)
+            override fun chooseExportFile() = exportMarkdown()
         }
     if (hooks == null) return sendPlain
     val runner = CommandRunner(connection, hooks, ui, runWords)
@@ -72,36 +64,6 @@ internal fun rememberCommandSend(
         } else {
             send(text)
         }
-    }
-}
-
-private const val EXPORT_FILE_NAME = "tether-session.md"
-
-/** Writes the session as Markdown to [uri] and says whether it worked. */
-@Suppress("TooGenericExceptionCaught")
-private fun CoroutineScope.saveExport(
-    context: Context,
-    connection: SessionConnection,
-    uri: Uri,
-    messages: AppMessages?,
-    words: RunWords,
-) {
-    launch {
-        val saved =
-            withContext(Dispatchers.IO) {
-                try {
-                    val markdown = connection.exportMarkdown().toByteArray()
-                    context.contentResolver
-                        .openOutputStream(
-                            uri,
-                            "w",
-                        )?.use { it.write(markdown) } !=
-                        null
-                } catch (_: Exception) {
-                    false
-                }
-            }
-        messages?.show(if (saved) words.exported else words.failed)
     }
 }
 

@@ -24,6 +24,15 @@ interface SessionGateway {
     /** The sessions of [projectId], newest first, as the core orders them. */
     fun listSessions(projectId: String): List<SessionInfo>
 
+    /** The archived sessions of [projectId], newest first. */
+    fun listArchived(projectId: String): List<SessionInfo>
+
+    /** Hides [sessionId] from the lists (true) or shows it again (false). */
+    fun archive(
+        sessionId: String,
+        archived: Boolean,
+    )
+
     /** The first model in [provider]'s saved list, or null when the list is empty. */
     fun defaultModel(provider: ProviderView): String?
 
@@ -74,6 +83,21 @@ class CoreSessionGateway(
                 updatedAtMs = record.updatedAtMs,
             )
         }
+
+    override fun listArchived(projectId: String): List<SessionInfo> =
+        runtime.listArchivedSessions(projectId).map { record ->
+            SessionInfo(
+                id = record.id,
+                title = record.title,
+                status = record.status,
+                updatedAtMs = record.updatedAtMs,
+            )
+        }
+
+    override fun archive(
+        sessionId: String,
+        archived: Boolean,
+    ) = coreCall { runtime.archiveSession(sessionId, archived) }
 
     override fun defaultModel(provider: ProviderView): String? = runtime.defaultModel(provider)
 

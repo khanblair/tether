@@ -2,6 +2,7 @@ package app.tether.session
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.heightIn
@@ -9,16 +10,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -32,16 +36,64 @@ import app.tether.design.tokens.TetherSize
 import app.tether.design.tokens.TetherSpace
 
 /**
- * The pill that jumps to the newest row. It shows when [count] is above zero, which means the
- * reader scrolled up and rows arrived since. A tap calls [onClick].
+ * The control that jumps to the newest row. [pill] picks what shows: nothing at the bottom, a
+ * round icon when the reader is above the bottom and no rows arrived, or the count pill when rows
+ * arrived since. A tap calls [onClick].
  */
 @Composable
-fun JumpToLatest(
+internal fun JumpToLatest(
+    pill: JumpPill,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    when (pill) {
+        JumpPill.Hidden -> Unit
+        JumpPill.Icon -> JumpIconButton(onClick = onClick, modifier = modifier)
+        is JumpPill.Count -> JumpCountPill(pill.count, onClick, modifier)
+    }
+}
+
+/** The round button with no count. The touch target is at least 48 dp; the circle is 40 dp. */
+@Composable
+private fun JumpIconButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val description = stringResource(R.string.jump_to_latest)
+    Box(
+        modifier =
+            modifier
+                .minimumInteractiveComponentSize()
+                .clickable(role = Role.Button, onClickLabel = description, onClick = onClick)
+                .semantics { contentDescription = description },
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .size(TetherSpace.space10)
+                    .shadow(TetherElevation.level2, CircleShape)
+                    .clip(CircleShape)
+                    .background(TetherTheme.colors.surfaceRaised),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = TetherIcons.ArrowDown,
+                contentDescription = null,
+                modifier = Modifier.size(TetherSize.iconS),
+                tint = TetherTheme.colors.text2,
+            )
+        }
+    }
+}
+
+/** The pill with the count of rows that arrived since the reader left the bottom. */
+@Composable
+private fun JumpCountPill(
     count: Int,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    if (count <= 0) return
     val label = pluralStringResource(R.plurals.session_jump_new, count, count)
     val description = pluralStringResource(R.plurals.session_jump_description, count, count)
     Row(

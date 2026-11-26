@@ -23,6 +23,8 @@ import app.tether.home.ProjectHomeScreen
 import app.tether.home.ProjectHomeViewModel
 import app.tether.home.ProjectsScreen
 import app.tether.home.ProjectsViewModel
+import app.tether.home.SessionRenameHost
+import app.tether.home.sessionRenameViewModel
 
 /** The start screens: Home, Projects, and Needs attention. */
 internal fun NavGraphBuilder.homeRoutes(
@@ -51,6 +53,7 @@ private fun NavGraphBuilder.dashboardRoute(
                         module.updates.state,
                     ),
             )
+        val rename = sessionRenameViewModel(module.sessionGateway)
         DashboardScreen(
             viewModel = dashboard,
             attentionCount = attentionItems.size,
@@ -62,7 +65,9 @@ private fun NavGraphBuilder.dashboardRoute(
             onOpenProjects = { nav.goTopLevel(Route.Projects) },
             onOpenProviders = { nav.go(Route.Providers) },
             onNewProject = { choice -> nav.go(choice.route()) },
+            onRenameSession = { rename.start(it.id, it.title) },
         )
+        SessionRenameHost(rename = rename, onRenamed = dashboard::refresh)
     }
 }
 
@@ -113,6 +118,7 @@ private fun NavGraphBuilder.projectHomeRoute(
             home.openedSessions.collect { nav.open("session/${Uri.encode(it)}") }
         }
         var exporting by rememberSaveable { mutableStateOf(false) }
+        val rename = sessionRenameViewModel(module.sessionGateway)
         ProjectHomeScreen(
             state = state,
             onBack = nav::back,
@@ -123,7 +129,9 @@ private fun NavGraphBuilder.projectHomeRoute(
             onExport = { exporting = true },
             onOpenChanges = { nav.open(gitPath(id)) },
             onOpenFiles = { nav.open(filesPath(id)) },
+            onRenameSession = { rename.start(it.id, it.title) },
         )
+        SessionRenameHost(rename = rename, onRenamed = home::refresh)
         val project = state.project
         if (exporting && project != null) {
             ExportProjectHost(

@@ -26,6 +26,7 @@ import app.tether.design.components.TetherIcon
 import app.tether.design.components.TetherTopBar
 import app.tether.design.tokens.TetherBorder
 import app.tether.design.tokens.TetherSpace
+import app.tether.session.sessionTitleText
 import app.tether.shell.BackButton
 
 /**
@@ -150,7 +151,7 @@ internal fun ApprovalRow(
     onClick: () -> Unit,
 ) {
     ListRow(
-        title = row.title,
+        title = sessionTitleText(row.title),
         subtitle = stringResource(R.string.attention_approval_sub, row.projectName),
         leading = { StatusMark(state = SessionState.Waiting) },
         trailing = { Chevron() },
@@ -166,7 +167,7 @@ internal fun FailureRow(
 ) {
     val ago = relativeTime(now, row.updatedAt).text()
     ListRow(
-        title = row.title,
+        title = sessionTitleText(row.title),
         subtitle = stringResource(R.string.attention_failed_sub, row.projectName, ago),
         leading = { StatusMark(state = SessionState.Failed) },
         trailing = { Chevron() },

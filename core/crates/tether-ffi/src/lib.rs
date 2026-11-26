@@ -73,7 +73,9 @@ pub use quality::{
     QualityConfigView, QualityRuleView, QualityRuntime, QualityRuntimeError, ThresholdView,
 };
 pub use secrets::{SecretVault, SecretVaultError, SecretsPlatform, SecretsPlatformFailure};
-pub use sessions::{SessionRunner, SessionRuntime, SessionRuntimeError};
+pub use sessions::{
+    SessionRunner, SessionRuntime, SessionRuntimeError, recover_interrupted_sessions,
+};
 pub use skills::{SkillDetailView, SkillView, SkillsRuntime, SkillsRuntimeError};
 pub use skills_install::{
     InstalledSkillView, QuarantineFileView, QuarantineView, ScanFindingView, ScanReportView,

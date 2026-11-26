@@ -1,8 +1,11 @@
 package app.tether.home
 
+import app.tether.core.generated.ConnectionStatusView
+import app.tether.core.generated.ProviderStatusView
 import app.tether.core.generated.ProviderView
 import app.tether.design.components.SessionState
 import app.tether.providers.FakeProviderGateway
+import app.tether.providers.connectionMessage
 import app.tether.session.FakeSessionGateway
 import app.tether.session.SessionStarter
 import kotlinx.coroutines.Dispatchers
@@ -54,6 +57,7 @@ class ProjectHomeViewModelTest {
                 projects = fixedProjects(projectList),
                 sessions = fixedSessions(sessionList),
                 starter = SessionStarter(providers, sessions),
+                providers = providers,
                 io = dispatcher,
             )
         dispatcher.scheduler.advanceUntilIdle()
@@ -151,4 +155,84 @@ class ProjectHomeViewModelTest {
             assertEquals("fresh", opened.await())
             assertEquals(StartPhase.Ready, vm.state.value.start)
         }
+
+    @Test
+    fun test_connection_on_a_missing_model_list_saves_the_list_and_starts_the_session() {
+        providers.keys[ProviderView.ANTHROPIC] = "key"
+        val vm = viewModel()
+        vm.startSession()
+        dispatcher.scheduler.advanceUntilIdle()
+        assertEquals(StartPhase.NoModels, vm.state.value.start)
+        // The core saves the model list when the provider accepts the key.
+        sessions.models[ProviderView.ANTHROPIC] = "model"
+
+        vm.testConnection()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertTrue(providers.calls.contains("testConnection"))
+        assertEquals(listOf(Triple("blog", ProviderView.ANTHROPIC, "model")), sessions.created)
+        assertEquals(StartPhase.Ready, vm.state.value.start)
+        assertNull(vm.state.value.testProblem)
+    }
+
+    @Test
+    fun a_rejected_key_in_the_connection_test_shows_its_failure_and_creates_nothing() {
+        providers.keys[ProviderView.ANTHROPIC] = "key"
+        providers.testResult = ProviderStatusView(ConnectionStatusView.BAD_KEY, 0u, null)
+        val vm = viewModel()
+        vm.startSession()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        vm.testConnection()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(StartPhase.TestFailed, vm.state.value.start)
+        assertEquals(connectionMessage(ConnectionStatusView.BAD_KEY), vm.state.value.testProblem)
+        assertTrue(sessions.created.isEmpty())
+    }
+
+    @Test
+    fun a_connection_test_that_still_has_no_models_stays_on_test_failed_with_no_message() {
+        providers.keys[ProviderView.ANTHROPIC] = "key"
+        providers.testResult = ProviderStatusView(ConnectionStatusView.UNSET, 0u, null)
+        val vm = viewModel()
+        vm.startSession()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        vm.testConnection()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(StartPhase.TestFailed, vm.state.value.start)
+        assertNull(vm.state.value.testProblem)
+        assertTrue(sessions.created.isEmpty())
+    }
+
+    @Test
+    fun test_connection_with_no_key_left_says_no_key() {
+        providers.keys[ProviderView.ANTHROPIC] = "key"
+        val vm = viewModel()
+        vm.startSession()
+        dispatcher.scheduler.advanceUntilIdle()
+        providers.keys.clear()
+
+        vm.testConnection()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(StartPhase.NoKey, vm.state.value.start)
+        assertFalse(providers.calls.contains("testConnection"))
+    }
+
+    @Test
+    fun test_connection_is_ignored_when_the_start_is_not_a_model_problem() {
+        providers.keys[ProviderView.ANTHROPIC] = "key"
+        sessions.models[ProviderView.ANTHROPIC] = "model"
+        val vm = viewModel()
+
+        vm.testConnection()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(StartPhase.Ready, vm.state.value.start)
+        assertFalse(providers.calls.contains("testConnection"))
+        assertTrue(sessions.created.isEmpty())
+    }
 }

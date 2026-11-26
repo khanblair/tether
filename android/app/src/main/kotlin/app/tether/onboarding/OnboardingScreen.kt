@@ -34,8 +34,6 @@ fun OnboardingScreen(
     onboarding: OnboardingViewModel,
     addKey: AddKeyViewModel,
     onExit: (OnboardingExit) -> Unit,
-    onOpenGitHub: () -> Unit,
-    onOpenArchive: () -> Unit,
 ) {
     val state by onboarding.state.collectAsStateWithLifecycle()
     BackHandler(enabled = state.step != OnboardingStep.Welcome, onBack = onboarding::back)
@@ -59,8 +57,8 @@ fun OnboardingScreen(
             OpenProjectStep(
                 onBack = onboarding::back,
                 onNewProject = onboarding::openNewProject,
-                onOpenGitHub = onOpenGitHub,
-                onOpenArchive = onOpenArchive,
+                onClone = onboarding::openClone,
+                onImport = onboarding::openImport,
                 onSkip = onboarding::skip,
             )
     }

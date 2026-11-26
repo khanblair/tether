@@ -28,7 +28,6 @@ internal fun NavGraphBuilder.githubRoutes(
     nav: TetherNav,
 ) {
     composable(SETTINGS_GITHUB_ROUTE) { GithubAccountRoute(module, nav) }
-    composable(ONBOARDING_GITHUB_ROUTE) { GithubAccountRoute(module, nav) }
     composable(SETTINGS_GIT_IDENTITY_ROUTE) {
         val viewModel: GitIdentityViewModel =
             viewModel(

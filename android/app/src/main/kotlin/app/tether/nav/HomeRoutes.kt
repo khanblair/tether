@@ -101,6 +101,7 @@ private fun NavGraphBuilder.projectHomeRoute(
                         module.home.projects,
                         module.home.sessions,
                         module.sessionStarter,
+                        module.providerGateway,
                     ),
             )
         val state by home.state.collectAsStateWithLifecycle()
@@ -117,6 +118,7 @@ private fun NavGraphBuilder.projectHomeRoute(
             onBack = nav::back,
             onOpenSession = { nav.open("session/${Uri.encode(it)}") },
             onNewSession = home::startSession,
+            onTestConnection = home::testConnection,
             onOpenProviders = { nav.go(Route.Providers) },
             onExport = { exporting = true },
             onOpenChanges = { nav.open(gitPath(id)) },

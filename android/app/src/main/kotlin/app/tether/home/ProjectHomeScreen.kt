@@ -24,9 +24,11 @@ import app.tether.design.components.PrimaryButton
 import app.tether.design.components.SessionRow
 import app.tether.design.components.SessionState
 import app.tether.design.components.TetherIcon
+import app.tether.design.components.TetherTextButton
 import app.tether.design.components.TetherTopBar
 import app.tether.design.tokens.TetherBorder
 import app.tether.design.tokens.TetherSpace
+import app.tether.providers.ConnectionMessage
 import app.tether.shell.BackButton
 
 /**
@@ -39,6 +41,7 @@ fun ProjectHomeScreen(
     onBack: () -> Unit,
     onOpenSession: (String) -> Unit,
     onNewSession: () -> Unit,
+    onTestConnection: () -> Unit,
     onOpenProviders: () -> Unit,
     onExport: () -> Unit,
     onOpenChanges: () -> Unit,
@@ -58,7 +61,13 @@ fun ProjectHomeScreen(
                     verticalArrangement = Arrangement.spacedBy(TetherSpace.space3),
                     modifier = Modifier.fillMaxWidth().padding(TetherSpace.space4),
                 ) {
-                    StartBlock(state.start, onNewSession, onOpenProviders)
+                    StartBlock(
+                        start = state.start,
+                        problem = state.testProblem,
+                        onTestConnection = onTestConnection,
+                        onOpenProviders = onOpenProviders,
+                        onNewSession = onNewSession,
+                    )
                     PrimaryButton(
                         label = stringResource(R.string.project_home_new_session),
                         onClick = onNewSession,
@@ -226,12 +235,17 @@ private fun SessionList(
     }
 }
 
-/** The block above the New session button. Each start result has one block and one action. */
+/**
+ * The block above the New session button. Each start result has one block. A missing model list
+ * or a failed connection test offers Test connection, with a text link to Providers.
+ */
 @Composable
 private fun StartBlock(
     start: StartPhase,
-    onNewSession: () -> Unit,
+    problem: ConnectionMessage?,
+    onTestConnection: () -> Unit,
     onOpenProviders: () -> Unit,
+    onNewSession: () -> Unit,
 ) {
     when (start) {
         StartPhase.Ready, StartPhase.Starting -> Unit
@@ -242,12 +256,28 @@ private fun StartBlock(
                 actionLabel = stringResource(R.string.project_home_add_key),
                 onAction = onOpenProviders,
             )
-        StartPhase.NoModels ->
+        StartPhase.Testing ->
             InlineBanner(
+                text = stringResource(R.string.project_home_testing),
+                tone = BannerTone.Info,
+            )
+        StartPhase.NoModels ->
+            TestBlock(
                 text = stringResource(R.string.project_home_no_models),
+                title = null,
                 tone = BannerTone.Warning,
-                actionLabel = stringResource(R.string.project_home_open_providers),
-                onAction = onOpenProviders,
+                onTestConnection = onTestConnection,
+                onOpenProviders = onOpenProviders,
+            )
+        StartPhase.TestFailed ->
+            TestBlock(
+                text =
+                    problem?.let { stringResource(it.body) }
+                        ?: stringResource(R.string.project_home_test_failed),
+                title = problem?.let { stringResource(it.title) },
+                tone = problem?.tone ?: BannerTone.Danger,
+                onTestConnection = onTestConnection,
+                onOpenProviders = onOpenProviders,
             )
         StartPhase.Failed ->
             InlineBanner(
@@ -257,6 +287,28 @@ private fun StartBlock(
                 onAction = onNewSession,
             )
     }
+}
+
+/** A banner with Test connection, and a text link to Providers under it. */
+@Composable
+private fun TestBlock(
+    text: String,
+    title: String?,
+    tone: BannerTone,
+    onTestConnection: () -> Unit,
+    onOpenProviders: () -> Unit,
+) {
+    InlineBanner(
+        text = text,
+        title = title,
+        tone = tone,
+        actionLabel = stringResource(R.string.project_home_test_connection),
+        onAction = onTestConnection,
+    )
+    TetherTextButton(
+        label = stringResource(R.string.project_home_open_providers),
+        onClick = onOpenProviders,
+    )
 }
 
 @Composable

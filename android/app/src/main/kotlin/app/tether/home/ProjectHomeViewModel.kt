@@ -5,6 +5,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import app.tether.core.generated.ConnectionStatusView
+import app.tether.core.generated.ProviderView
+import app.tether.providers.ConnectionMessage
+import app.tether.providers.ProviderGateway
+import app.tether.providers.callCore
+import app.tether.providers.connectionMessage
 import app.tether.session.SessionStarter
 import app.tether.session.StartResult
 import kotlinx.coroutines.CoroutineDispatcher
@@ -29,8 +35,14 @@ enum class StartPhase {
     /** No provider has a saved key. */
     NoKey,
 
-    /** The provider has no saved model list. */
+    /** The provider has no saved model list. The user can test the connection. */
     NoModels,
+
+    /** The connection test is running. The start is paused until it ends. */
+    Testing,
+
+    /** The connection test did not pass. The user can test again or open Providers. */
+    TestFailed,
 
     /** The core could not create the session. */
     Failed,
@@ -39,6 +51,7 @@ enum class StartPhase {
 /**
  * What the project home shows. [project] is null when the id is unknown, and then the screen says
  * so. [sessions] are the project's sessions, newest first. [lastSession] is the most recent one.
+ * [testProblem] is the failure of the last connection test, when it has a known message.
  */
 @Immutable
 data class ProjectHomeUiState(
@@ -47,18 +60,21 @@ data class ProjectHomeUiState(
     val sessions: List<SessionSummary> = emptyList(),
     val lastSession: SessionSummary? = null,
     val start: StartPhase = StartPhase.Ready,
+    val testProblem: ConnectionMessage? = null,
 )
 
 /**
  * State holder for one project's home. It reads the project and its sessions on [io]. Starting a
  * session runs the [SessionStarter] on [io] too, and each new session id is sent once on
- * [openedSessions] for the screen to open.
+ * [openedSessions] for the screen to open. A connection test uses the [ProviderGateway] on [io]
+ * for the first provider that has a key, then starts the session again when the key is accepted.
  */
 class ProjectHomeViewModel(
     private val projectId: String,
     private val projects: ProjectsSource,
     private val sessions: SessionsSource,
     private val starter: SessionStarter,
+    private val providers: ProviderGateway,
     private val io: CoroutineDispatcher = Dispatchers.IO,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(ProjectHomeUiState())
@@ -93,23 +109,64 @@ class ProjectHomeViewModel(
         }
     }
 
-    /** Starts a session in this project. A second tap while one starts does nothing. */
+    /** Starts a session in this project. A second tap while one starts or tests does nothing. */
     fun startSession() {
-        if (mutableState.value.start == StartPhase.Starting) return
+        if (isBusy()) return
         mutableState.update { it.copy(start = StartPhase.Starting) }
-        viewModelScope.launch(io) {
-            val phase =
-                when (val result = starter.start(projectId)) {
-                    is StartResult.Started -> {
-                        opened.send(result.sessionId)
-                        StartPhase.Ready
-                    }
-                    StartResult.NoKey -> StartPhase.NoKey
-                    StartResult.NoModels -> StartPhase.NoModels
-                    StartResult.Failed -> StartPhase.Failed
-                }
-            mutableState.update { it.copy(start = phase) }
+        viewModelScope.launch(io) { applyStart(starter.start(projectId)) }
+    }
+
+    /**
+     * Tests the connection of the first provider with a key, which saves its model list when the
+     * provider accepts the key. An accepted key starts the session again. Only the no-models and
+     * test-failed states can run it.
+     */
+    fun testConnection() {
+        val phase = mutableState.value.start
+        if (phase != StartPhase.NoModels && phase != StartPhase.TestFailed) return
+        setPhase(StartPhase.Testing, null)
+        viewModelScope.launch(io) { runTest() }
+    }
+
+    private fun isBusy(): Boolean =
+        mutableState.value.start.let { it == StartPhase.Starting || it == StartPhase.Testing }
+
+    private suspend fun runTest() {
+        val result = callCore(io) { testFirstKeyed() }
+        if (result.isFailure) {
+            setPhase(StartPhase.TestFailed, null)
+            return
         }
+        when (val status = result.getOrNull()) {
+            null -> setPhase(StartPhase.NoKey, null)
+            ConnectionStatusView.OK -> applyStart(starter.start(projectId))
+            else -> setPhase(StartPhase.TestFailed, connectionMessage(status))
+        }
+    }
+
+    /** Tests the first provider with a key. Null when no provider has a key. */
+    private fun testFirstKeyed(): ConnectionStatusView? {
+        val provider = ProviderView.entries.firstOrNull { providers.hasKey(it) } ?: return null
+        return providers.testConnection(provider).status
+    }
+
+    private suspend fun applyStart(result: StartResult) {
+        when (result) {
+            is StartResult.Started -> {
+                opened.send(result.sessionId)
+                setPhase(StartPhase.Ready, null)
+            }
+            StartResult.NoKey -> setPhase(StartPhase.NoKey, null)
+            StartResult.NoModels -> setPhase(StartPhase.NoModels, null)
+            StartResult.Failed -> setPhase(StartPhase.Failed, null)
+        }
+    }
+
+    private fun setPhase(
+        phase: StartPhase,
+        problem: ConnectionMessage?,
+    ) {
+        mutableState.update { it.copy(start = phase, testProblem = problem) }
     }
 
     companion object {
@@ -119,8 +176,11 @@ class ProjectHomeViewModel(
             projects: ProjectsSource,
             sessions: SessionsSource,
             starter: SessionStarter,
+            providers: ProviderGateway,
         ) = viewModelFactory {
-            initializer { ProjectHomeViewModel(projectId, projects, sessions, starter) }
+            initializer {
+                ProjectHomeViewModel(projectId, projects, sessions, starter, providers)
+            }
         }
     }
 }

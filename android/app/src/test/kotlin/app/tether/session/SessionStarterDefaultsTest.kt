@@ -137,7 +137,7 @@ class SessionStarterDefaultsTest {
     }
 
     @Test
-    fun a_failed_mode_call_gives_failed_even_though_the_session_was_created() {
+    fun a_refused_mode_call_still_starts_the_session_in_the_core_mode() {
         providers.keys[ProviderView.ANTHROPIC] = "key"
         sessions.models[ProviderView.ANTHROPIC] = "first-saved"
         appDefault.mode = SessionMode.AUTO
@@ -145,8 +145,53 @@ class SessionStarterDefaultsTest {
 
         val result = starter.start("p1")
 
-        assertEquals(StartResult.Failed, result)
+        assertEquals(StartResult.Started("new-session"), result)
         assertEquals(1, sessions.created.size)
+        assertTrue(sessions.modes.isEmpty())
+    }
+
+    @Test
+    fun a_bypass_app_default_skips_the_mode_call() {
+        providers.keys[ProviderView.ANTHROPIC] = "key"
+        sessions.models[ProviderView.ANTHROPIC] = "first-saved"
+        appDefault.mode = SessionMode.BYPASS
+
+        val result = starter.start("p1")
+
+        assertEquals(StartResult.Started("new-session"), result)
+        assertEquals(1, sessions.created.size)
+        assertTrue(sessions.modes.isEmpty())
+    }
+
+    @Test
+    fun a_bypass_project_default_skips_the_mode_call_even_with_an_app_mode() {
+        providers.keys[ProviderView.ANTHROPIC] = "key"
+        projectDefaults.saved["p1"] =
+            ProjectDefaults(ProviderView.ANTHROPIC, "claude", SessionMode.BYPASS)
+        appDefault.mode = SessionMode.AUTO
+
+        starter.start("p1")
+
+        assertTrue(sessions.modes.isEmpty())
+    }
+
+    @Test
+    fun the_normal_modes_are_applied_as_saved() {
+        providers.keys[ProviderView.ANTHROPIC] = "key"
+        sessions.models[ProviderView.ANTHROPIC] = "first-saved"
+        listOf(SessionMode.PLAN, SessionMode.ACCEPT_EDITS, SessionMode.AUTO).forEach { mode ->
+            appDefault.mode = mode
+            starter.start("p1")
+        }
+
+        assertEquals(
+            listOf(
+                "new-session" to PermissionModeView.PLAN,
+                "new-session" to PermissionModeView.ACCEPT_EDITS,
+                "new-session" to PermissionModeView.AUTO,
+            ),
+            sessions.modes,
+        )
     }
 
     @Test

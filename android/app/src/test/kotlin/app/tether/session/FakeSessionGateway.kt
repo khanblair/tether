@@ -10,6 +10,10 @@ class FakeSessionGateway : SessionGateway {
     val models = mutableMapOf<ProviderView, String?>()
     val created = mutableListOf<Triple<String, ProviderView, String>>()
     val modes = mutableListOf<Pair<String, PermissionModeView>>()
+    val renamed = mutableListOf<Pair<String, String>>()
+
+    /** Throws this from [rename]. Set it to test a failed rename. */
+    var renameError: Exception? = null
 
     /** Throws this from [setMode], and from nothing else. Set it to test a failed mode call. */
     var setModeError: Exception? = null
@@ -53,6 +57,14 @@ class FakeSessionGateway : SessionGateway {
     ) {
         setModeError?.let { throw it }
         modes += sessionId to mode
+    }
+
+    override fun rename(
+        sessionId: String,
+        title: String,
+    ) {
+        renameError?.let { throw it }
+        renamed += sessionId to title
     }
 }
 

@@ -126,6 +126,7 @@ fun TetherNavHost(module: AppModule) {
                 placeholderRoutes(nav = nav)
                 memoryRoutes(gateways = module.memoryArea, nav = nav)
                 filesRoutes(gateway = module.filesGateway, messages = module.messages, nav = nav)
+                previewRoutes(module = module, nav = nav)
                 composable("share-project") {
                     val projects by produceState(emptyList<ProjectSummary>()) {
                         value = withContext(Dispatchers.IO) { module.home.projects.projects() }
@@ -247,6 +248,8 @@ private fun SessionRoute(
                         }
                     },
                     sessionsChanged = module.sessionChanges::notifySessionsChanged,
+                    openPreview = nav.previewFile(projectId),
+                    openInlinePreview = nav.previewInline(module.inlinePreviews),
                 ),
             onOpenBudgets = { nav.open(SETTINGS_BUDGETS_ROUTE) },
         )

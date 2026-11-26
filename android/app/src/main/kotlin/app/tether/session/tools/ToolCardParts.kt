@@ -139,7 +139,8 @@ internal fun ToolTitleText(
 
 /**
  * The tappable header of a card. When [expandable] is true it is a button of at least 48 dp
- * that reports whether the card is expanded. Otherwise it is a plain row.
+ * that reports whether the card is expanded. Otherwise it is a plain row. [trailing] sits after
+ * the content, before the chevron, and keeps its own size.
  */
 @Composable
 internal fun ToolHeader(
@@ -150,6 +151,7 @@ internal fun ToolHeader(
     modifier: Modifier = Modifier,
     expandRes: Int = R.string.tools_output_expand,
     collapseRes: Int = R.string.tools_output_collapse,
+    trailing: (@Composable () -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     val colors = TetherTheme.colors
@@ -185,6 +187,7 @@ internal fun ToolHeader(
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
             content()
         }
+        trailing?.invoke()
         if (expandable) {
             Spacer(Modifier.width(TetherSpace.space2))
             TetherIcon(

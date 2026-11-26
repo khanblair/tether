@@ -53,6 +53,7 @@ private fun ToolCardFor(
     val expanded = call.id in tools.expanded
     val onToggle: () -> Unit = { tools.onToggle(call.id) }
     val running = call.status == ToolStatus.Running
+    val preview = previewAction(tools.previewPaths[call.id], tools.onPreview)
     if (call.tool == RUN_TOOL) {
         RunCard(
             call = call,
@@ -68,6 +69,7 @@ private fun ToolCardFor(
             onToggle = onToggle,
             modifier = modifier,
             animateRunning = running,
+            preview = preview,
         )
     }
 }

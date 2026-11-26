@@ -34,14 +34,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.tether.R
+import app.tether.design.TetherIcons
 import app.tether.design.TetherTheme
 import app.tether.design.components.BannerTone
 import app.tether.design.components.InlineBanner
+import app.tether.design.components.TetherIconButton
 import app.tether.design.components.TetherTextButton
 import app.tether.design.components.TetherTopBar
 import app.tether.design.tokens.TetherRadius
 import app.tether.design.tokens.TetherSpace
 import app.tether.messages.AppMessages
+import app.tether.preview.isPreviewable
 import app.tether.shell.BackButton
 
 /** The width of the line-number gutter in the code view. */
@@ -58,6 +61,7 @@ fun FileViewScreen(
     path: String,
     toasts: AppMessages,
     onBack: () -> Unit,
+    onPreview: () -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val copyPath = rememberCopyPath(toasts)
@@ -74,6 +78,13 @@ fun FileViewScreen(
                 subtitle = viewerSubtitle(folder, lineCount),
                 navigationIcon = { BackButton(onBack) },
                 actions = {
+                    if (isPreviewable(path)) {
+                        TetherIconButton(
+                            icon = TetherIcons.Eye,
+                            contentDescription = stringResource(R.string.files_preview_action),
+                            onClick = onPreview,
+                        )
+                    }
                     TetherTextButton(
                         label = stringResource(R.string.files_copy_path),
                         onClick = { copyPath(path) },

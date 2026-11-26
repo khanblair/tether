@@ -54,6 +54,7 @@ internal fun NavGraphBuilder.filesRoutes(
             path = path,
             toasts = messages,
             onBack = nav::back,
+            onPreview = { nav.open(previewPath(id, path)) },
         )
     }
 }

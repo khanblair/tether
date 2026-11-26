@@ -42,8 +42,8 @@ tether/
 │   └── crates/
 │       ├── tether-types/      ids, message, model catalog, session, text, usage, error, event (CoreEvent); no UniFFI code
 │       ├── tether-store/      SQLite storage: schema, migrations, sessions, projects, checkpoints, approvals, budgets, MCP servers, skills
-│       │   ├── migrations/{0001_init,0002_message_fts,0003_checkpoints,0004_approvals,0005_prompt_snapshot,0006_session_todos,0007_project_trust,0008_project_network,0009_git_identity,0010_budgets,0011_context,0012_mcp_servers,0013_skills_memory}.sql
-│       │   └── src/{lib,db,error,migrations,models,projects,sessions,session_load,session_search,session_fts,session_context,session_plans,checkpoints,approvals,permission_rules,project_trust,project_network,prompt_snapshots,provider_configs,todos,usage,budgets,context,mcp_servers,skill_settings}.rs; test modules (*_tests.rs, tests.rs)
+│       │   ├── migrations/{0001_init,0002_message_fts,0003_checkpoints,0004_approvals,0005_prompt_snapshot,0006_session_todos,0007_project_trust,0008_project_network,0009_git_identity,0010_budgets,0011_context,0012_mcp_servers,0013_skills_memory,0014_session_reasoning}.sql
+│       │   └── src/{lib,db,error,migrations,models,projects,sessions,session_rows,session_load,session_search,session_fts,session_context,session_plans,checkpoints,approvals,permission_rules,project_trust,project_network,prompt_snapshots,provider_configs,todos,usage,budgets,context,mcp_servers,skill_settings}.rs; test modules (*_tests.rs, tests.rs)
 │       ├── tether-engine/     Sessions, turn loop, permissions, executors, tool loop, checkpoints, prompts, config, quality gate, updates
 │       │   ├── src/{lib,budget,checkpoint_capture,context,network,notify,provider_connection,rewind,session,session_provider,tool_loop,usage}.rs; folders commands/, config/, executors/, permissions/, prompt/, quality/, session/, updates/; test modules (*_tests.rs, tests.rs)
 │       │   └── src/tool_loop/     Folders ci_tools/, git_tools/, knowledge_tools/, mcp_tools/, session_tools/; file_tools.rs, registry.rs, stream.rs
@@ -92,6 +92,7 @@ tether/
 │   │           ├── session/tools/                  Tool call and group cards, run card, quality report, system notes, tool titles and icons
 │   │           ├── session/notices/                Budget, context, cost, network, and interrupted-turn notices
 │   │           ├── session/compose/                Slash commands and their sheet, @mentions and chips, compose assist panel
+│   │           ├── session/voice/                  The Listening sheet, the speech recognizer wrapper, and its levels
 │   │           ├── git/                            Git screen, changes and branches tabs, diff screen and view, unified diff parser
 │   │           ├── projectarchive/                 Project ZIP import and export screens, export sheet, view models
 │   │           ├── settings/github/                GitHub account, clone, and Git identity screens, device code panel

@@ -82,7 +82,7 @@ The offline banner appears under the status line. Turns never fail only because 
 
 ### Manifest permissions
 
-Status: planned. The P0 manifest declares none of these; `INTERNET` arrives with the first provider call (P1).
+Status: built for the permissions below. The manifest declares `INTERNET`, `ACCESS_NETWORK_STATE`, `USE_BIOMETRIC`, `POST_NOTIFICATIONS`, and `RECORD_AUDIO`.
 
 | Permission | Why | When asked |
 |---|---|---|

@@ -249,7 +249,7 @@ SQLite database at `files/db/tether.db`, WAL mode, foreign keys on. IDs are ULID
 | Table | Columns | Notes |
 |---|---|---|
 | `projects` | id, name, path, remote_url, default_branch, default_provider, default_model_id, default_mode, created_at, opened_at | `path` is a safe name relative to `files/workspaces/`, with the last 8 ULID characters as a suffix; a `CHECK` rejects empty, absolute, and `..` paths. Project lists count sessions and sort by newest session activity |
-| `sessions` | id, project_id, title, provider, model_id, mode, status, created_at, updated_at, cost_micros, tokens_in, tokens_out | `cost_micros` is USD × 1,000,000 |
+| `sessions` | id, project_id, title, provider, model_id, mode, status, created_at, updated_at, cost_micros, tokens_in, tokens_out, reasoning_effort | `cost_micros` is USD × 1,000,000. `reasoning_effort` is `low`, `medium`, `high`, or NULL for the model default (migration 0014); the engine sends it only to a model whose catalog entry says it reasons |
 | `messages` | id, session_id, role, seq, created_at, rewound | role: user, assistant, tool, system_note |
 | `message_parts` | id, message_id, seq, kind, body_json | kind: text, image_ref, tool_call, tool_result, thinking, compaction_summary |
 | `tool_calls` | id, message_id, tool, args_json, status, executor, started_at, finished_at, result_ref | `result_ref` points to a blob for large results |
@@ -290,7 +290,7 @@ The core's API is the UniFFI surface. There are no HTTP routes.
 | `approve(tool_call_id, scope: ApprovalScope)` / `deny(tool_call_id, reason)` | Approvals |
 | `interrupt(session_id)` / `resume(session_id)` | Turn control |
 | `recover_interrupted_sessions(database_path) -> u32` | Mark turns left active by a dead process as `Interrupted`; call once at process start, before building any runtime, and get the count of changed sessions |
-| `SessionRuntime.set_session_mode(session_id, mode)` / `set_session_model(session_id, provider, model_id)` / `rename_session(session_id, title)` / `list_models(provider)` / `session_usage(session_id)` | Session settings and the model picker; model and mode changes are refused while a turn runs, and the app reopens its `SessionRunner` after one |
+| `SessionRuntime.set_session_mode(session_id, mode)` / `set_session_model(session_id, provider, model_id)` / `set_session_reasoning(session_id, effort)` / `rename_session(session_id, title)` / `list_models(provider)` / `session_usage(session_id)` | Session settings and the model picker; model and mode changes are refused while a turn runs, and the app reopens its `SessionRunner` after one |
 | `SessionRuntime.search_sessions(project_id, query)` / `search_transcripts(phrase, limit)` | Title and text search in one project, and full-text search of saved messages (limit 50) |
 | `FilesRuntime.list_dir(project_id, dir, show_ignored)` / `read_file(project_id, path)` / `search_file_names(project_id, pattern, limit)` / `search_file_text(project_id, text, limit)` | Browse, preview (256 KiB, binary detection), and search a project's files, read only, through the path guard; `.git` and symlinks are never listed, ignored files are hidden unless asked |
 | `ProjectRuntime.set_project_defaults(project_id, provider, model_id, mode)` | A project's default model pair and permission mode; the pair is set or cleared together |

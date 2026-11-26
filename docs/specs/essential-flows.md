@@ -1,6 +1,6 @@
 # Essential flows: scope for first run and core sessions
 
-Status: draft for review, 24 Nov 2026. No code is written. Base: `main` at `a89f04a` (v0.0.9). The phone that hit the problems ran v0.0.7 (About screen screenshot), so each finding says what differs between the two.
+Status: built on branch `feat/essential-flows` on 26 Nov 2026 (see section 9). Original scope written 24 Nov 2026. Base: `main` at `a89f04a` (v0.0.9). The phone that hit the problems ran v0.0.7 (About screen screenshot), so each finding says what differs between the two.
 
 ## 1. How this was checked
 
@@ -154,3 +154,18 @@ Done when: rename, model, mode, and Bypass each change what the status line and 
 ## 8. Not in this scope
 
 Skill install, vault sync, quality settings, status line meters, the diff card, and the remaining backend list (issue #207).
+
+## 9. Status after the build (26 Nov 2026)
+
+Built and checked (`just check` passes, 1,000+ app tests, store, engine, FFI, and providers tests, each new rule mutation-checked):
+- S0: one-time recovery, session open failures as a screen, background close, Keystore guard, crash recorder with About card, native `SessionFlowTest` (compiled, not run on a device).
+- S1: onboarding Clone and Import, Test connection for no models, no orphan session.
+- S2: Bypass inside the session, one-line titles, New session label, rename by long press, models without tools disabled with a reason.
+- S3: thinking effort end to end, default Medium, DeepSeek sends it.
+- Beyond the original scope, at Blair's request: the composer, top bar, status line, jump pill, plus sheet (with Camera, by decision), and the Listening voice sheet follow the prototype and `docs/ui-rules.md`. The prototype was not edited. The thinking effort control is not in the prototype and was added by decision.
+
+Not done:
+- **The crash cause (section 4) is still unknown.** No stack trace was available. The next crash writes one to About, Last crash.
+- `SessionFlowTest` needs a device: `just test-device`.
+- Not in the prototype or not built: the context breakdown sheet behind the status line percentage, archive and delete in the session menu, sending images and files (the core has no image input yet, issue #207), custom commands.
+- A model list read on every event is cached per model; a changed catalog shows after the model changes.

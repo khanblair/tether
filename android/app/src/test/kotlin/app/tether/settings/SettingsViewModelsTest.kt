@@ -233,10 +233,8 @@ class PermissionsViewModelTest {
     @After
     fun tearDown() = Dispatchers.resetMain()
 
-    private fun viewModel(
-        store: FakeSettingsStore = FakeSettingsStore(),
-        authenticate: (() -> Unit) -> Unit = { it() },
-    ) = PermissionsViewModel(store, projects, defaults, authenticate, io = dispatcher)
+    private fun viewModel(store: FakeSettingsStore = FakeSettingsStore()) =
+        PermissionsViewModel(store, projects, defaults, io = dispatcher)
 
     @Test
     fun the_app_default_mode_is_saved() {
@@ -275,20 +273,7 @@ class PermissionsViewModelTest {
     }
 
     @Test
-    fun bypass_is_saved_only_after_the_check_passes() {
-        val store = FakeSettingsStore()
-        val vm = viewModel(store, authenticate = { _ -> })
-        dispatcher.scheduler.advanceUntilIdle()
-
-        vm.open(ModeTarget.App)
-        vm.choose(SessionMode.BYPASS)
-        dispatcher.scheduler.advanceUntilIdle()
-
-        assertEquals(SessionMode.ACCEPT_EDITS, store.mode)
-    }
-
-    @Test
-    fun bypass_is_saved_when_the_check_passes() {
+    fun bypass_is_never_saved_as_the_app_default() {
         val store = FakeSettingsStore()
         val vm = viewModel(store)
         dispatcher.scheduler.advanceUntilIdle()
@@ -297,7 +282,21 @@ class PermissionsViewModelTest {
         vm.choose(SessionMode.BYPASS)
         dispatcher.scheduler.advanceUntilIdle()
 
-        assertEquals(SessionMode.BYPASS, store.mode)
+        assertEquals(SessionMode.ACCEPT_EDITS, store.mode)
+        assertEquals(SessionMode.ACCEPT_EDITS, vm.state.value.defaultMode)
+    }
+
+    @Test
+    fun bypass_is_never_saved_for_a_project() {
+        defaults.saved["p1"] = ProjectDefaults(null, null, SessionMode.PLAN)
+        val vm = viewModel()
+        dispatcher.scheduler.advanceUntilIdle()
+
+        vm.open(ModeTarget.Project("p1", "api"))
+        vm.choose(SessionMode.BYPASS)
+        dispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(ProjectDefaults(null, null, SessionMode.PLAN), defaults.saved["p1"])
     }
 
     @Test

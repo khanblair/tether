@@ -67,10 +67,8 @@ class PrefsSettingsStore(
 
     override fun defaultMode(): SessionMode = savedDefaultMode() ?: SessionMode.ACCEPT_EDITS
 
-    override fun savedDefaultMode(): SessionMode? {
-        val saved = prefs.getString(DEFAULT_MODE, null)
-        return SessionMode.entries.firstOrNull { it.name == saved }
-    }
+    override fun savedDefaultMode(): SessionMode? =
+        defaultModeNamed(prefs.getString(DEFAULT_MODE, null))
 
     override fun saveDefaultMode(mode: SessionMode) {
         prefs.edit { putString(DEFAULT_MODE, mode.name) }
@@ -101,3 +99,10 @@ class PrefsSettingsStore(
         const val ONBOARDED = "onboarded"
     }
 }
+
+/**
+ * The default mode named [saved]. Null when none is saved, or when the saved name is Bypass, which
+ * is never a default (an older install may still hold it).
+ */
+internal fun defaultModeNamed(saved: String?): SessionMode? =
+    SessionMode.entries.firstOrNull { it.name == saved }?.takeUnless { it == SessionMode.BYPASS }

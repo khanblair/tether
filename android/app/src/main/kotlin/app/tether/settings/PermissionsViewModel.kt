@@ -43,15 +43,13 @@ data class PermissionsUiState(
 )
 
 /**
- * The default permission mode and the per-project mode. Bypass needs [authenticate] to pass first:
- * it runs the biometric check and calls back only on success, the same rule as the session's mode
- * sheet.
+ * The default permission mode and the per-project mode. Bypass is never saved as a default: it
+ * is turned on inside a session, with its biometric check, and ends with the session.
  */
 class PermissionsViewModel(
     private val store: SettingsStore,
     private val projects: ProjectGateway,
     private val defaults: ProjectDefaultsGateway,
-    private val authenticate: (onPassed: () -> Unit) -> Unit,
     private val io: CoroutineDispatcher = Dispatchers.IO,
 ) : ViewModel() {
     private val mutableState =
@@ -81,15 +79,14 @@ class PermissionsViewModel(
         mutableState.update { it.copy(picking = null) }
     }
 
-    /** Saves [mode] for the picked target. Null means the app default, for a project. */
+    /**
+     * Saves [mode] for the picked target. Null means the app default, for a project. Bypass is
+     * never saved, so a Bypass pick changes nothing.
+     */
     fun choose(mode: SessionMode?) {
         val target = mutableState.value.picking ?: return
         mutableState.update { it.copy(picking = null) }
-        if (mode == SessionMode.BYPASS) {
-            authenticate { apply(target, mode) }
-        } else {
-            apply(target, mode)
-        }
+        if (mode != SessionMode.BYPASS) apply(target, mode)
     }
 
     private fun apply(

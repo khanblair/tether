@@ -1,10 +1,13 @@
 package app.tether.settings
 
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.tether.R
+import app.tether.design.TetherTheme
 import app.tether.design.components.BannerTone
 import app.tether.design.components.InlineBanner
 import app.tether.design.components.ListGroup
@@ -49,6 +52,11 @@ fun PermissionsScreen(
                 explanation = stringResource(R.string.settings_area_push_guard_na),
             )
         }
+        Text(
+            text = stringResource(R.string.settings_area_bypass_default_note),
+            style = MaterialTheme.typography.bodySmall,
+            color = TetherTheme.colors.text3,
+        )
         if (state.projects.isNotEmpty()) {
             SectionTitle(text = stringResource(R.string.settings_area_models_per_project))
             ListGroup {
@@ -81,8 +89,8 @@ fun PermissionsScreen(
 }
 
 /**
- * The picker: the five permission modes with their descriptions, and for a project, the app
- * default.
+ * The picker: the permission modes except Bypass, with their descriptions, and for a project, the
+ * app default.
  */
 @Composable
 private fun ModePickSheet(
@@ -102,7 +110,7 @@ private fun ModePickSheet(
             }
         }
         ListGroup {
-            SessionMode.entries.forEach { mode ->
+            SessionMode.entries.filterNot { it == SessionMode.BYPASS }.forEach { mode ->
                 ListRow(
                     title = stringResource(mode.labelRes()),
                     subtitle = stringResource(mode.descriptionRes()),

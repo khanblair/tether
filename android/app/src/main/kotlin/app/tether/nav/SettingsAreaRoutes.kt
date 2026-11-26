@@ -99,15 +99,13 @@ private fun NavGraphBuilder.profileAndModelRoutes(
     }
 }
 
-/** The permissions screen. Bypass needs the same biometric check as the session's mode sheet. */
+/** The permissions screen. It offers no Bypass default: Bypass is turned on inside a session. */
 private fun NavGraphBuilder.permissionRoutes(
     module: AppModule,
     nav: TetherNav,
 ) {
     composable(SETTINGS_PERMISSIONS_ROUTE) {
         val deps = settingsDepsOf(LocalContext.current)
-        val activity = LocalActivity.current as? MainActivity
-        val bypassTitle = stringResource(R.string.session_bypass_title)
         PermissionsScreen(
             viewModel =
                 viewModel(
@@ -118,13 +116,6 @@ private fun NavGraphBuilder.permissionRoutes(
                                     store = deps.store,
                                     projects = module.projectGateway,
                                     defaults = deps.projectDefaults,
-                                    authenticate = { onPassed ->
-                                        activity?.authenticateForKeyReveal(
-                                            title = bypassTitle,
-                                            onSuccess = onPassed,
-                                            onError = {},
-                                        )
-                                    },
                                 )
                             }
                         },

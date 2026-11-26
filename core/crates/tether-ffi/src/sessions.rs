@@ -27,6 +27,7 @@ mod open;
 mod prompt;
 #[path = "sessions/recovery.rs"]
 mod recovery;
+mod rewind_message;
 #[path = "sessions/user_runs.rs"]
 mod user_runs;
 #[path = "sessions/ux.rs"]
@@ -395,3 +396,5 @@ mod reasoning_tests;
 #[cfg(test)]
 #[path = "sessions/archive_tests.rs"]
 mod archive_tests;
+#[cfg(test)]
+mod rewind_message_tests;

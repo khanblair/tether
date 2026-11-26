@@ -21,6 +21,8 @@ mod session_provider;
 #[cfg(test)]
 mod session_reasoning_tests;
 #[cfg(test)]
+mod session_rewind_tests;
+#[cfg(test)]
 mod session_stream_tests;
 #[cfg(test)]
 mod session_tests;

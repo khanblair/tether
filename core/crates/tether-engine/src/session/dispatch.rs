@@ -13,14 +13,7 @@ impl SessionActor {
                 drop(outcome.map(|reply| reply.send(resolution.clone())));
                 self.run_turn(text, resolution).await;
             }
-            Command::Rewind {
-                checkpoint_id,
-                scope,
-                reply,
-            } => {
-                let result = self.rewind(&checkpoint_id, scope);
-                drop(reply.send(result));
-            }
+            Command::Rewind { .. } | Command::RewindToMessage { .. } => self.handle_rewind(command),
             Command::EnableBypass { reply } => {
                 drop(reply.send(self.set_bypass(true)));
             }
@@ -53,6 +46,21 @@ impl SessionActor {
                 let result = self.compact(focus).await;
                 drop(reply.send(result));
             }
+        }
+    }
+
+    /// Runs a checkpoint or message rewind and sends its reply.
+    fn handle_rewind(&mut self, command: Command) {
+        match command {
+            Command::Rewind {
+                checkpoint_id,
+                scope,
+                reply,
+            } => drop(reply.send(self.rewind(&checkpoint_id, scope))),
+            Command::RewindToMessage { message_id, reply } => {
+                drop(reply.send(self.rewind_to_message(&message_id)));
+            }
+            _ => {}
         }
     }
 

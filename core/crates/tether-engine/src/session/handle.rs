@@ -20,6 +20,10 @@ pub(super) enum Command {
         scope: RewindScope,
         reply: oneshot::Sender<Result<(), SessionActorError>>,
     },
+    RewindToMessage {
+        message_id: String,
+        reply: oneshot::Sender<Result<(), SessionActorError>>,
+    },
     EnableBypass {
         reply: oneshot::Sender<Result<(), SessionActorError>>,
     },
@@ -128,6 +132,21 @@ impl SessionHandle {
                 scope,
                 reply,
             })
+            .await
+            .map_err(|_| SessionActorError::Stopped)?;
+        result.await.map_err(|_| SessionActorError::Stopped)?
+    }
+
+    /// Cancels the running turn and hides every message from `message_id` onward.
+    /// Files are not touched, so this works without a workspace runtime.
+    ///
+    /// # Errors
+    /// Returns an error when the actor stopped or the message is not in this session.
+    pub async fn rewind_to_message(&self, message_id: String) -> Result<(), SessionActorError> {
+        self.interrupt();
+        let (reply, result) = oneshot::channel();
+        self.tx
+            .send(Command::RewindToMessage { message_id, reply })
             .await
             .map_err(|_| SessionActorError::Stopped)?;
         result.await.map_err(|_| SessionActorError::Stopped)?

@@ -20,6 +20,23 @@ text_enum!(Support {
     Unknown => "unknown",
 });
 
+/// How much reasoning a model should spend, for models that support the setting.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ReasoningEffort {
+    /// Little reasoning, fast.
+    Low,
+    /// The default balance.
+    Medium,
+    /// Deep reasoning, slower and dearer.
+    High,
+}
+
+text_enum!(ReasoningEffort {
+    Low => "low",
+    Medium => "medium",
+    High => "high",
+});
+
 /// Where a price came from.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PriceSource {
@@ -128,5 +145,28 @@ mod tests {
         assert_eq!(ModelCaps::UNKNOWN.tools, Support::Unknown);
         assert_eq!(ModelCaps::UNKNOWN.images, Support::Unknown);
         assert_eq!(ModelCaps::UNKNOWN.reasoning, Support::Unknown);
+    }
+
+    #[test]
+    fn reasoning_effort_text_round_trips() {
+        assert_eq!(
+            ReasoningEffort::ALL
+                .iter()
+                .map(|v| v.as_str())
+                .collect::<Vec<_>>(),
+            ["low", "medium", "high"]
+        );
+        for &value in ReasoningEffort::ALL {
+            assert_eq!(value.as_str().parse::<ReasoningEffort>().unwrap(), value);
+        }
+    }
+
+    #[test]
+    fn reasoning_effort_rejects_unknown_text() {
+        let error = "extreme".parse::<ReasoningEffort>().unwrap_err();
+        assert_eq!(error.kind, "ReasoningEffort");
+        assert_eq!(error.value, "extreme");
+        assert!("".parse::<ReasoningEffort>().is_err());
+        assert!("High".parse::<ReasoningEffort>().is_err());
     }
 }

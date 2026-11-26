@@ -2,16 +2,8 @@
 
 use tether_types::Message;
 
-/// How much reasoning a model should spend, for models that support the setting.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ReasoningEffort {
-    /// Little reasoning, fast.
-    Low,
-    /// The default balance.
-    Medium,
-    /// Deep reasoning, slower and dearer.
-    High,
-}
+/// How much reasoning a model should spend. The type lives in `tether-types`.
+pub use tether_types::ReasoningEffort;
 
 /// A tool the model may call.
 #[derive(Debug, Clone, PartialEq, Eq)]

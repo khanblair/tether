@@ -18,7 +18,7 @@ pub use error::CoreError;
 pub use event::{BudgetScope, CoreEvent, QualityCounts, QualityFindingRecord, QualitySeverity};
 pub use ids::{MessageId, ProjectId, SessionId, ToolCallId};
 pub use message::{Message, MessagePart, Role};
-pub use model::{ModelCaps, ModelInfo, ModelPrice, PriceSource, Support};
+pub use model::{ModelCaps, ModelInfo, ModelPrice, PriceSource, ReasoningEffort, Support};
 pub use plan::Plan;
 pub use session::{
     ConnectionStatus, Executor, ModelRef, NewRule, PermissionMode, PermissionRule, Provider,

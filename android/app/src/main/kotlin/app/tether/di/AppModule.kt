@@ -51,7 +51,10 @@ import app.tether.updates.createUpdateInstaller
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 
 /** Hand-wired dependencies. A DI library arrives only when this grows past a screenful. */
@@ -133,6 +136,17 @@ class AppModule(
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
+    /** Announces that sessions were archived, restored, or deleted. The lists read again. */
+    val sessionChanges: SessionChanges = SessionChanges()
+
+    /**
+     * Runs [block] on the app's own scope, off the main thread. It finishes even when the screen
+     * that started it has gone.
+     */
+    fun launchInBackground(block: suspend () -> Unit) {
+        appScope.launch(Dispatchers.IO) { block() }
+    }
+
     /**
      * Runs [block] off the main thread, for native work such as closing a runtime. A failure is
      * logged by its class name and does not escape.
@@ -192,5 +206,26 @@ internal fun runQuietly(
         block()
     } catch (failure: Exception) {
         onFailure(failure)
+    }
+}
+
+/**
+ * A signal that sessions changed. Lists collect [changes] while they are on screen and read their
+ * sessions again. A signal sent while no list is on screen is not kept; those lists read again
+ * when they resume.
+ */
+class SessionChanges {
+    private val events = MutableSharedFlow<Unit>(extraBufferCapacity = BUFFER)
+
+    /** Fires once for each change. */
+    val changes: SharedFlow<Unit> = events.asSharedFlow()
+
+    /** Announces a change. It is safe to call from any thread. */
+    fun notifySessionsChanged() {
+        events.tryEmit(Unit)
+    }
+
+    private companion object {
+        const val BUFFER = 8
     }
 }

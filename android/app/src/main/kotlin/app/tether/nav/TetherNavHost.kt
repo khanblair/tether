@@ -5,7 +5,9 @@ import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.DrawerState
@@ -47,9 +49,11 @@ import app.tether.home.SessionRenameHost
 import app.tether.home.SessionSummary
 import app.tether.home.sessionRenameViewModel
 import app.tether.session.SessionConnection
+import app.tether.session.SessionSettingsException
 import app.tether.session.SessionSheetEnv
 import app.tether.session.SessionUnavailableScreen
 import app.tether.session.TranscriptScreen
+import app.tether.session.restoreArchivedSession
 import app.tether.share.ShareProjectScreen
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -101,7 +105,13 @@ fun TetherNavHost(module: AppModule) {
             )
         },
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        // Keyboard space above the navigation bar. The screens' Scaffolds pad the bar already.
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .windowInsetsPadding(WindowInsets.ime.exclude(WindowInsets.navigationBars)),
+        ) {
             NavHost(navController = navController, startDestination = start) {
                 onboardingRoutes(module = module, nav = nav)
                 homeRoutes(module = module, nav = nav, attentionItems = attention)
@@ -184,6 +194,7 @@ private fun SessionRoute(
     val scope = rememberCoroutineScope()
     val screenMissing = stringResource(R.string.compose_command_screen_missing)
     val newSessionFailed = stringResource(R.string.compose_command_new_failed)
+    val changeFailed = stringResource(R.string.session_error_settings)
     var connection by remember(sessionId) { mutableStateOf<SessionConnection?>(null) }
     var unavailable by remember(sessionId) { mutableStateOf(sessionId == null) }
     var reason by remember(sessionId) { mutableStateOf<String?>(null) }
@@ -227,6 +238,15 @@ private fun SessionRoute(
                     },
                     openDrawer = nav::openDrawer,
                     projects = module.home.projects,
+                    leaveSession = onBack,
+                    undoArchive = { id ->
+                        module.launchInBackground {
+                            restoreArchivedSession(module.sessionGateway, id)
+                                .onSuccess { module.sessionChanges.notifySessionsChanged() }
+                                .onFailure { module.messages.show(changeFailed) }
+                        }
+                    },
+                    sessionsChanged = module.sessionChanges::notifySessionsChanged,
                 ),
             onOpenBudgets = { nav.open(SETTINGS_BUDGETS_ROUTE) },
         )
@@ -290,19 +310,43 @@ private fun DrawerHost(
     attentionCount: Int,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
+    var showArchived by rememberSaveable { mutableStateOf(false) }
     val reloads = remember { mutableIntStateOf(0) }
-    val sessions by produceState(
-        emptyList<SessionSummary>(),
+    val lists by produceState(
+        DrawerLists.Empty,
         drawerState.currentValue,
         reloads.intValue,
     ) {
-        value = withContext(Dispatchers.IO) { module.home.sessions.sessions() }
+        value =
+            withContext(Dispatchers.IO) {
+                DrawerLists(
+                    active = module.home.sessions.sessions(),
+                    archived = module.home.sessions.archivedSessions(),
+                )
+            }
     }
     val themeMode by module.themeMode.collectAsStateWithLifecycle()
     val now = remember(drawerState.currentValue) { System.currentTimeMillis() }
     val rename = sessionRenameViewModel(module.sessionGateway)
+    val scope = rememberCoroutineScope()
+    val restored = stringResource(R.string.drawer_archived_restored)
+    val restoreFailed = stringResource(R.string.drawer_archived_restore_failed)
     HomeDrawer(
-        sessions = sessions,
+        sessions = lists.active,
+        archived = lists.archived,
+        showArchived = showArchived,
+        onToggleArchived = { showArchived = !showArchived },
+        onUnarchive = { session ->
+            scope.launch {
+                if (unarchiveSession(module, session.id)) {
+                    reloads.intValue++
+                    module.sessionChanges.notifySessionsChanged()
+                    module.messages.show(restored)
+                } else {
+                    module.messages.show(restoreFailed)
+                }
+            }
+        },
         query = query,
         onQueryChange = { query = it },
         currentRoute = currentRoute,
@@ -320,5 +364,29 @@ private fun DrawerHost(
     )
     SessionRenameHost(rename = rename, onRenamed = { reloads.intValue++ })
 }
+
+/** The drawer's two session lists, loaded together. */
+private data class DrawerLists(
+    val active: List<SessionSummary>,
+    val archived: List<SessionSummary>,
+) {
+    companion object {
+        val Empty = DrawerLists(emptyList(), emptyList())
+    }
+}
+
+/** Restores an archived session. False when the core refuses; the caller shows the failure. */
+private suspend fun unarchiveSession(
+    module: AppModule,
+    sessionId: String,
+): Boolean =
+    withContext(Dispatchers.IO) {
+        try {
+            module.sessionGateway.archive(sessionId, false)
+            true
+        } catch (_: SessionSettingsException) {
+            false
+        }
+    }
 
 private const val TAG = "Tether"

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Preview screen: top bar, network chip, and states. -->
+    <string name="preview_title">Preview</string>
+    <string name="preview_reload">Reload preview</string>
+    <string name="preview_network_on">Network on</string>
+    <string name="preview_network_off">Network off</string>
+    <plurals name="preview_blocked">
+        <item quantity="one">%1$d request blocked. Turn on network to allow them.</item>
+        <item quantity="other">%1$d requests blocked. Turn on network to allow them.</item>
+    </plurals>
+    <string name="preview_turn_on">Turn on</string>
+    <string name="preview_loading">Loading preview.</string>
+    <string name="preview_missing">This project has no index.html yet. Ask the agent to create one.</string>
+    <string name="preview_failed">Could not open the preview.</string>
+    <string name="preview_retry">Try again</string>
+    <string name="preview_link_blocked">Link not opened:</string>
+    <string name="preview_expired">This preview is closed. Go back and open it again.</string>
+    <string name="preview_open_action">Preview</string>
+
+    <!-- File viewer action and the tool card and HTML block actions that open the preview. -->
+    <string name="files_preview_action">Preview</string>
+</resources>

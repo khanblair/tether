@@ -42,6 +42,10 @@ these patches. This folder and the build script are the corresponding source.
 
 ## Reproducibility check
 
-A rebuild with `tools/proot/build.sh` was run on 2026-11-27 on macOS with NDK 27.1.12297006, from the pinned commit and talloc tarball. The loader came out byte for byte identical to the committed one. `libproot.so` built and linked, but it is 313,336 bytes against 311,480 bytes for the committed file, so it is not identical. The cause is not found yet, and the rebuilt file has not been run on a device.
+A rebuild with `tools/proot/build.sh` on 2026-11-27, on macOS with NDK 27.1.12297006, from the pinned commit and the pinned talloc tarball, gives both binaries byte for byte identical to the committed ones (same SHA-256 as the table above). Two builds in a row also match each other.
 
-The committed binaries are the ones tested on an Android 17 device (see `docs/specs/linux-spike.md`). Ship those, and run `tools/proot/check-binaries.sh` to confirm them. Before replacing them with a rebuilt file, find the difference and repeat the device tests.
+An earlier rebuild differed in `libproot.so` only. The machine code was the same; two embedded strings were not:
+- talloc prints its source location in error strings. The script compiled it by absolute path, so the binary held the checkout folder (`/Users/.../build/proot/work/talloc-2.5.0/talloc.c:1435`). It now maps the folder away (`-fmacro-prefix-map`), which gives `talloc.c:1435`.
+- PRoot bakes `git describe` into the binary. A full clone also fetches upstream tags and gives `v5.1.107.102-46-gc0b2d098-dirty`. The script now clones with `--no-tags`, which gives `c0b2d098-dirty`.
+
+The longer strings moved `.rodata`, so the PC-relative addresses in `.text` and `.plt` changed too, with the same sizes. After both fixes the output matches exactly. The binaries that were device-tested on Android 17 are therefore the ones this script builds. Run `tools/proot/check-binaries.sh` to confirm the committed files.

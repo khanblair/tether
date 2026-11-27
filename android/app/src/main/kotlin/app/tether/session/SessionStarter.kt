@@ -26,6 +26,21 @@ sealed interface StartResult {
     data object Failed : StartResult
 }
 
+/** The model and mode shown before a new session is created. */
+data class SessionStartPreview(
+    val modelId: String?,
+    val mode: SessionMode,
+)
+
+/** Starts a session and describes the values it will use. */
+interface SessionStartGateway {
+    /** Resolves the model and mode without creating a session. */
+    fun preview(projectId: String): SessionStartPreview
+
+    /** Creates a session in [projectId]. */
+    fun start(projectId: String): StartResult
+}
+
 /**
  * Starts a plain chat session in a project. The model comes from the first of these that is set
  * and has a saved key: the project's default, the app default, then the first provider in
@@ -39,23 +54,47 @@ class SessionStarter(
     private val sessions: SessionGateway,
     private val projectDefaults: ProjectDefaultsGateway? = null,
     private val appDefaults: AppDefaultSource? = null,
-) {
+) : SessionStartGateway {
+    /** Resolves the model and mode without creating a session. */
+    override fun preview(projectId: String): SessionStartPreview {
+        val resolved = resolve(projectId)
+        val choice = resolved.choice ?: firstKeyedChoice()
+        return SessionStartPreview(
+            modelId = choice?.modelId,
+            mode = resolved.mode ?: SessionMode.ACCEPT_EDITS,
+        )
+    }
+
     /** Creates the session in [projectId], or says why it could not. */
     @Suppress("TooGenericExceptionCaught")
-    fun start(projectId: String): StartResult =
+    override fun start(projectId: String): StartResult =
         try {
-            val project = projectDefaults?.load(projectId)
-            val mode = project?.mode ?: appDefaults?.savedDefaultMode()
-            val effort = appDefaults?.savedDefaultEffort()
-            val chosen = savedChoice(project?.model()) ?: savedChoice(appDefaults?.defaultModel())
-            if (chosen != null) {
-                createStarted(projectId, chosen.provider, chosen.modelId, mode, effort)
+            val resolved = resolve(projectId)
+            if (resolved.choice != null) {
+                createStarted(
+                    projectId,
+                    resolved.choice.provider,
+                    resolved.choice.modelId,
+                    resolved.mode,
+                    resolved.effort,
+                )
             } else {
-                firstKeyedStart(projectId, mode, effort)
+                firstKeyedStart(projectId, resolved.mode, resolved.effort)
             }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (_: Exception) {
             StartResult.Failed
         }
+
+    private fun resolve(projectId: String): ResolvedStart {
+        val project = projectDefaults?.load(projectId)
+        return ResolvedStart(
+            choice = savedChoice(project?.model()) ?: savedChoice(appDefaults?.defaultModel()),
+            mode = project?.mode ?: appDefaults?.savedDefaultMode(),
+            effort = appDefaults?.savedDefaultEffort(),
+        )
+    }
 
     private fun firstKeyedStart(
         projectId: String,
@@ -63,13 +102,20 @@ class SessionStarter(
         effort: ThinkingEffort?,
     ): StartResult {
         val provider =
-            ProviderView.entries.firstOrNull { providers.hasKey(it) } ?: return StartResult.NoKey
+            ProviderView.entries.firstOrNull { providers.hasKey(it) }
+                ?: return StartResult.NoKey
         val model = sessions.defaultModel(provider)?.trim()?.takeIf(String::isNotEmpty)
         return if (model == null) {
             StartResult.NoModels
         } else {
             createStarted(projectId, provider, model, mode, effort)
         }
+    }
+
+    private fun firstKeyedChoice(): DefaultModel? {
+        val provider = ProviderView.entries.firstOrNull { providers.hasKey(it) } ?: return null
+        val model = sessions.defaultModel(provider)?.trim()?.takeIf(String::isNotEmpty)
+        return model?.let { DefaultModel(provider, it) }
     }
 
     /**
@@ -132,6 +178,12 @@ class SessionStarter(
         }
     }
 }
+
+private data class ResolvedStart(
+    val choice: DefaultModel?,
+    val mode: SessionMode?,
+    val effort: ThinkingEffort?,
+)
 
 /** The project's model as one value, or null when either half is missing. */
 private fun ProjectDefaults.model(): DefaultModel? =

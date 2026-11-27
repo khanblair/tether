@@ -8,7 +8,6 @@
     <string name="route_home_title">Home</string>
     <string name="route_projects_title">Projects</string>
     <string name="route_attention_title">Needs attention</string>
-    <string name="route_new_session_title">New session</string>
     <string name="route_skills_title">Skills and memory</string>
     <string name="route_clone_title">Clone from GitHub</string>
     <string name="route_new_project_title">New empty project</string>

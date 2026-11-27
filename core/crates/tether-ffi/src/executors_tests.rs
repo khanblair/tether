@@ -312,13 +312,13 @@ fn linux_shell_exit_callback_fires_once_with_the_code() {
 }
 
 #[test]
-fn linux_shell_close_is_safe_to_call_twice() {
+fn linux_shell_terminate_is_safe_to_call_twice() {
     let (_directory, runtime) = shell_fixture(true);
     let (session, receiver) = open_shell(&runtime);
     session.write(b"sleep 10\n".to_vec()).unwrap();
 
-    session.close().unwrap();
-    session.close().unwrap();
+    session.terminate().unwrap();
+    session.terminate().unwrap();
     let (_chunks, exits) = collect_until_exit(&receiver);
 
     assert_eq!(exits.len(), 1);
@@ -337,7 +337,7 @@ fn linux_shell_rejects_a_second_open_until_the_first_exits() {
         result,
         Err(ExecutorRuntimeError::LinuxShellAlreadyOpen)
     ));
-    first.close().unwrap();
+    first.terminate().unwrap();
     let (_chunks, _exits) = collect_until_exit(&receiver);
 }
 

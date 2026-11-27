@@ -321,9 +321,10 @@ The session tool registry includes these Git actions. `git_init` is available fo
 | `get_diff(project_id, scope)` / `apply_hunk_action(...)` | Diff review |
 | `run_command(project_id, cmd, executor)` | User-initiated run; the model-facing `run` tool also accepts `background: true` in Linux mode |
 | `open_linux_shell(project_id, rows, cols, sink)` | Opens one interactive Alpine shell, optionally mounted on a project's `/workspace`, with its saved network policy |
-| `LinuxShellSession.write(bytes)` / `.resize(rows, cols)` / `.close()` | Sends terminal input, changes the pty size, or kills the shell; one executor runtime allows one open shell |
+| `LinuxShellSession.write(bytes)` / `.resize(rows, cols)` / `.terminate()` | Sends terminal input, changes the pty size, or kills the shell; one executor runtime allows one open shell |
 | `LinuxShellSink.on_output(bytes)` / `.on_exit(code)` | Receives ordered terminal chunks of at most 8 KiB and one shell exit callback from a Rust reader thread |
-| `process_list()` / `process_logs(id, tail)` / `process_stop(id)` / `preview(path, url)` | Inspect or stop session processes, or emit a guarded Preview request; `preview` accepts exactly one target |
+| `SessionRunner.list_processes()` / `stop_process(process_id)` | Read or stop session-owned background processes directly from their shared table; these calls do not wait for a running turn, and stopping an unknown process returns `NotFound` |
+| `process_list` / `process_logs(id, tail)` / `process_stop(id)` / `preview(path, url)` | Agent tools for process inspection, output, stopping, or a guarded Preview request; `preview` accepts exactly one target |
 | `set_provider_key(provider, key)` / `test_provider(provider)` / `list_models(provider)` | Providers |
 | `github_device_start()` / `github_device_poll(code)` / `github_set_token(token)` | GitHub auth; `github_status()` reports the persisted token kind (`CLASSIC` or `FINE_GRAINED`), scopes, login, and repository-read reach |
 | `linux_install()` / `linux_repair()` / `linux_remove()` / `linux_status()` | Linux mode |

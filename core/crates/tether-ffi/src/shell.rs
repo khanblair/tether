@@ -162,11 +162,11 @@ impl LinuxShellSession {
             .map_err(map_linux_error)
     }
 
-    /// Kills the Alpine shell. Calling this more than once is safe.
+    /// Ends the shell. The Kotlin `close()` only releases the handle.
     ///
     /// # Errors
     /// Returns an executor error when the first kill cannot be delivered.
-    pub fn close(&self) -> Result<(), ExecutorRuntimeError> {
+    pub fn terminate(&self) -> Result<(), ExecutorRuntimeError> {
         self.close_shell()
     }
 }

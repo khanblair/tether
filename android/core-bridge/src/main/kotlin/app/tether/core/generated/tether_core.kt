@@ -1273,9 +1273,9 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_tether_core_checksum_method_sessionruntime_continue_past_budget(
     ): Int
-    external fun uniffi_tether_core_checksum_method_linuxshellsession_close(
-    ): Int
     external fun uniffi_tether_core_checksum_method_linuxshellsession_resize(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_linuxshellsession_terminate(
     ): Int
     external fun uniffi_tether_core_checksum_method_linuxshellsession_write(
     ): Int
@@ -1837,9 +1837,9 @@ internal object UniffiLib {
     ): Long
     external fun uniffi_tether_core_fn_free_linuxshellsession(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
-    external fun uniffi_tether_core_fn_method_linuxshellsession_close(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
     external fun uniffi_tether_core_fn_method_linuxshellsession_resize(`ptr`: Long,`rows`: Short,`cols`: Short,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_method_linuxshellsession_terminate(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_tether_core_fn_method_linuxshellsession_write(`ptr`: Long,`bytes`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
@@ -2556,10 +2556,10 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_tether_core_checksum_method_sessionruntime_continue_past_budget() and 0xFFFF) != 60744) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_tether_core_checksum_method_linuxshellsession_close() and 0xFFFF) != 6266) {
+    if ((lib.uniffi_tether_core_checksum_method_linuxshellsession_resize() and 0xFFFF) != 28840) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_tether_core_checksum_method_linuxshellsession_resize() and 0xFFFF) != 28840) {
+    if ((lib.uniffi_tether_core_checksum_method_linuxshellsession_terminate() and 0xFFFF) != 27660) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_method_linuxshellsession_write() and 0xFFFF) != 19132) {
@@ -6088,20 +6088,20 @@ public object FfiConverterTypeGitRuntime: FfiConverter<GitRuntime, Long> {
 public interface LinuxShellSessionInterface {
     
     /**
-     * Kills the Alpine shell. Calling this more than once is safe.
-     *
-     * # Errors
-     * Returns an executor error when the first kill cannot be delivered.
-     */
-    fun `close`()
-    
-    /**
      * Resizes the Alpine shell pty.
      *
      * # Errors
      * Returns an executor error when the shell is unavailable or the pty rejects the resize.
      */
     fun `resize`(`rows`: kotlin.UShort, `cols`: kotlin.UShort)
+    
+    /**
+     * Ends the shell. The Kotlin `close()` only releases the handle.
+     *
+     * # Errors
+     * Returns an executor error when the first kill cannot be delivered.
+     */
+    fun `terminate`()
     
     /**
      * Writes raw terminal input to the Alpine shell.
@@ -6220,25 +6220,6 @@ open class LinuxShellSession: Disposable, AutoCloseable, LinuxShellSessionInterf
 
     
     /**
-     * Kills the Alpine shell. Calling this more than once is safe.
-     *
-     * # Errors
-     * Returns an executor error when the first kill cannot be delivered.
-     */
-    @Throws(ExecutorRuntimeException::class)override fun `close`()
-        = 
-    callWithHandle {
-    uniffiRustCallWithError(ExecutorRuntimeException) { _status ->
-    UniffiLib.uniffi_tether_core_fn_method_linuxshellsession_close(
-        it,
-        _status)
-}
-    }
-    
-    
-
-    
-    /**
      * Resizes the Alpine shell pty.
      *
      * # Errors
@@ -6253,6 +6234,25 @@ open class LinuxShellSession: Disposable, AutoCloseable, LinuxShellSessionInterf
         
         FfiConverterUShort.lower(`rows`),
         FfiConverterUShort.lower(`cols`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Ends the shell. The Kotlin `close()` only releases the handle.
+     *
+     * # Errors
+     * Returns an executor error when the first kill cannot be delivered.
+     */
+    @Throws(ExecutorRuntimeException::class)override fun `terminate`()
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(ExecutorRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_linuxshellsession_terminate(
+        it,
+        _status)
 }
     }
     

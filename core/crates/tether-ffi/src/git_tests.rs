@@ -5,13 +5,15 @@ use std::pin::Pin;
 use std::process::Command;
 use std::sync::{Arc, Mutex, Weak};
 
+use tether_engine::{ExecuteContext, PrepareContext, ToolHandler};
 use tether_store::Store;
+use tether_types::{ProjectId, SessionId, ToolCallId};
 use tether_vcs::{HttpClient, HttpClientError, HttpRequest, HttpResponse};
 
 use super::super::SignInStateView;
 use super::super::{
     CloneProgressView, GitDiffSpecView, GitRuntime, GitRuntimeError, GitStatusView,
-    GithubStatusView, SecretVault, SecretsPlatform,
+    GithubStatusView, GithubTokenKindView, SecretVault, SecretsPlatform,
 };
 
 struct PlainPlatform;
@@ -36,6 +38,11 @@ impl SecretsPlatform for PlainPlatform {
 
 struct FakeHttp {
     responses: Mutex<VecDeque<HttpResponse>>,
+}
+
+struct RecordingHttp {
+    responses: Mutex<VecDeque<HttpResponse>>,
+    requests: Mutex<Vec<HttpRequest>>,
 }
 
 struct Progress {
@@ -72,6 +79,22 @@ impl HttpClient for FakeHttp {
     }
 }
 
+impl HttpClient for RecordingHttp {
+    fn send(
+        &self,
+        request: HttpRequest,
+    ) -> Pin<Box<dyn Future<Output = Result<HttpResponse, HttpClientError>> + Send + '_>> {
+        self.requests.lock().expect("request lock").push(request);
+        Box::pin(ready(
+            self.responses
+                .lock()
+                .expect("response lock")
+                .pop_front()
+                .ok_or(HttpClientError),
+        ))
+    }
+}
+
 fn response(body: &str) -> HttpResponse {
     HttpResponse {
         status: 200,
@@ -87,6 +110,35 @@ fn scoped_user() -> HttpResponse {
         .headers
         .insert("x-oauth-scopes".into(), "repo, read:user".into());
     value
+}
+
+fn repo_probe() -> HttpResponse {
+    response("[]")
+}
+
+async fn execute_tool(
+    handler: &Arc<dyn ToolHandler>,
+    root: &Path,
+    call: tether_engine::PreparedCall,
+) -> Result<String, String> {
+    let guard = tether_workspace::PathGuard::new(root).expect("guard");
+    let session = SessionId::new("git-runtime-test");
+    let call_id = ToolCallId::new("git-runtime-call");
+    let mut before_edit = |_: &[std::path::PathBuf]| Ok(());
+    handler
+        .execute(
+            call,
+            ExecuteContext {
+                session_id: &session,
+                tool_call_id: &call_id,
+                cancel: tokio_util::sync::CancellationToken::new(),
+                sink: None,
+                guard: &guard,
+                before_edit: &mut before_edit,
+            },
+        )
+        .await
+        .map(|output| output.text)
 }
 
 fn runtime(responses: impl IntoIterator<Item = HttpResponse>) -> Arc<GitRuntime> {
@@ -158,7 +210,7 @@ fn manual_identity_validation_rejects_empty_newline_and_angle_brackets() {
 
 #[test]
 fn a_good_token_records_scopes_and_sign_out_clears_token_and_identity() {
-    let runtime = runtime([scoped_user(), scoped_user()]);
+    let runtime = runtime([scoped_user(), repo_probe(), scoped_user()]);
     runtime
         .github_sign_in_with_token("recognizable-fake-token")
         .expect("sign in");
@@ -170,6 +222,8 @@ fn a_good_token_records_scopes_and_sign_out_clears_token_and_identity() {
             name: Some("Blair".into()),
             email: Some("blair@example.test".into()),
             scopes: vec!["repo".into(), "read:user".into()],
+            token_kind: Some(GithubTokenKindView::Classic),
+            can_read_repos: true,
         }
     );
     runtime.github_sign_out().expect("sign out");
@@ -179,6 +233,104 @@ fn a_good_token_records_scopes_and_sign_out_clears_token_and_identity() {
         runtime.github_status().expect("signed out").scopes,
         Vec::<String>::new()
     );
+}
+
+#[test]
+fn a_classic_token_without_repo_scope_is_accepted() {
+    let mut user =
+        response(r#"{"login":"blair","id":7,"name":"Blair","email":"blair@example.test"}"#);
+    user.headers
+        .insert("x-oauth-scopes".into(), "read:user".into());
+    let runtime = runtime([user.clone(), repo_probe(), user]);
+    runtime
+        .github_sign_in_with_token("classic-token")
+        .expect("classic sign in");
+    let status = runtime.github_status().expect("status");
+    assert_eq!(status.scopes, vec!["read:user"]);
+    assert_eq!(status.token_kind, Some(GithubTokenKindView::Classic));
+}
+
+#[test]
+fn a_fine_grained_token_is_accepted_without_a_scope_header() {
+    let user = response(r#"{"login":"blair","id":7,"name":"Blair","email":"blair@example.test"}"#);
+    let runtime = runtime([user.clone(), repo_probe(), user]);
+    runtime
+        .github_sign_in_with_token("github_pat_test")
+        .expect("fine-grained sign in");
+    let status = runtime.github_status().expect("status");
+    assert_eq!(status.scopes, Vec::<String>::new());
+    assert_eq!(status.token_kind, Some(GithubTokenKindView::FineGrained));
+    assert!(status.can_read_repos);
+}
+
+#[test]
+fn a_bad_token_is_rejected_as_credentials() {
+    let mut rejected = response("{}");
+    rejected.status = 401;
+    let runtime = runtime([rejected]);
+    assert!(matches!(
+        runtime.github_sign_in_with_token("github_pat_bad"),
+        Err(GitRuntimeError::GithubCredentials)
+    ));
+}
+
+#[test]
+fn a_forbidden_repository_probe_is_recorded_as_unreadable() {
+    let user = response(r#"{"login":"blair","id":7,"name":"Blair","email":"blair@example.test"}"#);
+    let mut forbidden = response("{}");
+    forbidden.status = 403;
+    let runtime = runtime([user.clone(), forbidden, user]);
+    runtime
+        .github_sign_in_with_token("github_pat_no_repo_access")
+        .expect("fine-grained sign in");
+    assert!(!runtime.github_status().expect("status").can_read_repos);
+}
+
+#[test]
+fn github_status_reads_token_info_after_a_new_runtime_opens_the_database() {
+    let dir = tempfile::tempdir().expect("fixture directory");
+    let database = dir.path().join("tether.db");
+    let vault = SecretVault::new(
+        dir.path().join("secrets").to_string_lossy().into_owned(),
+        Arc::new(PlainPlatform),
+    );
+    let first = GitRuntime::new(
+        database.to_str().expect("database path"),
+        dir.path()
+            .join("workspaces")
+            .to_str()
+            .expect("workspace path"),
+        Arc::clone(&vault),
+    )
+    .expect("runtime");
+    first.set_http_for_tests(Arc::new(FakeHttp {
+        responses: Mutex::new(
+            [scoped_user(), repo_probe(), scoped_user()]
+                .into_iter()
+                .collect(),
+        ),
+    }));
+    first
+        .github_sign_in_with_token("classic-token")
+        .expect("sign in");
+    drop(first);
+    let second = GitRuntime::new(
+        database.to_str().expect("database path"),
+        dir.path()
+            .join("workspaces")
+            .to_str()
+            .expect("workspace path"),
+        vault,
+    )
+    .expect("second runtime");
+    let status = second.github_status().expect("status");
+    assert_eq!(status.scopes, vec!["repo", "read:user"]);
+    assert_eq!(status.token_kind, Some(GithubTokenKindView::Classic));
+    assert!(status.can_read_repos);
+    second.github_sign_out().expect("sign out");
+    let signed_out = second.github_status().expect("signed out");
+    assert_eq!(signed_out.token_kind, None);
+    assert!(!signed_out.can_read_repos);
 }
 
 #[test]
@@ -264,6 +416,134 @@ fn git_init_uses_the_requested_branch() {
 }
 
 #[test]
+#[expect(
+    clippy::too_many_lines,
+    reason = "success and duplicate repository fixtures cover the complete error contract"
+)]
+fn github_repo_create_saves_remote_origin_and_validates_errors() {
+    let (dir, runtime, project_id, root) = project_runtime();
+    tether_vcs::Repo::init(&root, "main").expect("init");
+    runtime.vault.put("github-oauth", "token").expect("token");
+    let http = Arc::new(RecordingHttp {
+        responses: Mutex::new(VecDeque::from([response(
+            r#"{"clone_url":"https://github.com/blair/new-repo.git","html_url":"https://github.com/blair/new-repo","default_branch":"main"}"#,
+        )])),
+        requests: Mutex::new(Vec::new()),
+    });
+    runtime.set_http_for_tests(Arc::clone(&http) as Arc<dyn HttpClient>);
+    let handler = GitRuntime::tool_handler(
+        &runtime,
+        ProjectId::new(project_id.clone()),
+        None,
+        None,
+        Some("blair".into()),
+    );
+    let guard = tether_workspace::PathGuard::new(&root).expect("guard");
+    let call = handler
+        .prepare(
+            "github_repo_create",
+            r#"{"name":"new-repo","private":false,"description":"A test repo"}"#,
+            &PrepareContext { guard: &guard },
+        )
+        .expect("prepare");
+    assert_eq!(
+        call.target,
+        "create GitHub repository blair/new-repo (public)"
+    );
+    let output = runtime
+        .runtime
+        .block_on(execute_tool(&handler, &root, call))
+        .expect("create");
+    assert!(output.contains("https://github.com/blair/new-repo.git"));
+    let request = http.requests.lock().expect("requests").remove(0);
+    let body: serde_json::Value =
+        serde_json::from_slice(request.body.as_deref().expect("body")).expect("JSON body");
+    assert_eq!(body["name"], "new-repo");
+    assert_eq!(body["private"], false);
+    assert_eq!(body["description"], "A test repo");
+    let database = dir.path().join("tether.db");
+    let store = Store::open(&database).expect("store");
+    let project = store
+        .project_remote(&ProjectId::new(project_id.clone()))
+        .expect("remote")
+        .expect("saved remote");
+    assert_eq!(
+        project.remote_url.as_deref(),
+        Some("https://github.com/blair/new-repo.git")
+    );
+    assert_eq!(project.default_branch.as_deref(), Some("main"));
+    let config = std::fs::read_to_string(root.join(".git/config")).expect("config");
+    assert!(config.contains("[remote \"origin\"]"));
+    assert!(config.contains("url = https://github.com/blair/new-repo.git"));
+
+    let (_dir, runtime, project_id, root) = project_runtime();
+    tether_vcs::Repo::init(&root, "main").expect("init");
+    runtime.vault.put("github-oauth", "token").expect("token");
+    let mut duplicate = response(
+        r#"{"message":"Validation Failed","errors":[{"message":"name already exists on this account"}]}"#,
+    );
+    duplicate.status = 422;
+    runtime.set_http_for_tests(Arc::new(RecordingHttp {
+        responses: Mutex::new(VecDeque::from([duplicate])),
+        requests: Mutex::new(Vec::new()),
+    }));
+    let handler = GitRuntime::tool_handler(
+        &runtime,
+        ProjectId::new(project_id),
+        None,
+        None,
+        Some("blair".into()),
+    );
+    let guard = tether_workspace::PathGuard::new(&root).expect("guard");
+    let call = handler
+        .prepare(
+            "github_repo_create",
+            r#"{"name":"new-repo"}"#,
+            &PrepareContext { guard: &guard },
+        )
+        .expect("prepare");
+    assert_eq!(
+        runtime
+            .runtime
+            .block_on(execute_tool(&handler, &root, call))
+            .unwrap_err(),
+        "GitHub repository name already exists"
+    );
+}
+
+#[test]
+fn github_repo_create_without_a_token_points_to_settings() {
+    let (_dir, runtime, project_id, root) = project_runtime();
+    tether_vcs::Repo::init(&root, "main").expect("init");
+    runtime.set_http_for_tests(Arc::new(RecordingHttp {
+        responses: Mutex::new(VecDeque::new()),
+        requests: Mutex::new(Vec::new()),
+    }));
+    let handler = GitRuntime::tool_handler(
+        &runtime,
+        ProjectId::new(project_id),
+        None,
+        None,
+        Some("blair".into()),
+    );
+    let guard = tether_workspace::PathGuard::new(&root).expect("guard");
+    let call = handler
+        .prepare(
+            "github_repo_create",
+            r#"{"name":"new-repo"}"#,
+            &PrepareContext { guard: &guard },
+        )
+        .expect("prepare");
+    assert_eq!(
+        runtime
+            .runtime
+            .block_on(execute_tool(&handler, &root, call))
+            .unwrap_err(),
+        "Sign in to GitHub in Settings first"
+    );
+}
+
+#[test]
 fn auto_clone_choice_uses_the_two_hundred_megabyte_rule() {
     let large = runtime([response(
         r#"{"default_branch":"main","private":false,"size":204801,"clone_url":"https://github.com/acme/repo.git","permissions":{}}"#,
@@ -296,6 +576,10 @@ fn auto_clone_choice_uses_the_two_hundred_megabyte_rule() {
 }
 
 #[test]
+#[expect(
+    clippy::too_many_lines,
+    reason = "the device-flow state table covers every public poll outcome"
+)]
 fn device_flow_maps_pending_slow_down_authorized_denied_and_expired() {
     let start = response(
         r#"{"device_code":"device","user_code":"ABCD","verification_uri":"https://github.com/login/device","expires_in":600,"interval":1}"#,
@@ -310,6 +594,8 @@ fn device_flow_maps_pending_slow_down_authorized_denied_and_expired() {
         pending,
         slow,
         token,
+        scoped_user(),
+        repo_probe(),
         scoped_user(),
         start.clone(),
         denied,

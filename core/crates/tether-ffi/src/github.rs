@@ -8,6 +8,7 @@ use tether_vcs::{HttpRequest, HttpResponse};
 use crate::git::GitRuntime;
 use crate::git_support::now_ms;
 use crate::git_types::GitRuntimeError;
+use crate::github_token_info::inspect_token;
 /// The public part of a GitHub device grant.
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct DeviceGrantView {
@@ -35,6 +36,15 @@ pub enum SignInStateView {
     Expired,
 }
 
+/// The kind of GitHub personal access token in use.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum GithubTokenKindView {
+    /// A classic personal access token.
+    Classic,
+    /// A fine-grained personal access token.
+    FineGrained,
+}
+
 /// The saved GitHub account state.
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct GithubStatusView {
@@ -48,6 +58,10 @@ pub struct GithubStatusView {
     pub email: Option<String>,
     /// Scopes reported by the last token validation.
     pub scopes: Vec<String>,
+    /// The kind of the saved token, if one is known.
+    pub token_kind: Option<GithubTokenKindView>,
+    /// Whether the last repository reach probe succeeded.
+    pub can_read_repos: bool,
 }
 
 /// One repository shown in the clone picker.
@@ -156,9 +170,7 @@ impl GitRuntime {
             .ok_or(GitRuntimeError::GithubNotConfigured)?;
         let value = self.request_device_token(client_id, &state.device_code)?;
         if let Some(token) = value.get("access_token").and_then(Value::as_str) {
-            self.save_github_token(token)?;
-            self.set_scopes(["repo".into()])?;
-            self.refresh_identity()?;
+            self.github_sign_in_with_token(token)?;
             let login = self.github_status()?.login.unwrap_or_default();
             *grant = None;
             return Ok(SignInStateView::Authorized(login));
@@ -184,36 +196,14 @@ impl GitRuntime {
     /// Validates and stores a GitHub personal access token.
     ///
     /// # Errors
-    /// Returns an error when GitHub rejects the token or it lacks the `repo` scope.
+    /// Returns an error when GitHub rejects the token or its response is unusable.
     pub fn github_sign_in_with_token(&self, token: &str) -> Result<(), GitRuntimeError> {
         if token.trim().is_empty() {
             return Err(GitRuntimeError::InvalidInput);
         }
-        let response = self.http_bearer("https://api.github.com/user", token)?;
-        if response.0 == 401 {
-            return Err(GitRuntimeError::GithubCredentials);
-        }
-        if !(200..300).contains(&response.0) {
-            return Err(GitRuntimeError::GithubResponse);
-        }
-        let scopes = response
-            .2
-            .as_deref()
-            .map(|text| {
-                text.split(',')
-                    .map(str::trim)
-                    .filter(|scope| !scope.is_empty())
-                    .map(str::to_owned)
-                    .collect::<Vec<_>>()
-            })
-            .unwrap_or_default();
-        if !scopes.iter().any(|scope| scope == "repo") {
-            return Err(GitRuntimeError::MissingScope {
-                scope: "repo".into(),
-            });
-        }
+        let info = inspect_token(self, token)?;
         self.save_github_token(token)?;
-        self.set_scopes(scopes)?;
+        self.save_github_token_info(&info)?;
         self.refresh_identity()
     }
 
@@ -228,7 +218,7 @@ impl GitRuntime {
         self.store()?
             .clear_git_identity()
             .map_err(|_| GitRuntimeError::Unavailable)?;
-        self.set_scopes(Vec::new())
+        self.clear_github_token_info()
     }
 
     /// Reads the saved GitHub account and Git identity state.
@@ -244,16 +234,21 @@ impl GitRuntime {
             .store()?
             .git_identity()
             .map_err(|_| GitRuntimeError::Unavailable)?;
+        let info = self.github_token_info()?;
         Ok(GithubStatusView {
             signed_in,
             login: identity.as_ref().and_then(|value| value.login.clone()),
             name: identity.as_ref().map(|value| value.name.clone()),
             email: identity.as_ref().map(|value| value.email.clone()),
-            scopes: self
-                .scopes
-                .lock()
-                .map_err(|_| GitRuntimeError::Unavailable)?
-                .clone(),
+            scopes: info
+                .as_ref()
+                .map_or_else(Vec::new, |value| value.scopes.clone()),
+            token_kind: info.as_ref().and_then(|value| match value.kind.as_str() {
+                "classic" => Some(GithubTokenKindView::Classic),
+                "fine_grained" => Some(GithubTokenKindView::FineGrained),
+                _ => None,
+            }),
+            can_read_repos: info.is_some_and(|value| value.can_read_repos),
         })
     }
 }
@@ -325,7 +320,7 @@ impl GitRuntime {
         Ok(response.body)
     }
 
-    fn http_bearer(
+    pub(crate) fn http_bearer(
         &self,
         url: &str,
         token: &str,
@@ -358,17 +353,6 @@ impl GitRuntime {
         self.runtime
             .block_on(http.send(request))
             .map_err(|_| GitRuntimeError::GithubNetwork)
-    }
-
-    fn set_scopes<I>(&self, scopes: I) -> Result<(), GitRuntimeError>
-    where
-        I: IntoIterator<Item = String>,
-    {
-        *self
-            .scopes
-            .lock()
-            .map_err(|_| GitRuntimeError::Unavailable)? = scopes.into_iter().collect();
-        Ok(())
     }
 }
 

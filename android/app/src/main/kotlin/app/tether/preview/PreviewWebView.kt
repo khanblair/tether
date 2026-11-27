@@ -48,11 +48,13 @@ fun PreviewWebView(
     onBlocked: (String) -> Unit,
     onAddressBlocked: (String) -> Unit,
     modifier: Modifier = Modifier,
+    serverOrigin: ServerOrigin? = null,
 ) {
     val allowed by rememberUpdatedState(networkAllowed)
     val client =
         PreviewClient(
             networkAllowed = { allowed() },
+            serverOrigin = serverOrigin,
             readFile = readFile,
             onBlocked = onBlocked,
             onAddressBlocked = onAddressBlocked,
@@ -135,6 +137,7 @@ private object DenyingChromeClient : WebChromeClient() {
 /** Answers each request from [PreviewFilesGateway] or blocks it, as [requestDecision] says. */
 private class PreviewClient(
     private val networkAllowed: () -> Boolean,
+    private val serverOrigin: ServerOrigin?,
     private val readFile: (String) -> FileBytes,
     private val onBlocked: (String) -> Unit,
     private val onAddressBlocked: (String) -> Unit,
@@ -144,7 +147,7 @@ private class PreviewClient(
         request: WebResourceRequest?,
     ): WebResourceResponse? {
         val url = request?.url?.toString() ?: return textResponse(STATUS_FORBIDDEN)
-        return when (val decision = requestDecision(url, networkAllowed())) {
+        return when (val decision = requestDecision(url, networkAllowed(), serverOrigin)) {
             is RequestDecision.Serve -> serve(decision.path)
             RequestDecision.NotFound -> textResponse(STATUS_NOT_FOUND)
             RequestDecision.Block -> {
@@ -160,7 +163,12 @@ private class PreviewClient(
         request: WebResourceRequest?,
     ): Boolean {
         val url = request?.url?.toString().orEmpty()
-        val allowed = previewPathFor(url) != null
+        val allowed =
+            if (serverOrigin == null) {
+                previewPathFor(url) != null
+            } else {
+                parseUri(url)?.let { isServerOrigin(it, serverOrigin) } == true
+            }
         if (!allowed) onAddressBlocked(url)
         return !allowed
     }

@@ -35,7 +35,7 @@ pub(crate) fn config(root: &Path, workspace: Option<PathBuf>, proot: PathBuf) ->
     fs::write(root.join("etc/resolv.conf"), b"nameserver 127.0.0.1\n").unwrap();
     ProotConfig {
         proot_path: proot,
-        loader_path: None,
+        loader_path: root.join("loader"),
         linux_root: root.to_owned(),
         workspace,
         network: NetworkPolicy::default(),

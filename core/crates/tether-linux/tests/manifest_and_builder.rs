@@ -135,7 +135,7 @@ fn command_builder_rejects_relative_cwd_and_reserved_environment() {
     let directory = tempdir().unwrap();
     let config = ProotConfig {
         proot_path: directory.path().join("proot"),
-        loader_path: None,
+        loader_path: directory.path().join("loader"),
         linux_root: directory.path().join("linux"),
         workspace: None,
         network: NetworkPolicy::On,

@@ -30,8 +30,8 @@ pub enum SessionKind {
 pub struct ProotConfig {
     /// Absolute path to the PRoot executable.
     pub proot_path: PathBuf,
-    /// Optional absolute path to the PRoot loader.
-    pub loader_path: Option<PathBuf>,
+    /// Absolute path to the PRoot loader.
+    pub loader_path: PathBuf,
     /// The private Linux storage directory.
     pub linux_root: PathBuf,
     /// Optional real project directory mounted at `/workspace`.
@@ -133,10 +133,11 @@ fn guest_environment(
         "PROOT_TMP_DIR".into(),
         config.linux_root.join("tmp").to_string_lossy().into_owned(),
     )];
-    if let Some(loader) = &config.loader_path {
-        validate_host_path(loader, "PRoot loader")?;
-        environment.push(("PROOT_LOADER".into(), loader.to_string_lossy().into_owned()));
-    }
+    validate_host_path(&config.loader_path, "PRoot loader")?;
+    environment.push((
+        "PROOT_LOADER".into(),
+        config.loader_path.to_string_lossy().into_owned(),
+    ));
     let term = match kind {
         SessionKind::Command => "dumb",
         SessionKind::Shell => "xterm-256color",

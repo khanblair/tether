@@ -94,6 +94,10 @@ fn off_environment(linux: &std::path::Path) -> BTreeMap<String, String> {
         ),
         ("PROJECT_FLAG".into(), "yes".into()),
         (
+            "PROOT_LOADER".into(),
+            linux.join("loader").to_string_lossy().into(),
+        ),
+        (
             "PROOT_TMP_DIR".into(),
             linux.join("tmp").to_string_lossy().into(),
         ),
@@ -115,6 +119,10 @@ fn on_environment(linux: &std::path::Path) -> BTreeMap<String, String> {
         (
             "PROOT_TMP_DIR".into(),
             linux.join("tmp").to_string_lossy().into(),
+        ),
+        (
+            "PROOT_LOADER".into(),
+            linux.join("loader").to_string_lossy().into(),
         ),
         ("TERM".into(), "dumb".into()),
         ("TMPDIR".into(), "/tmp".into()),
@@ -214,7 +222,7 @@ fn command_builder_rejects_each_unsafe_host_path() {
     );
 
     let mut relative_loader = base.clone();
-    relative_loader.loader_path = Some("relative/loader".into());
+    relative_loader.loader_path = "relative/loader".into();
     assert!(
         relative_loader
             .command(&["true".into()], &[], "/", SessionKind::Command)
@@ -295,7 +303,7 @@ fn command_builder_rejects_relative_parent_and_symlinked_workspace() {
     std::os::unix::fs::symlink(&real, &link).unwrap();
     let config = ProotConfig {
         proot_path: folder.path().join("proot"),
-        loader_path: None,
+        loader_path: folder.path().join("loader"),
         linux_root: folder.path().join("linux"),
         workspace: Some(link),
         network: NetworkPolicy::Off,

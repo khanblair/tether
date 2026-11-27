@@ -207,15 +207,6 @@ impl SessionActor {
         Ok(())
     }
 
-    /// Reads the in-memory mode. A session without tools is never in Bypass.
-    fn bypass_active(&self) -> Result<bool, SessionActorError> {
-        let Some(tools) = &self.tools else {
-            return Ok(false);
-        };
-        let mode = tools.mode.lock().map_err(|_| SessionActorError::Stopped)?;
-        Ok(*mode == PermissionMode::Bypass)
-    }
-
     fn set_working_mode(&mut self, mode: PermissionMode) -> Result<(), SessionActorError> {
         self.store
             .set_session_mode(&self.session.id, mode, now_ms())?;

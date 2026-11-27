@@ -74,10 +74,12 @@ impl SessionActor {
         let (tx, rx) = mpsc::channel(8);
         let active = Arc::new(Mutex::new(None));
         let budget = crate::budget::BudgetGate::new();
+        let bypass_mode = options.tools.as_ref().map(|tools| Arc::clone(&tools.mode));
         let handle = SessionHandle {
             tx,
             active: Arc::clone(&active),
             budget: Arc::clone(&budget),
+            bypass_mode,
         };
         Ok((
             Self {

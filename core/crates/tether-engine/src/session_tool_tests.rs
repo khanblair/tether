@@ -3,6 +3,7 @@ use std::sync::{
     Arc,
     atomic::{AtomicUsize, Ordering},
 };
+use std::time::Duration;
 
 use tether_providers::{
     BoxFuture, ChatProvider, ChatRequest, ProviderError, StopReason, StreamEvent,
@@ -12,7 +13,7 @@ use tether_types::{
     CoreEvent, MessagePart, ModelRef, PermissionMode, ProjectId, Provider, Role, ToolCallId,
 };
 use tether_workspace::PathGuard;
-use tokio::sync::mpsc;
+use tokio::sync::{Notify, mpsc};
 use tokio_util::sync::CancellationToken;
 
 use crate::session_tests::seeded_store;
@@ -78,6 +79,31 @@ impl ChatProvider for ReadThenFinish {
                     .unwrap();
             }
             Ok(())
+        })
+    }
+}
+
+struct BlockingProvider {
+    started: Arc<Notify>,
+    gate: Arc<Notify>,
+}
+
+impl ChatProvider for BlockingProvider {
+    fn stream_chat<'a>(
+        &'a self,
+        _request: &'a ChatRequest,
+        events: mpsc::Sender<StreamEvent>,
+        _cancel: CancellationToken,
+    ) -> BoxFuture<'a, Result<(), ProviderError>> {
+        Box::pin(async move {
+            self.started.notify_one();
+            self.gate.notified().await;
+            events
+                .send(StreamEvent::Finished {
+                    stop_reason: StopReason::EndTurn,
+                })
+                .await
+                .map_err(|_| ProviderError::Cancelled)
         })
     }
 }
@@ -219,7 +245,64 @@ async fn bypass_active_is_false_for_a_plain_session() {
     let (actor, handle) =
         crate::SessionActor::new(store, &id, provider, Arc::new(Recorder(tx))).unwrap();
     let task = tokio::spawn(actor.run());
-    assert!(!handle.bypass_active().await.unwrap());
+    assert!(
+        !tokio::time::timeout(Duration::from_millis(200), handle.bypass_active())
+            .await
+            .unwrap()
+            .unwrap()
+    );
+    drop(handle);
+    task.await.unwrap();
+}
+
+#[tokio::test]
+async fn bypass_active_does_not_wait_for_a_running_turn() {
+    let root = tempfile::tempdir().unwrap();
+    let workspace = root.path().join("workspace");
+    fs::create_dir(&workspace).unwrap();
+    let (store, id) = seeded_store(&root.path().join("store.db"));
+    let started = Arc::new(Notify::new());
+    let gate = Arc::new(Notify::new());
+    let provider: Arc<dyn ChatProvider> = Arc::new(BlockingProvider {
+        started: Arc::clone(&started),
+        gate: Arc::clone(&gate),
+    });
+    let factory: ProviderFactory = Arc::new(move || Ok(Arc::clone(&provider)));
+    let mode = Arc::new(std::sync::Mutex::new(PermissionMode::Ask));
+    let (tx, _rx) = mpsc::unbounded_channel();
+    let (actor, handle) = SessionActor::new_with_tool_runtime(
+        store,
+        &id,
+        factory,
+        Arc::new(Recorder(tx)),
+        ToolRuntime {
+            guard: PathGuard::new(&workspace).unwrap(),
+            blobs: BlobStore::open(root.path().join("blobs")).unwrap(),
+            approver: Arc::new(|_: &str, _: &str| false),
+            mode: Arc::clone(&mode),
+            handlers: Vec::new(),
+        },
+    )
+    .unwrap();
+    let task = tokio::spawn(actor.run());
+    handle.send_message("Hi".into()).await.unwrap();
+    tokio::time::timeout(Duration::from_secs(2), started.notified())
+        .await
+        .unwrap();
+    assert!(
+        !tokio::time::timeout(Duration::from_millis(200), handle.bypass_active())
+            .await
+            .unwrap()
+            .unwrap()
+    );
+    *mode.lock().unwrap() = PermissionMode::Bypass;
+    assert!(
+        tokio::time::timeout(Duration::from_millis(200), handle.bypass_active())
+            .await
+            .unwrap()
+            .unwrap()
+    );
+    gate.notify_one();
     drop(handle);
     task.await.unwrap();
 }

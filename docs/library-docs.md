@@ -167,7 +167,7 @@ Icons: Lucide (ISC), converted to Compose `ImageVector`s in `designsystem/Icons.
 - **gix:** feature flags are fine-grained; enable only what we use. Push over HTTPS uses our credential callback with the GitHub token; never embed the token in the URL (it would land in config and logs).
 - **wasmtime:** create one `Engine` per process. Precompiled `.cwasm` files are only valid for the same Wasmtime version and engine config; the cache key includes both. Use epoch interruption for time limits, not fuel (fuel is slower).
 - **WASI mounts:** preopen only `/workspace` and a per-run temp dir. Do not inherit the host environment.
-- **PRoot binaries:** must be named `lib*.so` and placed in the `full` flavor's `jniLibs`. The full manifest sets `extractNativeLibs=true` so Android extracts them to `nativeLibraryDir`, the only place an app may execute files from on Android 10+.
+- **PRoot binaries:** must be named `lib*.so` and placed in the `full` flavor's `jniLibs`. `android.packaging.jniLibs.useLegacyPackaging = true` in `android/app/build.gradle.kts` makes Android extract them to `nativeLibraryDir`, the only place an app may execute files from on Android 10+. AGP 9.5.1 rejects `extractNativeLibs` in a manifest and has no per-variant switch, so the play flavor extracts its libraries too.
 - **tree-sitter:** grammars must match the core library ABI version. Upgrade the core and all grammars in one PR.
 - **UniFFI:** callback interfaces are called from Rust threads. Kotlin implementations must be thread-safe and must not touch UI directly.
 - **JNA and R8:** keep rules in `core-bridge/consumer-rules.pro` (and `app/proguard-rules.pro`) are required or release builds crash at first core call.

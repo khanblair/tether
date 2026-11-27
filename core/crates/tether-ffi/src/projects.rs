@@ -380,4 +380,6 @@ fn now_ms() -> Result<i64, ProjectRuntimeError> {
 }
 
 #[cfg(test)]
+mod root_tests;
+#[cfg(test)]
 mod tests;

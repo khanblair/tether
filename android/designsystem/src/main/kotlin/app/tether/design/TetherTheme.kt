@@ -151,6 +151,7 @@ object TetherTheme {
 @Composable
 fun TetherTheme(
     mode: ThemeMode = ThemeMode.System,
+    accent: Color? = null,
     content: @Composable () -> Unit,
 ) {
     val dark =
@@ -159,7 +160,8 @@ fun TetherTheme(
             ThemeMode.Light -> false
             ThemeMode.Dark -> true
         }
-    val palette: TetherPalette = if (dark) TetherTokens.dark else TetherTokens.light
+    val basePalette: TetherPalette = if (dark) TetherTokens.dark else TetherTokens.light
+    val palette = accent?.let { deriveAccentPalette(basePalette, it, dark) } ?: basePalette
     CompositionLocalProvider(LocalPalette provides palette, LocalDark provides dark) {
         MaterialTheme(
             colorScheme = palette.color.toMaterial(dark),

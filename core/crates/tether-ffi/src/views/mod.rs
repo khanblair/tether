@@ -31,8 +31,8 @@ pub use session::{
 pub use todo::{TodoItemView, TodoStatusView};
 pub use types::{
     BudgetScopeView, ConnectionStatusView, ExecutorView, MessagePartView, MessageView,
-    ModelRefView, PermissionModeView, ProviderView, RoleView, SessionStatusView,
-    ToolCallStatusView, UsageSnapshotView,
+    ModelRefView, PermissionModeView, PreviewTargetView, ProcessStatusView, ProviderView, RoleView,
+    SessionStatusView, ToolCallStatusView, UsageSnapshotView,
 };
 pub use usage::{
     BudgetView, DayUsageView, ModelUsageView, ProjectUsageView, UsageSummaryView, UsageTotalsView,

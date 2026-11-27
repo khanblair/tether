@@ -306,7 +306,9 @@ fn event_session(event: &CoreEvent) -> String {
         | CoreEvent::BudgetWarning { session_id, .. }
         | CoreEvent::BudgetReached { session_id, .. }
         | CoreEvent::ContextCompacted { session_id, .. }
-        | CoreEvent::QualityReport { session_id, .. } => session_id.to_string(),
+        | CoreEvent::QualityReport { session_id, .. }
+        | CoreEvent::ProcessChanged { session_id, .. }
+        | CoreEvent::PreviewRequested { session_id, .. } => session_id.to_string(),
         CoreEvent::Ready { .. } | CoreEvent::Test { .. } | CoreEvent::ProviderStatus { .. } => {
             String::new()
         }

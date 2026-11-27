@@ -2,7 +2,7 @@
 
 use tether_types::{
     BudgetScope, ConnectionStatus, Executor, Message, MessagePart, ModelRef, PermissionMode,
-    Provider, Role, SessionStatus, ToolCallStatus, UsageSnapshot,
+    PreviewTarget, ProcessStatus, Provider, Role, SessionStatus, ToolCallStatus, UsageSnapshot,
 };
 
 /// Declares a field-less view enum and its conversion from the engine type.
@@ -90,6 +90,56 @@ mirror_enum!(
     /// FFI view of [`BudgetScope`].
     BudgetScopeView <=> BudgetScope { Session, Day }
 );
+
+/// FFI view of a background process state.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum ProcessStatusView {
+    /// The process is still running.
+    Running,
+    /// The process returned an exit code.
+    Exited {
+        /// The returned exit code.
+        code: i32,
+    },
+    /// The process was stopped.
+    Stopped,
+}
+
+impl From<ProcessStatus> for ProcessStatusView {
+    fn from(status: ProcessStatus) -> Self {
+        match status {
+            ProcessStatus::Running => Self::Running,
+            ProcessStatus::Exited(code) => Self::Exited { code },
+            ProcessStatus::Stopped => Self::Stopped,
+        }
+    }
+}
+
+/// FFI view of a Preview target.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Enum)]
+pub enum PreviewTargetView {
+    /// A project-relative HTML file.
+    File {
+        /// The guarded path.
+        path: String,
+    },
+    /// A server owned by a session process.
+    Server {
+        /// The loopback URL.
+        url: String,
+        /// The owning process id.
+        process_id: String,
+    },
+}
+
+impl From<PreviewTarget> for PreviewTargetView {
+    fn from(target: PreviewTarget) -> Self {
+        match target {
+            PreviewTarget::File { path } => Self::File { path },
+            PreviewTarget::Server { url, process_id } => Self::Server { url, process_id },
+        }
+    }
+}
 
 /// FFI view of [`ModelRef`].
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]

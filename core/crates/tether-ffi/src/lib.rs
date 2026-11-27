@@ -30,6 +30,7 @@ mod resume;
 mod secrets;
 mod session_control;
 mod sessions;
+mod shell;
 mod skills;
 mod skills_install;
 mod updater;
@@ -82,6 +83,7 @@ pub use secrets::{SecretVault, SecretVaultError, SecretsPlatform, SecretsPlatfor
 pub use sessions::{
     SessionRunner, SessionRuntime, SessionRuntimeError, recover_interrupted_sessions,
 };
+pub use shell::{LinuxShellSession, LinuxShellSink};
 pub use skills::{SkillDetailView, SkillView, SkillsRuntime, SkillsRuntimeError};
 pub use skills_install::{
     InstalledSkillView, QuarantineFileView, QuarantineView, ScanFindingView, ScanReportView,
@@ -99,11 +101,11 @@ pub use views::{
     ContextBreakdownView, ContextSectionView, CoreErrorView, CoreEventView, DayUsageView,
     ErrorKindView, ExecutorView, InterruptionView, MessagePartView, MessageView, ModelRefView,
     ModelUsageView, ModelView, PendingApprovalView, PendingQuestionView, PermissionModeView,
-    PermissionRuleView, PlanView, ProjectUsageView, ProjectView, PromptSectionView, ProviderView,
-    QualityCountsView, QualityFindingRecordView, ReasoningEffortView, RewindScopeView, RoleView,
-    SessionRecordView, SessionStatusView, SessionUsageView, SupportView, TodoItemView,
-    TodoStatusView, ToolCallStatusView, TranscriptHitView, UsageSnapshotView, UsageSummaryView,
-    UsageTotalsView, WorkspaceLocationView,
+    PermissionRuleView, PlanView, PreviewTargetView, ProcessStatusView, ProjectUsageView,
+    ProjectView, PromptSectionView, ProviderView, QualityCountsView, QualityFindingRecordView,
+    ReasoningEffortView, RewindScopeView, RoleView, SessionRecordView, SessionStatusView,
+    SessionUsageView, SupportView, TodoItemView, TodoStatusView, ToolCallStatusView,
+    TranscriptHitView, UsageSnapshotView, UsageSummaryView, UsageTotalsView, WorkspaceLocationView,
 };
 
 uniffi::setup_scaffolding!();

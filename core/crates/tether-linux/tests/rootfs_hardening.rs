@@ -17,7 +17,7 @@ fn image(bytes: &[u8]) -> RootfsImage {
     RootfsImage {
         arch: "x86_64".into(),
         url: "https://example.invalid/image".into(),
-        sha256: format!("{:x}", Sha256::digest(bytes)),
+        sha256: hex(&Sha256::digest(bytes)),
         size_bytes: bytes.len() as u64,
         max_extracted_bytes: 1024,
     }
@@ -181,4 +181,12 @@ fn repair_does_not_follow_a_symlinked_cache() {
         .unwrap();
 
     assert_eq!(calls.load(Ordering::SeqCst), 2);
+}
+
+fn hex(bytes: &[u8]) -> String {
+    use std::fmt::Write;
+    bytes.iter().fold(String::new(), |mut output, byte| {
+        write!(output, "{byte:02x}").expect("writing to a String cannot fail");
+        output
+    })
 }

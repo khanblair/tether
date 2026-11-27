@@ -43,7 +43,7 @@ fn archive() -> Vec<u8> {
 fn installs_archive_and_reuses_verified_cache() {
     let directory = tempdir().unwrap();
     let bytes = archive();
-    let digest = format!("{:x}", Sha256::digest(&bytes));
+    let digest = hex(&Sha256::digest(&bytes));
     let image = RootfsImage {
         arch: "x86_64".into(),
         url: "https://example.invalid/image".into(),
@@ -107,7 +107,7 @@ fn rejects_archive_path_escape_and_cleans_staging() {
         builder.finish().unwrap();
     }
     let bytes = compressed.finish().unwrap();
-    let digest = format!("{:x}", Sha256::digest(&bytes));
+    let digest = hex(&Sha256::digest(&bytes));
     let image = RootfsImage {
         arch: "x86_64".into(),
         url: "https://example.invalid/image".into(),
@@ -134,4 +134,12 @@ fn rejects_archive_path_escape_and_cleans_staging() {
             .join("linux/rootfs/alpine.partial")
             .exists()
     );
+}
+
+fn hex(bytes: &[u8]) -> String {
+    use std::fmt::Write;
+    bytes.iter().fold(String::new(), |mut output, byte| {
+        write!(output, "{byte:02x}").expect("writing to a String cannot fail");
+        output
+    })
 }

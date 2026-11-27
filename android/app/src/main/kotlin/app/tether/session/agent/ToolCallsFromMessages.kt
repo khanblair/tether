@@ -3,6 +3,7 @@ package app.tether.session.agent
 import app.tether.core.generated.MessagePartView
 import app.tether.core.generated.MessageView
 import app.tether.core.generated.RoleView
+import app.tether.session.tools.savedToolTarget
 
 /**
  * The tool calls saved in the transcript, by call id, in the order they were proposed. A call
@@ -33,7 +34,7 @@ private fun persistedCall(
     ToolCallUi(
         id = call.id,
         tool = call.tool,
-        target = "",
+        target = savedToolTarget(call.tool, call.argsJson, result?.text.orEmpty()),
         status = result.toStatus(),
         output = result?.text.orEmpty(),
         outputTruncated = result?.resultRef != null,

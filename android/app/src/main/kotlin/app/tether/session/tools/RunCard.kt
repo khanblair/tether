@@ -70,13 +70,17 @@ private fun RunHeader(
         expanded = expanded,
         onToggle = onToggle,
     ) {
-        Text(
-            text = target.command,
-            style = TetherTheme.monoLabel,
-            color = TetherTheme.colors.text,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
+        if (toolTitle(call).kind == ToolTitleKind.RunServer) {
+            ToolTitleText(title = toolTitle(call))
+        } else {
+            Text(
+                text = target.command,
+                style = TetherTheme.monoLabel,
+                color = TetherTheme.colors.text,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
         Row(verticalAlignment = Alignment.CenterVertically) {
             ExecutorBadge(executor = target.executor)
             if (target.executor != null) {

@@ -104,8 +104,12 @@ fun ApprovalBar(
                     .weight(1f)
                     .padding(horizontal = TetherSpace.space3, vertical = TetherSpace.space3),
         ) {
-            BarHeader(kind = kind, position = position, total = total)
-            TargetRow(target = approval.target, expanded = expanded, onToggle = onToggleExpanded)
+            BarHeader(kind = kind, target = approval.target, position = position, total = total)
+            TargetRow(
+                target = approvalTarget(approval.tool, approval.target),
+                expanded = expanded,
+                onToggle = onToggleExpanded,
+            )
             if (expanded && (kind == ApprovalKind.Push || kind == ApprovalKind.ForcePush)) {
                 Text(
                     text = stringResource(R.string.approval_push_asked_every_time),
@@ -136,6 +140,7 @@ fun ApprovalBar(
 @Composable
 private fun BarHeader(
     kind: ApprovalKind,
+    target: String,
     position: Int,
     total: Int,
 ) {
@@ -155,7 +160,14 @@ private fun BarHeader(
         )
         Spacer(Modifier.width(TetherSpace.space2))
         Text(
-            text = stringResource(kind.labelRes()),
+            text =
+                stringResource(
+                    if (kind == ApprovalKind.GithubRepoCreate) {
+                        githubRepoApprovalLabelRes(target)
+                    } else {
+                        kind.labelRes()
+                    },
+                ),
             style = MaterialTheme.typography.titleSmall,
             color = TetherTheme.colors.text,
             modifier = Modifier.weight(1f).semantics { liveRegion = LiveRegionMode.Polite },

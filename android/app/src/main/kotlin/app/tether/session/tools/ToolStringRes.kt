@@ -83,11 +83,53 @@ private val VERB_TABLE: Map<ToolTitleKind, VerbRes> =
                 R.string.tools_verb_run_present,
                 R.string.tools_verb_run_past,
             ),
+        ToolTitleKind.RunServer to
+            VerbRes(
+                R.string.tools_server_run_imperative,
+                R.string.tools_server_run_present,
+                R.string.tools_server_run_past,
+            ),
+        ToolTitleKind.ProcessList to
+            VerbRes(
+                R.string.tools_process_list_imperative,
+                R.string.tools_process_list_present,
+                R.string.tools_process_list_past,
+            ),
+        ToolTitleKind.ProcessLogs to
+            VerbRes(
+                R.string.tools_process_logs_imperative,
+                R.string.tools_process_logs_present,
+                R.string.tools_process_logs_past,
+            ),
+        ToolTitleKind.ProcessStop to
+            VerbRes(
+                R.string.tools_process_stop_imperative,
+                R.string.tools_process_stop_present,
+                R.string.tools_process_stop_past,
+            ),
+        ToolTitleKind.Preview to
+            VerbRes(
+                R.string.tools_preview_imperative,
+                R.string.tools_preview_present,
+                R.string.tools_preview_past,
+            ),
         ToolTitleKind.CiRun to
             VerbRes(
                 R.string.tools_verb_ci_run_imperative,
                 R.string.tools_verb_ci_run_present,
                 R.string.tools_verb_ci_run_past,
+            ),
+        ToolTitleKind.GitInit to
+            VerbRes(
+                R.string.github_tool_git_init_imperative,
+                R.string.github_tool_git_init_present,
+                R.string.github_tool_git_init_past,
+            ),
+        ToolTitleKind.GithubRepoCreate to
+            VerbRes(
+                R.string.github_tool_repo_create_imperative,
+                R.string.github_tool_repo_create_present,
+                R.string.github_tool_repo_create_past,
             ),
         ToolTitleKind.Unknown to
             VerbRes(
@@ -116,7 +158,14 @@ internal fun fixedTitleRes(kind: ToolTitleKind): Int? =
         ToolTitleKind.ListDir,
         ToolTitleKind.Search,
         ToolTitleKind.Run,
+        ToolTitleKind.RunServer,
         ToolTitleKind.CiRun,
+        ToolTitleKind.ProcessList,
+        ToolTitleKind.ProcessLogs,
+        ToolTitleKind.ProcessStop,
+        ToolTitleKind.Preview,
+        ToolTitleKind.GitInit,
+        ToolTitleKind.GithubRepoCreate,
         ToolTitleKind.Unknown,
         -> null
     }

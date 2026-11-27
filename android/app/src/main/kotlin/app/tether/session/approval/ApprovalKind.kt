@@ -3,6 +3,8 @@ package app.tether.session.approval
 /** What an approval asks the user to allow. Each kind has its own summary and icon. */
 enum class ApprovalKind {
     Command,
+    Server,
+    ProcessStop,
     Edit,
     Delete,
     Move,
@@ -10,6 +12,7 @@ enum class ApprovalKind {
     Push,
     ForcePush,
     PullRequest,
+    GithubRepoCreate,
     Other,
 }
 
@@ -25,16 +28,26 @@ fun approvalKind(
     target: String,
 ): ApprovalKind =
     when {
-        tool == "run" -> ApprovalKind.Command
-        tool == "write_file" || tool == "edit_file" || tool == "multi_edit" -> ApprovalKind.Edit
-        tool == "delete_file" -> ApprovalKind.Delete
-        tool == "move_file" -> ApprovalKind.Move
+        tool == "run" && target.endsWith(BACKGROUND_SUFFIX) -> ApprovalKind.Server
         tool == "git_push" && target.startsWith(FORCE_PUSH_PREFIX) -> ApprovalKind.ForcePush
-        tool == "git_push" -> ApprovalKind.Push
-        tool == "pr_create" -> ApprovalKind.PullRequest
         tool.startsWith("web_") -> ApprovalKind.Network
-        else -> ApprovalKind.Other
+        else -> TOOL_KINDS[tool] ?: ApprovalKind.Other
     }
+
+/** The kind of each tool name with one fixed kind. Names missing here are [ApprovalKind.Other]. */
+private val TOOL_KINDS: Map<String, ApprovalKind> =
+    mapOf(
+        "run" to ApprovalKind.Command,
+        "process_stop" to ApprovalKind.ProcessStop,
+        "write_file" to ApprovalKind.Edit,
+        "edit_file" to ApprovalKind.Edit,
+        "multi_edit" to ApprovalKind.Edit,
+        "delete_file" to ApprovalKind.Delete,
+        "move_file" to ApprovalKind.Move,
+        "git_push" to ApprovalKind.Push,
+        "pr_create" to ApprovalKind.PullRequest,
+        "github_repo_create" to ApprovalKind.GithubRepoCreate,
+    )
 
 /**
  * Shortens [text] to at most [maxChars] characters by cutting the middle and keeping both ends,
@@ -53,3 +66,17 @@ fun middleEllipsize(
 }
 
 private const val ELLIPSIS = "…"
+private const val BACKGROUND_SUFFIX = " (keeps running until stopped)"
+
+/** The short target shown in the approval bar for a background server. */
+internal fun approvalTarget(
+    tool: String,
+    target: String,
+): String =
+    if (tool == "run" && target.endsWith(BACKGROUND_SUFFIX)) {
+        target
+            .removePrefix("[linux] ")
+            .removeSuffix(BACKGROUND_SUFFIX)
+    } else {
+        target
+    }

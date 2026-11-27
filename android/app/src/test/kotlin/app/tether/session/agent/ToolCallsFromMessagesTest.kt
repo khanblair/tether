@@ -3,6 +3,7 @@ package app.tether.session.agent
 import app.tether.core.generated.MessagePartView
 import app.tether.core.generated.MessageView
 import app.tether.core.generated.RoleView
+import app.tether.session.tools.toolTitle
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -179,5 +180,70 @@ class ToolCallsFromMessagesTest {
 
         assertTrue(resultsOnly.isToolResultOnly())
         assertTrue(!message("m3", RoleView.ASSISTANT, call("t1")).isToolResultOnly())
+    }
+
+    @Test
+    fun a_saved_git_init_card_recovers_its_branch() {
+        val calls =
+            toolCallsFromMessages(
+                listOf(
+                    message(
+                        "m1",
+                        RoleView.ASSISTANT,
+                        MessagePartView.ToolCall("t1", "git_init", "{\"default_branch\":\"main\"}"),
+                    ),
+                    message(
+                        "m2",
+                        RoleView.TOOL,
+                        result("t1", "Initialized Git repository on main"),
+                    ),
+                ),
+            )
+
+        assertEquals("on main", toolTitle(calls.getValue("t1")).target)
+    }
+
+    @Test
+    fun saved_repository_cards_show_private_and_public_targets() {
+        val calls =
+            toolCallsFromMessages(
+                listOf(
+                    message(
+                        "m1",
+                        RoleView.ASSISTANT,
+                        MessagePartView.ToolCall(
+                            "private",
+                            "github_repo_create",
+                            "{\"name\":\"secret\",\"private\":true}",
+                        ),
+                        MessagePartView.ToolCall(
+                            "public",
+                            "github_repo_create",
+                            "{\"name\":\"open\",\"private\":false}",
+                        ),
+                    ),
+                    message(
+                        "m2",
+                        RoleView.TOOL,
+                        result(
+                            "private",
+                            "Created GitHub repository: clone " +
+                                "https://github.com/blair/secret.git, web " +
+                                "https://github.com/blair/secret",
+                        ),
+                        result(
+                            "public",
+                            "Created GitHub repository: clone " +
+                                "https://github.com/blair/open.git, web ",
+                        ),
+                    ),
+                ),
+            )
+
+        assertEquals(
+            "blair/secret · private · https://github.com/blair/secret",
+            toolTitle(calls.getValue("private")).target,
+        )
+        assertEquals("blair/open · public", toolTitle(calls.getValue("public")).target)
     }
 }

@@ -7,6 +7,11 @@ class ApprovalKindTest {
     @Test
     fun each_tool_maps_to_its_kind() {
         assertEquals(ApprovalKind.Command, approvalKind("run", "ls"))
+        assertEquals(
+            ApprovalKind.Server,
+            approvalKind("run", "[linux] npm run dev (keeps running until stopped)"),
+        )
+        assertEquals(ApprovalKind.ProcessStop, approvalKind("process_stop", "server-1"))
         assertEquals(ApprovalKind.Edit, approvalKind("write_file", "a.kt"))
         assertEquals(ApprovalKind.Edit, approvalKind("edit_file", "a.kt"))
         assertEquals(ApprovalKind.Edit, approvalKind("multi_edit", "a.kt"))
@@ -15,6 +20,10 @@ class ApprovalKindTest {
         assertEquals(ApprovalKind.Network, approvalKind("web_fetch", "https://example.test"))
         assertEquals(ApprovalKind.Push, approvalKind("git_push", "push main to origin"))
         assertEquals(ApprovalKind.PullRequest, approvalKind("pr_create", "open a pull request"))
+        assertEquals(
+            ApprovalKind.GithubRepoCreate,
+            approvalKind("github_repo_create", "create GitHub repository blair/app (private)"),
+        )
         assertEquals(ApprovalKind.Other, approvalKind("mcp__docs__read", "docs: read {}"))
     }
 
@@ -47,5 +56,13 @@ class ApprovalKindTest {
     @Test(expected = IllegalArgumentException::class)
     fun a_limit_below_one_is_refused() {
         middleEllipsize("abc", 0)
+    }
+
+    @Test
+    fun a_background_server_target_is_shortened_in_the_approval_bar() {
+        assertEquals(
+            "npm run dev",
+            approvalTarget("run", "[linux] npm run dev (keeps running until stopped)"),
+        )
     }
 }

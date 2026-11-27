@@ -278,7 +278,7 @@ fn workspace_session_requires_a_saved_project_folder() {
 }
 
 #[test]
-fn plain_project_sessions_do_not_advertise_git_tools() {
+fn plain_project_sessions_advertise_git_tools_for_initialization() {
     let dir = tempfile::tempdir().unwrap();
     let db = dir.path().join("tether.db");
     let session_id = seeded_session(&db);
@@ -305,12 +305,9 @@ fn plain_project_sessions_do_not_advertise_git_tools() {
     )
     .unwrap();
     let registry = ToolLoop::with_handlers(tools.guard, tools.handlers).unwrap();
-    assert!(
-        registry
-            .specs()
-            .iter()
-            .all(|spec| !spec.name.starts_with("git_") && !spec.name.starts_with("pr_"))
-    );
+    let names: Vec<_> = registry.specs().into_iter().map(|spec| spec.name).collect();
+    assert!(names.contains(&"git_init".to_owned()));
+    assert!(names.contains(&"github_repo_create".to_owned()));
 }
 
 #[test]

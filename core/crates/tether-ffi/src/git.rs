@@ -5,14 +5,14 @@ use std::sync::{Arc, Mutex};
 
 use tether_engine::{GitTools, GitToolsConfig, GithubClientFactory, ToolHandler};
 use tether_secrets::{Secret, SecretRef};
-use tether_store::{GitIdentity, Store};
+use tether_store::{GitIdentity, Store, project_dir};
 use tether_types::ProjectId;
 use tether_vcs::{DiffSpec, HttpClient, Repo, ReqwestHttpClient};
 
 use crate::SecretVault;
 use crate::git_support::{
-    RuntimeGithub, RuntimeIdentity, RuntimeTransport, branch_view, cap_diff, commit_view,
-    filter_diff_path, now_ms, repo_error, status_view, validate_identity_field,
+    RuntimeGithub, RuntimeIdentity, RuntimeRemote, RuntimeTransport, branch_view, cap_diff,
+    commit_view, filter_diff_path, now_ms, repo_error, status_view, validate_identity_field,
 };
 use crate::git_types::{
     GitBranchView, GitCommitView, GitDiffSpecView, GitRuntimeError, GitStatusView,
@@ -32,7 +32,6 @@ pub struct GitRuntime {
     pub(crate) runtime: Arc<tokio::runtime::Runtime>,
     pub(crate) oauth_client_id: Mutex<Option<String>>,
     pub(crate) device_grant: Mutex<Option<DeviceGrantState>>,
-    pub(crate) scopes: Mutex<Vec<String>>,
     pub(crate) active_clone: Mutex<Option<Arc<tether_vcs::CancellationToken>>>,
     pub(crate) http: Mutex<Arc<dyn HttpClient>>,
 }
@@ -44,16 +43,23 @@ impl GitRuntime {
     }
 
     pub(crate) fn tool_handler(
-        runtime: Arc<Self>,
+        runtime: &Arc<Self>,
+        project_id: ProjectId,
         remote_url: Option<String>,
         default_branch: Option<String>,
+        github_owner: Option<String>,
     ) -> Arc<dyn ToolHandler> {
         Arc::new(GitTools::new(GitToolsConfig {
             remote_url,
             default_branch,
-            identity: Arc::new(RuntimeIdentity(Arc::clone(&runtime))),
-            transport: Arc::new(RuntimeTransport(Arc::clone(&runtime))),
-            github: Arc::new(RuntimeGithub(runtime)),
+            identity: Arc::new(RuntimeIdentity(Arc::clone(runtime))),
+            transport: Arc::new(RuntimeTransport(Arc::clone(runtime))),
+            github: Arc::new(RuntimeGithub(Arc::clone(runtime))),
+            github_owner,
+            remote_writer: Arc::new(RuntimeRemote {
+                runtime: Arc::clone(runtime),
+                project_id,
+            }),
             gates: Vec::new(),
         }))
     }
@@ -84,7 +90,6 @@ impl GitRuntime {
             runtime: Arc::new(runtime),
             oauth_client_id: Mutex::new(None),
             device_grant: Mutex::new(None),
-            scopes: Mutex::new(Vec::new()),
             active_clone: Mutex::new(None),
             http: Mutex::new(Arc::new(http)),
         }))
@@ -181,7 +186,7 @@ impl GitRuntime {
         self.with_repo(project_id, |repo| repo.current_branch())
     }
 
-    /// Initializes a repository in an empty project folder.
+    /// Initializes a repository in the project folder.
     ///
     /// # Errors
     /// Returns an error when the project is absent, non-empty, or the branch is invalid.
@@ -260,7 +265,7 @@ impl GitRuntime {
             .load_project(&ProjectId::new(project_id.to_owned()))
             .map_err(|_| GitRuntimeError::Unavailable)?
             .ok_or(GitRuntimeError::NotFound)?;
-        Ok(Path::new(&self.workspaces_root).join(project.path))
+        Ok(project_dir(Path::new(&self.workspaces_root), &project))
     }
 
     fn repo(&self, project_id: &str) -> Result<Repo, GitRuntimeError> {

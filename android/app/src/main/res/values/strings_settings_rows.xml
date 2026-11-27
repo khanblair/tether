@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Subtitles of the Settings list rows that show live state. -->
+    <string name="settings_rows_github_signed_in">Signed in</string>
+    <string name="settings_rows_github_signed_in_as">Signed in as %1$s</string>
+    <string name="settings_rows_github_signed_out">Not signed in</string>
+    <string name="settings_rows_mcp_none">No servers</string>
+    <plurals name="settings_rows_mcp_servers">
+        <item quantity="one">%d server</item>
+        <item quantity="other">%d servers</item>
+    </plurals>
+    <string name="settings_rows_skills_none">No skills</string>
+    <plurals name="settings_rows_skills">
+        <item quantity="one">%d skill</item>
+        <item quantity="other">%d skills</item>
+    </plurals>
+    <string name="settings_rows_budgets_none">No limits set</string>
+    <string name="settings_rows_budgets_daily">Daily limit %1$s</string>
+    <string name="settings_rows_budgets_session">Session limit %1$s</string>
+</resources>

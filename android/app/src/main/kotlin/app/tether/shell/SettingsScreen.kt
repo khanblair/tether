@@ -1,6 +1,8 @@
 package app.tether.shell
 
 import android.text.format.Formatter
+import androidx.annotation.PluralsRes
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -46,9 +49,13 @@ import app.tether.nav.SETTINGS_PROFILE_ROUTE
 import app.tether.nav.SETTINGS_QUALITY_ROUTE
 import app.tether.nav.SKILLS_MEMORY_ROUTE
 import app.tether.session.labelRes
+import app.tether.settings.RowText
 import app.tether.settings.SettingsDeps
+import app.tether.settings.SettingsRowsState
+import app.tether.settings.SettingsRowsViewModel
 import app.tether.settings.SettingsSummary
 import app.tether.settings.SettingsSummaryViewModel
+import app.tether.settings.budgets.dollarsText
 import app.tether.updates.UpdatesUiState
 
 /**
@@ -78,7 +85,25 @@ fun SettingsScreen(
                 },
         )
     val summary by summaryModel.state.collectAsStateWithLifecycle()
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { summaryModel.refresh() }
+    val rowsModel: SettingsRowsViewModel =
+        viewModel(
+            factory =
+                viewModelFactory {
+                    initializer {
+                        SettingsRowsViewModel(
+                            module.githubGateway,
+                            module.mcpGateway,
+                            module.memoryArea.skills,
+                            module.budgetsGateway,
+                        )
+                    }
+                },
+        )
+    val rows by rowsModel.state.collectAsStateWithLifecycle()
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        summaryModel.refresh()
+        rowsModel.refresh()
+    }
     val mode by module.themeMode.collectAsStateWithLifecycle()
     val updateState by module.updates.state.collectAsStateWithLifecycle()
     Scaffold(
@@ -99,7 +124,7 @@ fun SettingsScreen(
                     .fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(TetherSpace.space3),
         ) {
-            MainGroups(summary, onOpen, onOpenProviders)
+            MainGroups(summary, rows, onOpen, onOpenProviders)
             Text(
                 text = stringResource(R.string.settings_theme_title),
                 style = MaterialTheme.typography.titleSmall,
@@ -156,6 +181,7 @@ fun SettingsScreen(
 @Composable
 private fun MainGroups(
     summary: SettingsSummary,
+    rows: SettingsRowsState,
     onOpen: (String) -> Unit,
     onOpenProviders: () -> Unit,
 ) {
@@ -207,13 +233,13 @@ private fun MainGroups(
         )
         ListRow(
             title = stringResource(R.string.settings_area_list_github),
-            subtitle = stringResource(R.string.settings_area_not_available),
+            subtitle = rowSubtitle(rows.github),
             trailing = { ChevronIcon() },
             onClick = { onOpen(SETTINGS_GITHUB_ROUTE) },
         )
         ListRow(
             title = stringResource(R.string.settings_area_list_mcp),
-            subtitle = stringResource(R.string.settings_area_not_available),
+            subtitle = rowSubtitle(rows.mcp),
             trailing = { ChevronIcon() },
             onClick = { onOpen(SETTINGS_MCP_ROUTE) },
         )
@@ -221,7 +247,7 @@ private fun MainGroups(
     ListGroup {
         ListRow(
             title = stringResource(R.string.settings_area_list_skills),
-            subtitle = stringResource(R.string.settings_area_not_available),
+            subtitle = rowSubtitle(rows.skills),
             trailing = { ChevronIcon() },
             onClick = { onOpen(SKILLS_MEMORY_ROUTE) },
         )
@@ -233,12 +259,56 @@ private fun MainGroups(
         )
         ListRow(
             title = stringResource(R.string.settings_area_list_budgets),
-            subtitle = stringResource(R.string.settings_area_not_available),
+            subtitle = rowSubtitle(rows.budgets),
             trailing = { ChevronIcon() },
             onClick = { onOpen(SETTINGS_BUDGETS_ROUTE) },
         )
     }
 }
+
+/** The words for a row's live state. Null while the row loads or its read failed. */
+@Composable
+private fun rowSubtitle(text: RowText): String? =
+    when (text) {
+        RowText.None -> null
+        is RowText.SignedIn -> signedInText(text.login)
+        RowText.NotSignedIn -> stringResource(R.string.settings_rows_github_signed_out)
+        is RowText.Servers ->
+            countText(
+                text.count,
+                R.string.settings_rows_mcp_none,
+                R.plurals.settings_rows_mcp_servers,
+            )
+        is RowText.Skills ->
+            countText(
+                text.count,
+                R.string.settings_rows_skills_none,
+                R.plurals.settings_rows_skills,
+            )
+        RowText.NoLimits -> stringResource(R.string.settings_rows_budgets_none)
+        is RowText.DailyLimit ->
+            stringResource(R.string.settings_rows_budgets_daily, dollarsText(text.micros))
+        is RowText.SessionLimit ->
+            stringResource(R.string.settings_rows_budgets_session, dollarsText(text.micros))
+    }
+
+@Composable
+private fun signedInText(login: String?): String =
+    login?.let { stringResource(R.string.settings_rows_github_signed_in_as, it) }
+        ?: stringResource(R.string.settings_rows_github_signed_in)
+
+/** The "none" words for zero, or the plural count for any other number. */
+@Composable
+private fun countText(
+    count: Int,
+    @StringRes noneRes: Int,
+    @PluralsRes pluralRes: Int,
+): String =
+    if (count == 0) {
+        stringResource(noneRes)
+    } else {
+        pluralStringResource(pluralRes, count, count)
+    }
 
 @Composable
 private fun dataSubtitle(bytes: Long?): String =

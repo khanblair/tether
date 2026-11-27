@@ -155,7 +155,7 @@ The full model is in architecture.md section 10. Mobile-specific points:
 - Backups exclude secrets, the Linux root filesystem, runtime packs, and by default workspaces (`backup_rules.xml`, `data_extraction_rules.xml`). Memory, skills, and the vault are included in backups; they hold no secrets and writes are scanned (architecture.md section 14).
 - Network security config forbids cleartext traffic.
 - Exported components: only the main activity, the share intent filter, and the notification action receiver (which accepts only our signed `PendingIntent`s).
-- The `full` flavor ships `libproot.so` and `libproot-loader.so` in `app/src/full/jniLibs/arm64-v8a/`. They are signed as part of the APK and extracted to `nativeLibraryDir` by the full manifest's `extractNativeLibs=true` setting. The Play flavor has no PRoot files. Linux mode is unavailable on x86_64 devices. The Alpine root filesystem is downloaded and verified against the signed manifest.
+- The `full` flavor ships `libproot.so` and `libproot-loader.so` in `app/src/full/jniLibs/arm64-v8a/`. They are signed as part of the APK and extracted to `nativeLibraryDir` because `useLegacyPackaging` is on in the app build file (it applies to both flavors). The Play flavor has no PRoot files. Linux mode is unavailable on x86_64 devices. The Alpine root filesystem is downloaded and verified against the signed manifest.
 
 ## 10. Budgets
 

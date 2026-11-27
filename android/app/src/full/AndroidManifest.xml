@@ -10,9 +10,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
-    <application
-        android:extractNativeLibs="true"
-        tools:replace="android:extractNativeLibs">
+    <application>
         <service
             android:name=".linux.LinuxSessionService"
             android:exported="false"

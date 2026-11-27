@@ -43,6 +43,16 @@ android {
         }
     }
 
+    packaging {
+        jniLibs {
+            // Linux mode runs libproot.so from nativeLibraryDir, the only place Android lets an app
+            // execute a file from, so the libraries must be extracted at install time. AGP refuses
+            // extractNativeLibs in a manifest and has no per-variant switch, so this applies to both
+            // flavors (docs/specs/linux-spike.md section 5).
+            useLegacyPackaging = true
+        }
+    }
+
     signingConfigs {
         // Release signing reads the environment; see docs/development.md section 5.
         val keystorePath = System.getenv("TETHER_KEYSTORE_PATH")

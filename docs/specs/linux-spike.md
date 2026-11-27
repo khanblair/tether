@@ -36,7 +36,7 @@ Start times in the app process: `--version` 8 to 10 ms, a musl shell 33 to 36 ms
 
 ## 5. What Tether must do
 
-- Ship `libproot.so` and `libproot-loader.so` in `jniLibs/arm64-v8a` of the `full` flavor. The full source-set manifest sets `android:extractNativeLibs="true"`, because the default leaves no file to execute. AGP 9.5.1 exposes `useLegacyPackaging` only in the global DSL, so it is not used here.
+- Ship `libproot.so` and `libproot-loader.so` in `jniLibs/arm64-v8a` of the `full` flavor. The app build file sets `android.packaging.jniLibs.useLegacyPackaging = true`, because the default leaves no file to execute. AGP 9.5.1 rejects `android:extractNativeLibs` in a manifest (found when `assembleFullDebug` failed) and its variant API has no per-variant switch, so the setting applies to both flavors: the play flavor installs larger, with `libtether_core.so` extracted.
 - Read `ApplicationInfo.nativeLibraryDir` at every start. The path changed between two installs. Never store it.
 - Always set `PROOT_LOADER=<nativeLibraryDir>/libproot-loader.so`. Make `loader_path` required in `proot.rs` (it is optional now).
 - Keep the app in a foreground state while Linux runs. The full flavor has a `specialUse` foreground service with the `linux-userland` subtype, an ongoing low-importance `linux_session` notification, and the `FOREGROUND_SERVICE` and `FOREGROUND_SERVICE_SPECIAL_USE` permissions. The Executors screen offers a setting for only while a shell or server runs, or whenever Linux mode is installed. The Play flavor uses a no-op controller.

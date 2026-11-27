@@ -15,6 +15,7 @@ import androidx.navigation.compose.composable
 import app.tether.MainActivity
 import app.tether.R
 import app.tether.TetherApp
+import app.tether.appearance.AppearanceScreen
 import app.tether.di.AppModule
 import app.tether.settings.DataScreen
 import app.tether.settings.DataViewModel
@@ -43,6 +44,7 @@ const val SETTINGS_BUDGETS_ROUTE = "settings/budgets"
 const val SETTINGS_NOTIFICATIONS_ROUTE = "settings/notifications"
 const val SETTINGS_PRIVACY_ROUTE = "settings/privacy"
 const val SETTINGS_DATA_ROUTE = "settings/data"
+const val SETTINGS_APPEARANCE_ROUTE = "settings/appearance"
 
 /** Skills and memory. Area A3 changes this constant when its screens exist. */
 const val SKILLS_MEMORY_ROUTE = "settings/skills-memory"
@@ -141,6 +143,9 @@ private fun NavGraphBuilder.systemRoutes(
     module: AppModule,
     nav: TetherNav,
 ) {
+    composable(SETTINGS_APPEARANCE_ROUTE) {
+        AppearanceScreen(module = module, onBack = nav::back)
+    }
     composable(SETTINGS_NOTIFICATIONS_ROUTE) {
         val deps = settingsDepsOf(LocalContext.current)
         val context = LocalContext.current

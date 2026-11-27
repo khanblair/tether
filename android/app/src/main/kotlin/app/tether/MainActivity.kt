@@ -21,6 +21,7 @@ import app.tether.appearance.effectiveDensity
 import app.tether.design.TetherTheme
 import app.tether.nav.TetherNavHost
 import app.tether.settings.AppLockLayers
+import androidx.compose.ui.graphics.Color as ComposeColor
 
 /** The single activity. All screens are Compose destinations. */
 class MainActivity : ComponentActivity() {
@@ -82,7 +83,10 @@ class MainActivity : ComponentActivity() {
             CompositionLocalProvider(
                 LocalDensity provides effectiveDensity(LocalDensity.current, appearance),
             ) {
-                TetherTheme(mode = mode) {
+                TetherTheme(
+                    mode = mode,
+                    accent = appearance.accentArgb?.let { ComposeColor(it) },
+                ) {
                     SystemBars(dark = TetherTheme.isDark)
                     AppLockLayers(locked = locked, onUnlock = ::requestUnlock) {
                         TetherNavHost(module = module)

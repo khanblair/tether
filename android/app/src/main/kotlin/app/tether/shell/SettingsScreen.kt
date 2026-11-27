@@ -9,10 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -26,6 +23,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import app.tether.R
+import app.tether.appearance.Appearance
+import app.tether.appearance.AppearanceSummaryLabels
+import app.tether.appearance.TEXT_FOLLOW_SYSTEM
+import app.tether.appearance.appearanceRowSummary
+import app.tether.design.Palette
 import app.tether.design.TetherIcons
 import app.tether.design.TetherTheme
 import app.tether.design.ThemeMode
@@ -36,6 +38,7 @@ import app.tether.design.components.TetherTopBar
 import app.tether.design.tokens.TetherSpace
 import app.tether.di.AppModule
 import app.tether.nav.Route
+import app.tether.nav.SETTINGS_APPEARANCE_ROUTE
 import app.tether.nav.SETTINGS_BUDGETS_ROUTE
 import app.tether.nav.SETTINGS_DATA_ROUTE
 import app.tether.nav.SETTINGS_EXECUTORS_ROUTE
@@ -59,8 +62,7 @@ import app.tether.settings.budgets.dollarsText
 import app.tether.updates.UpdatesUiState
 
 /**
- * The main Settings list. Each group is a feature's list; each row opens its own screen. The theme
- * choice stays on this list, and Providers and About open their existing screens.
+ * The main Settings list. Each group is a feature's list; each row opens its own screen.
  */
 @Composable
 fun SettingsScreen(
@@ -105,6 +107,7 @@ fun SettingsScreen(
         rowsModel.refresh()
     }
     val mode by module.themeMode.collectAsStateWithLifecycle()
+    val appearance by module.appearance.appearance.collectAsStateWithLifecycle()
     val updateState by module.updates.state.collectAsStateWithLifecycle()
     Scaffold(
         containerColor = TetherTheme.colors.bg,
@@ -125,16 +128,21 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(TetherSpace.space3),
         ) {
             MainGroups(summary, rows, onOpen, onOpenProviders)
-            Text(
-                text = stringResource(R.string.settings_theme_title),
-                style = MaterialTheme.typography.titleSmall,
-            )
-            ThemeChoices(mode, module)
-            Text(
-                text = stringResource(R.string.settings_theme_note),
-                style = MaterialTheme.typography.bodySmall,
-                color = TetherTheme.colors.text3,
-            )
+            ListGroup {
+                ListRow(
+                    title = stringResource(R.string.appearance_title),
+                    subtitle = appearanceSummary(mode, appearance),
+                    leading = {
+                        TetherIcon(
+                            icon = TetherIcons.Palette,
+                            contentDescription = null,
+                            tint = TetherTheme.colors.text2,
+                        )
+                    },
+                    trailing = { ChevronIcon() },
+                    onClick = { onOpen(SETTINGS_APPEARANCE_ROUTE) },
+                )
+            }
             ListGroup {
                 ListRow(
                     title = stringResource(R.string.settings_area_list_notifications),
@@ -319,27 +327,39 @@ private fun dataSubtitle(bytes: Long?): String =
         )
     } ?: stringResource(R.string.settings_area_data_unknown)
 
-/** The theme chips. The choice applies at once and is saved. */
 @Composable
-private fun ThemeChoices(
+private fun appearanceSummary(
     mode: ThemeMode,
-    module: AppModule,
-) {
-    val labels =
-        mapOf(
-            ThemeMode.System to R.string.settings_theme_system,
-            ThemeMode.Light to R.string.settings_theme_light,
-            ThemeMode.Dark to R.string.settings_theme_dark,
+    appearance: Appearance,
+): String {
+    val themeName =
+        stringResource(
+            when (mode) {
+                ThemeMode.System -> R.string.settings_theme_system
+                ThemeMode.Light -> R.string.settings_theme_light
+                ThemeMode.Dark -> R.string.settings_theme_dark
+            },
         )
-    Column(verticalArrangement = Arrangement.spacedBy(TetherSpace.space2)) {
-        ThemeMode.entries.forEach { option ->
-            FilterChip(
-                selected = option == mode,
-                onClick = { module.setThemeMode(option) },
-                label = { Text(text = stringResource(labels.getValue(option))) },
-            )
+    val themeSummary = stringResource(R.string.appearance_theme_summary, themeName)
+    val textLabel =
+        if (appearance.textPercent == TEXT_FOLLOW_SYSTEM) {
+            stringResource(R.string.appearance_text_follows_system)
+        } else {
+            stringResource(R.string.appearance_text_summary, appearance.textPercent)
         }
-    }
+    val interfaceLabel =
+        stringResource(R.string.appearance_interface_summary, appearance.interfacePercent)
+    return appearanceRowSummary(
+        mode = mode,
+        appearance = appearance,
+        labels =
+            AppearanceSummaryLabels(
+                theme = { themeSummary },
+                followsSystem = textLabel,
+                textPercent = { textLabel },
+                interfacePercent = { interfaceLabel },
+            ),
+    )
 }
 
 @Composable

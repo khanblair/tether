@@ -1,6 +1,6 @@
 use tether_types::{ModelRef, PermissionMode, ProjectId, Provider};
 
-use crate::{GitIdentity, Store, StoreError};
+use crate::{GitIdentity, Store, StoreError, project_dir};
 
 fn model() -> ModelRef {
     ModelRef {
@@ -29,6 +29,22 @@ fn duplicate_project_names_get_distinct_paths() {
     let second = store.create_project("My App", 101).unwrap();
     assert_ne!(first.path, second.path);
     assert_ne!(first.id, second.id);
+}
+
+#[test]
+fn saved_new_project_root_is_copied_to_new_projects_and_can_be_cleared() {
+    let mut store = Store::open_in_memory().unwrap();
+    store.set_new_project_root(Some("/shared/tether")).unwrap();
+    let shared = store.create_project("Shared", 100).unwrap();
+    assert_eq!(shared.root.as_deref(), Some("/shared/tether"));
+    assert_eq!(
+        project_dir(std::path::Path::new("/private/workspaces"), &shared),
+        std::path::Path::new("/shared/tether").join(&shared.path)
+    );
+    store.set_new_project_root(None).unwrap();
+    let private = store.create_project("Private", 101).unwrap();
+    assert_eq!(private.root, None);
+    assert_eq!(store.new_project_root().unwrap(), None);
 }
 
 #[test]

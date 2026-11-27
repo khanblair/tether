@@ -180,7 +180,10 @@ fn migration_fifteen_keeps_existing_sessions_unarchived() {
          VALUES ('s', 'p', 'openai', 'm', 'ask', 'idle', 1, 1);",
     )
     .unwrap();
-    assert_eq!(apply(&mut conn, MIGRATIONS).unwrap(), 15);
+    assert_eq!(
+        apply(&mut conn, MIGRATIONS).unwrap(),
+        crate::migrations::latest(MIGRATIONS)
+    );
     let archived: i64 = conn
         .query_row("SELECT archived FROM sessions WHERE id = 's'", [], |row| {
             row.get(0)

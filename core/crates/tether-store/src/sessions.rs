@@ -38,7 +38,7 @@ pub struct SessionRecord {
 }
 
 impl Store {
-    /// Returns the project directory relative to the private workspaces root.
+    /// Returns the saved project directory name.
     ///
     /// # Errors
     /// Returns an error when SQLite cannot read the project.

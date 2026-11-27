@@ -170,6 +170,57 @@ fn a_project_path_must_stay_inside_the_workspace_folder() {
 }
 
 #[test]
+fn migration_sixteen_keeps_existing_projects_on_the_private_default_root() {
+    let mut connection = rusqlite::Connection::open_in_memory().unwrap();
+    crate::migrations::apply(&mut connection, &crate::migrations::MIGRATIONS[..15]).unwrap();
+    connection
+        .execute(
+            "INSERT INTO projects (id, name, path, created_at) VALUES ('old', 'old', 'old', 1)",
+            [],
+        )
+        .unwrap();
+    assert_eq!(
+        crate::migrations::apply(&mut connection, crate::migrations::MIGRATIONS).unwrap(),
+        crate::migrations::latest(crate::migrations::MIGRATIONS)
+    );
+    let root: Option<String> = connection
+        .query_row("SELECT root FROM projects WHERE id = 'old'", [], |row| {
+            row.get(0)
+        })
+        .unwrap();
+    assert_eq!(root, None);
+    let strict: i64 = connection
+        .query_row(
+            "SELECT strict FROM pragma_table_list WHERE name = 'app_settings'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(strict, 1);
+}
+
+#[test]
+fn project_root_check_accepts_absolute_paths_and_rejects_traversal() {
+    let store = Store::open_in_memory().unwrap();
+    let insert = "INSERT INTO projects (id, name, path, root, created_at)
+                  VALUES (?1, 'n', ?2, ?3, 1)";
+    store
+        .conn
+        .execute(insert, ["valid", "valid", "/shared/tether"])
+        .unwrap();
+    for (id, root) in [
+        ("relative", "shared/tether"),
+        ("parent", "/a/../x"),
+        ("dot", "/a/.."),
+    ] {
+        assert!(
+            store.conn.execute(insert, [id, id, root]).is_err(),
+            "accepted root {root:?}"
+        );
+    }
+}
+
+#[test]
 fn two_projects_cannot_share_a_path() {
     let store = seeded();
     let twin = store.conn.execute(

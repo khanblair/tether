@@ -73,6 +73,14 @@ pub(crate) const MIGRATIONS: &[Migration] = &[
         version: 15,
         sql: include_str!("../migrations/0015_session_archive.sql"),
     },
+    Migration {
+        version: 16,
+        sql: include_str!("../migrations/0016_project_root.sql"),
+    },
+    Migration {
+        version: 17,
+        sql: include_str!("../migrations/0017_github_token_info.sql"),
+    },
 ];
 
 /// The schema version kept in `PRAGMA user_version`. A new database reports 0.

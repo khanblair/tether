@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="workspace_title">Workspace folder</string>
+    <string name="workspace_onboarding_title">Where should Tether work?</string>
+    <string name="workspace_current_folder">Current projects folder</string>
+    <string name="workspace_private">Private</string>
+    <string name="workspace_custom">Custom</string>
+    <string name="workspace_private_choice">Private storage (recommended)</string>
+    <string name="workspace_private_choice_body">Only Tether can read this folder.</string>
+    <string name="workspace_custom_choice">A folder I choose</string>
+    <string name="workspace_custom_choice_body">Choose a folder that other apps can see.</string>
+    <string name="workspace_path_label">Folder path</string>
+    <string name="workspace_path_hint">For example, /storage/emulated/0/Tether</string>
+    <string name="workspace_save">Save folder</string>
+    <string name="workspace_use_private">Use private storage</string>
+    <string name="workspace_allow_access">Allow all files access</string>
+    <string name="workspace_permission_note">Allow access before saving a shared folder.</string>
+    <string name="workspace_new_projects_note">New projects go here. Existing projects stay where they are.</string>
+    <string name="workspace_custom_note">Other apps and a computer can see files in this folder.</string>
+    <string name="workspace_onboarding_intro">Tether keeps projects and app data on this phone.</string>
+    <string name="workspace_data_title">Where your data lives</string>
+    <string name="workspace_data_projects">Projects</string>
+    <string name="workspace_data_database">Database</string>
+    <string name="workspace_data_secrets">Secrets</string>
+    <string name="workspace_data_checkpoints">Checkpoints</string>
+    <string name="workspace_data_memory">Memory</string>
+    <string name="workspace_data_skills">Skills</string>
+    <string name="workspace_data_vault">Vault</string>
+    <string name="workspace_data_crash_report">Crash report</string>
+    <string name="workspace_error_empty_path">Enter a folder path</string>
+    <string name="workspace_error_not_absolute">Use a full path that starts with /</string>
+    <string name="workspace_error_cannot_create">That folder could not be created</string>
+    <string name="workspace_error_not_directory">Pick a folder, not a file</string>
+    <string name="workspace_error_symlink">Pick a folder that is not a link</string>
+    <string name="workspace_error_not_writable">That folder is not writable</string>
+    <string name="workspace_error_inside_private">Pick a folder outside the app private storage</string>
+    <string name="workspace_error_filesystem_root">Pick a folder below the filesystem root</string>
+    <string name="workspace_error_inside_project">Pick a folder that is not inside a project</string>
+    <string name="workspace_error_unavailable">That folder is not available</string>
+    <string name="workspace_error_read">Tether could not read the workspace folder</string>
+</resources>

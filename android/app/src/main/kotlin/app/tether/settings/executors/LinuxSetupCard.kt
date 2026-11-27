@@ -34,6 +34,7 @@ fun LinuxSetupCard(
     modifier: Modifier = Modifier,
     source: String? = null,
     onRemove: (() -> Unit)? = null,
+    onOpenShell: (() -> Unit)? = null,
 ) {
     val colors = TetherTheme.colors
     val body = MaterialTheme.typography.bodySmall
@@ -79,7 +80,7 @@ fun LinuxSetupCard(
                     style = body,
                     color = colors.text2,
                 )
-                ReadyActions(onRepair = onRepair, onRemove = onRemove)
+                ReadyActions(onRepair = onRepair, onRemove = onRemove, onOpenShell = onOpenShell)
             }
             is LinuxState.Broken -> BrokenBody(state = state, source = source, onRepair = onRepair)
         }
@@ -126,8 +127,12 @@ private fun BrokenBody(
 private fun ReadyActions(
     onRepair: (() -> Unit)?,
     onRemove: (() -> Unit)?,
+    onOpenShell: (() -> Unit)?,
 ) {
     Row(horizontalArrangement = Arrangement.spacedBy(TetherSpace.space2)) {
+        onOpenShell?.let {
+            PrimaryButton(label = stringResource(R.string.linux_open_shell), onClick = it)
+        }
         onRepair?.let {
             TetherTextButton(label = stringResource(R.string.executors_linux_repair), onClick = it)
         }

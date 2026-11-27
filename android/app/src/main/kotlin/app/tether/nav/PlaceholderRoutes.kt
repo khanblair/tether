@@ -20,6 +20,7 @@ internal fun NavGraphBuilder.placeholderRoutes(nav: TetherNav) {
             Route.Providers,
             Route.About,
             Route.Onboarding,
+            Route.Linux,
         )
     Route.entries.filter { it !in real && it != Route.Session }.forEach { route ->
         composable(route.path) { PlaceholderScreen(route = route, onBack = nav::back) }

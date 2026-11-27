@@ -24,6 +24,18 @@ class ExecutorsMappingTest {
     }
 
     @Test
+    fun the_linux_shell_errors_map_to_the_closest_failures() {
+        assertEquals(
+            ExecutorsFailure.Unavailable,
+            ExecutorRuntimeException.LinuxNotReady().toFailure(),
+        )
+        assertEquals(
+            ExecutorsFailure.Unknown,
+            ExecutorRuntimeException.LinuxShellAlreadyOpen().toFailure(),
+        )
+    }
+
+    @Test
     fun every_ci_error_maps_to_one_failure() {
         assertEquals(ExecutorsFailure.NoRepository, CiRuntimeException.Repository().toFailure())
         assertEquals(ExecutorsFailure.NotSignedIn, CiRuntimeException.NotSignedIn().toFailure())

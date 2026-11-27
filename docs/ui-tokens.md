@@ -148,7 +148,18 @@ Rules:
 4. `text-3` is the lightest text allowed on any surface. `text-disabled` is only for disabled controls.
 5. A new color pair is added to the `contrast` array in `tokens.json` before it is used. The check then measures it and this table gets a row.
 
-## 4. Typography
+## 4. User accent
+
+The user picks one accent color. Tether keeps its hue and derives the light and dark palettes from
+it. Lightness and chroma may change when needed for readability. Text on the accent chooses a
+near-black or near-white tone. Soft, tonal, ink, and secondary accent colors use the same hue
+family. The secondary accent shifts the hue by about 25 degrees.
+
+Plum is the unchanged default. The hand-tuned token values stay in use when the seed is Plum. The
+palette code and its unit tests enforce every accent contrast pair for every seed, including custom
+near-gray, white, and black colors.
+
+## 5. Typography
 
 Fonts: IBM Plex Sans (UI), IBM Plex Mono (code). Bundled weights: Sans 400, 500, 600; Mono 400, 500. Sizes in sp so system font scaling applies.
 
@@ -169,7 +180,7 @@ Fonts: IBM Plex Sans (UI), IBM Plex Mono (code). Bundled weights: Sans 400, 500,
 
 Rules: no font below 12 sp. Line length in the transcript caps at 72 characters on wide screens through `layout.transcript-max`.
 
-## 5. Spacing
+## 6. Spacing
 
 4 dp base scale. In Kotlin: `TetherSpace.space4`.
 
@@ -190,7 +201,7 @@ Rules: no font below 12 sp. Line length in the transcript caps at 72 characters 
 
 Defaults: screen horizontal padding `space.4`; gap between transcript blocks `space.4`; inside cards `space.3`; between a label and its control `space.1`.
 
-## 6. Radius
+## 7. Radius
 
 | Token | dp | Use |
 |---|---|---|
@@ -201,7 +212,7 @@ Defaults: screen horizontal padding `space.4`; gap between transcript blocks `sp
 | `radius.lg` | 20 | Top corners of bottom sheets |
 | `radius.full` | 999 | Avatars, circular icon buttons, the send button |
 
-## 7. Borders and elevation
+## 8. Borders and elevation
 
 | Token | Value | Use |
 |---|---|---|
@@ -217,7 +228,7 @@ In Kotlin, `TetherElevation.level1` to `level3` are 1, 4, and 12 dp. The shadow 
 
 Rule: separate surfaces by tone first, shadow second, border last. Cards in the transcript use no border.
 
-## 8. Focus
+## 9. Focus
 
 | Token | Value |
 |---|---|
@@ -227,7 +238,7 @@ Rule: separate surfaces by tone first, shadow second, border last. Cards in the 
 
 Every focusable element shows the ring when focused by keyboard or switch access. Touch focus does not show the ring.
 
-## 9. Motion
+## 10. Motion
 
 | Token | Value | Use |
 |---|---|---|
@@ -243,7 +254,7 @@ Every focusable element shows the ring when focused by keyboard or switch access
 
 Rules: no motion longer than 300 ms. No bouncing or spring overshoot. With the system "remove animations" setting on, all durations become `motion.instant` except progress indicators.
 
-## 10. Layout sizes
+## 11. Layout sizes
 
 | Token | dp | Use |
 |---|---|---|
@@ -265,7 +276,7 @@ Rules: no motion longer than 300 ms. No bouncing or spring overshoot. With the s
 | `layout.pane-list` | 320 | List pane width on expanded layouts |
 | `layout.pane-detail-min` | 360 | Minimum detail pane width |
 
-## 11. Breakpoints
+## 12. Breakpoints
 
 Based on Android window size classes, by window width:
 
@@ -276,7 +287,7 @@ Based on Android window size classes, by window width:
 | `breakpoint.expanded` | 840 to 1199 dp | Two panes: transcript and diff or files |
 | `breakpoint.large` | 1200 dp and up | Three panes: sessions, transcript, diff or files |
 
-## 12. Layers
+## 13. Layers
 
 | Token | Order | Contents |
 |---|---|---|
@@ -288,7 +299,7 @@ Based on Android window size classes, by window width:
 | `layer.snackbar` | 50 | Snackbars |
 | `layer.overlay` | 60 | Debug overlays (debug builds only) |
 
-## 13. Icons
+## 14. Icons
 
 Status: planned. P0 uses text labels. The set below arrives with the first feature screens.
 
@@ -300,7 +311,7 @@ Status: planned. P0 uses text labels. The set below arrives with the first featu
 
 The launcher icon and the logo are separate from this set. The logo source is `images/logo.svg`. The Android adaptive icon is a vector foreground (`ic_launcher_foreground.xml`) on `mint-100`, plus a single color monochrome layer for themed icons on Android 13 and later.
 
-## 14. Charts
+## 15. Charts
 
 Used only on the `/cost` screen and Linux mode disk usage.
 
@@ -315,7 +326,7 @@ Used only on the `/cost` screen and Linux mode disk usage.
 
 Rules: bar and line charts only. Every chart has a text summary above it and a data table behind a "Show data" toggle. Series are also told apart by pattern or direct labels, not color alone. In the dark theme `series-1` (mint) and `series-3` (green) are close, so they must never appear as neighbors without a pattern or label.
 
-## 15. Themes and generated outputs
+## 16. Themes and generated outputs
 
 Themes: System (default), Light, Dark. The theme follows the system setting unless the user overrides it in Settings. In P0 the override is held in memory only; persistence arrives with settings storage in P1.
 
@@ -361,7 +372,7 @@ The CSS form uses `--tt-` names. The shape of the output, abbreviated:
 
 The docs site uses this CSS, so the site follows the same light and dark themes as the app.
 
-## 16. Changing tokens
+## 17. Changing tokens
 
 1. Edit `tokens/tokens.json`.
 2. Run `just tokens`. It fails if any listed contrast pair drops below its requirement.

@@ -58,6 +58,35 @@ class ArchiveReasonTest {
     }
 
     @Test
+    fun workspace_root_errors_map_to_invalid_workspace_folder() {
+        val errors =
+            listOf(
+                ProjectRuntimeException.RootNotAbsolute(),
+                ProjectRuntimeException.RootCannotBeCreated(),
+                ProjectRuntimeException.RootNotDirectory(),
+                ProjectRuntimeException.RootIsSymlink(),
+                ProjectRuntimeException.RootNotWritable(),
+                ProjectRuntimeException.RootInsidePrivateRoot(),
+                ProjectRuntimeException.RootIsFilesystemRoot(),
+                ProjectRuntimeException.RootInsideProject(),
+                ProjectRuntimeException.RootUnavailable(),
+            )
+
+        errors.forEach { error ->
+            assertEquals(ArchiveReason.InvalidWorkspaceFolder, error.toArchiveReason())
+        }
+
+        assertEquals(
+            ArchiveReason.InvalidName,
+            ProjectRuntimeException.InvalidName().toArchiveReason(),
+        )
+        assertEquals(
+            ArchiveReason.Unavailable,
+            ProjectRuntimeException.Unavailable().toArchiveReason(),
+        )
+    }
+
+    @Test
     fun an_archive_error_with_an_unknown_detail_keeps_the_unknown_reason() {
         val error = ProjectRuntimeException.Archive(detail = "new detail")
         assertEquals(ArchiveReason.UnknownDetail, error.toArchiveReason())

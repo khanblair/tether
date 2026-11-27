@@ -19,6 +19,7 @@ fun ArchiveReason.messageRes(): Int =
         ArchiveReason.Cancelled -> R.string.archive_reason_cancelled
         ArchiveReason.ProjectNotFound -> R.string.archive_reason_project_not_found
         ArchiveReason.Unavailable -> R.string.archive_reason_unavailable
+        ArchiveReason.InvalidWorkspaceFolder -> R.string.archive_reason_invalid_workspace_folder
         ArchiveReason.Unexpected -> R.string.archive_reason_unexpected
         ArchiveReason.ReadFailed -> R.string.archive_reason_read
         ArchiveReason.WriteFailed -> R.string.archive_reason_write

@@ -9,7 +9,7 @@ extensions.configure<ApplicationExtension> {
 }
 
 val rustCoreDir = rootProject.layout.projectDirectory.dir("../core")
-val targetAbis = listOf("arm64-v8a", "x86_64")
+val targetAbis = tetherAbis(providers)
 
 extensions.configure<ApplicationAndroidComponentsExtension> {
     onVariants { variant ->

@@ -38,6 +38,8 @@ Tokens and bindings are committed, so a fresh clone builds without `just tokens`
 
 To run on an emulator: start one (`emulator -avd <name>`), then `just run`. P0 was verified on a Pixel 9 arm64 emulator.
 
+To run from Android Studio, open `android/`, pick the `fullDebug` build variant, and press Run. A debug APK holds the core for both ABIs and is about 360 MB, which can fill a small emulator (`INSTALL_FAILED_INSUFFICIENT_STORAGE`). On an arm64 emulator, build one ABI: add `tether.abis=arm64-v8a` to `~/.gradle/gradle.properties` (not to the repo's `gradle.properties`). The debug APK drops to about 135 MB and the Rust build time halves. CI and releases never set it, so they build both ABIs.
+
 ## 3. Workspace layout
 
 See project-structure.md. Day to day you will mostly touch `core/crates/tether-engine`, a provider or tool crate, and one `android/feature-*` module.

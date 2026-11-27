@@ -1047,7 +1047,11 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_tether_core_checksum_method_projectruntime_load_project(
     ): Int
+    external fun uniffi_tether_core_checksum_method_projectruntime_set_new_project_root(
+    ): Int
     external fun uniffi_tether_core_checksum_method_projectruntime_set_project_defaults(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_projectruntime_workspace_location(
     ): Int
     external fun uniffi_tether_core_checksum_method_providersettings_has_key(
     ): Int
@@ -1552,8 +1556,12 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_tether_core_fn_method_projectruntime_load_project(`ptr`: Long,`id`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_tether_core_fn_method_projectruntime_set_new_project_root(`ptr`: Long,`root`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_tether_core_fn_method_projectruntime_set_project_defaults(`ptr`: Long,`projectId`: RustBuffer.ByValue,`provider`: RustBuffer.ByValue,`modelId`: RustBuffer.ByValue,`mode`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_tether_core_fn_method_projectruntime_workspace_location(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_tether_core_fn_clone_providersettings(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
     external fun uniffi_tether_core_fn_free_providersettings(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -2075,7 +2083,7 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_tether_core_checksum_method_gitruntime_git_diff() and 0xFFFF) != 41524) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_tether_core_checksum_method_gitruntime_git_init() and 0xFFFF) != 45562) {
+    if ((lib.uniffi_tether_core_checksum_method_gitruntime_git_init() and 0xFFFF) != 12405) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_method_gitruntime_git_log() and 0xFFFF) != 56618) {
@@ -2099,7 +2107,7 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_tether_core_checksum_method_gitruntime_github_sign_in_start() and 0xFFFF) != 15943) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_tether_core_checksum_method_gitruntime_github_sign_in_with_token() and 0xFFFF) != 8884) {
+    if ((lib.uniffi_tether_core_checksum_method_gitruntime_github_sign_in_with_token() and 0xFFFF) != 39989) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_method_gitruntime_github_sign_out() and 0xFFFF) != 20463) {
@@ -2180,7 +2188,13 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_tether_core_checksum_method_projectruntime_load_project() and 0xFFFF) != 45624) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_tether_core_checksum_method_projectruntime_set_new_project_root() and 0xFFFF) != 5173) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_tether_core_checksum_method_projectruntime_set_project_defaults() and 0xFFFF) != 3180) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_projectruntime_workspace_location() and 0xFFFF) != 11030) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_method_providersettings_has_key() and 0xFFFF) != 45540) {
@@ -2303,7 +2317,7 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_tether_core_checksum_method_sessionruntime_set_compaction_threshold() and 0xFFFF) != 61011) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_tether_core_checksum_method_sessionruntime_configure_executors() and 0xFFFF) != 40370) {
+    if ((lib.uniffi_tether_core_checksum_method_sessionruntime_configure_executors() and 0xFFFF) != 9404) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_method_sessionruntime_executor_availability() and 0xFFFF) != 2158) {
@@ -5273,7 +5287,7 @@ public interface GitRuntimeInterface {
     fun `gitDiff`(`projectId`: kotlin.String, `spec`: GitDiffSpecView): kotlin.String
     
     /**
-     * Initializes a repository in an empty project folder.
+     * Initializes a repository in the project folder.
      *
      * # Errors
      * Returns an error when the project is absent, non-empty, or the branch is invalid.
@@ -5340,7 +5354,7 @@ public interface GitRuntimeInterface {
      * Validates and stores a GitHub personal access token.
      *
      * # Errors
-     * Returns an error when GitHub rejects the token or it lacks the `repo` scope.
+     * Returns an error when GitHub rejects the token or its response is unusable.
      */
     fun `githubSignInWithToken`(`token`: kotlin.String)
     
@@ -5589,7 +5603,7 @@ open class GitRuntime: Disposable, AutoCloseable, GitRuntimeInterface
 
     
     /**
-     * Initializes a repository in an empty project folder.
+     * Initializes a repository in the project folder.
      *
      * # Errors
      * Returns an error when the project is absent, non-empty, or the branch is invalid.
@@ -5758,7 +5772,7 @@ open class GitRuntime: Disposable, AutoCloseable, GitRuntimeInterface
      * Validates and stores a GitHub personal access token.
      *
      * # Errors
-     * Returns an error when GitHub rejects the token or it lacks the `repo` scope.
+     * Returns an error when GitHub rejects the token or its response is unusable.
      */
     @Throws(GitRuntimeException::class)override fun `githubSignInWithToken`(`token`: kotlin.String)
         = 
@@ -7671,12 +7685,28 @@ public interface ProjectRuntimeInterface {
     fun `loadProject`(`id`: kotlin.String): ProjectView
     
     /**
+     * Saves the root used for new projects. Existing projects keep their roots.
+     *
+     * # Errors
+     * Returns a typed error when the root is invalid or storage cannot be updated.
+     */
+    fun `setNewProjectRoot`(`root`: kotlin.String?)
+    
+    /**
      * Saves a project's model and permission defaults.
      *
      * # Errors
      * Returns an error for an incomplete model pair, unknown project, or unavailable storage.
      */
     fun `setProjectDefaults`(`projectId`: kotlin.String, `provider`: ProviderView?, `modelId`: kotlin.String?, `mode`: PermissionModeView?)
+    
+    /**
+     * Reads the default and saved roots used by projects.
+     *
+     * # Errors
+     * Returns an error when the database cannot be read.
+     */
+    fun `workspaceLocation`(): WorkspaceLocationView
     
     companion object
 }
@@ -8068,6 +8098,26 @@ open class ProjectRuntime: Disposable, AutoCloseable, ProjectRuntimeInterface
 
     
     /**
+     * Saves the root used for new projects. Existing projects keep their roots.
+     *
+     * # Errors
+     * Returns a typed error when the root is invalid or storage cannot be updated.
+     */
+    @Throws(ProjectRuntimeException::class)override fun `setNewProjectRoot`(`root`: kotlin.String?)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(ProjectRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_projectruntime_set_new_project_root(
+        it,
+        
+        FfiConverterOptionalString.lower(`root`),_status)
+}
+    }
+    
+    
+
+    
+    /**
      * Saves a project's model and permission defaults.
      *
      * # Errors
@@ -8087,6 +8137,26 @@ open class ProjectRuntime: Disposable, AutoCloseable, ProjectRuntimeInterface
 }
     }
     
+    
+
+    
+    /**
+     * Reads the default and saved roots used by projects.
+     *
+     * # Errors
+     * Returns an error when the database cannot be read.
+     */
+    @Throws(ProjectRuntimeException::class)override fun `workspaceLocation`(): WorkspaceLocationView {
+            return FfiConverterTypeWorkspaceLocationView.lift(
+    callWithHandle {
+    uniffiRustCallWithError(ProjectRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_projectruntime_workspace_location(
+        it,
+        _status)
+}
+    }
+    )
+    }
     
 
     
@@ -10699,7 +10769,7 @@ public interface SessionRuntimeInterface {
      * Stores platform executor paths for later session opens.
      *
      * # Errors
-     * Returns an error when a supplied path contains unsafe control characters.
+     * Returns an error when a supplied path is unsafe, relative, or incomplete.
      */
     fun `configureExecutors`(`paths`: ExecutorPathsView)
     
@@ -11634,7 +11704,7 @@ open class SessionRuntime: Disposable, AutoCloseable, SessionRuntimeInterface
      * Stores platform executor paths for later session opens.
      *
      * # Errors
-     * Returns an error when a supplied path contains unsafe control characters.
+     * Returns an error when a supplied path is unsafe, relative, or incomplete.
      */
     @Throws(ExecutorRuntimeException::class)override fun `configureExecutors`(`paths`: ExecutorPathsView)
         = 
@@ -16401,7 +16471,7 @@ data class ExecutorAvailabilityView (
     var `sandboxPrograms`: List<kotlin.String>
     , 
     /**
-     * Whether Linux mode has PRoot and a ready root filesystem.
+     * Whether Linux mode has PRoot, its loader, and a ready root filesystem.
      */
     var `linuxReady`: kotlin.Boolean
     , 
@@ -17112,6 +17182,16 @@ data class GithubStatusView (
      * Scopes reported by the last token validation.
      */
     var `scopes`: List<kotlin.String>
+    , 
+    /**
+     * The kind of the saved token, if one is known.
+     */
+    var `tokenKind`: GithubTokenKindView?
+    , 
+    /**
+     * Whether the last repository reach probe succeeded.
+     */
+    var `canReadRepos`: kotlin.Boolean
     
 ){
     
@@ -17133,6 +17213,8 @@ public object FfiConverterTypeGithubStatusView: FfiConverterRustBuffer<GithubSta
             FfiConverterOptionalString.read(buf),
             FfiConverterOptionalString.read(buf),
             FfiConverterSequenceString.read(buf),
+            FfiConverterOptionalTypeGithubTokenKindView.read(buf),
+            FfiConverterBoolean.read(buf),
         )
     }
 
@@ -17141,7 +17223,9 @@ public object FfiConverterTypeGithubStatusView: FfiConverterRustBuffer<GithubSta
             FfiConverterOptionalString.allocationSize(value.`login`) +
             FfiConverterOptionalString.allocationSize(value.`name`) +
             FfiConverterOptionalString.allocationSize(value.`email`) +
-            FfiConverterSequenceString.allocationSize(value.`scopes`)
+            FfiConverterSequenceString.allocationSize(value.`scopes`) +
+            FfiConverterOptionalTypeGithubTokenKindView.allocationSize(value.`tokenKind`) +
+            FfiConverterBoolean.allocationSize(value.`canReadRepos`)
     )
 
     override fun write(value: GithubStatusView, buf: ByteBuffer) {
@@ -17150,6 +17234,8 @@ public object FfiConverterTypeGithubStatusView: FfiConverterRustBuffer<GithubSta
             FfiConverterOptionalString.write(value.`name`, buf)
             FfiConverterOptionalString.write(value.`email`, buf)
             FfiConverterSequenceString.write(value.`scopes`, buf)
+            FfiConverterOptionalTypeGithubTokenKindView.write(value.`tokenKind`, buf)
+            FfiConverterBoolean.write(value.`canReadRepos`, buf)
     }
 }
 
@@ -18155,9 +18241,14 @@ data class ProjectView (
     var `name`: kotlin.String
     , 
     /**
-     * Directory name relative to the workspaces root.
+     * Directory name relative to the project's root.
      */
     var `path`: kotlin.String
+    , 
+    /**
+     * Absolute project root, or `None` for the private default root.
+     */
+    var `root`: kotlin.String?
     , 
     /**
      * Creation time in Unix milliseconds.
@@ -18207,6 +18298,7 @@ public object FfiConverterTypeProjectView: FfiConverterRustBuffer<ProjectView> {
             FfiConverterString.read(buf),
             FfiConverterString.read(buf),
             FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
             FfiConverterLong.read(buf),
             FfiConverterLong.read(buf),
             FfiConverterUInt.read(buf),
@@ -18220,6 +18312,7 @@ public object FfiConverterTypeProjectView: FfiConverterRustBuffer<ProjectView> {
             FfiConverterString.allocationSize(value.`id`) +
             FfiConverterString.allocationSize(value.`name`) +
             FfiConverterString.allocationSize(value.`path`) +
+            FfiConverterOptionalString.allocationSize(value.`root`) +
             FfiConverterLong.allocationSize(value.`createdAtMs`) +
             FfiConverterLong.allocationSize(value.`lastActivityMs`) +
             FfiConverterUInt.allocationSize(value.`sessionCount`) +
@@ -18232,6 +18325,7 @@ public object FfiConverterTypeProjectView: FfiConverterRustBuffer<ProjectView> {
             FfiConverterString.write(value.`id`, buf)
             FfiConverterString.write(value.`name`, buf)
             FfiConverterString.write(value.`path`, buf)
+            FfiConverterOptionalString.write(value.`root`, buf)
             FfiConverterLong.write(value.`createdAtMs`, buf)
             FfiConverterLong.write(value.`lastActivityMs`, buf)
             FfiConverterUInt.write(value.`sessionCount`, buf)
@@ -20222,6 +20316,61 @@ public object FfiConverterTypeWorkflowProposalView: FfiConverterRustBuffer<Workf
 
 
 /**
+ * The private default and saved roots used by project creation.
+ */
+data class WorkspaceLocationView (
+    /**
+     * The app's private default root.
+     */
+    var `defaultRoot`: kotlin.String
+    , 
+    /**
+     * The root saved for new projects, if any.
+     */
+    var `newProjectRoot`: kotlin.String?
+    , 
+    /**
+     * The root where the next project will be created.
+     */
+    var `effectiveRoot`: kotlin.String
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeWorkspaceLocationView: FfiConverterRustBuffer<WorkspaceLocationView> {
+    override fun read(buf: ByteBuffer): WorkspaceLocationView {
+        return WorkspaceLocationView(
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: WorkspaceLocationView) = (
+            FfiConverterString.allocationSize(value.`defaultRoot`) +
+            FfiConverterOptionalString.allocationSize(value.`newProjectRoot`) +
+            FfiConverterString.allocationSize(value.`effectiveRoot`)
+    )
+
+    override fun write(value: WorkspaceLocationView, buf: ByteBuffer) {
+            FfiConverterString.write(value.`defaultRoot`, buf)
+            FfiConverterOptionalString.write(value.`newProjectRoot`, buf)
+            FfiConverterString.write(value.`effectiveRoot`, buf)
+    }
+}
+
+
+
+/**
  * FFI view of [`BudgetScope`].
  */
 
@@ -22169,6 +22318,49 @@ public object FfiConverterTypeGitRuntimeError : FfiConverterRustBuffer<GitRuntim
 
 
 /**
+ * The kind of GitHub personal access token in use.
+ */
+
+enum class GithubTokenKindView {
+    
+    /**
+     * A classic personal access token.
+     */
+    CLASSIC,
+    /**
+     * A fine-grained personal access token.
+     */
+    FINE_GRAINED;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeGithubTokenKindView: FfiConverterRustBuffer<GithubTokenKindView> {
+    override fun read(buf: ByteBuffer) = try {
+        GithubTokenKindView.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: GithubTokenKindView) = 4UL
+
+    override fun write(value: GithubTokenKindView, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
  * Controls whether vault import merges into or replaces an empty vault.
  */
 
@@ -23131,6 +23323,87 @@ sealed class ProjectRuntimeException: kotlin.Exception() {
             get() = ""
     }
     
+    /**
+     * The selected root is not an absolute path.
+     */
+    class RootNotAbsolute(
+        ) : ProjectRuntimeException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * The selected root could not be created.
+     */
+    class RootCannotBeCreated(
+        ) : ProjectRuntimeException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * The selected root is not a directory.
+     */
+    class RootNotDirectory(
+        ) : ProjectRuntimeException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * The selected root is a symlink.
+     */
+    class RootIsSymlink(
+        ) : ProjectRuntimeException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * The selected root cannot be written.
+     */
+    class RootNotWritable(
+        ) : ProjectRuntimeException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * The selected root is inside private app storage.
+     */
+    class RootInsidePrivateRoot(
+        ) : ProjectRuntimeException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * The selected root is the filesystem root.
+     */
+    class RootIsFilesystemRoot(
+        ) : ProjectRuntimeException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * The selected root is inside another project.
+     */
+    class RootInsideProject(
+        ) : ProjectRuntimeException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * The selected root could not be inspected.
+     */
+    class RootUnavailable(
+        ) : ProjectRuntimeException() {
+        override val message
+            get() = ""
+    }
+    
 
     
 
@@ -23159,6 +23432,15 @@ public object FfiConverterTypeProjectRuntimeError : FfiConverterRustBuffer<Proje
             5 -> ProjectRuntimeException.Cancelled()
             6 -> ProjectRuntimeException.NotFound()
             7 -> ProjectRuntimeException.Unavailable()
+            8 -> ProjectRuntimeException.RootNotAbsolute()
+            9 -> ProjectRuntimeException.RootCannotBeCreated()
+            10 -> ProjectRuntimeException.RootNotDirectory()
+            11 -> ProjectRuntimeException.RootIsSymlink()
+            12 -> ProjectRuntimeException.RootNotWritable()
+            13 -> ProjectRuntimeException.RootInsidePrivateRoot()
+            14 -> ProjectRuntimeException.RootIsFilesystemRoot()
+            15 -> ProjectRuntimeException.RootInsideProject()
+            16 -> ProjectRuntimeException.RootUnavailable()
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
     }
@@ -23194,6 +23476,42 @@ public object FfiConverterTypeProjectRuntimeError : FfiConverterRustBuffer<Proje
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
             )
+            is ProjectRuntimeException.RootNotAbsolute -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is ProjectRuntimeException.RootCannotBeCreated -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is ProjectRuntimeException.RootNotDirectory -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is ProjectRuntimeException.RootIsSymlink -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is ProjectRuntimeException.RootNotWritable -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is ProjectRuntimeException.RootInsidePrivateRoot -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is ProjectRuntimeException.RootIsFilesystemRoot -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is ProjectRuntimeException.RootInsideProject -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is ProjectRuntimeException.RootUnavailable -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
         }
     }
 
@@ -23226,6 +23544,42 @@ public object FfiConverterTypeProjectRuntimeError : FfiConverterRustBuffer<Proje
             }
             is ProjectRuntimeException.Unavailable -> {
                 buf.putInt(7)
+                Unit
+            }
+            is ProjectRuntimeException.RootNotAbsolute -> {
+                buf.putInt(8)
+                Unit
+            }
+            is ProjectRuntimeException.RootCannotBeCreated -> {
+                buf.putInt(9)
+                Unit
+            }
+            is ProjectRuntimeException.RootNotDirectory -> {
+                buf.putInt(10)
+                Unit
+            }
+            is ProjectRuntimeException.RootIsSymlink -> {
+                buf.putInt(11)
+                Unit
+            }
+            is ProjectRuntimeException.RootNotWritable -> {
+                buf.putInt(12)
+                Unit
+            }
+            is ProjectRuntimeException.RootInsidePrivateRoot -> {
+                buf.putInt(13)
+                Unit
+            }
+            is ProjectRuntimeException.RootIsFilesystemRoot -> {
+                buf.putInt(14)
+                Unit
+            }
+            is ProjectRuntimeException.RootInsideProject -> {
+                buf.putInt(15)
+                Unit
+            }
+            is ProjectRuntimeException.RootUnavailable -> {
+                buf.putInt(16)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
@@ -25809,6 +26163,38 @@ public object FfiConverterOptionalTypeExecutorView: FfiConverterRustBuffer<Execu
         } else {
             buf.put(1)
             FfiConverterTypeExecutorView.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeGithubTokenKindView: FfiConverterRustBuffer<GithubTokenKindView?> {
+    override fun read(buf: ByteBuffer): GithubTokenKindView? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeGithubTokenKindView.read(buf)
+    }
+
+    override fun allocationSize(value: GithubTokenKindView?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeGithubTokenKindView.allocationSize(value)
+        }
+    }
+
+    override fun write(value: GithubTokenKindView?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeGithubTokenKindView.write(value, buf)
         }
     }
 }

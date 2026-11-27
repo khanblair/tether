@@ -42,7 +42,7 @@ tether/
 │   └── crates/
 │       ├── tether-types/      ids, message, model catalog, session, text, usage, error, event (CoreEvent); no UniFFI code
 │       ├── tether-store/      SQLite storage: schema, migrations, sessions, projects, checkpoints, approvals, budgets, MCP servers, skills
-│       │   ├── migrations/{0001_init,0002_message_fts,0003_checkpoints,0004_approvals,0005_prompt_snapshot,0006_session_todos,0007_project_trust,0008_project_network,0009_git_identity,0010_budgets,0011_context,0012_mcp_servers,0013_skills_memory,0014_session_reasoning,0015_session_archive}.sql
+│       │   ├── migrations/{0001_init,0002_message_fts,0003_checkpoints,0004_approvals,0005_prompt_snapshot,0006_session_todos,0007_project_trust,0008_project_network,0009_git_identity,0010_budgets,0011_context,0012_mcp_servers,0013_skills_memory,0014_session_reasoning,0015_session_archive,0016_project_root}.sql
 │       │   └── src/{lib,db,error,migrations,models,projects,sessions,session_rows,session_load,session_search,session_archive,session_fts,session_context,session_plans,checkpoints,approvals,permission_rules,project_trust,project_network,prompt_snapshots,provider_configs,todos,usage,budgets,context,mcp_servers,skill_settings}.rs; test modules (*_tests.rs, tests.rs)
 │       ├── tether-engine/     Sessions, turn loop, permissions, executors, tool loop, checkpoints, prompts, config, quality gate, updates
 │       │   ├── src/{lib,budget,checkpoint_capture,context,network,notify,provider_connection,rewind,session,session_provider,tool_loop,usage}.rs; folders commands/, config/, executors/, permissions/, prompt/, quality/, session/, updates/; test modules (*_tests.rs, tests.rs)
@@ -51,7 +51,7 @@ tether/
 │       ├── tether-providers/  lib.rs (ChatProvider, ModelCatalog), catalog.rs, pricing/ and data/prices/, request.rs, event.rs, error.rs, sse.rs (SseParser), client.rs (shared HTTP client), anthropic/ (adapter), openai/ (adapter), gemini/ (adapter), openai_compat/ (adapter), deepseek.rs, openrouter.rs, transport.rs (shared request and stream code)
 │       ├── tether-ffi/        UniFFI surface, builds libtether_core.so
 │       │   ├── uniffi.toml
-│       │   └── src/{lib,approvals,archive,callbacks,ci,ci_service,ci_types,commands,config,context,executors,executors_download,executors_http,files,files_bytes,git,git_clone,git_support,git_types,github,knowledge,mcp,mcp_support,mcp_types,memory,network,notify,projects,provider_settings,quality,questions,resume,secrets,session_control,sessions,skills,skills_install,updater,usage,vault,vault_archive,vault_manifest,vault_sync}.rs; folders sessions/ (open, prompt, provider, recovery, user_runs, ux), skills_install/ (api, download, github_url, preview, quarantine, scope, tree, upkeep, views), views/ (approval, checkpoint, context, error, event, event_from, plan, project, question, session, todo, types, usage), bin/ (uniffi-bindgen); test modules
+│       │   └── src/{lib,approvals,archive,callbacks,ci,ci_service,ci_types,commands,config,context,executors,executors_download,executors_http,files,files_bytes,git,git_clone,git_support,git_types,github,knowledge,mcp,mcp_support,mcp_types,memory,network,notify,project_location,projects,provider_settings,quality,questions,resume,secrets,session_control,sessions,skills,skills_install,updater,usage,vault,vault_archive,vault_manifest,vault_sync}.rs; folders sessions/ (open, prompt, provider, recovery, user_runs, ux), skills_install/ (api, download, github_url, preview, quarantine, scope, tree, upkeep, views), views/ (approval, checkpoint, context, error, event, event_from, plan, project, question, session, todo, types, usage), bin/ (uniffi-bindgen); test modules
 │       ├── tether-quality/    Quality gate: smell and slop rules, prose checks, review parsing, highlighting
 │       │   ├── data/{generic_names.txt,slop_patterns.toml,slop_words.txt} (shared with slop-lint)
 │       │   └── src/{lib,highlight,language,manifest,model,prose,registry,report,review,thresholds}.rs; rules/{mod,slop,smell,smell_text,tests_rules,util}.rs; tests/ (integration tests, Markdown and Rust fixtures)
@@ -400,7 +400,10 @@ core/
     │   │   ├── 0010_budgets.sql         Budget limits and whether session prices were known
     │   │   ├── 0011_context.sql         Context compaction records and the global threshold
     │   │   ├── 0012_mcp_servers.sql       MCP servers, header secret references, and tool settings
-    │   │   └── 0013_skills_memory.sql     Skill settings, disabled skills, staged skill changes, usage, and the skills block in prompt snapshots
+    │   │   ├── 0013_skills_memory.sql     Skill settings, disabled skills, staged skill changes, usage, and the skills block in prompt snapshots
+    │   │   ├── 0014_session_reasoning.sql Saved reasoning effort per session
+    │   │   ├── 0015_session_archive.sql  Archived session state
+    │   │   └── 0016_project_root.sql     Per-project roots and the saved root for new projects
     │   └── src/
     │       ├── lib.rs               SQLite storage: schema, migrations, queries
     │       ├── db.rs                Connection: open, set up, migrate

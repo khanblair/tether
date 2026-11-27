@@ -48,7 +48,7 @@ There is no Tether backend. Every outbound call leaves from the Rust core.
 | Tokio runtime | One multi-thread runtime inside the core, worker count = min(4, CPU cores) | Created on first core call, lives with the process |
 | Blocking pool | File I/O, git operations, tree-sitter parsing, Wasmtime compilation | Tokio blocking threads, capped at 8 |
 | Sandbox instance | One Wasmtime store per `run`, on a blocking thread, with epoch-based interruption | One command |
-| Linux mode child | `libproot.so` process launched from `nativeLibraryDir`, then the command inside Alpine | One command or one interactive shell |
+| Linux mode child | `libproot.so` process launched with its required loader from `nativeLibraryDir`, then the command inside Alpine | One command or one interactive shell |
 
 Why one process: the core holds session state in memory and SQLite; splitting it across processes adds IPC for no benefit. Crash isolation for user code comes from Wasmtime (traps do not crash the host) and from Linux mode running in child processes.
 
@@ -60,7 +60,7 @@ Why one process: the core holds session state in memory and SQLite; splitting it
 |---|---|---|
 | `tether-types` | Shared types: messages, tool calls, events, IDs, errors | none |
 | `tether-ffi` | The UniFFI surface: exported functions, callback interfaces, type mapping | `tether-engine` |
-| `tether-engine` | Sessions, the turn loop, permission checks, executor router, compaction, checkpoints | most crates below |
+| `tether-engine` | Sessions, the turn loop, permission checks, executor router, compaction, checkpoints, and guarded Git/GitHub agent tools | most crates below |
 | `tether-providers` | One adapter per provider, streaming parsers, model catalog, usage and price math | `tether-types` |
 | `tether-tools` | Tool definitions, JSON schemas, argument validation, result formatting | `tether-workspace`, `tether-vcs` |
 | `tether-workspace` | PathGuard and a basic file index, glob, and text search; full ignore semantics, file ops, and watcher follow | none |
@@ -78,7 +78,7 @@ Why one process: the core holds session state in memory and SQLite; splitting it
 
 Rule: only `tether-engine` coordinates other crates. Leaf crates never call each other except where the table lists the dependency.
 
-Status: `tether-types`, `tether-engine`, `tether-ffi`, `tether-store`, `tether-secrets`, and `tether-providers` contain code. The other crates are empty libraries that hold their place in the workspace (see project-structure.md, Present now). P1-11 adds a plain text session actor. P1-15 adds store queries for sessions by project, title, and saved non-rewound text, plus rename. Each actor owns one store connection and serializes its turns on a Tokio channel. It saves the user message before the request and saves each reply batch before emitting it. The app calls `recover_interrupted_sessions` once at process start, which marks any active session `Interrupted`; building a `SessionRuntime` does not change saved status. The transcript, including any saved partial reply, remains readable. `SessionRuntime` exposes create, load, list, transcript, open, send, and interrupt through UniFFI. It also reads the first model id in a provider's saved catalog. `ProjectRuntime` creates, lists, and loads projects. Project creation adds the database row and workspace directory, and removes the row if directory creation fails. The P1-22 Android screens follow.
+Status: `tether-types`, `tether-engine`, `tether-ffi`, `tether-store`, `tether-secrets`, and `tether-providers` contain code. The other crates are empty libraries that hold their place in the workspace (see project-structure.md, Present now). P1-11 adds a plain text session actor. P1-15 adds store queries for sessions by project, title, and saved non-rewound text, plus rename. Each actor owns one store connection and serializes its turns on a Tokio channel. It saves the user message before the request and saves each reply batch before emitting it. The app calls `recover_interrupted_sessions` once at process start, which marks any active session `Interrupted`; building a `SessionRuntime` does not change saved status. The transcript, including any saved partial reply, remains readable. `SessionRuntime` exposes create, load, list, transcript, open, send, and interrupt through UniFFI. It also reads the first model id in a provider's saved catalog. `ProjectRuntime` creates, lists, and loads projects, reports the private default and saved new-project roots, and validates a new root before saving it. Each project keeps an optional absolute root, so changing the saved root does not move existing projects. Project creation adds the database row and workspace directory, and removes the row if directory creation fails. The P1-22 Android screens follow.
 
 `tether-tools` (P2-04, P2-05): `ReadTools` uses the workspace path guard for UTF-8 file reads, direct directory lists, and indexed glob and regex grep. File reads stop at 1 MiB; results stop at 1,000 entries. The engine registers these read tools. `EditTools` uses the same guard for write, exact edit, multi-edit, move, and delete. Multi-edit stages replacements in memory and writes once after every exact match succeeds. Temporary files keep text replacement atomic.
 
@@ -186,6 +186,8 @@ P2-08 lists checkpoints newest first. The session actor cancels an active turn b
 4. Runs `apk add` for the base package list through PRoot, with network allowed for setup only.
 5. Marks the environment ready and stores the Alpine version.
 
+Executor configuration is refreshed at app start. When `proot_path` is supplied, the PRoot loader path is required and both paths must be absolute. The saved configuration is replaced on each call, and Linux readiness requires both files and a ready root filesystem.
+
 ## 6. State machines
 
 ### Session
@@ -248,7 +250,8 @@ SQLite database at `files/db/tether.db`, WAL mode, foreign keys on. IDs are ULID
 
 | Table | Columns | Notes |
 |---|---|---|
-| `projects` | id, name, path, remote_url, default_branch, default_provider, default_model_id, default_mode, created_at, opened_at | `path` is a safe name relative to `files/workspaces/`, with the last 8 ULID characters as a suffix; a `CHECK` rejects empty, absolute, and `..` paths. Project lists count sessions and sort by newest session activity |
+| `projects` | id, name, path, root, remote_url, default_branch, default_provider, default_model_id, default_mode, created_at, opened_at | `path` is a safe name relative to the project's root: the private default unless the project has its own. The optional `root` is an absolute folder. The last 8 ULID characters make `path` unique across roots. A `CHECK` rejects empty, absolute, and `..` paths. Project lists count sessions and sort by newest session activity |
+| `app_settings` | key, value | `new_project_root` is the saved root for projects created after the setting changes |
 | `sessions` | id, project_id, title, provider, model_id, mode, status, created_at, updated_at, cost_micros, tokens_in, tokens_out, reasoning_effort, archived | `cost_micros` is USD × 1,000,000. `reasoning_effort` is `low`, `medium`, `high`, or NULL for the model default (migration 0014); the engine sends it only to a model whose catalog entry says it reasons. `archived` is 0 or 1 (migration 0015): archived sessions leave the project lists, the session search, and the transcript search, and stay loadable |
 | `messages` | id, session_id, role, seq, created_at, rewound | role: user, assistant, tool, system_note |
 | `message_parts` | id, message_id, seq, kind, body_json | kind: text, image_ref, tool_call, tool_result, thinking, compaction_summary |
@@ -260,6 +263,7 @@ SQLite database at `files/db/tether.db`, WAL mode, foreign keys on. IDs are ULID
 | `quality_reports` | id, checkpoint_id, findings_json, blocking_count | |
 | `runs` | id, tool_call_id, executor, command, exit_code, duration_ms, output_ref, ci_run_id | |
 | `provider_configs` | provider, secret_ref, base_url, status, tested_at | no key material; `secret_ref` names the wrapped secret |
+| `github_token_info` | kind, scopes_json, login, can_read_repos, checked_at | persisted GitHub token metadata; token material stays in the vault |
 | `models` | provider, model_id, display_name, context_window, max_output_tokens, input_price_micros, output_price_micros, cache_read_price_micros, cache_write_price_micros, price_source, caps_json, position | catalog rows in provider order; prices are USD × 1,000,000 per million tokens, NULL when unknown |
 | `models_fetch` | provider, fetched_at | last successful catalog fetch, including an empty list; Unix milliseconds |
 | `mcp_servers` | id, name, url, transport, secret_ref, enabled | |
@@ -279,12 +283,23 @@ Status: schema 0001 (P1-02 and P1-09) creates `projects`, `sessions`, `messages`
 
 The core's API is the UniFFI surface. There are no HTTP routes.
 
+The session tool registry includes these Git actions. `git_init` is available for every project workspace, including one with no `.git` directory or saved remote. `github_repo_create` saves the returned remote before later push and pull request calls.
+
+| Tool | Effect | Approval |
+|---|---|---|
+| `git_init` | Initialize the local repository on the requested default branch | Workspace edit |
+| `git_status` / `git_diff` / `git_log` | Read local repository state | None |
+| `git_commit` / `git_branch` | Change local repository state | File edit rules |
+| `github_repo_create` | Create a GitHub repository, add `origin`, and save the project remote | Push rules, always except Bypass |
+| `git_push` / `pr_create` / `pr_status` | Push or use the saved remote repository | Existing remote-action rules |
+
 ### Commands (Kotlin calls Rust)
 
 | Function | Purpose |
 |---|---|
 | `init(config: CoreConfig, sink: EventSink, platform: PlatformCallbacks)` | Start the core |
 | `ProjectRuntime.create_project(name)` / `list_projects()` / `load_project(id)` | Save a project and its workspace, then read project details; clone, import, and user deletion follow |
+| `ProjectRuntime.workspace_location()` / `set_new_project_root(root)` | Read the private default, saved new-project root, and effective root; validate and save a root for new projects without moving existing projects |
 | `SessionRuntime.list_sessions(project_id)` / `create_session(project_id, provider, model_id)` / `load_session(id)` / `default_model(provider)` | List or open sessions and read the first saved model id |
 | `send_message(session_id, input: UserInput)` | Start a turn |
 | `approve(tool_call_id, scope: ApprovalScope)` / `deny(tool_call_id, reason)` | Approvals |
@@ -302,7 +317,7 @@ The core's API is the UniFFI surface. There are no HTTP routes.
 | `get_diff(project_id, scope)` / `apply_hunk_action(...)` | Diff review |
 | `run_command(project_id, cmd, executor)` | User-initiated run |
 | `set_provider_key(provider, key)` / `test_provider(provider)` / `list_models(provider)` | Providers |
-| `github_device_start()` / `github_device_poll(code)` / `github_set_token(token)` | GitHub auth |
+| `github_device_start()` / `github_device_poll(code)` / `github_set_token(token)` | GitHub auth; `github_status()` reports the persisted token kind (`CLASSIC` or `FINE_GRAINED`), scopes, login, and repository-read reach |
 | `linux_install()` / `linux_repair()` / `linux_remove()` / `linux_status()` | Linux mode |
 | `runtime_packs()` / `install_runtime_pack(id)` | Sandbox runtimes |
 | `add_mcp_server(spec)` / `remove_mcp_server(id)` | MCP |
@@ -333,7 +348,7 @@ All under the app's private `files/` directory unless noted.
 
 | Path | Contents |
 |---|---|
-| `workspaces/<project-path>/` | Project files and `.git`; the path uses a name slug and a ULID suffix |
+| `workspaces/<project-path>/` or `<project-root>/<project-path>/` | Project files and `.git`; the path uses a name slug and a ULID suffix. Existing projects use the root saved on their row, while NULL uses the private default |
 | `db/tether.db` | SQLite database |
 | `blobs/<aa>/<hash>` | Content-addressed blobs |
 | `secrets/<ref>.bin` | The bytes `SecretsPlatform.wrap` returned (AES-GCM with a Keystore key: 12-byte IV, ciphertext, tag), after a 5-byte header (`TSEC` and a format version). `<ref>` allows only `a-z`, `0-9`, `-`, and `_`, up to 64 characters |

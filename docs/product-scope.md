@@ -97,8 +97,10 @@ Each feature lists what it is, how it works, and why it exists. IDs (F1 and so o
 | `multi_edit` | Several exact replacements in one file, applied together | Yes |
 | `move_file` / `delete_file` | Rename or delete | Yes |
 | `run` | Run a command through the executor router (F10) | Yes |
+| `git_init` | Initialize the project's local repository | Yes |
 | `git_status` / `git_diff` / `git_log` | Read repo state | No |
 | `git_commit` / `git_branch` | Change local repo state | Yes |
+| `github_repo_create` | Create a GitHub repository and connect it as `origin` | Always, in every mode except Bypass |
 | `git_push` / `pr_create` | Change remote state | Always, in every mode except Bypass; force push asks even in Bypass |
 | `ci_run` / `ci_logs` | Start a workflow run and read its results | Yes |
 | `web_fetch` | Fetch a URL as text | Yes |
@@ -227,10 +229,12 @@ Each feature lists what it is, how it works, and why it exists. IDs (F1 and so o
 
 ### F11. Git and GitHub
 
-**What.** Branch, commit, push, and open pull requests.
+**What.** Initialize a local repository, create a GitHub repository, branch, commit, push, and open pull requests.
 
 **How.**
 - GitHub sign-in uses the OAuth device flow: Tether shows a code, the user approves it in the browser, and the token is stored wrapped by the Keystore. A fine-grained personal access token can be pasted instead.
+- Sign-in accepts classic and fine-grained tokens. Tether persists the token kind, classic scopes, login, and whether `/user/repos` is readable, so GitHub status survives a restart.
+- `git_init` works in a project with existing files. `github_repo_create` creates the repository, adds its clone URL as `origin`, and saves the remote so the existing push and pull request tools can continue the flow.
 - The agent works on a branch named `tether/<short-task-slug>` by default, never directly on the default branch unless the project setting allows it.
 - `git_push` to the default branch, force push, and remote branch deletion always ask, even in Bypass (force push) or Auto (the others).
 - Commit messages and PR descriptions are drafted by the agent, run through `slop-lint` rules, and shown for editing before use.
@@ -379,7 +383,7 @@ Tether has no server, so every integration runs from the phone with credentials 
 
 | Integration | Release | How it works | What the agent can do |
 |---|---|---|---|
-| GitHub | v1 | OAuth device flow or personal access token; REST and GraphQL APIs; git over HTTPS | Clone, push, PRs, Actions runs and logs, issues read |
+| GitHub | v1 | OAuth device flow or personal access token; REST and GraphQL APIs; git over HTTPS | Clone, create repositories, push, PRs, Actions runs and logs, issues read |
 | Telegram | v1.1 | User creates a bot with BotFather and pastes its token; the foreground service long-polls the Bot API while Tether is running | Receive approval requests and run status; send tasks to a project by message; approve or deny with inline buttons |
 | Discord | v1.2 | User creates a bot application and pastes its token; the service holds a gateway connection while running | Same as Telegram, in a DM or a chosen channel |
 | Google Workspace | v1.3 | Google sign-in with scopes the user grants per feature | Drive: import and export files and folders to a workspace. Sheets: read ranges as data, write results. Docs: read as Markdown, write reports. Optional Gmail and Calendar later |

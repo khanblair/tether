@@ -10,6 +10,7 @@ import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.gradle.process.ExecOperations
+import java.io.File
 import javax.inject.Inject
 
 /** Builds the Rust core for Android ABIs with cargo-ndk and writes `lib<name>.so` per ABI. */
@@ -38,9 +39,12 @@ abstract class CargoNdkTask
         fun build() {
             val home = System.getenv("HOME").orEmpty()
             val cargoBin = "$home/.cargo/bin"
+            // Gradle finds the program on its own PATH, not on the PATH set below, and an IDE
+            // started from the Dock has no ~/.cargo/bin. Use the absolute path when it exists.
+            val cargo = File(cargoBin, "cargo").takeIf { it.canExecute() }?.absolutePath ?: "cargo"
             val args =
                 buildList {
-                    add("cargo")
+                    add(cargo)
                     add("ndk")
                     abis.get().forEach {
                         add("-t")

@@ -167,7 +167,7 @@ Icons: Lucide (ISC), converted to Compose `ImageVector`s in `designsystem/Icons.
 - **JNA and R8:** keep rules in `core-bridge/consumer-rules.pro` (and `app/proguard-rules.pro`) are required or release builds crash at first core call.
 - **Compose and streaming text:** append-only text should be a single `AnnotatedString` per block, updated in place; do not create a new list item per delta.
 - **Material 3:** use its components for behavior (text fields, sheets, menus), but colors, shapes, and type always come from Tether tokens, never `MaterialTheme` defaults. `TetherTheme` switches dynamic color off; do not turn it on.
-- **Convention plugins:** `cargo ndk` must be on the Gradle process `PATH`. `CargoNdkTask` adds `~/.cargo/bin`, so builds from Android Studio work without a login shell.
+- **Convention plugins:** `cargo ndk` must be on the Gradle process `PATH`. `CargoNdkTask` runs `~/.cargo/bin/cargo` by its absolute path and adds `~/.cargo/bin` to the child PATH, so builds from Android Studio work without a login shell. Gradle looks up the program on its own PATH, not on the PATH set for the child, so the absolute path matters.
 
 ## 5. Banned libraries
 

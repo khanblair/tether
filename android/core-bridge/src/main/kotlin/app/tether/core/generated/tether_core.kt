@@ -1121,6 +1121,10 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_tether_core_checksum_method_sessionrunner_send_message_with_outcome(
     ): Int
+    external fun uniffi_tether_core_checksum_method_sessionrunner_list_processes(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_sessionrunner_stop_process(
+    ): Int
     external fun uniffi_tether_core_checksum_method_sessionrunner_rewind_to_message(
     ): Int
     external fun uniffi_tether_core_checksum_method_sessionruntime_approve(
@@ -1671,6 +1675,10 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_tether_core_fn_method_sessionrunner_send_message_with_outcome(`ptr`: Long,`text`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_tether_core_fn_method_sessionrunner_list_processes(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_tether_core_fn_method_sessionrunner_stop_process(`ptr`: Long,`processId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
     external fun uniffi_tether_core_fn_method_sessionrunner_rewind_to_message(`ptr`: Long,`messageId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_tether_core_fn_clone_sessionruntime(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -2318,6 +2326,12 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_method_sessionrunner_send_message_with_outcome() and 0xFFFF) != 36200) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_sessionrunner_list_processes() and 0xFFFF) != 52150) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_sessionrunner_stop_process() and 0xFFFF) != 51306) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_method_sessionrunner_rewind_to_message() and 0xFFFF) != 11699) {
@@ -11044,6 +11058,26 @@ public interface SessionRunnerInterface {
     fun `sendMessageWithOutcome`(`text`: kotlin.String): SendOutcomeView
     
     /**
+     * Reads the session's background process table without waiting for a turn.
+     *
+     * A plain chat session has no process manager and returns an empty list.
+
+     */
+    fun `listProcesses`(): List<ProcessView>
+    
+    /**
+     * Stops one session-owned background process without waiting for a turn.
+     *
+     * Stopping a process that has already stopped is successful. Plain chat
+     * sessions and sessions without Linux tools report `NotFound`.
+     *
+     * # Errors
+     * Returns `NotFound` for an unknown process or a session without a process
+     * manager, and `Unavailable` when the process table cannot be read.
+     */
+    fun `stopProcess`(`processId`: kotlin.String)
+    
+    /**
      * Stops a running turn and hides the given message and every later one.
      * Files are not restored. Call from a background thread.
      *
@@ -11256,6 +11290,49 @@ open class SessionRunner: Disposable, AutoCloseable, SessionRunnerInterface
     }
     )
     }
+    
+
+    
+    /**
+     * Reads the session's background process table without waiting for a turn.
+     *
+     * A plain chat session has no process manager and returns an empty list.
+
+     */override fun `listProcesses`(): List<ProcessView> {
+            return FfiConverterSequenceTypeProcessView.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_sessionrunner_list_processes(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Stops one session-owned background process without waiting for a turn.
+     *
+     * Stopping a process that has already stopped is successful. Plain chat
+     * sessions and sessions without Linux tools report `NotFound`.
+     *
+     * # Errors
+     * Returns `NotFound` for an unknown process or a session without a process
+     * manager, and `Unavailable` when the process table cannot be read.
+     */
+    @Throws(SessionRuntimeException::class)override fun `stopProcess`(`processId`: kotlin.String)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(SessionRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_sessionrunner_stop_process(
+        it,
+        
+        FfiConverterString.lower(`processId`),_status)
+}
+    }
+    
     
 
     
@@ -18989,6 +19066,77 @@ public object FfiConverterTypePlanView: FfiConverterRustBuffer<PlanView> {
             FfiConverterSequenceString.write(value.`files`, buf)
             FfiConverterSequenceString.write(value.`commands`, buf)
             FfiConverterSequenceString.write(value.`openQuestions`, buf)
+    }
+}
+
+
+
+/**
+ * FFI view of one session-owned background process.
+ */
+data class ProcessView (
+    /**
+     * Short process identifier.
+     */
+    var `id`: kotlin.String
+    , 
+    /**
+     * Original command.
+     */
+    var `command`: kotlin.String
+    , 
+    /**
+     * Current process state.
+     */
+    var `status`: ProcessStatusView
+    , 
+    /**
+     * Detected listening port, if any.
+     */
+    var `port`: kotlin.UShort?
+    , 
+    /**
+     * Start time in Unix milliseconds.
+     */
+    var `startedAtMs`: kotlin.ULong
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeProcessView: FfiConverterRustBuffer<ProcessView> {
+    override fun read(buf: ByteBuffer): ProcessView {
+        return ProcessView(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterTypeProcessStatusView.read(buf),
+            FfiConverterOptionalUShort.read(buf),
+            FfiConverterULong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: ProcessView) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`command`) +
+            FfiConverterTypeProcessStatusView.allocationSize(value.`status`) +
+            FfiConverterOptionalUShort.allocationSize(value.`port`) +
+            FfiConverterULong.allocationSize(value.`startedAtMs`)
+    )
+
+    override fun write(value: ProcessView, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`command`, buf)
+            FfiConverterTypeProcessStatusView.write(value.`status`, buf)
+            FfiConverterOptionalUShort.write(value.`port`, buf)
+            FfiConverterULong.write(value.`startedAtMs`, buf)
     }
 }
 
@@ -28165,6 +28313,34 @@ public object FfiConverterSequenceTypePermissionRuleView: FfiConverterRustBuffer
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypePermissionRuleView.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeProcessView: FfiConverterRustBuffer<List<ProcessView>> {
+    override fun read(buf: ByteBuffer): List<ProcessView> {
+        val len = buf.getInt()
+        return List<ProcessView>(len) {
+            FfiConverterTypeProcessView.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<ProcessView>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeProcessView.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<ProcessView>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeProcessView.write(it, buf)
         }
     }
 }

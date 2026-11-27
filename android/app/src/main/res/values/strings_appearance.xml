@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="appearance_title">Appearance</string>
+    <string name="appearance_preview">Preview</string>
+    <string name="appearance_preview_edited">Edited</string>
+    <string name="appearance_preview_file">src/auth/session.py</string>
+    <string name="appearance_preview_added">+1</string>
+    <string name="appearance_preview_removed">−1</string>
+    <string name="appearance_preview_primary">Allow</string>
+    <string name="appearance_preview_tonal">Review later</string>
+    <string name="appearance_preview_chip">Selected</string>
+    <string name="appearance_preview_model">Sonnet 5.5</string>
+    <string name="appearance_theme">Theme</string>
+    <string name="appearance_theme_system">System</string>
+    <string name="appearance_theme_light">Light</string>
+    <string name="appearance_theme_dark">Dark</string>
+    <string name="appearance_theme_summary">%1$s theme</string>
+    <string name="appearance_interface_size">Interface size</string>
+    <string name="appearance_interface_hint">Makes everything larger or smaller, like Android display size.</string>
+    <string name="appearance_text_size">Text size</string>
+    <string name="appearance_follow_system">Follow system</string>
+    <string name="appearance_text_follows_system">text follows system</string>
+    <string name="appearance_text_summary">text %1$d%%</string>
+    <string name="appearance_interface_summary">interface %1$d%%</string>
+    <string name="appearance_text_hint">Follows Android\'s font size unless you change it here.</string>
+    <string name="appearance_accent_color">Accent color</string>
+    <string name="appearance_plum">Plum</string>
+    <string name="appearance_blue">Blue</string>
+    <string name="appearance_green">Green</string>
+    <string name="appearance_yellow">Yellow</string>
+    <string name="appearance_red">Red</string>
+    <string name="appearance_custom">Custom</string>
+    <string name="appearance_swatch_selected">%1$s, selected</string>
+    <string name="appearance_swatch_not_selected">%1$s, not selected</string>
+    <string name="appearance_hue">Hue</string>
+    <string name="appearance_saturation">Saturation</string>
+    <string name="appearance_hex">Hex color</string>
+    <string name="appearance_hex_invalid_empty">Enter a color.</string>
+    <string name="appearance_hex_invalid_length">Use 3 or 6 hex digits.</string>
+    <string name="appearance_hex_invalid_characters">Use only hex digits.</string>
+    <string name="appearance_adjusted_for_readability">Adjusted for readability</string>
+    <string name="appearance_reset_plum">Reset to Plum</string>
+    <string name="appearance_reset_all">Reset all</string>
+</resources>

@@ -190,6 +190,9 @@ All components start as **Planned**. Screenshot tests start with the first featu
 
 | Name | Purpose | Props | States | Phase | Status |
 |---|---|---|---|---|---|
+| `AppearanceScreen` | Live preview and controls for theme, interface size, text size, and accent color | `appearance`, `theme`, change lambdas, `onBack` | light, dark, 200% font, narrow, custom picker open | P1 | In progress |
+| `AccentSwatchRow` | Built-in and custom accent color choices with selected state | `selectedId`, `customArgb`, `onSelect`, `onOpenCustom` | each swatch selected, custom selected, narrow scroll | P1 | In progress |
+| `CustomAccentPicker` | Hue, saturation, and validated hex controls for a custom accent | `initialArgb`, `onAccentSelected` | valid hex, empty hex, invalid length, invalid characters, adjusted color | P1 | In progress |
 | `ProviderRow` | Provider with key status: icon, name, subtitle, chevron | `name`, `subtitle`, `status` (`ProviderRowStatus`), `statusDescription`, `onClick` | unset, ok, bad key, network error, blocked | P1 | Built |
 | `TestConnectionButton` | Outlined full-width button that starts a key test | `state` (`TestState`), `label`, `onTest`, `enabled` | idle, testing, ok, failed, disabled | P1 | Built |
 | `ModelPicker` | Searchable model list with badges | `models`, `selected`, `onPick` | loading, list, filtered, no tools model disabled | P1 | Planned |
@@ -221,7 +224,7 @@ All components start as **Planned**. Screenshot tests start with the first featu
 
 ## Icons
 
-The full icon list and its meanings are in ui-tokens.md section 13. Icons are added to `designsystem/Icons.kt` only when a component in this registry uses them. Do not add icons for decoration.
+The full icon list and its meanings are in ui-tokens.md section 13. Icons are added to `designsystem/Icons.kt` only when a component in this registry uses them. The Appearance row uses `palette`. Do not add icons for decoration.
 
 ## Rules for changing entries
 

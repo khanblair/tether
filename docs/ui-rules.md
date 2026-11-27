@@ -127,6 +127,9 @@ Compact (phone portrait), from top to bottom:
 
 ### Settings
 - Grouped list matching product-scope.md F19. Each group is one screen.
+- Appearance replaces the inline theme control on the main Settings list. It contains the live
+  preview, theme, interface size, text size, accent color, custom color picker, and reset actions.
+- The accent picker is not in the prototype; added by decision D41.
 - Destructive actions (delete project, remove Linux mode, clear data) are at the bottom of their group, in `color.danger`, and need confirmation that names the thing being deleted.
 
 ### Cost

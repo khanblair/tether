@@ -4,6 +4,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class RequestDecisionTest {
+    private val server = ServerOrigin(5173)
+
     @Test
     fun the_preview_origin_is_served_from_the_project() {
         assertEquals(
@@ -71,5 +73,53 @@ class RequestDecisionTest {
     @Test
     fun an_unparseable_url_is_blocked() {
         assertEquals(RequestDecision.Block, requestDecision("not a url", true))
+    }
+
+    @Test
+    fun the_owned_server_origin_is_the_only_cleartext_origin() {
+        val allowed = "http://127.0.0.1:5173/index.html"
+        assertEquals(RequestDecision.Pass, requestDecision(allowed, false, server))
+        assertEquals(
+            RequestDecision.Pass,
+            requestDecision("http://127.0.0.1:5173/app.js", true, server),
+        )
+        assertEquals(
+            RequestDecision.Block,
+            requestDecision("http://127.0.0.1:5174/", false, server),
+        )
+        assertEquals(
+            RequestDecision.Block,
+            requestDecision("http://127.0.0.1:5174/", true, server),
+        )
+        assertEquals(
+            RequestDecision.Block,
+            requestDecision("http://127.0.0.1/", false, server),
+        )
+        assertEquals(
+            RequestDecision.Block,
+            requestDecision("http://localhost:5173/", false, server),
+        )
+        assertEquals(RequestDecision.Block, requestDecision("http://0.0.0.0:5173/", false, server))
+        assertEquals(RequestDecision.Block, requestDecision("http://[::1]:5173/", false, server))
+        assertEquals(
+            RequestDecision.Block,
+            requestDecision("http://127.0.0.1.evil.test:5173/", false, server),
+        )
+        assertEquals(
+            RequestDecision.Block,
+            requestDecision("http://user@127.0.0.1:5173/", false, server),
+        )
+        assertEquals(
+            RequestDecision.Block,
+            requestDecision("http://127.0.0.1:5173/#fragment", false, server),
+        )
+        assertEquals(
+            RequestDecision.Block,
+            requestDecision("https://127.0.0.1:5173/", false, server),
+        )
+        assertEquals(
+            RequestDecision.Block,
+            requestDecision("http://example.com:5173/", true, server),
+        )
     }
 }

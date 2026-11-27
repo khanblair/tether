@@ -46,8 +46,12 @@ fun PreviewScreen(
     onReload: () -> Unit,
     onNetworkChange: (Boolean) -> Unit,
     page: @Composable (PreviewLoad) -> Unit,
+    modifier: Modifier = Modifier,
+    banner: String? = null,
+    serverStopped: Boolean = false,
 ) {
     Scaffold(
+        modifier = modifier,
         containerColor = TetherTheme.colors.bg,
         topBar = {
             TetherTopBar(
@@ -69,6 +73,13 @@ fun PreviewScreen(
         },
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            banner?.let {
+                InlineBanner(
+                    text = it,
+                    tone = BannerTone.Info,
+                    modifier = Modifier.padding(horizontal = TetherSpace.space4),
+                )
+            }
             val blocked = state.blocked.size
             if (blocked > 0 && !state.networkAllowed && !state.networkLocked) {
                 InlineBanner(
@@ -79,12 +90,22 @@ fun PreviewScreen(
                     modifier = Modifier.padding(horizontal = TetherSpace.space4),
                 )
             }
-            PreviewBody(
-                load = state.load,
-                reloadKey = state.reloadKey,
-                page = page,
-                onReload = onReload,
-            )
+            if (serverStopped || !state.serverRunning) {
+                InlineBanner(
+                    text = stringResource(R.string.preview_server_stopped),
+                    tone = BannerTone.Warning,
+                    actionLabel = stringResource(R.string.preview_server_reload),
+                    onAction = onReload,
+                    modifier = Modifier.padding(TetherSpace.space4),
+                )
+            } else {
+                PreviewBody(
+                    load = state.load,
+                    reloadKey = state.reloadKey,
+                    page = page,
+                    onReload = onReload,
+                )
+            }
         }
     }
 }

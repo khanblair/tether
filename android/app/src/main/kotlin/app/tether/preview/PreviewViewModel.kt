@@ -62,6 +62,8 @@ data class PreviewUiState(
     val networkLocked: Boolean = false,
     val blocked: Set<String> = emptySet(),
     val reloadKey: Int = 0,
+    val serverOrigin: ServerOrigin? = null,
+    val serverRunning: Boolean = true,
 )
 
 /**
@@ -75,7 +77,12 @@ class PreviewViewModel(
     private val io: CoroutineDispatcher = Dispatchers.IO,
 ) : ViewModel() {
     private val mutableState =
-        MutableStateFlow(PreviewUiState(networkLocked = target is PreviewTarget.Inline))
+        MutableStateFlow(
+            PreviewUiState(
+                networkLocked = target is PreviewTarget.Inline,
+                serverOrigin = (target as? PreviewTarget.Server)?.url?.serverOrigin(),
+            ),
+        )
     private var userChangedNetwork = false
 
     /** The preview state. */
@@ -126,6 +133,13 @@ class PreviewViewModel(
         mutableState.update { it.copy(blocked = it.blocked + url) }
     }
 
+    /** Updates the process state without starting or stopping anything. */
+    fun setServerRunning(running: Boolean) {
+        if (target is PreviewTarget.Server) {
+            mutableState.update { it.copy(serverRunning = running) }
+        }
+    }
+
     /**
      * The bytes of [path] in the project, up to the preview limit. Blocking, so the WebView calls
      * it off the main thread. A preview with no project has no files.
@@ -135,12 +149,14 @@ class PreviewViewModel(
             is PreviewTarget.File ->
                 files.readBytes(current.projectId, path, PREVIEW_LIMIT_BYTES)
             is PreviewTarget.Inline -> throw FilesFailure(FilesProblem.NotFound)
+            is PreviewTarget.Server -> throw FilesFailure(FilesProblem.NotFound)
         }
 
     private suspend fun prepare(): PreviewLoad =
         when (val current = target) {
             is PreviewTarget.Inline -> PreviewLoad.Html(current.html)
             is PreviewTarget.File -> probe(current)
+            is PreviewTarget.Server -> PreviewLoad.Page(current.url)
         }
 
     private suspend fun probe(current: PreviewTarget.File): PreviewLoad =
@@ -166,3 +182,21 @@ class PreviewViewModel(
         }
     }
 }
+
+private fun String.serverOrigin(): ServerOrigin? {
+    val uri = parseUri(this) ?: return null
+    return if (isPlainLoopbackHttp(uri) && uri.port in 1..MAX_PORT) {
+        ServerOrigin(uri.port)
+    } else {
+        null
+    }
+}
+
+/** Whether [uri] is plain http to the loopback host, with no user info or fragment. */
+private fun isPlainLoopbackHttp(uri: java.net.URI): Boolean =
+    uri.scheme.equals("http", ignoreCase = true) &&
+        uri.host == "127.0.0.1" &&
+        uri.userInfo == null &&
+        uri.rawFragment == null
+
+private const val MAX_PORT = 65_535

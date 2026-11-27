@@ -18,6 +18,10 @@ private const val BACKSLASH = '\\'
 private const val NUL = '\u0000'
 private const val ASCII_LIMIT = 128
 private const val SAFE_PUNCTUATION = "-._~/"
+private const val QUERY_SAFE_PUNCTUATION = "-._~"
+private const val PERCENT = '%'
+private const val HEX_RADIX = 16
+private const val ESCAPE_LENGTH = 3
 private const val HEX_DIGITS = "0123456789ABCDEF"
 private const val NIBBLE_BITS = 4
 private const val NIBBLE_MASK = 0xF
@@ -80,13 +84,58 @@ internal fun isPreviewOrigin(uri: URI): Boolean =
         uri.port == -1
 
 /** Percent-encodes [path] byte by byte, keeping letters, digits, "-._~" and "/". */
-internal fun encodePath(path: String): String {
+internal fun encodePath(path: String): String = percentEncode(path, SAFE_PUNCTUATION)
+
+/**
+ * Percent-encodes one query value byte by byte, keeping letters, digits and "-._~". Every other
+ * byte, including "/", ":", "?", "&", "=" and "#", is encoded, so the value cannot split the URL.
+ */
+internal fun encodeQueryValue(value: String): String = percentEncode(value, QUERY_SAFE_PUNCTUATION)
+
+/**
+ * Reverses [encodeQueryValue]: each %XX escape is one UTF-8 byte. Null when an escape is cut
+ * short or is not two hex digits. Pure Kotlin, so it runs in plain JVM tests.
+ */
+internal fun decodeQueryValue(value: String): String? {
+    val bytes = java.io.ByteArrayOutputStream()
+    var i = 0
+    var valid = true
+    while (valid && i < value.length) {
+        if (value[i] == PERCENT) {
+            val byte = escapedByte(value, i)
+            valid = byte != null
+            if (byte != null) bytes.write(byte)
+            i += ESCAPE_LENGTH
+        } else {
+            val codePoint = value.codePointAt(i)
+            bytes.write(String(Character.toChars(codePoint)).toByteArray(Charsets.UTF_8))
+            i += Character.charCount(codePoint)
+        }
+    }
+    return if (valid) String(bytes.toByteArray(), Charsets.UTF_8) else null
+}
+
+/** The byte of the %XX escape that starts at [index], or null when it is cut short or not hex. */
+private fun escapedByte(
+    value: String,
+    index: Int,
+): Int? {
+    val high = value.getOrNull(index + 1)?.let { Character.digit(it, HEX_RADIX) } ?: -1
+    val low = value.getOrNull(index + 2)?.let { Character.digit(it, HEX_RADIX) } ?: -1
+    return if (high < 0 || low < 0) null else high * HEX_RADIX + low
+}
+
+/** Percent-encodes [text] byte by byte, keeping ASCII letters, digits and [safePunctuation]. */
+private fun percentEncode(
+    text: String,
+    safePunctuation: String,
+): String {
     val out = StringBuilder()
-    for (byte in path.toByteArray(Charsets.UTF_8)) {
+    for (byte in text.toByteArray(Charsets.UTF_8)) {
         val code = byte.toInt() and BYTE_MASK
         val char = code.toChar()
         val safe =
-            code < ASCII_LIMIT && (char.isLetterOrDigit() || SAFE_PUNCTUATION.contains(char))
+            code < ASCII_LIMIT && (char.isLetterOrDigit() || safePunctuation.contains(char))
         if (safe) {
             out.append(char)
         } else {

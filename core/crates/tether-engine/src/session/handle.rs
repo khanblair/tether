@@ -30,9 +30,6 @@ pub(super) enum Command {
     DisableBypass {
         reply: oneshot::Sender<Result<(), SessionActorError>>,
     },
-    BypassActive {
-        reply: oneshot::Sender<Result<bool, SessionActorError>>,
-    },
     RunPlan {
         mode: PermissionMode,
         reply: oneshot::Sender<Result<(), SessionActorError>>,
@@ -58,6 +55,7 @@ pub struct SessionHandle {
     pub(super) tx: mpsc::Sender<Command>,
     pub(super) active: Arc<Mutex<Option<CancellationToken>>>,
     pub(super) budget: Arc<crate::budget::BudgetGate>,
+    pub(super) bypass_mode: Option<Arc<Mutex<PermissionMode>>>,
 }
 
 impl SessionHandle {
@@ -182,13 +180,18 @@ impl SessionHandle {
     ///
     /// # Errors
     /// Returns an error when the actor stopped or its mode lock is poisoned.
+    #[expect(
+        clippy::unused_async,
+        clippy::unused_async_trait_impl,
+        reason = "Keep the async handle contract while reading the shared lock directly"
+    )]
     pub async fn bypass_active(&self) -> Result<bool, SessionActorError> {
-        let (reply, result) = oneshot::channel();
-        self.tx
-            .send(Command::BypassActive { reply })
-            .await
-            .map_err(|_| SessionActorError::Stopped)?;
-        result.await.map_err(|_| SessionActorError::Stopped)?
+        let Some(mode) = &self.bypass_mode else {
+            return Ok(false);
+        };
+        mode.lock()
+            .map(|mode| *mode == PermissionMode::Bypass)
+            .map_err(|_| SessionActorError::Stopped)
     }
 
     /// Switches to a working mode and starts the plan turn.

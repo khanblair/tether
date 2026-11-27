@@ -47,6 +47,7 @@ serde_json.workspace = true
 reqwest.workspace = true
 
 [dev-dependencies]
+tether-providers.workspace = true
 tempfile.workspace = true
 rusqlite.workspace = true
 

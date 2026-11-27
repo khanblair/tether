@@ -1,22 +1,20 @@
 //! UniFFI entry point for session creation, transcript reads, and plain chat turns.
-
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
-
-use tether_engine::SessionHandle;
-use tether_engine::prompt::PromptSources;
-use tether_store::Store;
-#[cfg(test)]
-use tether_types::Provider;
-use tether_types::{ModelRef, PermissionMode, ProjectId, SessionId};
 
 use crate::approvals::ApprovalBroker;
 use crate::{
     CheckpointView, EventSink, MessageView, ProviderView, RewindScopeView, SecretVault,
     SendOutcomeView, SessionRecordView,
 };
+use tether_engine::SessionHandle;
+use tether_engine::prompt::PromptSources;
+use tether_store::Store;
+#[cfg(test)]
+use tether_types::Provider;
+use tether_types::{ModelRef, PermissionMode, ProjectId, SessionId};
 
 #[path = "sessions/provider.rs"]
 mod provider;
@@ -398,3 +396,5 @@ mod reasoning_tests;
 mod archive_tests;
 #[cfg(test)]
 mod rewind_message_tests;
+#[cfg(test)]
+mod slow_bypass_tests;

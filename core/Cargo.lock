@@ -3991,6 +3991,7 @@ dependencies = [
  "tether-linux",
  "tether-mcp",
  "tether-memory",
+ "tether-providers",
  "tether-quality",
  "tether-sandbox",
  "tether-secrets",

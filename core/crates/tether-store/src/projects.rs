@@ -1,12 +1,13 @@
 //! Project rows and workspace directory names.
 
 use rusqlite::{OptionalExtension, Row, params};
+use std::path::{Path, PathBuf};
 use tether_types::{ModelRef, PermissionMode, ProjectId, Provider};
 use ulid::Ulid;
 
 use crate::{Store, StoreError};
 
-const PROJECT_COLUMNS: &str = "SELECT p.id, p.name, p.path, p.created_at,
+const PROJECT_COLUMNS: &str = "SELECT p.id, p.name, p.path, p.root, p.created_at,
     COALESCE(MAX(s.updated_at), p.created_at), COUNT(s.id),
     p.default_provider, p.default_model_id, p.default_mode
     FROM projects p LEFT JOIN sessions s ON s.project_id = p.id AND s.archived = 0";
@@ -18,8 +19,10 @@ pub struct ProjectRecord {
     pub id: ProjectId,
     /// Trimmed display name.
     pub name: String,
-    /// Directory name relative to the workspaces root.
+    /// Directory name relative to the project's root.
     pub path: String,
+    /// Absolute project root, or the private default root when absent.
+    pub root: Option<String>,
     /// Creation time in Unix milliseconds.
     pub created_at: i64,
     /// Newest session update time, or creation time when empty.
@@ -71,6 +74,7 @@ type ProjectRow = (
     String,
     String,
     String,
+    Option<String>,
     i64,
     i64,
     i64,
@@ -80,6 +84,44 @@ type ProjectRow = (
 );
 
 impl Store {
+    /// Reads the saved root used for new projects.
+    ///
+    /// # Errors
+    /// Returns an error when SQLite cannot read the setting.
+    pub fn new_project_root(&self) -> Result<Option<String>, StoreError> {
+        self.conn
+            .query_row(
+                "SELECT value FROM app_settings WHERE key = 'new_project_root'",
+                [],
+                |row| row.get(0),
+            )
+            .optional()
+            .map_err(Into::into)
+    }
+
+    /// Saves or clears the root used for new projects.
+    ///
+    /// # Errors
+    /// Returns an error when SQLite cannot write the setting.
+    pub fn set_new_project_root(&self, root: Option<&str>) -> Result<(), StoreError> {
+        match root {
+            Some(root) => {
+                self.conn.execute(
+                    "INSERT INTO app_settings (key, value) VALUES ('new_project_root', ?1)
+                     ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                    [root],
+                )?;
+            }
+            None => {
+                self.conn.execute(
+                    "DELETE FROM app_settings WHERE key = 'new_project_root'",
+                    [],
+                )?;
+            }
+        }
+        Ok(())
+    }
+
     /// Reads a project's remote URL and default branch.
     ///
     /// # Errors
@@ -184,14 +226,17 @@ impl Store {
         }
         let id = ProjectId::new(Ulid::new().to_string());
         let path = project_path(name, &id);
+        let root = self.new_project_root()?;
         self.conn.execute(
-            "INSERT INTO projects (id, name, path, created_at) VALUES (?1, ?2, ?3, ?4)",
-            params![id.as_str(), name, path, now_ms],
+            "INSERT INTO projects (id, name, path, root, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![id.as_str(), name, path, root, now_ms],
         )?;
         Ok(ProjectRecord {
             id,
             name: name.into(),
             path,
+            root,
             created_at: now_ms,
             last_activity_at: now_ms,
             session_count: 0,
@@ -206,7 +251,7 @@ impl Store {
     /// # Errors
     /// Returns an error when the database cannot be read or a count overflows.
     pub fn list_projects(&self) -> Result<Vec<ProjectRecord>, StoreError> {
-        let sql = format!("{PROJECT_COLUMNS} GROUP BY p.id ORDER BY 5 DESC, p.id DESC");
+        let sql = format!("{PROJECT_COLUMNS} GROUP BY p.id ORDER BY 6 DESC, p.id DESC");
         let mut statement = self.conn.prepare(&sql)?;
         let rows = statement.query_map([], project_row)?;
         rows.map(|row| row.map_err(StoreError::from).and_then(decode_project))
@@ -295,6 +340,7 @@ fn project_row(row: &Row<'_>) -> rusqlite::Result<ProjectRow> {
         row.get(6)?,
         row.get(7)?,
         row.get(8)?,
+        row.get(9)?,
     ))
 }
 
@@ -303,19 +349,30 @@ fn decode_project(row: ProjectRow) -> Result<ProjectRecord, StoreError> {
         id: ProjectId::new(row.0),
         name: row.1,
         path: row.2,
-        created_at: row.3,
-        last_activity_at: row.4,
-        session_count: u32::try_from(row.5).map_err(|_| StoreError::SessionCounterOverflow)?,
+        root: row.3,
+        created_at: row.4,
+        last_activity_at: row.5,
+        session_count: u32::try_from(row.6).map_err(|_| StoreError::SessionCounterOverflow)?,
         default_provider: row
-            .6
+            .7
             .map(|value| crate::sessions::parse_enum("default_provider", value))
             .transpose()?,
-        default_model_id: row.7,
+        default_model_id: row.8,
         default_mode: row
-            .8
+            .9
             .map(|value| crate::sessions::parse_enum("default_mode", value))
             .transpose()?,
     })
+}
+
+/// Resolves a saved project against the private default root.
+#[must_use]
+pub fn project_dir(default_root: &Path, project: &ProjectRecord) -> PathBuf {
+    project
+        .root
+        .as_deref()
+        .map_or_else(|| default_root.to_owned(), PathBuf::from)
+        .join(&project.path)
 }
 
 fn project_path(name: &str, id: &ProjectId) -> String {

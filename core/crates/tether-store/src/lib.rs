@@ -65,7 +65,7 @@ pub use db::Store;
 pub use error::StoreError;
 pub use mcp_servers::{McpServerHeaderRecord, McpServerRecord, McpToolSettingRecord};
 pub use models::{CATALOG_TTL_MS, catalog_is_fresh};
-pub use projects::{GitIdentity, ProjectDefaults, ProjectRecord, ProjectRemote};
+pub use projects::{GitIdentity, ProjectDefaults, ProjectRecord, ProjectRemote, project_dir};
 pub use prompt_snapshots::PromptSnapshot;
 pub use session_fts::SessionSearchHit;
 pub use sessions::SessionRecord;

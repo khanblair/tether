@@ -9,6 +9,8 @@
     <string name="approval_kind_push">Push to GitHub</string>
     <string name="approval_kind_force_push">Force push to GitHub</string>
     <string name="approval_kind_pull_request">Open a pull request on GitHub</string>
+    <string name="approval_kind_github_repo_create_private">Create a private repository</string>
+    <string name="approval_kind_github_repo_create_public">Create a PUBLIC repository</string>
     <string name="approval_kind_other">Use a tool</string>
 
     <!-- Approval bar: the position in the waiting list, the buttons, and the expanded detail. -->

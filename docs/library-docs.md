@@ -184,7 +184,7 @@ Icons: Lucide (ISC), converted to Compose `ImageVector`s in `designsystem/Icons.
 | `anyhow` in library crates | Erases error types at boundaries | `thiserror` |
 | `lazy_static`, `once_cell` | Replaced by the standard library | `std::sync::LazyLock`, `OnceLock` |
 | Firebase Analytics, Crashlytics, any analytics SDK | No data leaves the device without consent (Q3) | Local crash log export |
-| Termux packages or its app code | GPL licensing; we own the Linux layer | Our PRoot build and Alpine |
+| Termux packages or its app code | GPL licensing; we own the Linux layer. The one exception is the source of the `termux/proot` fork, built by us with our patches (D42) | Our PRoot build and Alpine |
 | Accompanist modules with official replacements | Deprecated | Official AndroidX APIs |
 | Compose Multiplatform for app UI | Conflicts with decision D2 | Jetpack Compose now, SwiftUI later |
 | Any WebView-based UI for core screens | Slow, inconsistent. The Preview screen is the one allowed WebView (D40) | Compose |

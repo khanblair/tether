@@ -25,7 +25,7 @@ impl Repo {
         Ok(Self { root })
     }
 
-    /// Initializes an empty repository with `default_branch`.
+    /// Initializes a repository with `default_branch`.
     ///
     /// # Errors
     /// Returns an error when the destination is not empty or the branch is invalid.
@@ -36,7 +36,7 @@ impl Repo {
             &root,
             gix::create::Kind::WithWorktree,
             gix::create::Options {
-                destination_must_be_empty: Some(true),
+                destination_must_be_empty: Some(false),
                 ..Default::default()
             },
         )
@@ -49,6 +49,27 @@ impl Repo {
             .map_err(|_| RepoError::Io)?;
         }
         Ok(Self { root })
+    }
+
+    /// Adds or replaces a named remote in the repository configuration.
+    ///
+    /// # Errors
+    /// Returns an error when the URL is invalid or the local Git configuration cannot be written.
+    pub fn add_remote(&self, name: &str, url: &str) -> Result<(), RepoError> {
+        let repository = self.git()?;
+        let config_path = repository
+            .config_path(gix::config::Source::Local)
+            .map_err(|_| RepoError::Io)?;
+        let mut config = repository
+            .config_file_mut(config_path)
+            .map_err(|_| RepoError::Io)?;
+        let mut remote = repository
+            .remote_at_without_url_rewrite(url)
+            .map_err(|_| RepoError::InvalidName)?;
+        remote
+            .save_as_to(name, &mut config)
+            .map_err(|_| RepoError::InvalidName)?;
+        config.commit().map_err(|_| RepoError::Io)
     }
 
     /// Returns the repository root.

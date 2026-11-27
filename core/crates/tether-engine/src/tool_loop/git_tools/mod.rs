@@ -1,7 +1,7 @@
 //! Git and GitHub tools bound to one project workspace.
 
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use serde_json::{Value, json};
 use tether_providers::{BoxFuture, ToolSpec};
@@ -88,6 +88,15 @@ pub trait GithubClientFactory: Send + Sync {
     fn client(&self) -> Result<GithubClient, String>;
 }
 
+/// Persists the remote metadata owned by the project store.
+pub trait GitRemoteWriter: Send + Sync {
+    /// Saves a repository URL and its default branch.
+    ///
+    /// # Errors
+    /// Returns a message when the project metadata cannot be saved.
+    fn set_remote(&self, remote_url: &str, default_branch: &str) -> Result<(), String>;
+}
+
 /// Dependencies for the Git handler.
 pub struct GitToolsConfig {
     /// Saved project remote URL, if any.
@@ -100,6 +109,10 @@ pub struct GitToolsConfig {
     pub transport: Arc<dyn TransportFactory>,
     /// Creates GitHub clients.
     pub github: Arc<dyn GithubClientFactory>,
+    /// Authenticated GitHub login for approval targets, if known.
+    pub github_owner: Option<String>,
+    /// Persists a newly created repository's remote metadata.
+    pub remote_writer: Arc<dyn GitRemoteWriter>,
     /// Commit gates owned by later phases.
     pub gates: Vec<Arc<dyn CommitGate>>,
 }
@@ -107,13 +120,26 @@ pub struct GitToolsConfig {
 /// Handles local Git and GitHub actions for one project.
 pub struct GitTools {
     config: GitToolsConfig,
+    remote: Mutex<RemoteState>,
+}
+
+pub(super) struct RemoteState {
+    pub(super) url: Option<String>,
+    pub(super) default_branch: Option<String>,
 }
 
 impl GitTools {
     /// Creates a Git handler for one project.
     #[must_use]
     pub fn new(config: GitToolsConfig) -> Self {
-        Self { config }
+        let remote = RemoteState {
+            url: config.remote_url.clone(),
+            default_branch: config.default_branch.clone(),
+        };
+        Self {
+            config,
+            remote: Mutex::new(remote),
+        }
     }
 }
 
@@ -128,10 +154,17 @@ impl ToolHandler for GitTools {
         args_json: &str,
         context: &PrepareContext<'_>,
     ) -> Result<PreparedCall, String> {
+        let default_branch = self
+            .remote
+            .lock()
+            .map_err(|_| "Git remote state is unavailable".to_owned())?
+            .default_branch
+            .clone();
         validation::prepare(
             name,
             args_json,
-            self.config.default_branch.as_deref(),
+            default_branch.as_deref(),
+            self.config.github_owner.as_deref(),
             context.guard.root(),
         )
     }
@@ -154,6 +187,13 @@ impl GitTools {
         let root = context.guard.root().to_owned();
         let cancel = context.cancel.clone();
         match call.tool.as_str() {
+            "git_init" => {
+                let payload = call.payload;
+                let result = tokio::task::spawn_blocking(move || local::init(&root, &payload))
+                    .await
+                    .map_err(|_| "git operation stopped".to_owned())??;
+                Ok(ToolOutput { text: result })
+            }
             "git_status" | "git_diff" | "git_log" | "git_branch" | "git_commit" => {
                 let deps = local::LocalDeps {
                     identity: Arc::clone(&self.config.identity),
@@ -163,13 +203,20 @@ impl GitTools {
                 let result = run_local(root, call, deps).await?;
                 Ok(ToolOutput { text: result })
             }
-            "git_push" | "pr_create" | "pr_status" => {
+            "git_push" | "pr_create" | "pr_status" | "github_repo_create" => {
+                let (remote_url, default_branch) = self
+                    .remote
+                    .lock()
+                    .map_err(|_| "Git remote state is unavailable".to_owned())
+                    .map(|remote| (remote.url.clone(), remote.default_branch.clone()))?;
                 let setup = remote::RemoteSetup {
                     root: &root,
-                    remote_url: self.config.remote_url.as_deref(),
-                    default_branch: self.config.default_branch.as_deref(),
+                    remote_url: remote_url.as_deref(),
+                    default_branch: default_branch.as_deref(),
                     transport: &self.config.transport,
                     github: &self.config.github,
+                    remote_writer: &self.config.remote_writer,
+                    remote_state: &self.remote,
                 };
                 let result = remote::execute(&call, &setup, &cancel).await?;
                 Ok(ToolOutput { text: result })
@@ -191,11 +238,28 @@ async fn run_local(
 }
 
 fn specs() -> Vec<ToolSpec> {
-    [
+    local_specs()
+        .into_iter()
+        .chain(remote_specs())
+        .map(|(name, description, schema)| ToolSpec {
+            name: name.to_owned(),
+            description: description.to_owned(),
+            input_schema_json: schema.to_string(),
+        })
+        .collect()
+}
+
+fn local_specs() -> Vec<(&'static str, &'static str, Value)> {
+    vec![
         (
             "git_status",
             "Read the current Git status. Use it before deciding what to change.",
             json!({"type":"object","properties":{},"additionalProperties":false}),
+        ),
+        (
+            "git_init",
+            "Initialize a Git repository in this project.",
+            json!({"type":"object","properties":{"default_branch":{"type":"string","maxLength":100}},"additionalProperties":false}),
         ),
         (
             "git_diff",
@@ -217,6 +281,11 @@ fn specs() -> Vec<ToolSpec> {
             "Stage selected changes and create a commit with the saved identity.",
             json!({"type":"object","properties":{"message":{"type":"string","minLength":1,"maxLength":MAX_TEXT},"paths":{"type":"array","maxItems":100,"items":{"type":"string","maxLength":MAX_PATH}}},"required":["message"],"additionalProperties":false}),
         ),
+    ]
+}
+
+fn remote_specs() -> Vec<(&'static str, &'static str, Value)> {
+    vec![
         (
             "git_push",
             "Push the current branch to origin after the normal remote-action guard.",
@@ -232,14 +301,12 @@ fn specs() -> Vec<ToolSpec> {
             "Read pull request checks and review comments for the current branch.",
             json!({"type":"object","properties":{"number":{"type":"integer","minimum":1}},"additionalProperties":false}),
         ),
+        (
+            "github_repo_create",
+            "Create a GitHub repository and connect it to this project.",
+            json!({"type":"object","properties":{"name":{"type":"string","minLength":1,"maxLength":100},"private":{"type":"boolean"},"description":{"type":"string","maxLength":20000}},"required":["name"],"additionalProperties":false}),
+        ),
     ]
-    .into_iter()
-    .map(|(name, description, schema)| ToolSpec {
-        name: name.to_owned(),
-        description: description.to_owned(),
-        input_schema_json: schema.to_string(),
-    })
-    .collect()
 }
 
 /// Caps a diff while retaining an explicit marker for the model.
@@ -284,6 +351,10 @@ pub(crate) fn optional_usize(value: &Value, key: &str, default: usize) -> Result
             .and_then(|number| usize::try_from(number).ok())
             .ok_or_else(|| format!("{key} must be a nonnegative integer"))
     })
+}
+
+pub(crate) fn no_repository_error() -> String {
+    "this project is not a git repository; run git_init first".into()
 }
 
 pub(crate) fn require_object(name: &str, args_json: &str) -> Result<Value, String> {

@@ -13,6 +13,7 @@ use crate::tool_loop::PreparedCall;
 pub(super) fn allowed_fields(name: &str) -> Option<&'static [&'static str]> {
     Some(match name {
         "git_status" => &[],
+        "git_init" => &["default_branch"],
         "git_diff" => &["staged", "path", "from", "to"],
         "git_log" => &["limit", "path"],
         "git_branch" => &["name", "from", "switch"],
@@ -20,6 +21,7 @@ pub(super) fn allowed_fields(name: &str) -> Option<&'static [&'static str]> {
         "git_push" => &["branch", "force", "delete"],
         "pr_create" => &["title", "body", "base", "draft"],
         "pr_status" => &["number"],
+        "github_repo_create" => &["name", "private", "description"],
         _ => return None,
     })
 }
@@ -28,6 +30,7 @@ pub(super) fn prepare(
     name: &str,
     args_json: &str,
     default_branch: Option<&str>,
+    github_owner: Option<&str>,
     root: &Path,
 ) -> Result<PreparedCall, String> {
     let value = require_object(name, args_json)?;
@@ -38,6 +41,7 @@ pub(super) fn prepare(
             "status".into(),
             value,
         )),
+        "git_init" => git_init(value),
         "git_diff" => diff(value),
         "git_log" => log(value),
         "git_branch" => branch(value),
@@ -45,8 +49,27 @@ pub(super) fn prepare(
         "git_push" => push(value, default_branch, root),
         "pr_create" => pr_create(value, default_branch, root),
         "pr_status" => pr_status(value),
+        "github_repo_create" => github_repo_create(value, github_owner),
         _ => Err("unknown tool".into()),
     }
+}
+
+fn git_init(mut value: Value) -> Result<PreparedCall, String> {
+    let branch = optional_string(&value, "default_branch")?
+        .unwrap_or("main")
+        .to_owned();
+    bounded(&branch, 100, "default_branch")?;
+    tether_vcs::validate_branch_name(&branch)
+        .map_err(|_| "default_branch is invalid".to_owned())?;
+    if value.get("default_branch").is_none() {
+        value["default_branch"] = Value::String(branch.clone());
+    }
+    Ok(target_tool(
+        "git_init",
+        PermissionEffect::Edit,
+        format!("initialize a Git repository on {branch}"),
+        value,
+    ))
 }
 
 fn diff(value: Value) -> Result<PreparedCall, String> {
@@ -136,7 +159,7 @@ fn commit(value: Value) -> Result<PreparedCall, String> {
 /// Reads the branch that is checked out now, so an approved target names a real branch.
 fn checked_out_branch(root: &Path) -> Result<String, String> {
     Repo::open(root)
-        .map_err(|error| error.to_string())?
+        .map_err(|_| super::no_repository_error())?
         .current_branch()
         .map_err(|error| error.to_string())?
         .ok_or_else(|| "current branch is unavailable".to_owned())
@@ -230,6 +253,36 @@ fn pr_status(value: Value) -> Result<PreparedCall, String> {
         "pull request status".into(),
         value,
     ))
+}
+
+fn github_repo_create(value: Value, owner: Option<&str>) -> Result<PreparedCall, String> {
+    let name = string(&value, "name")?;
+    validate_repository_name(name)?;
+    let private = optional_bool(&value, "private", true)?;
+    let visibility = if private { "private" } else { "public" };
+    let repository = owner.map_or_else(|| name.to_owned(), |owner| format!("{owner}/{name}"));
+    Ok(target_tool(
+        "github_repo_create",
+        PermissionEffect::Push,
+        format!("create GitHub repository {repository} ({visibility})"),
+        value,
+    ))
+}
+
+fn validate_repository_name(name: &str) -> Result<(), String> {
+    let length = name.chars().count();
+    if !(1..=100).contains(&length)
+        || matches!(name, "." | "..")
+        || !name.chars().all(|character| {
+            character.is_ascii_alphanumeric() || matches!(character, '-' | '_' | '.')
+        })
+    {
+        return Err(
+            "repository name must be 1 to 100 letters, digits, '-', '_' or '.' and not '.' or '..'"
+                .into(),
+        );
+    }
+    Ok(())
 }
 
 fn validate_path(path: &str) -> Result<String, String> {

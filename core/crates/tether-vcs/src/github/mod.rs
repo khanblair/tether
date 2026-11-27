@@ -220,6 +220,17 @@ pub struct RepoInfo {
     pub permissions: BTreeMap<String, bool>,
 }
 
+/// A repository created through the authenticated GitHub API.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CreatedRepository {
+    /// HTTPS clone URL.
+    pub clone_url: String,
+    /// Browser URL.
+    pub html_url: String,
+    /// Default branch, or `main` when GitHub has not assigned one yet.
+    pub default_branch: String,
+}
+
 /// Pull request input.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PullRequestDraft {

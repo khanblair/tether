@@ -3965,6 +3965,7 @@ dependencies = [
  "tether-providers",
  "tether-quality",
  "tether-sandbox",
+ "tether-secrets",
  "tether-skills",
  "tether-store",
  "tether-tools",

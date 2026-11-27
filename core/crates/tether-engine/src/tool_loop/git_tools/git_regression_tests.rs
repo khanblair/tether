@@ -1,7 +1,14 @@
+use std::collections::VecDeque;
+use std::future::Future;
 use std::io::Write;
+use std::pin::Pin;
 use std::process::Stdio;
+use std::sync::Mutex;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use super::*;
+use tether_secrets::Secret;
+use tether_vcs::{HttpClient, HttpClientError, HttpRequest, HttpResponse};
 
 struct FixedIdentity;
 
@@ -86,6 +93,131 @@ impl TransportFactory for ReceivePackFactory {
     }
 }
 
+struct AcceptingPush {
+    posts: Arc<AtomicUsize>,
+}
+
+impl Transport for AcceptingPush {
+    fn get(
+        &self,
+        _url: &str,
+        _headers: BTreeMap<String, String>,
+    ) -> Result<Vec<u8>, TransportError> {
+        let mut response = packet("# service=git-receive-pack\n");
+        response.extend(b"0000");
+        response.extend(packet(&format!(
+            "{} refs/heads/main\0report-status side-band-64k\n",
+            "0".repeat(40)
+        )));
+        response.extend(b"0000");
+        Ok(response)
+    }
+
+    fn post(
+        &self,
+        _url: &str,
+        _content_type: &str,
+        _body: Vec<u8>,
+    ) -> Result<Vec<u8>, TransportError> {
+        self.posts.fetch_add(1, Ordering::Relaxed);
+        let mut response = packet("unpack ok\n");
+        response.extend(packet("ok refs/heads/main\n"));
+        response.extend(b"0000");
+        Ok(response)
+    }
+}
+
+struct AcceptingPushFactory(Arc<AtomicUsize>);
+
+impl TransportFactory for AcceptingPushFactory {
+    fn transport(&self) -> Result<Box<dyn Transport>, String> {
+        Ok(Box::new(AcceptingPush {
+            posts: Arc::clone(&self.0),
+        }))
+    }
+}
+
+fn packet(payload: &str) -> Vec<u8> {
+    format!("{:04x}{payload}", payload.len() + 4).into_bytes()
+}
+
+struct NoRemote;
+impl GitRemoteWriter for NoRemote {
+    fn set_remote(&self, _: &str, _: &str) -> Result<(), String> {
+        Ok(())
+    }
+}
+
+struct RecordingRemote {
+    calls: Mutex<Vec<(String, String)>>,
+}
+
+impl RecordingRemote {
+    fn new() -> Self {
+        Self {
+            calls: Mutex::new(Vec::new()),
+        }
+    }
+}
+
+impl GitRemoteWriter for RecordingRemote {
+    fn set_remote(&self, remote_url: &str, default_branch: &str) -> Result<(), String> {
+        self.calls
+            .lock()
+            .map_err(|_| "remote recording lock is unavailable".to_owned())?
+            .push((remote_url.to_owned(), default_branch.to_owned()));
+        Ok(())
+    }
+}
+
+struct GithubApi {
+    responses: Mutex<VecDeque<Result<HttpResponse, HttpClientError>>>,
+}
+
+impl GithubApi {
+    fn new(responses: Vec<HttpResponse>) -> Arc<Self> {
+        Arc::new(Self {
+            responses: Mutex::new(responses.into_iter().map(Ok).collect()),
+        })
+    }
+}
+
+impl HttpClient for GithubApi {
+    fn send(
+        &self,
+        _request: HttpRequest,
+    ) -> Pin<Box<dyn Future<Output = Result<HttpResponse, HttpClientError>> + Send + '_>> {
+        let response = self
+            .responses
+            .lock()
+            .map_err(|_| HttpClientError)
+            .and_then(|mut responses| responses.pop_front().ok_or(HttpClientError));
+        Box::pin(async move { response? })
+    }
+}
+
+struct GithubFactory(Arc<GithubApi>);
+
+impl GithubClientFactory for GithubFactory {
+    fn client(&self) -> Result<GithubClient, String> {
+        let http: Arc<dyn HttpClient> = self.0.clone();
+        GithubClient::with_base_url(
+            http,
+            Secret::from_text("test-token"),
+            "https://api.github.test",
+        )
+        .map_err(|error| error.to_string())
+    }
+}
+
+fn response(body: &str) -> HttpResponse {
+    HttpResponse {
+        status: 201,
+        headers: BTreeMap::default(),
+        body: body.as_bytes().to_vec(),
+    }
+}
+
 async fn push_call(repo: &Repo, bare: &Path, args: &str) -> Result<String, String> {
     let handler = GitTools::new(GitToolsConfig {
         remote_url: Some("https://github.test/acme/repo.git".into()),
@@ -93,6 +225,8 @@ async fn push_call(repo: &Repo, bare: &Path, args: &str) -> Result<String, Strin
         identity: Arc::new(NoIdentity),
         transport: Arc::new(ReceivePackFactory(bare.to_owned())),
         github: Arc::new(NoGithub),
+        github_owner: None,
+        remote_writer: Arc::new(NoRemote),
         gates: Vec::new(),
     });
     let guard = PathGuard::new(repo.path()).unwrap();
@@ -317,6 +451,105 @@ fn default_branch_push_never_skips_approver_but_bypass_allows_it() {
         ),
         crate::permissions::Decision::Block { .. }
     ));
+}
+
+#[test]
+fn repository_creation_asks_in_every_mode_except_bypass() {
+    let repo = Repo::on_branch("main");
+    let guard = PathGuard::new(repo.path()).unwrap();
+    let call = super::tools("main")
+        .prepare(
+            "github_repo_create",
+            r#"{"name":"new-repo","private":false}"#,
+            &PrepareContext { guard: &guard },
+        )
+        .unwrap();
+    assert_eq!(
+        call.target,
+        "create GitHub repository blair/new-repo (public)"
+    );
+    let rule = PermissionRule {
+        id: "stored".into(),
+        tool: "github_repo_create".into(),
+        pattern: "*".into(),
+        executor: None,
+    };
+    let request = crate::permissions::PermissionRequest {
+        tool: "github_repo_create",
+        target: &call.target,
+        executor: None,
+    };
+    for mode in [
+        PermissionMode::Ask,
+        PermissionMode::AcceptEdits,
+        PermissionMode::Auto,
+    ] {
+        assert_eq!(
+            permission(mode, call.effect, &rule, request),
+            crate::permissions::Decision::Ask
+        );
+    }
+    assert_eq!(
+        permission(PermissionMode::Bypass, call.effect, &rule, request),
+        crate::permissions::Decision::Allow
+    );
+    assert!(matches!(
+        permission(PermissionMode::Plan, call.effect, &rule, request),
+        crate::permissions::Decision::Block { .. }
+    ));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn empty_project_can_init_commit_create_push_and_open_pr() {
+    let workspace = tempfile::tempdir().unwrap();
+    let push_posts = Arc::new(AtomicUsize::new(0));
+    let api = GithubApi::new(vec![
+        response(
+            r#"{"clone_url":"https://github.com/blair/new-repo.git","html_url":"https://github.com/blair/new-repo","default_branch":"main"}"#,
+        ),
+        response(
+            r#"{"number":7,"html_url":"https://github.com/blair/new-repo/pull/7","title":"Add note","body":"","state":"open","head":{"sha":"head-sha","ref":"main"},"base":{"ref":"main"}}"#,
+        ),
+    ]);
+    let remote_writer = Arc::new(RecordingRemote::new());
+    let handler = GitTools::new(GitToolsConfig {
+        remote_url: None,
+        default_branch: None,
+        identity: Arc::new(FixedIdentity),
+        transport: Arc::new(AcceptingPushFactory(Arc::clone(&push_posts))),
+        github: Arc::new(GithubFactory(Arc::clone(&api))),
+        github_owner: Some("blair".into()),
+        remote_writer: Arc::clone(&remote_writer) as Arc<dyn GitRemoteWriter>,
+        gates: Vec::new(),
+    });
+    std::fs::write(workspace.path().join("note.txt"), "hello\n").unwrap();
+    for (tool, args) in [
+        ("git_init", r"{}"),
+        ("git_commit", r#"{"message":"Add note"}"#),
+        (
+            "github_repo_create",
+            r#"{"name":"new-repo","private":true,"description":"A test repo"}"#,
+        ),
+        ("git_push", r"{}"),
+        ("pr_create", r#"{"title":"Add note"}"#),
+    ] {
+        let guard = PathGuard::new(workspace.path()).unwrap();
+        let call = handler
+            .prepare(tool, args, &PrepareContext { guard: &guard })
+            .unwrap();
+        execute_call(&handler, workspace.path(), call)
+            .await
+            .unwrap_or_else(|error| panic!("{tool}: {error}"));
+    }
+    assert_eq!(
+        remote_writer.calls.lock().unwrap().as_slice(),
+        [(
+            "https://github.com/blair/new-repo.git".into(),
+            "main".into()
+        )]
+    );
+    assert!(workspace.path().join(".git/config").exists());
+    assert_eq!(push_posts.load(Ordering::Relaxed), 1);
 }
 
 #[test]

@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::sync::Mutex;
 
 use serde_json::Value;
 use tether_vcs::{
@@ -7,7 +8,10 @@ use tether_vcs::{
 };
 use tokio_util::sync::CancellationToken;
 
-use super::{GithubClientFactory, TransportFactory, optional_bool, optional_string, string};
+use super::{
+    GitRemoteWriter, GithubClientFactory, RemoteState, TransportFactory, no_repository_error,
+    optional_bool, optional_string, string,
+};
 use crate::tool_loop::PreparedCall;
 
 /// Project settings and factories that the remote actions need.
@@ -22,6 +26,10 @@ pub(super) struct RemoteSetup<'a> {
     pub(super) transport: &'a Arc<dyn TransportFactory>,
     /// Creates GitHub clients.
     pub(super) github: &'a Arc<dyn GithubClientFactory>,
+    /// Persists the project remote metadata.
+    pub(super) remote_writer: &'a Arc<dyn GitRemoteWriter>,
+    /// Updates the in-memory remote used by later tool calls.
+    pub(super) remote_state: &'a Mutex<RemoteState>,
 }
 
 pub(super) async fn execute(
@@ -33,6 +41,7 @@ pub(super) async fn execute(
         "git_push" => push_blocking(call, setup, cancel).await,
         "pr_create" => create_pr(call, setup).await,
         "pr_status" => status_pr(call, setup).await,
+        "github_repo_create" => create_repository(call, setup).await,
         _ => Err("unknown git tool".into()),
     }
 }
@@ -72,7 +81,7 @@ fn push_call(job: &PushJob) -> Result<String, String> {
         .remote_url
         .as_deref()
         .ok_or("project has no GitHub remote")?;
-    let repo = Repo::open(&job.root).map_err(|error| error.to_string())?;
+    let repo = Repo::open(&job.root).map_err(|_| no_repository_error())?;
     // Preparation resolved and froze the branch, so this is the branch the user approved.
     let branch = string(&job.call.payload, "branch")?.to_owned();
     let force = optional_bool(&job.call.payload, "force", false)?;
@@ -153,7 +162,7 @@ async fn create_pr(call: &PreparedCall, setup: &RemoteSetup<'_>) -> Result<Strin
 
 async fn status_pr(call: &PreparedCall, setup: &RemoteSetup<'_>) -> Result<String, String> {
     let (owner, repo_name) = parse_remote(setup.remote_url)?;
-    let repo = Repo::open(setup.root).map_err(|error| error.to_string())?;
+    let repo = Repo::open(setup.root).map_err(|_| no_repository_error())?;
     let client = setup.github.client()?;
     let number = if let Some(number) = call.payload.get("number").and_then(Value::as_u64) {
         number
@@ -178,6 +187,40 @@ async fn status_pr(call: &PreparedCall, setup: &RemoteSetup<'_>) -> Result<Strin
         .await
         .map_err(|error| error.to_string())?;
     Ok(status_text(&pr, checks, comments))
+}
+
+async fn create_repository(call: &PreparedCall, setup: &RemoteSetup<'_>) -> Result<String, String> {
+    Repo::open(setup.root).map_err(|_| no_repository_error())?;
+    let name = string(&call.payload, "name")?;
+    let private = optional_bool(&call.payload, "private", true)?;
+    let description = optional_string(&call.payload, "description")?;
+    let client = setup
+        .github
+        .client()
+        .map_err(|error| github_client_error(&error))?;
+    let repository = client
+        .create_repository(name, private, description)
+        .await
+        .map_err(create_repository_error)?;
+    Repo::open(setup.root)
+        .map_err(|_| no_repository_error())?
+        .add_remote("origin", &repository.clone_url)
+        .map_err(|error| error.to_string())?;
+    setup
+        .remote_writer
+        .set_remote(&repository.clone_url, &repository.default_branch)?;
+    setup
+        .remote_state
+        .lock()
+        .map_err(|_| "Git remote state is unavailable".to_owned())
+        .map(|mut state| {
+            state.url = Some(repository.clone_url.clone());
+            state.default_branch = Some(repository.default_branch.clone());
+        })?;
+    Ok(format!(
+        "Created GitHub repository: clone {}, web {}",
+        repository.clone_url, repository.html_url
+    ))
 }
 
 /// Finds the number of the open pull request whose head branch is `branch`.
@@ -237,6 +280,27 @@ fn create_error(error: GithubError) -> String {
                 .any(|message| message.contains("head") && message.contains("does not exist")) =>
         {
             "Push the branch first".into()
+        }
+        other => other.to_string(),
+    }
+}
+
+fn github_client_error(error: &str) -> String {
+    if error.contains("not signed in") {
+        "Sign in to GitHub in Settings first".into()
+    } else {
+        error.to_owned()
+    }
+}
+
+fn create_repository_error(error: GithubError) -> String {
+    match error {
+        GithubError::Validation { messages }
+            if messages
+                .iter()
+                .any(|message| message.to_ascii_lowercase().contains("name already exists")) =>
+        {
+            "GitHub repository name already exists".into()
         }
         other => other.to_string(),
     }

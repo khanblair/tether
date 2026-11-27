@@ -183,6 +183,8 @@ All components start as **Planned**. Screenshot tests start with the first featu
 | `RuntimePackRow` | Sandbox runtime pack with install state | `pack`, `source`, `onInstall`, `onCancel` | not installed, downloading, ready, failed | P5 | Built |
 | `CiRunsList` | Recent CI runs | `runs`, `onOpen` | loading, list, empty | P6 | Built |
 | `LinuxSetupCard` | Linux mode setup and status | `state`, `source`, `onInstall`, `onRepair`, `onRemove` | not installed, each setup step, ready, broken, unavailable in `play` | P7 | Built |
+| `LinuxBackgroundSettingRow` | Chooses when the Linux foreground notification keeps Linux running | `mode`, `onClick` | while running, whenever installed, 200% font, 320 dp | C14 | In progress |
+| `LinuxBackgroundPickSheet` | Two-choice picker for the Linux foreground notification rule | `current`, `onPick`, `onDismiss` | each choice selected, light, dark, 200% font, 320 dp | C14 | In progress |
 | `TerminalView` | Linux shell rendering | `frame`, `onInput`, `onResize`, `onCopy` | default, scrollback, alternate screen, failed, not ready | P7 | Built |
 | `TerminalKeyRow` | Extra keys above the keyboard | `onKey`, `modifiers` | default, Ctrl held, Alt held | P7 | Built |
 | `ServerBar` | Compact process row above the composer with Preview and Stop, plus a preview-ready line | `state`, `preview`, `onPreview`, `onStop` | one server, two servers expanded, stopped, 200% font, 320 dp | P9 | Built |

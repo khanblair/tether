@@ -9,6 +9,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -33,6 +36,7 @@ fun ExecutorsScreen(
     onOpenLinux: (() -> Unit)? = null,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    var pickingBackground by rememberSaveable { mutableStateOf(false) }
     val repair: (() -> Unit)? = if (state.linuxSetupInBuild) viewModel::repairLinux else null
     SettingsPage(title = stringResource(R.string.executors_title), onBack = onBack) {
         SectionTitle(text = stringResource(R.string.executors_section_sandbox))
@@ -51,6 +55,12 @@ fun ExecutorsScreen(
                 source = state.linuxSource,
                 onOpenShell = onOpenLinux,
             )
+            if (state.linuxSetupInBuild && state.linux == LinuxState.Ready) {
+                LinuxBackgroundSettingRow(
+                    mode = state.linuxBackgroundMode,
+                    onClick = { pickingBackground = true },
+                )
+            }
         }
         SectionTitle(text = stringResource(R.string.executors_section_ci))
         CiSection(state = state.ci, onRetry = viewModel::retryCi, onOpenCiRuns = onOpenCiRuns)
@@ -59,6 +69,16 @@ fun ExecutorsScreen(
             state = state.network,
             onSet = viewModel::setNetworkAllowed,
             onRetry = viewModel::retryNetwork,
+        )
+    }
+    if (pickingBackground) {
+        LinuxBackgroundPickSheet(
+            current = state.linuxBackgroundMode,
+            onPick = { mode ->
+                viewModel.setLinuxBackgroundMode(mode)
+                pickingBackground = false
+            },
+            onDismiss = { pickingBackground = false },
         )
     }
 }

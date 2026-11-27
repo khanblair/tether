@@ -1,6 +1,6 @@
 # Linux mode spike: PRoot on Android 17
 
-Status: spike done 2026-11-27. The result is a decision (D42) and a list of work in section 6. Facts below were measured on an Android 17 emulator (API 37, arm64, 16 KB pages, a `user` build with no root) in a real app process, with a test app that targets API 36. The build scripts, patches, and logs are kept outside the repo in the session folder and are summarized here. Not tested: a release build, a foreground service, the phantom process limit, x86_64.
+Status: spike and foreground-service implementation done 2026-11-27. The result is a decision (D42) and a list of work in section 6. Facts below were measured on an Android 17 emulator (API 37, arm64, 16 KB pages, a `user` build with no root) in a real app process, with a test app that targets API 36. The build scripts, patches, and logs are kept outside the repo in the session folder and are summarized here. Not tested on a device: a release build, the phantom process limit, and x86_64.
 
 ## 1. Question
 
@@ -39,14 +39,14 @@ Start times in the app process: `--version` 8 to 10 ms, a musl shell 33 to 36 ms
 - Ship `libproot.so` and `libproot-loader.so` in `jniLibs/arm64-v8a` of the `full` flavor. The full source-set manifest sets `android:extractNativeLibs="true"`, because the default leaves no file to execute. AGP 9.5.1 exposes `useLegacyPackaging` only in the global DSL, so it is not used here.
 - Read `ApplicationInfo.nativeLibraryDir` at every start. The path changed between two installs. Never store it.
 - Always set `PROOT_LOADER=<nativeLibraryDir>/libproot-loader.so`. Make `loader_path` required in `proot.rs` (it is optional now).
-- Keep the app in a foreground state while a Linux session runs (a foreground service).
+- Keep the app in a foreground state while Linux runs. The full flavor has a `specialUse` foreground service with the `linux-userland` subtype, an ongoing low-importance `linux_session` notification, and the `FOREGROUND_SERVICE` and `FOREGROUND_SERVICE_SPECIAL_USE` permissions. The Executors screen offers a setting for only while a shell or server runs, or whenever Linux mode is installed. The Play flavor uses a no-op controller.
 - Tether's own `libtether_core.so` is already 16 KB aligned, and the APK passes `zipalign -P 16`.
 
 ## 6. Risks
 
 - Rule A is the main risk: if a future Android release denies `execute` on `app_data_file` for mapping, PRoot with a data-folder root filesystem stops working. Mitigation: the CI executor stays available, and Linux mode is labeled best effort.
 - Rule B depends on the fork's SIGSYS handling. A guest program that needs a blocked syscall must cope with ENOSYS.
-- The app freezer and the phantom process limit need a real foreground service test.
+- The app freezer risk is addressed by the foreground service and its setting. A real device test still needs to confirm the service across screen off, app backgrounding, and process events. The phantom process limit also needs a device test.
 - x86_64 has no build yet. Intel emulators and CI use x86_64, so Linux mode shows as not available there.
 
 ## 7. Work that follows
@@ -54,5 +54,5 @@ Start times in the app process: `--version` 8 to 10 ms, a musl shell 33 to 36 ms
 1. **Done.** `proot_loader_path` is required in `tether-linux` and `configure_executors`, and the runner sets `PROOT_LOADER`.
 2. **Done for arm64.** `third_party/proot/pins.sh` and `tools/proot/build.sh` pin the source and talloc checksum, apply the patch, build both binaries, and publish the GPL source offer.
 3. **App wiring done; tooling built; publication remains.** The `full` manifest extracts the arm64 `jniLibs`, app start configures the executor paths from `nativeLibraryDir`, and full resources hold the future rootfs key and URL. The `tether-linux-manifest` binary, `just linux-key`, and `just linux-manifest` prepare and verify the signed Alpine `manifest.json` and detached signature. Blair must run the recipes on a networked machine, keep the private key outside the repo, upload the archive, checksum, manifest, and signature to the GitHub release tagged `rootfs-<alpine version>`, then put the release manifest URL and printed public key into the full app resources.
-4. Background processes in the `run` tool, port discovery, a foreground service, cleartext to `127.0.0.1`, and the Preview of a localhost server.
+4. **Foreground service built.** Background processes in the `run` tool, port discovery, cleartext to `127.0.0.1`, and the Preview of a localhost server remain.
 5. **Done.** The `/linux` shell screen accepts input with its terminal key row, keeps bounded scrollback, and shows the capability message in the Play flavor (P7-07).

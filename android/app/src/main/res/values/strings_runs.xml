@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="runs_title">Runs</string>
+    <string name="runs_choose_project">Choose project</string>
+    <string name="runs_filter_all">All</string>
+    <string name="runs_filter_sandbox">Sandbox</string>
+    <string name="runs_filter_linux">Linux mode</string>
+    <string name="runs_filter_ci">CI</string>
+    <string name="runs_empty">Nothing has run in this project yet.</string>
+    <string name="runs_no_project">Open a project to see its runs.</string>
+    <string name="runs_failed">Could not read runs. Try again.</string>
+    <string name="runs_try_again">Try again</string>
+    <string name="runs_workflow_branch">%1$s · %2$s</string>
+    <string name="runs_background_meta">%1$s · %2$s</string>
+    <string name="runs_exit_duration_time">exit %1$d · %2$s · %3$s</string>
+    <string name="runs_duration_time">%1$s · %2$s</string>
+    <string name="runs_outcome_time">%1$s · %2$s</string>
+    <string name="runs_ci_meta">%1$s · %2$s</string>
+    <string name="runs_ci_meta_time">%1$s · %2$s · %3$s</string>
+    <string name="runs_outcome_succeeded">Succeeded</string>
+    <string name="runs_outcome_failed">Failed</string>
+    <string name="runs_outcome_timed_out">Timed out</string>
+    <string name="runs_outcome_cancelled">Cancelled</string>
+    <string name="runs_outcome_out_of_memory">Out of memory</string>
+    <string name="runs_outcome_denied">Denied</string>
+    <string name="runs_outcome_background">Background</string>
+    <string name="runs_outcome_unknown">Unknown</string>
+</resources>

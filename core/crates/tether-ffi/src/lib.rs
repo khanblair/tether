@@ -96,13 +96,14 @@ pub use vault::{
     VaultLinkView, VaultLinksView, VaultNoteView, VaultRuntime, VaultRuntimeError,
     VaultSyncReportView,
 };
+pub use views::run::{RunHistoryView, RunOutcomeView};
 pub use views::{
     BudgetScopeView, BudgetView, CheckpointView, CompactionView, ConnectionStatusView,
     ContextBreakdownView, ContextSectionView, CoreErrorView, CoreEventView, DayUsageView,
     ErrorKindView, ExecutorView, InterruptionView, MessagePartView, MessageView, ModelRefView,
-    ModelUsageView, ModelView, PendingApprovalView, PendingQuestionView, PermissionModeView,
-    PermissionRuleView, PlanView, PreviewTargetView, ProcessStatusView, ProcessView,
-    ProjectUsageView, ProjectView, PromptSectionView, ProviderView, QualityCountsView,
+    ModelUsageView, ModelView, NewSessionPreviewView, PendingApprovalView, PendingQuestionView,
+    PermissionModeView, PermissionRuleView, PlanView, PreviewTargetView, ProcessStatusView,
+    ProcessView, ProjectUsageView, ProjectView, PromptSectionView, ProviderView, QualityCountsView,
     QualityFindingRecordView, ReasoningEffortView, RewindScopeView, RoleView, SessionRecordView,
     SessionStatusView, SessionUsageView, SupportView, TodoItemView, TodoStatusView,
     ToolCallStatusView, TranscriptHitView, UsageSnapshotView, UsageSummaryView, UsageTotalsView,

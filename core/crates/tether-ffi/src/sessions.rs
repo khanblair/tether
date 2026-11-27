@@ -19,6 +19,8 @@ use tether_types::{ModelRef, PermissionMode, ProjectId, SessionId};
 #[path = "sessions/provider.rs"]
 mod provider;
 use provider::{provider_key, session_provider_factory};
+#[path = "sessions/new_session.rs"]
+mod new_session;
 #[path = "sessions/open.rs"]
 mod open;
 #[path = "sessions/processes.rs"]
@@ -28,6 +30,7 @@ mod prompt;
 #[path = "sessions/recovery.rs"]
 mod recovery;
 mod rewind_message;
+mod runs;
 #[path = "sessions/user_runs.rs"]
 mod user_runs;
 #[path = "sessions/ux.rs"]

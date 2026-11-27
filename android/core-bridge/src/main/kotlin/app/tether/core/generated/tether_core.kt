@@ -1239,11 +1239,15 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_tether_core_checksum_method_sessionruntime_transcript(
     ): Int
+    external fun uniffi_tether_core_checksum_method_sessionruntime_new_session_preview(
+    ): Int
     external fun uniffi_tether_core_checksum_method_sessionruntime_global_instructions(
     ): Int
     external fun uniffi_tether_core_checksum_method_sessionruntime_session_prompt_sections(
     ): Int
     external fun uniffi_tether_core_checksum_method_sessionruntime_set_global_instructions(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_sessionruntime_list_runs(
     ): Int
     external fun uniffi_tether_core_checksum_method_sessionruntime_rerun_elsewhere(
     ): Int
@@ -1799,12 +1803,16 @@ internal object UniffiLib {
     ): Long
     external fun uniffi_tether_core_fn_method_sessionruntime_transcript(`ptr`: Long,`sessionId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_tether_core_fn_method_sessionruntime_new_session_preview(`ptr`: Long,`projectId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_tether_core_fn_method_sessionruntime_global_instructions(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_tether_core_fn_method_sessionruntime_session_prompt_sections(`ptr`: Long,`sessionId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_tether_core_fn_method_sessionruntime_set_global_instructions(`ptr`: Long,`text`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_tether_core_fn_method_sessionruntime_list_runs(`ptr`: Long,`projectId`: RustBuffer.ByValue,`limit`: Int,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_tether_core_fn_method_sessionruntime_rerun_elsewhere(`ptr`: Long,`sessionId`: RustBuffer.ByValue,`toolCallId`: RustBuffer.ByValue,`executor`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     external fun uniffi_tether_core_fn_method_sessionruntime_run_user_command(`ptr`: Long,`sessionId`: RustBuffer.ByValue,`command`: RustBuffer.ByValue,`executor`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -2505,6 +2513,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_tether_core_checksum_method_sessionruntime_transcript() and 0xFFFF) != 42069) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_tether_core_checksum_method_sessionruntime_new_session_preview() and 0xFFFF) != 56785) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_tether_core_checksum_method_sessionruntime_global_instructions() and 0xFFFF) != 9278) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -2512,6 +2523,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_method_sessionruntime_set_global_instructions() and 0xFFFF) != 40901) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_sessionruntime_list_runs() and 0xFFFF) != 53043) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_method_sessionruntime_rerun_elsewhere() and 0xFFFF) != 7126) {
@@ -11937,6 +11951,15 @@ public interface SessionRuntimeInterface {
     fun `transcript`(`sessionId`: kotlin.String): List<MessageView>
     
     /**
+     * Returns the data shown before a new session starts in one project.
+     *
+     * # Errors
+     * Returns `NotFound` when the project is absent, or `Unavailable` when a source cannot be
+     * read.
+     */
+    fun `newSessionPreview`(`projectId`: kotlin.String): NewSessionPreviewView
+    
+    /**
      * Reads the current global instructions file.
      *
      * # Errors
@@ -11959,6 +11982,14 @@ public interface SessionRuntimeInterface {
      * Returns `InstructionsTooLong` over 32 KiB or `Unavailable` for file errors.
      */
     fun `setGlobalInstructions`(`text`: kotlin.String?)
+    
+    /**
+     * Lists saved `run` calls for a live project, newest first.
+     *
+     * # Errors
+     * Returns `NotFound` for an unknown project or `Unavailable` when the store cannot be read.
+     */
+    fun `listRuns`(`projectId`: kotlin.String, `limit`: kotlin.UInt): List<RunHistoryView>
     
     /**
      * Reruns a saved command with a different executor and no approval.
@@ -13355,6 +13386,28 @@ open class SessionRuntime: Disposable, AutoCloseable, SessionRuntimeInterface
 
     
     /**
+     * Returns the data shown before a new session starts in one project.
+     *
+     * # Errors
+     * Returns `NotFound` when the project is absent, or `Unavailable` when a source cannot be
+     * read.
+     */
+    @Throws(SessionRuntimeException::class)override fun `newSessionPreview`(`projectId`: kotlin.String): NewSessionPreviewView {
+            return FfiConverterTypeNewSessionPreviewView.lift(
+    callWithHandle {
+    uniffiRustCallWithError(SessionRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_sessionruntime_new_session_preview(
+        it,
+        
+        FfiConverterString.lower(`projectId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
      * Reads the current global instructions file.
      *
      * # Errors
@@ -13412,6 +13465,28 @@ open class SessionRuntime: Disposable, AutoCloseable, SessionRuntimeInterface
 }
     }
     
+    
+
+    
+    /**
+     * Lists saved `run` calls for a live project, newest first.
+     *
+     * # Errors
+     * Returns `NotFound` for an unknown project or `Unavailable` when the store cannot be read.
+     */
+    @Throws(SessionRuntimeException::class)override fun `listRuns`(`projectId`: kotlin.String, `limit`: kotlin.UInt): List<RunHistoryView> {
+            return FfiConverterSequenceTypeRunHistoryView.lift(
+    callWithHandle {
+    uniffiRustCallWithError(SessionRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_sessionruntime_list_runs(
+        it,
+        
+        FfiConverterString.lower(`projectId`),
+        FfiConverterUInt.lower(`limit`),_status)
+}
+    }
+    )
+    }
     
 
     
@@ -18820,6 +18895,85 @@ public object FfiConverterTypeModelView: FfiConverterRustBuffer<ModelView> {
 
 
 /**
+ * What a new session in this project will load, for the New session screen.
+ */
+data class NewSessionPreviewView (
+    /**
+     * File name of the instructions file the prompt will use, or `None` when the project has none.
+     */
+    var `instructionsFile`: kotlin.String?
+    , 
+    /**
+     * Line count of that file after the prompt's 32 KiB cap.
+     */
+    var `instructionsLines`: kotlin.UInt
+    , 
+    /**
+     * Entries in MEMORY.md plus USER.md frozen into the prompt.
+     */
+    var `memoryEntries`: kotlin.UInt
+    , 
+    /**
+     * Valid skills that are not disabled.
+     */
+    var `skillsAvailable`: kotlin.UInt
+    , 
+    /**
+     * Title of the most recent non-archived session in this project, if any.
+     */
+    var `lastSessionTitle`: kotlin.String?
+    , 
+    /**
+     * Update time of that session in milliseconds since the Unix epoch.
+     */
+    var `lastSessionUpdatedAtMs`: kotlin.Long?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeNewSessionPreviewView: FfiConverterRustBuffer<NewSessionPreviewView> {
+    override fun read(buf: ByteBuffer): NewSessionPreviewView {
+        return NewSessionPreviewView(
+            FfiConverterOptionalString.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: NewSessionPreviewView) = (
+            FfiConverterOptionalString.allocationSize(value.`instructionsFile`) +
+            FfiConverterUInt.allocationSize(value.`instructionsLines`) +
+            FfiConverterUInt.allocationSize(value.`memoryEntries`) +
+            FfiConverterUInt.allocationSize(value.`skillsAvailable`) +
+            FfiConverterOptionalString.allocationSize(value.`lastSessionTitle`) +
+            FfiConverterOptionalLong.allocationSize(value.`lastSessionUpdatedAtMs`)
+    )
+
+    override fun write(value: NewSessionPreviewView, buf: ByteBuffer) {
+            FfiConverterOptionalString.write(value.`instructionsFile`, buf)
+            FfiConverterUInt.write(value.`instructionsLines`, buf)
+            FfiConverterUInt.write(value.`memoryEntries`, buf)
+            FfiConverterUInt.write(value.`skillsAvailable`, buf)
+            FfiConverterOptionalString.write(value.`lastSessionTitle`, buf)
+            FfiConverterOptionalLong.write(value.`lastSessionUpdatedAtMs`, buf)
+    }
+}
+
+
+
+/**
  * One approval waiting for the user.
  */
 data class PendingApprovalView (
@@ -19902,6 +20056,117 @@ public object FfiConverterTypeReleaseView: FfiConverterRustBuffer<ReleaseView> {
             FfiConverterString.write(value.`publishedAt`, buf)
             FfiConverterString.write(value.`apkName`, buf)
             FfiConverterULong.write(value.`apkSizeBytes`, buf)
+    }
+}
+
+
+
+/**
+ * One `run` tool call and how it ended.
+ */
+data class RunHistoryView (
+    /**
+     * Provider call identifier.
+     */
+    var `callId`: kotlin.String
+    , 
+    /**
+     * Session that owns the call.
+     */
+    var `sessionId`: kotlin.String
+    , 
+    /**
+     * Saved display title of the session.
+     */
+    var `sessionTitle`: kotlin.String
+    , 
+    /**
+     * The command line, cut to 500 characters on a character boundary.
+     */
+    var `command`: kotlin.String
+    , 
+    /**
+     * Executor from the result or call arguments.
+     */
+    var `executor`: ExecutorView?
+    , 
+    /**
+     * How the call ended.
+     */
+    var `outcome`: RunOutcomeView
+    , 
+    /**
+     * Exit code when the outcome is `Succeeded` or `Failed`.
+     */
+    var `exitCode`: kotlin.Int?
+    , 
+    /**
+     * Foreground duration in milliseconds.
+     */
+    var `durationMs`: kotlin.ULong?
+    , 
+    /**
+     * Call message creation time in Unix milliseconds.
+     */
+    var `startedAtMs`: kotlin.Long
+    , 
+    /**
+     * True for a Linux background run.
+     */
+    var `background`: kotlin.Boolean
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeRunHistoryView: FfiConverterRustBuffer<RunHistoryView> {
+    override fun read(buf: ByteBuffer): RunHistoryView {
+        return RunHistoryView(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalTypeExecutorView.read(buf),
+            FfiConverterTypeRunOutcomeView.read(buf),
+            FfiConverterOptionalInt.read(buf),
+            FfiConverterOptionalULong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: RunHistoryView) = (
+            FfiConverterString.allocationSize(value.`callId`) +
+            FfiConverterString.allocationSize(value.`sessionId`) +
+            FfiConverterString.allocationSize(value.`sessionTitle`) +
+            FfiConverterString.allocationSize(value.`command`) +
+            FfiConverterOptionalTypeExecutorView.allocationSize(value.`executor`) +
+            FfiConverterTypeRunOutcomeView.allocationSize(value.`outcome`) +
+            FfiConverterOptionalInt.allocationSize(value.`exitCode`) +
+            FfiConverterOptionalULong.allocationSize(value.`durationMs`) +
+            FfiConverterLong.allocationSize(value.`startedAtMs`) +
+            FfiConverterBoolean.allocationSize(value.`background`)
+    )
+
+    override fun write(value: RunHistoryView, buf: ByteBuffer) {
+            FfiConverterString.write(value.`callId`, buf)
+            FfiConverterString.write(value.`sessionId`, buf)
+            FfiConverterString.write(value.`sessionTitle`, buf)
+            FfiConverterString.write(value.`command`, buf)
+            FfiConverterOptionalTypeExecutorView.write(value.`executor`, buf)
+            FfiConverterTypeRunOutcomeView.write(value.`outcome`, buf)
+            FfiConverterOptionalInt.write(value.`exitCode`, buf)
+            FfiConverterOptionalULong.write(value.`durationMs`, buf)
+            FfiConverterLong.write(value.`startedAtMs`, buf)
+            FfiConverterBoolean.write(value.`background`, buf)
     }
 }
 
@@ -25241,6 +25506,73 @@ public object FfiConverterTypeRoleView: FfiConverterRustBuffer<RoleView> {
 
 
 /**
+ * The terminal state shown for one saved `run` call.
+ */
+
+enum class RunOutcomeView {
+    
+    /**
+     * The command exited with code zero.
+     */
+    SUCCEEDED,
+    /**
+     * The command exited with a nonzero code.
+     */
+    FAILED,
+    /**
+     * The executor stopped the command at its time limit.
+     */
+    TIMED_OUT,
+    /**
+     * The caller cancelled the command.
+     */
+    CANCELLED,
+    /**
+     * The command exceeded its memory limit.
+     */
+    OUT_OF_MEMORY,
+    /**
+     * The user denied the call before execution.
+     */
+    DENIED,
+    /**
+     * Linux started a background process.
+     */
+    BACKGROUND,
+    /**
+     * No known result is available.
+     */
+    UNKNOWN;
+
+    
+
+
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeRunOutcomeView: FfiConverterRustBuffer<RunOutcomeView> {
+    override fun read(buf: ByteBuffer) = try {
+        RunOutcomeView.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: RunOutcomeView) = 4UL
+
+    override fun write(value: RunOutcomeView, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
  * Scan severity exposed to the platform.
  */
 
@@ -27235,6 +27567,38 @@ public object FfiConverterOptionalUInt: FfiConverterRustBuffer<kotlin.UInt?> {
 /**
  * @suppress
  */
+public object FfiConverterOptionalInt: FfiConverterRustBuffer<kotlin.Int?> {
+    override fun read(buf: ByteBuffer): kotlin.Int? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterInt.read(buf)
+    }
+
+    override fun allocationSize(value: kotlin.Int?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterInt.allocationSize(value)
+        }
+    }
+
+    override fun write(value: kotlin.Int?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterInt.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterOptionalULong: FfiConverterRustBuffer<kotlin.ULong?> {
     override fun read(buf: ByteBuffer): kotlin.ULong? {
         if (buf.get().toInt() == 0) {
@@ -28509,6 +28873,34 @@ public object FfiConverterSequenceTypeQuarantineFileView: FfiConverterRustBuffer
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeQuarantineFileView.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeRunHistoryView: FfiConverterRustBuffer<List<RunHistoryView>> {
+    override fun read(buf: ByteBuffer): List<RunHistoryView> {
+        val len = buf.getInt()
+        return List<RunHistoryView>(len) {
+            FfiConverterTypeRunHistoryView.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<RunHistoryView>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeRunHistoryView.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<RunHistoryView>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeRunHistoryView.write(it, buf)
         }
     }
 }

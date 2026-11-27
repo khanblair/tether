@@ -219,7 +219,7 @@ pub(super) fn session_tool_runtime(
     ))
 }
 
-fn skill_catalog(
+pub(super) fn skill_catalog(
     store: &Store,
     project_root: Option<&Path>,
     files_root: &Path,

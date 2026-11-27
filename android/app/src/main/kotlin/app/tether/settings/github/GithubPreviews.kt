@@ -75,7 +75,7 @@ internal fun AccountDeviceCodePreview() {
     }
 }
 
-@Preview(name = "Account signed in, light")
+@Preview(name = "Account classic token, repositories readable")
 @Composable
 internal fun AccountSignedInPreview() {
     TetherTheme(mode = ThemeMode.Light) {
@@ -90,6 +90,101 @@ internal fun AccountSignedInPreview() {
                             name = "Example User",
                             email = "user@example.com",
                             scopes = listOf("repo"),
+                            tokenKind = GithubTokenKind.Classic,
+                            canReadRepos = true,
+                        ),
+                ),
+            onBack = {},
+            onSignInWithDevice = {},
+            onStopPolling = {},
+            onOpenUrl = {},
+            onTokenChange = {},
+            onSignInWithToken = {},
+            onSignOut = {},
+            onOpenIdentity = {},
+        )
+    }
+}
+
+@Preview(name = "Account classic token, repositories blocked")
+@Composable
+internal fun AccountClassicNoRepositoryAccessPreview() {
+    TetherTheme(mode = ThemeMode.Light) {
+        GithubAccountScreen(
+            state =
+                AccountUiState(
+                    loading = false,
+                    status =
+                        GithubStatus(
+                            signedIn = true,
+                            login = "example-user",
+                            name = "Example User",
+                            email = "user@example.com",
+                            scopes = listOf("read:user"),
+                            tokenKind = GithubTokenKind.Classic,
+                            canReadRepos = false,
+                        ),
+                ),
+            onBack = {},
+            onSignInWithDevice = {},
+            onStopPolling = {},
+            onOpenUrl = {},
+            onTokenChange = {},
+            onSignInWithToken = {},
+            onSignOut = {},
+            onOpenIdentity = {},
+        )
+    }
+}
+
+@Preview(name = "Account fine-grained token, repositories readable")
+@Composable
+internal fun AccountFineGrainedPreview() {
+    TetherTheme(mode = ThemeMode.Dark) {
+        GithubAccountScreen(
+            state =
+                AccountUiState(
+                    loading = false,
+                    status =
+                        GithubStatus(
+                            signedIn = true,
+                            login = "example-user",
+                            name = "Example User",
+                            email = "user@example.com",
+                            scopes = emptyList(),
+                            tokenKind = GithubTokenKind.FineGrained,
+                            canReadRepos = true,
+                        ),
+                ),
+            onBack = {},
+            onSignInWithDevice = {},
+            onStopPolling = {},
+            onOpenUrl = {},
+            onTokenChange = {},
+            onSignInWithToken = {},
+            onSignOut = {},
+            onOpenIdentity = {},
+        )
+    }
+}
+
+@Preview(name = "Account fine-grained token, repositories blocked")
+@Composable
+internal fun AccountFineGrainedNoRepositoryAccessPreview() {
+    TetherTheme(mode = ThemeMode.Light) {
+        GithubAccountScreen(
+            state =
+                AccountUiState(
+                    loading = false,
+                    status =
+                        GithubStatus(
+                            signedIn = true,
+                            login = "example-user",
+                            name = "Example User",
+                            email = "user@example.com",
+                            scopes = emptyList(),
+                            tokenKind = GithubTokenKind.FineGrained,
+                            canReadRepos = false,
                         ),
                 ),
             onBack = {},

@@ -10,12 +10,59 @@ data class GithubStatus(
     val name: String?,
     val email: String?,
     val scopes: List<String>,
+    val tokenKind: GithubTokenKind? = null,
+    val canReadRepos: Boolean = false,
 ) {
     companion object {
         /** No account saved. */
         val SignedOut = GithubStatus(false, null, null, null, emptyList())
     }
 }
+
+/** The kind of personal access token saved for the account. */
+enum class GithubTokenKind {
+    /** A classic personal access token with named scopes. */
+    Classic,
+
+    /** A fine-grained personal access token with repository permissions. */
+    FineGrained,
+}
+
+/** Whether the saved token can read the account's repositories. */
+enum class GithubRepositoryAccess {
+    Yes,
+    No,
+}
+
+/** How the account card explains the token's access settings. */
+enum class GithubScopePresentation {
+    ClassicScopes,
+    FineGrained,
+    Unknown,
+}
+
+/** The pure display decisions for the signed-in account card. */
+data class GithubAccountAccess(
+    val tokenKind: GithubTokenKind?,
+    val repositoryAccess: GithubRepositoryAccess,
+    val scopes: List<String>,
+    val scopePresentation: GithubScopePresentation,
+)
+
+/** Chooses the account card's access text and scope presentation. */
+fun GithubStatus.accountAccess(): GithubAccountAccess =
+    GithubAccountAccess(
+        tokenKind = tokenKind,
+        repositoryAccess =
+            if (canReadRepos) GithubRepositoryAccess.Yes else GithubRepositoryAccess.No,
+        scopes = if (tokenKind == GithubTokenKind.Classic) scopes else emptyList(),
+        scopePresentation =
+            when (tokenKind) {
+                GithubTokenKind.Classic -> GithubScopePresentation.ClassicScopes
+                GithubTokenKind.FineGrained -> GithubScopePresentation.FineGrained
+                null -> GithubScopePresentation.Unknown
+            },
+    )
 
 /** The one-time code of the device flow. [intervalSeconds] is the minimum wait between polls. */
 data class DeviceGrant(

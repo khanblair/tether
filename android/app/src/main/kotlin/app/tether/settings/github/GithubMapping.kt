@@ -1,6 +1,8 @@
 package app.tether.settings.github
 
 import app.tether.core.generated.GitRuntimeException
+import app.tether.core.generated.GithubStatusView
+import app.tether.core.generated.GithubTokenKindView
 import app.tether.core.generated.ShallowChoiceView
 import app.tether.core.generated.SignInStateView
 
@@ -26,6 +28,25 @@ internal fun Throwable.githubFailure(): GithubFailure =
         is GithubFailureException -> failure
         is GitRuntimeException -> toGithubFailure()
         else -> GithubFailure.Unavailable
+    }
+
+/** Maps the generated GitHub status to the model used by Settings. */
+internal fun GithubStatusView.toGithubStatus(): GithubStatus =
+    GithubStatus(
+        signedIn = signedIn,
+        login = login,
+        name = name,
+        email = email,
+        scopes = scopes,
+        tokenKind = tokenKind?.toGithubTokenKind(),
+        canReadRepos = canReadRepos,
+    )
+
+/** Maps the generated token kind to the model used by Settings. */
+internal fun GithubTokenKindView.toGithubTokenKind(): GithubTokenKind =
+    when (this) {
+        GithubTokenKindView.CLASSIC -> GithubTokenKind.Classic
+        GithubTokenKindView.FINE_GRAINED -> GithubTokenKind.FineGrained
     }
 
 /** The poll result the screens use. Every core case maps. */

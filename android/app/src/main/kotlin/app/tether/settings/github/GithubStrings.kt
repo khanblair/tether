@@ -20,6 +20,22 @@ internal fun GithubFailure.messageRes(): Int =
         GithubFailure.RepositoryFailed -> R.string.github_failure_repository
     }
 
+/** The user-facing label for a personal access token kind. */
+@StringRes
+internal fun GithubTokenKind.labelRes(): Int =
+    when (this) {
+        GithubTokenKind.Classic -> R.string.github_account_token_kind_classic
+        GithubTokenKind.FineGrained -> R.string.github_account_token_kind_fine_grained
+    }
+
+/** The user-facing label for repository reach. */
+@StringRes
+internal fun GithubRepositoryAccess.labelRes(): Int =
+    when (this) {
+        GithubRepositoryAccess.Yes -> R.string.github_account_repositories_yes
+        GithubRepositoryAccess.No -> R.string.github_account_repositories_no
+    }
+
 /** The phase line for a clone progress report. */
 @StringRes
 internal fun ClonePhaseStep.labelRes(): Int =

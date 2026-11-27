@@ -58,15 +58,7 @@ class CoreGithubGateway(
 
     override fun status(): GithubStatus =
         guard {
-            git.githubStatus().let { view ->
-                GithubStatus(
-                    signedIn = view.signedIn,
-                    login = view.login,
-                    name = view.name,
-                    email = view.email,
-                    scopes = view.scopes,
-                )
-            }
+            git.githubStatus().toGithubStatus()
         }
 
     override fun startDeviceFlow(): DeviceGrant =

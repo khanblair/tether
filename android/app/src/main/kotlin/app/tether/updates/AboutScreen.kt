@@ -128,8 +128,12 @@ fun AboutContent(
                 modifier = Modifier.widthIn(max = TetherSize.transcriptMax).fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(TetherSpace.space4),
             ) {
-                AppHeader(version = state.currentVersion)
-                UpdateCard(state = state, card = updateCardFor(state), onAction = onAction)
+                AppHeader(version = state.currentVersion, versionLabel = versionLabelFor(state))
+                if (state.developmentBuild) {
+                    BodyText(text = stringResource(R.string.dev_build_updates_off))
+                } else {
+                    UpdateCard(state = state, card = updateCardFor(state), onAction = onAction)
+                }
                 crashCard?.invoke()
                 onShowWelcome?.let { ShowWelcomeRow(onShow = it) }
                 coreCard?.invoke()
@@ -161,7 +165,10 @@ private fun UpdatesController.perform(action: UpdateAction) =
     }
 
 @Composable
-private fun AppHeader(version: String) {
+private fun AppHeader(
+    version: String,
+    @StringRes versionLabel: Int,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(TetherSpace.space1)) {
         Text(
             text = stringResource(R.string.about_app_name),
@@ -169,7 +176,7 @@ private fun AppHeader(version: String) {
             color = TetherTheme.colors.text,
         )
         Text(
-            text = stringResource(R.string.about_version, version),
+            text = stringResource(versionLabel, version),
             style = TetherTheme.monoLabel,
             color = TetherTheme.colors.text2,
         )

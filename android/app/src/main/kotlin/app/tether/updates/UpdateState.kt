@@ -74,14 +74,16 @@ data class UpdatesUiState(
     val totalBytes: Long = 0L,
     val apkPath: String? = null,
     val problem: UpdateProblem? = null,
+    /** True in a debuggable build. The flow never checks, so no update is ever offered. */
+    val developmentBuild: Boolean = false,
 ) {
     /** True when a newer version is known, even before its notes are loaded. */
     val updateAvailable: Boolean
-        get() = release != null || knownNewerVersion != null
+        get() = !developmentBuild && (release != null || knownNewerVersion != null)
 
     /** The newer version to name in a banner, or null. */
     val newerVersion: String?
-        get() = release?.version ?: knownNewerVersion
+        get() = if (developmentBuild) null else release?.version ?: knownNewerVersion
 
     /** Download progress from 0 to 100, or null while the size is not known. */
     val percent: Int?

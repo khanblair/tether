@@ -51,6 +51,8 @@ data class LinuxShellFrame(
 class LinuxShellViewModel(
     private val gateway: LinuxShellGateway,
     private val io: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO,
+    private val onShellOpenChanged: (Boolean) -> Unit = {},
+    private val onSourceClosed: () -> Unit = {},
 ) : ViewModel() {
     private val parser = AnsiParser(TerminalBuffer())
     private val output = Channel<OutputEvent>(Channel.UNLIMITED)
@@ -92,6 +94,7 @@ class LinuxShellViewModel(
                     )
                 handle = opened
                 mutableState.value = LinuxShellState.Open
+                onShellOpenChanged(true)
             } catch (error: CancellationException) {
                 throw error
             } catch (error: ExecutorRuntimeException) {
@@ -129,10 +132,13 @@ class LinuxShellViewModel(
             runShellCall { handle?.let { it.close() } }
             handle = null
             mutableState.value = LinuxShellState.Closed
+            onShellOpenChanged(false)
         }
     }
 
     override fun onCleared() {
+        onShellOpenChanged(false)
+        onSourceClosed()
         closeScope.launch { runShellCall { handle?.let { it.close() } } }
         output.close()
         super.onCleared()
@@ -157,6 +163,7 @@ class LinuxShellViewModel(
             is OutputEvent.Exit -> {
                 handle = null
                 mutableState.value = LinuxShellState.Exited(event.code)
+                onShellOpenChanged(false)
             }
         }
     }
@@ -186,10 +193,19 @@ class LinuxShellViewModel(
     companion object {
         private const val FRAME_INTERVAL_MS = 33L
 
-        fun factory(gateway: LinuxShellGateway) =
-            viewModelFactory {
-                initializer { LinuxShellViewModel(gateway) }
+        fun factory(
+            gateway: LinuxShellGateway,
+            onShellOpenChanged: (Boolean) -> Unit = {},
+            onSourceClosed: () -> Unit = {},
+        ) = viewModelFactory {
+            initializer {
+                LinuxShellViewModel(
+                    gateway = gateway,
+                    onShellOpenChanged = onShellOpenChanged,
+                    onSourceClosed = onSourceClosed,
+                )
             }
+        }
     }
 }
 

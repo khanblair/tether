@@ -23,9 +23,13 @@ import app.tether.home.HomeSources
 import app.tether.home.ProjectGateway
 import app.tether.home.createHomeSources
 import app.tether.linux.CoreLinuxShellGateway
+import app.tether.linux.LinuxActivity
+import app.tether.linux.LinuxBackgroundController
 import app.tether.linux.LinuxSetup
 import app.tether.linux.LinuxShellGateway
+import app.tether.linux.createLinuxServiceController
 import app.tether.linux.createLinuxSetup
+import app.tether.linux.linuxBackgroundStore
 import app.tether.memory.MemoryAreaGateways
 import app.tether.memory.createMemoryAreaGateways
 import app.tether.messages.AppMessages
@@ -41,6 +45,7 @@ import app.tether.session.SessionGateway
 import app.tether.session.SessionSettingsGateway
 import app.tether.session.SessionStarter
 import app.tether.session.createSessionSettingsGateway
+import app.tether.session.servers.ServerProcessRegistry
 import app.tether.settings.PrefsSettingsStore
 import app.tether.settings.budgets.BudgetsGateway
 import app.tether.settings.budgets.createBudgetsGateway
@@ -109,6 +114,15 @@ class AppModule(
 
     /** Linux mode setup differs between the full and Play builds. */
     val linuxSetup: LinuxSetup = createLinuxSetup()
+
+    /** The saved rule for keeping Linux processes alive in the background. */
+    val linuxBackground = LinuxBackgroundController(context.linuxBackgroundStore())
+
+    /** Tracks all open Linux shells and session-owned servers for the app process. */
+    val linuxActivity: LinuxActivity =
+        LinuxActivity(linuxBackground, createLinuxServiceController(context)).also {
+            ServerProcessRegistry.setLinuxActivity(it)
+        }
 
     /** Interactive Linux shell calls over the same lazy executor runtime. */
     val linuxShellGateway: LinuxShellGateway by lazy {

@@ -2,6 +2,7 @@ package app.tether.nav
 
 import android.net.Uri
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.platform.LocalContext
@@ -25,44 +26,77 @@ internal fun NavGraphBuilder.linuxRoutes(
 ) {
     composable(
         route = "${Route.Linux.path}?projectId={projectId}",
-        arguments =
-            listOf(
-                navArgument("projectId") {
-                    type = NavType.StringType
-                    nullable = true
-                    defaultValue = null
-                },
-            ),
+        arguments = linuxArguments(),
     ) { entry ->
-        val context = LocalContext.current
         val requested = entry.arguments?.getString("projectId")
         LinuxProject(module, requested) { projectId, projectName ->
-            if (!module.linuxSetup.executorBuildConfig(context).linuxSupported) {
-                LinuxUnavailableScreen(onBack = nav::back)
-            } else {
-                val model: LinuxShellViewModel =
-                    viewModel(
-                        key = projectId.orEmpty(),
-                        factory = LinuxShellViewModel.factory(module.linuxShellGateway),
-                    )
-                androidx.compose.runtime.LaunchedEffect(projectId) {
-                    model.open(projectId, TerminalRows.DEFAULT, TerminalRows.DEFAULT_COLUMNS)
-                }
-                LinuxShellScreen(
-                    viewModel = model,
-                    projectName = projectName,
-                    onBack = nav::back,
-                    onOpenExecutors = { nav.open(SETTINGS_EXECUTORS_ROUTE) },
-                    onClose = {
-                        model.closeShell()
-                        nav.back()
-                    },
-                    messages = module.messages,
-                )
-            }
+            LinuxRoute(module, nav, projectId, projectName)
         }
     }
 }
+
+private fun linuxArguments() =
+    listOf(
+        navArgument("projectId") {
+            type = NavType.StringType
+            nullable = true
+            defaultValue = null
+        },
+    )
+
+@Composable
+private fun LinuxRoute(
+    module: AppModule,
+    nav: TetherNav,
+    projectId: String?,
+    projectName: String?,
+) {
+    val context = LocalContext.current
+    if (!module.linuxSetup.executorBuildConfig(context).linuxSupported) {
+        LinuxUnavailableScreen(onBack = nav::back)
+    } else {
+        val sourceId = linuxShellSourceId(projectId)
+        module.linuxActivity.openSource(sourceId)
+        val model = linuxShellModel(module, projectId, sourceId)
+        LaunchedEffect(projectId) {
+            model.open(projectId, TerminalRows.DEFAULT, TerminalRows.DEFAULT_COLUMNS)
+        }
+        LinuxShellScreen(
+            viewModel = model,
+            projectName = projectName,
+            onBack = nav::back,
+            onOpenExecutors = { nav.open(SETTINGS_EXECUTORS_ROUTE) },
+            onClose = {
+                model.closeShell()
+                nav.back()
+            },
+            messages = module.messages,
+        )
+    }
+}
+
+@Composable
+private fun linuxShellModel(
+    module: AppModule,
+    projectId: String?,
+    sourceId: String,
+): LinuxShellViewModel =
+    viewModel(
+        key = projectId.orEmpty(),
+        factory =
+            LinuxShellViewModel.factory(
+                gateway = module.linuxShellGateway,
+                onShellOpenChanged = { open ->
+                    module.linuxActivity.reportShell(
+                        sourceId = sourceId,
+                        open = open,
+                    )
+                },
+                onSourceClosed = {
+                    module.linuxActivity.removeSource(sourceId)
+                },
+            ),
+    )
 
 /** Opens Linux with a session's project without adding a second route entry. */
 internal fun linuxPath(projectId: String?): String =
@@ -100,6 +134,8 @@ private data class ProjectSelection(
     val id: String?,
     val name: String?,
 )
+
+private fun linuxShellSourceId(projectId: String?): String = "linux-shell:${projectId.orEmpty()}"
 
 private object TerminalRows {
     const val DEFAULT = 24

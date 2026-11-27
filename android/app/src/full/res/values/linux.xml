@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Set after the signed manifest is published. -->
-    <string name="linux_rootfs_manifest_url"></string>
-    <string name="linux_rootfs_key_hex"></string>
+    <!-- The signed rootfs manifest published by just linux-manifest (release rootfs-3.22.2). -->
+    <string name="linux_rootfs_manifest_url">https://github.com/khanblair/tether/releases/download/rootfs-3.22.2/manifest.json</string>
+    <string name="linux_rootfs_key_hex">cef8530843b6b56ab074e6333f7f6dfb0b87b40d146d69881dd5d2795aacd054</string>
     <string name="runtime_pack_key_hex"></string>
 </resources>

@@ -4,6 +4,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use tether_engine::config::{self, ConfigIssue, ConfigOrigin, EffectiveConfig, SessionConfig};
+use tether_store::project_dir;
 use tether_types::ProjectId;
 
 use crate::{ExecutorView, ModelRefView, ProjectRuntime, ProjectRuntimeError};
@@ -154,7 +155,7 @@ impl ProjectRuntime {
             .load_project(&id)
             .map_err(|_| ProjectRuntimeError::Unavailable)?
             .ok_or(ProjectRuntimeError::NotFound)?;
-        let root = Path::new(&self.workspaces_root).join(&project.path);
+        let root = project_dir(Path::new(&self.workspaces_root), &project);
         let trusted = store
             .is_project_trusted(&id)
             .map_err(|_| ProjectRuntimeError::Unavailable)?;

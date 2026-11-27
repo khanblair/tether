@@ -2,7 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
-use tether_store::Store;
+use tether_store::{Store, project_dir};
 use tether_types::ProjectId;
 
 use super::views::SkillScopeView;
@@ -28,11 +28,11 @@ fn project_skill_root(root: &Path, project_id: &str) -> Result<PathBuf, SkillsRu
     {
         return Err(SkillsRuntimeError::NotTrusted);
     }
-    let relative = store
-        .project_path(&id)
+    let project = store
+        .load_project(&id)
         .map_err(|_| SkillsRuntimeError::Unavailable)?
         .ok_or(SkillsRuntimeError::Unavailable)?;
-    Ok(app.join("workspaces").join(relative).join(".tether/skills"))
+    Ok(project_dir(&app.join("workspaces"), &project).join(".tether/skills"))
 }
 
 pub(super) fn valid_name(name: &str) -> bool {

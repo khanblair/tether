@@ -2,7 +2,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use tether_engine::GithubClientFactory;
-use tether_store::Store;
+use tether_store::{Store, project_dir};
 use tether_types::ProjectId;
 use tether_vcs::{CloneRequest, Repo, parse_github_url, should_clone_shallow};
 
@@ -23,8 +23,8 @@ pub(crate) fn clone_repository(
     let project = store
         .create_project(&project_name, crate::git_support::now_ms())
         .map_err(|_| GitRuntimeError::Unavailable)?;
-    let destination = Path::new(&runtime.workspaces_root).join(&project.path);
-    if std::fs::create_dir_all(&runtime.workspaces_root).is_err() {
+    let destination = project_dir(Path::new(&runtime.workspaces_root), &project);
+    if std::fs::create_dir_all(&destination).is_err() {
         return cleanup(&mut store, &project.id, &destination);
     }
     let cancel = Arc::new(tether_vcs::CancellationToken::new());
@@ -84,13 +84,6 @@ pub(crate) fn clone_for_factory(runtime: &GitRuntime) -> Result<GitRuntime, GitR
                 .clone(),
         ),
         device_grant: std::sync::Mutex::new(None),
-        scopes: std::sync::Mutex::new(
-            runtime
-                .scopes
-                .lock()
-                .map_err(|_| GitRuntimeError::Unavailable)?
-                .clone(),
-        ),
         active_clone: std::sync::Mutex::new(None),
         http: std::sync::Mutex::new(
             runtime

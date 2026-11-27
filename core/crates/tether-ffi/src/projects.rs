@@ -5,13 +5,14 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use tether_store::{Store, StoreError};
+use tether_store::{Store, StoreError, project_dir};
 use tether_types::{ModelRef, PermissionMode, ProjectId};
 use tether_workspace::archive::{ArchiveError, CreateOptions, create_zip, extract_zip};
 use tokio_util::sync::CancellationToken;
 
 use crate::archive::{archive_detail, extract_limits, is_archive_input_error};
-use crate::{PermissionModeView, ProjectView, ProviderView};
+use crate::project_location::save_root;
+use crate::{PermissionModeView, ProjectView, ProviderView, WorkspaceLocationView};
 
 /// A project operation failed.
 #[derive(Debug, thiserror::Error, uniffi::Error)]
@@ -40,6 +41,33 @@ pub enum ProjectRuntimeError {
     /// The database or workspace directory is unavailable.
     #[error("project is unavailable")]
     Unavailable,
+    /// The selected root is not an absolute path.
+    #[error("project root must be absolute")]
+    RootNotAbsolute,
+    /// The selected root could not be created.
+    #[error("project root could not be created")]
+    RootCannotBeCreated,
+    /// The selected root is not a directory.
+    #[error("project root is not a directory")]
+    RootNotDirectory,
+    /// The selected root is a symlink.
+    #[error("project root must not be a symlink")]
+    RootIsSymlink,
+    /// The selected root cannot be written.
+    #[error("project root is not writable")]
+    RootNotWritable,
+    /// The selected root is inside private app storage.
+    #[error("project root is inside private storage")]
+    RootInsidePrivateRoot,
+    /// The selected root is the filesystem root.
+    #[error("project root cannot be the filesystem root")]
+    RootIsFilesystemRoot,
+    /// The selected root is inside another project.
+    #[error("project root is inside another project")]
+    RootInsideProject,
+    /// The selected root could not be inspected.
+    #[error("project root is unavailable")]
+    RootUnavailable,
 }
 
 /// Opens projects in the app database and creates their workspace directories.
@@ -85,7 +113,7 @@ impl ProjectRuntime {
                 StoreError::InvalidProjectName => ProjectRuntimeError::InvalidName,
                 _ => ProjectRuntimeError::Unavailable,
             })?;
-        if std::fs::create_dir_all(Path::new(&self.workspaces_root).join(&project.path)).is_err() {
+        if fs::create_dir_all(project_dir(Path::new(&self.workspaces_root), &project)).is_err() {
             store
                 .delete_project(&project.id)
                 .map_err(|_| ProjectRuntimeError::Unavailable)?;
@@ -138,11 +166,11 @@ impl ProjectRuntime {
         include_ignored: bool,
     ) -> Result<(), ProjectRuntimeError> {
         let store = self.store()?;
-        let relative = store
-            .project_path(&ProjectId::new(project_id))
+        let project = store
+            .load_project(&ProjectId::new(project_id))
             .map_err(|_| ProjectRuntimeError::Unavailable)?
             .ok_or(ProjectRuntimeError::NotFound)?;
-        let root = Path::new(&self.workspaces_root).join(relative);
+        let root = project_dir(Path::new(&self.workspaces_root), &project);
         let options = CreateOptions {
             include_ignored,
             ..CreateOptions::default()
@@ -173,6 +201,36 @@ impl ProjectRuntime {
             .map_err(|_| ProjectRuntimeError::Unavailable)?
             .map(Into::into)
             .ok_or(ProjectRuntimeError::NotFound)
+    }
+
+    /// Reads the default and saved roots used by projects.
+    ///
+    /// # Errors
+    /// Returns an error when the database cannot be read.
+    pub fn workspace_location(&self) -> Result<WorkspaceLocationView, ProjectRuntimeError> {
+        let default_root = self.workspaces_root.clone();
+        let new_project_root = self
+            .store()?
+            .new_project_root()
+            .map_err(|_| ProjectRuntimeError::Unavailable)?;
+        let effective_root = new_project_root
+            .clone()
+            .unwrap_or_else(|| default_root.clone());
+        Ok(WorkspaceLocationView {
+            default_root,
+            new_project_root,
+            effective_root,
+        })
+    }
+
+    /// Saves the root used for new projects. Existing projects keep their roots.
+    ///
+    /// # Errors
+    /// Returns a typed error when the root is invalid or storage cannot be updated.
+    #[expect(clippy::needless_pass_by_value, reason = "UniFFI passes owned values")]
+    pub fn set_new_project_root(&self, root: Option<String>) -> Result<(), ProjectRuntimeError> {
+        let store = self.store()?;
+        save_root(&store, Path::new(&self.workspaces_root), root.as_deref())
     }
 
     /// Saves a project's model and permission defaults.
@@ -236,7 +294,7 @@ impl ProjectRuntime {
         let project = store
             .create_project(&project_name, now_ms()?)
             .map_err(|error| map_store_error(&error))?;
-        let destination = Path::new(&self.workspaces_root).join(&project.path);
+        let destination = project_dir(Path::new(&self.workspaces_root), &project);
         if fs::create_dir_all(&destination).is_err() {
             return import_cleanup(
                 &mut store,

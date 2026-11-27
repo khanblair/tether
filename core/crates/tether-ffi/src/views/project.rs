@@ -11,8 +11,10 @@ pub struct ProjectView {
     pub id: String,
     /// Trimmed display name.
     pub name: String,
-    /// Directory name relative to the workspaces root.
+    /// Directory name relative to the project's root.
     pub path: String,
+    /// Absolute project root, or `None` for the private default root.
+    pub root: Option<String>,
     /// Creation time in Unix milliseconds.
     pub created_at_ms: i64,
     /// Newest session activity, or creation time when empty.
@@ -33,6 +35,7 @@ impl From<ProjectRecord> for ProjectView {
             id: project.id.into(),
             name: project.name,
             path: project.path,
+            root: project.root,
             created_at_ms: project.created_at,
             last_activity_ms: project.last_activity_at,
             session_count: project.session_count,
@@ -41,4 +44,15 @@ impl From<ProjectRecord> for ProjectView {
             default_mode: project.default_mode.map(Into::into),
         }
     }
+}
+
+/// The private default and saved roots used by project creation.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct WorkspaceLocationView {
+    /// The app's private default root.
+    pub default_root: String,
+    /// The root saved for new projects, if any.
+    pub new_project_root: Option<String>,
+    /// The root where the next project will be created.
+    pub effective_root: String,
 }

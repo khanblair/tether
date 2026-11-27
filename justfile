@@ -46,6 +46,13 @@ test-tools:
     tools/bump-version.sh --self-test
     tools/release-version.sh --self-test
 
+# Build the full-flavor PRoot libraries and copy them into its arm64 source set.
+proot:
+    tools/proot/build.sh
+    mkdir -p android/app/src/full/jniLibs/arm64-v8a
+    cp build/proot/libproot.so android/app/src/full/jniLibs/arm64-v8a/libproot.so
+    cp build/proot/libproot-loader.so android/app/src/full/jniLibs/arm64-v8a/libproot-loader.so
+
 # Instrumented tests on the connected device or emulator.
 test-device:
     cd android && ./gradlew connectedFullDebugAndroidTest
@@ -105,6 +112,45 @@ check: lint slop smells smell-fixtures test
 # One-time: create the release keystore and store it, with its password, as GitHub secrets. Run in your own terminal.
 release-signing:
     tools/setup-release-signing.sh
+
+# Create the Linux rootfs signing key outside the repository.
+linux-key:
+    mkdir -p "$HOME/.tether-release"
+    cargo run --quiet --manifest-path core/Cargo.toml --locked -p tether-linux-manifest -- keygen --out "$HOME/.tether-release/linux-manifest.key"
+    echo "Next: run just linux-manifest after checking the pinned Alpine release."
+
+# Download, verify, sign, and stage the Linux rootfs release files.
+linux-manifest:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    source third_party/linux/pins.sh
+    dist="dist/linux"
+    mkdir -p "$dist"
+    archive_name="alpine-minirootfs-$ALPINE_VERSION-$ALPINE_ARCH.tar.gz"
+    alpine_url="https://dl-cdn.alpinelinux.org/alpine/$ALPINE_BRANCH/releases/$ALPINE_ARCH/$archive_name"
+    archive="$dist/$archive_name"
+    checksum="$archive.sha256"
+    curl --fail --location --silent --show-error --output "$archive" "$alpine_url"
+    curl --fail --location --silent --show-error --output "$checksum" "$alpine_url.sha256"
+    expected="$(awk '{ for (i = 1; i <= NF; i++) if (length($i) == 64 && $i ~ /^[[:xdigit:]]+$/) { print tolower($i); exit }}' "$checksum")"
+    actual="$(shasum -a 256 "$archive" | awk '{print $1}')"
+    test "$expected" = "$actual"
+    release_asset_url="https://github.com/khanblair/tether/releases/download/rootfs-$ALPINE_VERSION/$archive_name"
+    sign_output="$(cargo run --quiet --manifest-path core/Cargo.toml --locked -p tether-linux-manifest -- sign --key "$HOME/.tether-release/linux-manifest.key" --rootfs "$archive" --url "$release_asset_url" --alpine-version "$ALPINE_VERSION" --out-dir "$dist")"
+    printf '%s\n' "$sign_output"
+    public_key="$(printf '%s\n' "$sign_output" | sed -n 's/^public key: //p')"
+    test -n "$public_key"
+    manifest_url="https://github.com/khanblair/tether/releases/download/rootfs-$ALPINE_VERSION/manifest.json"
+    echo "Next steps:"
+    echo "1. Create the GitHub release tagged rootfs-$ALPINE_VERSION."
+    echo "2. Upload these files to that release:"
+    echo "   $archive"
+    echo "   $checksum"
+    echo "   $dist/manifest.json"
+    echo "   $dist/manifest.json.sig"
+    echo "3. Set manifest_url to $manifest_url."
+    echo "4. Put this public key in android/app/src/full/res/values/linux.xml:"
+    echo "   $public_key"
 
 # Raise the core version: `just bump patch` (or minor, major, or an exact X.Y.Z). Merging the bump publishes the release.
 bump level="patch":

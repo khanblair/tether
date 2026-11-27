@@ -10,5 +10,4 @@
     <string name="linux_background_when_installed_description">A permanent notification while Linux is set up. Uses more battery.</string>
     <string name="linux_background_channel_name">Linux session</string>
     <string name="linux_background_channel_description">Silent. Shows while Linux mode runs.</string>
-    <string name="linux_background_notification_title">Linux mode</string>
 </resources>

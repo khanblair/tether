@@ -1,5 +1,6 @@
 package app.tether.linux
 
+import androidx.core.content.edit
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -104,7 +105,7 @@ fun android.content.Context.linuxBackgroundStore(): LinuxBackgroundStore {
     val preferences = getSharedPreferences(LINUX_PREFERENCES, android.content.Context.MODE_PRIVATE)
     return LinuxBackgroundStore(
         read = { preferences.getString(BACKGROUND_MODE_KEY, null) },
-        write = { mode -> preferences.edit().putString(BACKGROUND_MODE_KEY, mode).apply() },
+        write = { mode -> preferences.edit { putString(BACKGROUND_MODE_KEY, mode) } },
     )
 }
 

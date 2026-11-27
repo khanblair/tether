@@ -26,6 +26,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -71,12 +72,15 @@ internal fun ShellTerminal(
     var input by remember { mutableStateOf("") }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
     LaunchedEffect(Unit) { listState.scrollToItem(frame.lines.lastIndex) }
+    val showJump by remember(frame) {
+        derivedStateOf { listState.firstVisibleItemIndex < frame.lines.lastIndex }
+    }
     BoxWithConstraints(modifier = modifier) {
         val density = LocalDensity.current
         val (rows, columns) = terminalSize(maxWidth, maxHeight, density)
         LaunchedEffect(rows, columns) { onResize(rows, columns) }
         TerminalOutput(frame, listState, onCopy)
-        if (listState.firstVisibleItemIndex < frame.lines.lastIndex) {
+        if (showJump) {
             JumpBottomButton(
                 onClick = { scope.launch { listState.animateScrollToItem(frame.lines.lastIndex) } },
                 modifier = Modifier.align(Alignment.BottomEnd).padding(TetherSpace.space3),

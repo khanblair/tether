@@ -40,6 +40,7 @@ class TetherApp : Application() {
         module.launchInBackground {
             runQuietly({
                 module.linuxSetup.configureAtStart(this@TetherApp, module::configureExecutors)
+                module.linuxActivity.reportLinuxReady(module.executorsGateway.linuxReady())
             }) {
                 Log.w("Tether", "Linux setup failed: ${it.javaClass.simpleName}")
             }

@@ -3,6 +3,7 @@ package app.tether.session.servers
 import app.tether.core.generated.CoreEventView
 import app.tether.core.generated.ProcessStatusView
 import app.tether.core.generated.ProcessView
+import app.tether.linux.LinuxActivity
 import app.tether.preview.PreviewTarget
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -133,20 +134,29 @@ class ServerStateHolder {
 object ServerProcessRegistry {
     private val mutableStatuses = MutableStateFlow<Map<String, ServerStatus>>(emptyMap())
     private val owners = mutableMapOf<String, String>()
+    private var linuxActivity: LinuxActivity? = null
 
     val statuses: StateFlow<Map<String, ServerStatus>> = mutableStatuses.asStateFlow()
+
+    /** Connects the open-session process counts to the app-wide Linux activity tracker. */
+    @Synchronized
+    fun setLinuxActivity(activity: LinuxActivity?) {
+        linuxActivity = activity
+    }
 
     @Synchronized
     fun register(
         sessionId: String,
         processes: List<ProcessView>,
     ) {
+        linuxActivity?.openSource(sessionId)
         val next = mutableStatuses.value.toMutableMap()
         processes.forEach { process ->
             owners[process.id] = sessionId
             next[process.id] = process.status.toServerStatus()
         }
         mutableStatuses.value = next
+        report(sessionId)
     }
 
     @Synchronized
@@ -156,6 +166,7 @@ object ServerProcessRegistry {
         mutableStatuses.value =
             mutableStatuses.value +
             (changed.processId to changed.status.toServerStatus())
+        report(changed.sessionId)
     }
 
     @Synchronized
@@ -166,12 +177,23 @@ object ServerProcessRegistry {
             owners.remove(processId)
         }
         mutableStatuses.value = next
+        linuxActivity?.removeSource(sessionId)
     }
 
     @Synchronized
     fun clearForTests() {
         owners.clear()
         mutableStatuses.value = emptyMap()
+        linuxActivity = null
+    }
+
+    private fun report(sessionId: String) {
+        val count =
+            owners
+                .filterValues { it == sessionId }
+                .keys
+                .count { mutableStatuses.value[it] == ServerStatus.Running }
+        linuxActivity?.reportServers(sessionId, count)
     }
 }
 

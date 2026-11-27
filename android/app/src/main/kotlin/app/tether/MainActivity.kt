@@ -98,11 +98,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
+        (application as TetherApp).module.linuxActivity.setAppVisible(true)
         (application as TetherApp).appLock.onStarted()
     }
 
     override fun onStop() {
         (application as TetherApp).appLock.onStopped()
+        (application as TetherApp).module.linuxActivity.setAppVisible(false)
         super.onStop()
     }
 

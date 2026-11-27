@@ -21,7 +21,7 @@ data class ChannelSpec(
     val importance: Int,
 )
 
-/** The four channels the notification settings list, in the order they are shown. */
+/** The five channels the notification settings list, in the order they are shown. */
 val TETHER_CHANNELS: List<ChannelSpec> =
     listOf(
         ChannelSpec(
@@ -47,6 +47,12 @@ val TETHER_CHANNELS: List<ChannelSpec> =
             nameRes = R.string.settings_area_channel_budget,
             descriptionRes = R.string.settings_area_channel_budget_desc,
             importance = NotificationManager.IMPORTANCE_HIGH,
+        ),
+        ChannelSpec(
+            id = "linux_session",
+            nameRes = R.string.linux_background_channel_name,
+            descriptionRes = R.string.linux_background_channel_description,
+            importance = NotificationManager.IMPORTANCE_LOW,
         ),
     )
 

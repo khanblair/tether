@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="linux_background_title">Keep Linux running in the background</string>
+    <string name="linux_background_row_while_running">Only while a shell or server runs</string>
+    <string name="linux_background_row_when_installed">Whenever Linux mode is installed</string>
+    <string name="linux_background_sheet_title">Keep Linux running in the background</string>
+    <string name="linux_background_while_running_title">Only while a shell or server runs (recommended)</string>
+    <string name="linux_background_while_running_description">Uses a notification while it runs</string>
+    <string name="linux_background_when_installed_title">Whenever Linux mode is installed</string>
+    <string name="linux_background_when_installed_description">A permanent notification while Linux is set up. Uses more battery.</string>
+    <string name="linux_background_channel_name">Linux session</string>
+    <string name="linux_background_channel_description">Silent. Shows while Linux mode runs.</string>
+    <string name="linux_background_notification_title">Linux mode</string>
+</resources>

@@ -40,7 +40,7 @@ pub struct ExecutorPathsView {
 pub struct ExecutorAvailabilityView {
     /// Verified sandbox program names.
     pub sandbox_programs: Vec<String>,
-    /// Whether Linux mode has PRoot and a ready root filesystem.
+    /// Whether Linux mode has PRoot, its loader, and a ready root filesystem.
     pub linux_ready: bool,
     /// Whether CI has been configured.
     pub ci_ready: bool,
@@ -65,7 +65,7 @@ impl SessionRuntime {
     /// Stores platform executor paths for later session opens.
     ///
     /// # Errors
-    /// Returns an error when a supplied path contains unsafe control characters.
+    /// Returns an error when a supplied path is unsafe, relative, or incomplete.
     pub fn configure_executors(
         &self,
         paths: ExecutorPathsView,
@@ -104,6 +104,7 @@ impl SessionRuntime {
             .proot_path
             .as_ref()
             .is_some_and(|path| Path::new(path).is_file())
+            && paths.loader_path.is_file()
             && matches!(
                 RootfsManager::new(paths.linux_root).status(),
                 Ok(RootfsStatus::Ready { .. })
@@ -154,7 +155,7 @@ struct ExecutorPaths {
     packs_root: PathBuf,
     linux_root: PathBuf,
     proot_path: Option<PathBuf>,
-    loader_path: Option<PathBuf>,
+    loader_path: PathBuf,
     pack_key: Option<String>,
     rootfs_key: Option<String>,
 }
@@ -215,6 +216,7 @@ fn linux_runners(
         return (None, None);
     };
     let ready = proot_path.is_file()
+        && paths.loader_path.is_file()
         && matches!(
             RootfsManager::new(&paths.linux_root).status(),
             Ok(RootfsStatus::Ready { .. })
@@ -260,6 +262,17 @@ fn validate_paths(paths: &ExecutorPathsView) -> Result<(), ExecutorRuntimeError>
     }) {
         return Err(ExecutorRuntimeError::InvalidConfiguration);
     }
+    if paths.proot_path.is_some() != paths.proot_loader_path.is_some()
+        || [
+            paths.proot_path.as_deref(),
+            paths.proot_loader_path.as_deref(),
+        ]
+        .into_iter()
+        .flatten()
+        .any(|path| !Path::new(path).is_absolute())
+    {
+        return Err(ExecutorRuntimeError::InvalidConfiguration);
+    }
     if [
         paths.pack_verifying_key_hex.as_deref(),
         paths.rootfs_verifying_key_hex.as_deref(),
@@ -279,7 +292,7 @@ fn read_paths(files_root: &Path) -> Result<ExecutorPaths, ExecutorRuntimeError> 
     let mut packs_root = None;
     let mut linux_root = None;
     let mut proot_path = None;
-    let mut loader_path = None;
+    let mut loader_path = PathBuf::new();
     let mut pack_key = None;
     let mut rootfs_key = None;
     for line in text.lines() {
@@ -290,7 +303,7 @@ fn read_paths(files_root: &Path) -> Result<ExecutorPaths, ExecutorRuntimeError> 
             "packs_root" => packs_root = Some(PathBuf::from(value)),
             "linux_root" => linux_root = Some(PathBuf::from(value)),
             "proot_path" => proot_path = Some(PathBuf::from(value)),
-            "loader_path" => loader_path = Some(PathBuf::from(value)),
+            "loader_path" => loader_path = PathBuf::from(value),
             "pack_key" => pack_key = Some(value.to_owned()),
             "rootfs_key" => rootfs_key = Some(value.to_owned()),
             _ => {}
@@ -313,3 +326,7 @@ fn now_ms() -> Result<i64, ExecutorRuntimeError> {
         .and_then(|value| i64::try_from(value.as_millis()).ok())
         .ok_or(ExecutorRuntimeError::Unavailable)
 }
+
+#[cfg(test)]
+#[path = "executors_tests.rs"]
+mod tests;

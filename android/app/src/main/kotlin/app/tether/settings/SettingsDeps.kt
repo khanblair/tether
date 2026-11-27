@@ -28,6 +28,14 @@ class SettingsDeps(
             workspaces = context.filesDir.resolve("workspaces"),
             checkpointBlobs = context.filesDir.resolve("blobs"),
             updateCache = context.cacheDir.resolve("updates"),
+            workspaceRoot = {
+                java.io.File(module.workspaceGateway.location().effectiveRoot)
+            },
+            secrets = context.filesDir.resolve("secrets"),
+            memory = context.filesDir.resolve("memory"),
+            skills = context.filesDir.resolve("skills"),
+            vault = context.filesDir.resolve("vault"),
+            crashReport = context.filesDir.resolve("crash/last.txt"),
         )
 
     /** Notification state from the system. */

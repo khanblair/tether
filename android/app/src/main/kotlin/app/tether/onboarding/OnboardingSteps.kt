@@ -43,6 +43,10 @@ import app.tether.providers.connectionMessage
 import app.tether.providers.firstText
 import app.tether.providers.providerNameRes
 import app.tether.settings.ChevronTrailing
+import app.tether.workspace.WorkspaceCapabilities
+import app.tether.workspace.WorkspaceContent
+import app.tether.workspace.WorkspacePermissionEffect
+import app.tether.workspace.WorkspaceViewModel
 import kotlinx.coroutines.launch
 
 /** The add-key step: pick a provider, paste its key, and save it with a connection test. */
@@ -215,6 +219,42 @@ private fun failureRes(message: ProviderMessage?): Int? =
         ProviderMessage.TestFailed -> R.string.provider_detail_message_test
         else -> null
     }
+
+/** The workspace step: keep the private default, or choose a shared folder in the full build. */
+@Composable
+internal fun WorkspaceStep(
+    viewModel: WorkspaceViewModel,
+    capabilities: WorkspaceCapabilities,
+    onBack: () -> Unit,
+    onContinue: () -> Unit,
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    WorkspacePermissionEffect(viewModel, capabilities)
+    OnboardingPage(step = OnboardingStep.Workspace, onBack = onBack) {
+        WorkspaceContent(
+            state = state,
+            sharedFolderAllowed = capabilities.sharedFolderAllowed,
+            showCurrentFolder = false,
+            showDataPaths = true,
+            onChoose = viewModel::choose,
+            onPathChange = viewModel::onPathChange,
+            onSave = { afterSave ->
+                viewModel.save {
+                    afterSave()
+                    onContinue()
+                }
+            },
+            onUsePrivate = { afterSave ->
+                viewModel.usePrivateStorage {
+                    afterSave()
+                    onContinue()
+                }
+            },
+            onAllowAccess = { context -> capabilities.openAllFilesAccessSettings(context) },
+        )
+        SkipButton { viewModel.usePrivateStorage(onContinue) }
+    }
+}
 
 /** The open-project step: a new empty project, a GitHub clone, or a zip import. */
 @Composable

@@ -24,15 +24,19 @@ import app.tether.design.components.TetherTextButton
 import app.tether.design.components.TetherTopBar
 import app.tether.design.tokens.TetherSpace
 import app.tether.shell.BackButton
+import app.tether.workspace.WorkspaceCapabilities
+import app.tether.workspace.WorkspaceViewModel
 
 /**
- * The first-run flow: welcome, a provider key, then a project. Back moves one step at a time. Skip
- * on any step ends the flow. [onExit] runs once the flow has ended.
+ * The first-run flow: welcome, a provider key, a workspace, then a project. Back moves one step at
+ * a time. Skip ends the flow except on the workspace step, where it keeps private storage.
  */
 @Composable
 fun OnboardingScreen(
     onboarding: OnboardingViewModel,
     addKey: AddKeyViewModel,
+    workspace: WorkspaceViewModel,
+    workspaceCapabilities: WorkspaceCapabilities,
     onExit: (OnboardingExit) -> Unit,
 ) {
     val state by onboarding.state.collectAsStateWithLifecycle()
@@ -52,6 +56,13 @@ fun OnboardingScreen(
                 onBack = onboarding::back,
                 onContinue = onboarding::next,
                 onSkip = onboarding::skip,
+            )
+        OnboardingStep.Workspace ->
+            WorkspaceStep(
+                viewModel = workspace,
+                capabilities = workspaceCapabilities,
+                onBack = onboarding::back,
+                onContinue = onboarding::next,
             )
         OnboardingStep.OpenProject ->
             OpenProjectStep(
@@ -158,5 +169,6 @@ private fun titleRes(step: OnboardingStep): Int =
     when (step) {
         OnboardingStep.Welcome -> R.string.route_onboarding_title
         OnboardingStep.AddKey -> R.string.onboarding_key_title
+        OnboardingStep.Workspace -> R.string.workspace_onboarding_title
         OnboardingStep.OpenProject -> R.string.onboarding_project_title
     }

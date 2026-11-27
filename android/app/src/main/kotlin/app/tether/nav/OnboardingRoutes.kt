@@ -10,6 +10,8 @@ import app.tether.onboarding.OnboardingExit
 import app.tether.onboarding.OnboardingScreen
 import app.tether.onboarding.OnboardingViewModel
 import app.tether.settings.SettingsStore
+import app.tether.workspace.WorkspaceViewModel
+import app.tether.workspace.suggestedWorkspacePath
 
 /**
  * The first screen the app shows. The first-run flow until it is finished or skipped once, then
@@ -31,9 +33,26 @@ internal fun NavGraphBuilder.onboardingRoutes(
             viewModel(
                 factory = AddKeyViewModel.factory(module.providerGateway, onboarding::next),
             )
+        val settingsDeps = settingsDepsOf(LocalContext.current)
+        val workspace: WorkspaceViewModel =
+            viewModel(
+                factory =
+                    WorkspaceViewModel.factory(
+                        gateway = module.workspaceGateway,
+                        sharedFolderAllowed = module.workspaceCapabilities.sharedFolderAllowed,
+                        initialAllFilesAccessGranted =
+                            module.workspaceCapabilities.allFilesAccessGranted(
+                                LocalContext.current,
+                            ),
+                        suggestedPath = suggestedWorkspacePath(),
+                        paths = settingsDeps.storage::paths,
+                    ),
+            )
         OnboardingScreen(
             onboarding = onboarding,
             addKey = addKey,
+            workspace = workspace,
+            workspaceCapabilities = module.workspaceCapabilities,
             onExit = nav::leaveOnboarding,
         )
     }

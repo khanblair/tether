@@ -140,6 +140,9 @@ impl TetherCore {
 }
 
 #[cfg(test)]
+mod uniffi_name_tests;
+
+#[cfg(test)]
 mod tests {
     #[test]
     fn version_matches_package_version() {

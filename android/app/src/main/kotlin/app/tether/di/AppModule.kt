@@ -2,6 +2,8 @@ package app.tether.di
 
 import android.content.Context
 import android.util.Log
+import app.tether.appearance.AppearanceController
+import app.tether.appearance.PrefsAppearanceStore
 import app.tether.core.CoreClient
 import app.tether.core.generated.CiRuntime
 import app.tether.core.generated.ProjectRuntime
@@ -51,6 +53,7 @@ import app.tether.updates.CoreUpdateGateway
 import app.tether.updates.PrefsUpdateStore
 import app.tether.updates.UpdatesController
 import app.tether.updates.createUpdateInstaller
+import app.tether.updates.isDebuggableBuild
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -188,6 +191,7 @@ class AppModule(
                     ).versionName
                     .orEmpty(),
             scope = appScope,
+            isDebuggable = isDebuggableBuild(context),
         )
     }
 
@@ -200,6 +204,9 @@ class AppModule(
     fun setThemeMode(mode: ThemeMode) {
         theme.set(mode)
     }
+
+    /** The appearance choices: interface size, text size and accent. Saved at once. */
+    val appearance = AppearanceController(PrefsAppearanceStore(context))
 
     /** Messages for the snackbar host, such as the toast after a test event. */
     val messages = AppMessages()

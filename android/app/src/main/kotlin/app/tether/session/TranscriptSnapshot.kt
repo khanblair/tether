@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import app.tether.core.generated.CoreEventView
 import app.tether.core.generated.MessageView
+import app.tether.core.generated.ProcessView
 import app.tether.core.generated.ProviderView
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
@@ -25,6 +26,8 @@ internal data class TranscriptSnapshot(
     /** Whether the model reads images. Unknown counts as no. */
     val supportsImages: Boolean,
     val usage: SessionUsage,
+    /** The background processes present when this snapshot was read. */
+    val processes: List<ProcessView>,
     /** Whether Bypass is on in the open session. A failed read counts as off. */
     val bypass: Boolean,
 )
@@ -90,6 +93,7 @@ internal suspend fun SessionConnection.snapshot(): TranscriptSnapshot =
             modelName = modelDisplayName(details.modelId, listOfNotNull(model)),
             supportsImages = model?.images == true,
             usage = settings.usage(sessionId),
+            processes = listProcesses(),
             bypass =
                 sessionCall(Dispatchers.IO) { settings.bypassActive(sessionId) }
                     .getOrDefault(false),

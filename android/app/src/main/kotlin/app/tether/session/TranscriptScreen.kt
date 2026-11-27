@@ -17,6 +17,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.tether.R
 import app.tether.core.generated.CoreEventView
 import app.tether.core.generated.MessageView
@@ -41,6 +42,12 @@ import app.tether.session.agent.savedPreviewPaths
 import app.tether.session.agent.toolCallsFromMessages
 import app.tether.session.compose.CommandScreen
 import app.tether.session.compose.commandHooksOf
+import app.tether.session.servers.ServerBar
+import app.tether.session.servers.ServerPreviewTarget
+import app.tether.session.servers.ServerState
+import app.tether.session.servers.ServerStateHolder
+import app.tether.session.servers.serverPreviewAction
+import app.tether.session.servers.serverStopAction
 import kotlinx.coroutines.launch
 
 /** Persisted messages are read off the main thread when the session route opens. */
@@ -62,6 +69,20 @@ fun TranscriptScreen(
     val agent = rememberAgentLoop(connection)
     val agentUi = rememberAgentScreen(agent)
     val project = rememberProjectSummary(sheets?.projects, connection?.projectId)
+    val serverState = remember(connection) { ServerStateHolder() }
+    val servers by serverState.state.collectAsStateWithLifecycle()
+    var serverPreview by remember(connection) { mutableStateOf<ServerPreviewTarget?>(null) }
+    val stopFailed = stringResource(R.string.server_stop_failed)
+    val previewReady = stringResource(R.string.server_preview_ready)
+    val openLabel = stringResource(R.string.server_open)
+    val stoppedFormat = stringResource(R.string.server_stopped_code)
+    val openServerPreview = serverPreviewAction(sheets)
+    val stopServer =
+        serverStopAction(scope, connection) { sheets?.messages?.show(stopFailed) }
+    val onSnapshotLoaded: (TranscriptSnapshot) -> Unit = {
+        serverState.loadOnce(it.processes)
+        snapshot = it
+    }
 
     /** A turn starts: the last turn's cards clear, and the send shows as running. */
     fun startTurn() {
@@ -92,7 +113,6 @@ fun TranscriptScreen(
                 turn.onSendFailed()
         })
     }
-
     val chat =
         rememberChatActions(
             connection = connection,
@@ -105,7 +125,7 @@ fun TranscriptScreen(
     SnapshotReload(
         connection = connection,
         reloads = sheetControl.reloads,
-        onLoaded = { snapshot = it },
+        onLoaded = onSnapshotLoaded,
         onFailed = { failed = true },
     )
     CoreEvents(
@@ -113,8 +133,12 @@ fun TranscriptScreen(
         onEvent = { event ->
             agent?.onEvent(event)
             turn = turn.onEvent(event, System.currentTimeMillis())
+            handleServerEvent(event, serverState, sheets, stoppedFormat) { target ->
+                serverPreview = target
+                sheets?.messages?.show(previewReady, openLabel) { openServerPreview(target) }
+            }
         },
-        onLoaded = { snapshot = it },
+        onLoaded = onSnapshotLoaded,
         onFailed = { failed = true },
     )
     TranscriptContent(
@@ -155,6 +179,10 @@ fun TranscriptScreen(
                 { text: String -> sendPlanEdit(active, text) }
             },
         onOpenBudgets = onOpenBudgets ?: {},
+        servers = servers,
+        serverPreview = serverPreview,
+        onPreviewServer = openServerPreview,
+        onStopServer = stopServer,
         composer =
             connection?.let { active ->
                 {
@@ -214,19 +242,6 @@ private fun MessageSheetSlot(
     }
 }
 
-/** Opens a command screen for this session. Without sheets, the action is missing. */
-private fun screenOpener(
-    sheets: SessionSheetEnv?,
-    target: CommandScreen,
-): (() -> Unit)? = sheets?.let { env -> { env.openScreen(target, "") } }
-
-/** A sheet opener for a session with sheets. Without sheets, the control has no action. */
-private fun sheetOpener(
-    sheets: SessionSheetEnv?,
-    control: SessionSheetControl,
-    kind: SessionSheetKind,
-): (() -> Unit)? = sheets?.let { { control.openSheet(kind) } }
-
 /** Lazy items use persisted IDs so rows keep their identity as text arrives. */
 @Composable
 fun TranscriptContent(
@@ -260,6 +275,10 @@ fun TranscriptContent(
     agent: AgentScreenUi? = null,
     onSendPlanEdit: ((String) -> Unit)? = null,
     onOpenBudgets: () -> Unit = {},
+    servers: ServerState = ServerState(),
+    serverPreview: ServerPreviewTarget? = null,
+    onPreviewServer: (ServerPreviewTarget) -> Unit = {},
+    onStopServer: (String) -> Unit = {},
 ) {
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
@@ -345,6 +364,13 @@ fun TranscriptContent(
                     modifier = Modifier.padding(top = TetherSpace.space2),
                 )
             }
+            ServerBar(
+                state = servers,
+                preview = serverPreview,
+                onPreview = onPreviewServer,
+                onStop = onStopServer,
+                modifier = Modifier.padding(horizontal = TetherSpace.space3),
+            )
             composer?.invoke()
         }
     }

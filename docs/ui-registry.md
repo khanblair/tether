@@ -183,21 +183,25 @@ All components start as **Planned**. Screenshot tests start with the first featu
 | `RuntimePackRow` | Sandbox runtime pack with install state | `pack`, `source`, `onInstall`, `onCancel` | not installed, downloading, ready, failed | P5 | Built |
 | `CiRunsList` | Recent CI runs | `runs`, `onOpen` | loading, list, empty | P6 | Built |
 | `LinuxSetupCard` | Linux mode setup and status | `state`, `source`, `onInstall`, `onRepair`, `onRemove` | not installed, each setup step, ready, broken, unavailable in `play` | P7 | Built |
-| `TerminalView` | Linux shell rendering | `screen` (from core `vt100`), `onInput` | default, network off badge | P7 | Planned |
-| `TerminalKeyRow` | Extra keys above the keyboard | `onKey`, `modifiers` | default, Ctrl held | P7 | Planned |
+| `TerminalView` | Linux shell rendering | `frame`, `onInput`, `onResize`, `onCopy` | default, scrollback, alternate screen, failed, not ready | P7 | Built |
+| `TerminalKeyRow` | Extra keys above the keyboard | `onKey`, `modifiers` | default, Ctrl held, Alt held | P7 | Built |
+| `ServerBar` | Compact process row above the composer with Preview and Stop, plus a preview-ready line | `state`, `preview`, `onPreview`, `onStop` | one server, two servers expanded, stopped, 200% font, 320 dp | P9 | Built |
+| `ServerPreview` | WebView for an owned 127.0.0.1 server with a network chip and stopped state | `url`, `processId`, `network`, `onReload` | running, blocked request, network on, server stopped | P9 | Built |
 
 ## Settings and providers
 
 | Name | Purpose | Props | States | Phase | Status |
 |---|---|---|---|---|---|
 | `AppearanceScreen` | Live preview and controls for theme, interface size, text size, and accent color | `appearance`, `theme`, change lambdas, `onBack` | light, dark, 200% font, narrow, custom picker open | P1 | In progress |
+| `WorkspaceScreen` | Shows the effective projects folder and saves the folder used by new projects | `state`, `sharedFolderAllowed`, `onChoose`, `onPathChange`, `onSave`, `onUsePrivate`, `onBack` | private, custom, path error, permission needed, 200% font, narrow | P1 | In progress |
+| `DataLocations` | Read-only paths and sizes for local Tether data; the projects row opens Workspace folder | `paths`, `usage`, `onOpenWorkspace` | loading, populated, custom projects path | P1 | In progress |
 | `AccentSwatchRow` | Built-in and custom accent color choices with selected state | `selectedId`, `customArgb`, `onSelect`, `onOpenCustom` | each swatch selected, custom selected, narrow scroll | P1 | In progress |
 | `CustomAccentPicker` | Hue, saturation, and validated hex controls for a custom accent | `initialArgb`, `onAccentSelected` | valid hex, empty hex, invalid length, invalid characters, adjusted color | P1 | In progress |
 | `ProviderRow` | Provider with key status: icon, name, subtitle, chevron | `name`, `subtitle`, `status` (`ProviderRowStatus`), `statusDescription`, `onClick` | unset, ok, bad key, network error, blocked | P1 | Built |
 | `TestConnectionButton` | Outlined full-width button that starts a key test | `state` (`TestState`), `label`, `onTest`, `enabled` | idle, testing, ok, failed, disabled | P1 | Built |
 | `ModelPicker` | Searchable model list with badges | `models`, `selected`, `onPick` | loading, list, filtered, no tools model disabled | P1 | Planned |
 | `CapabilityBadges` | Tools, images, reasoning badges | `caps` | each combination | P1 | Planned |
-| `GitHubAccountCard` | GitHub sign-in state | `status`, `onSignOut` | signed out, device code shown, signed in | P4 | Built |
+| `GitHubAccountCard` | GitHub sign-in state and token reach | `status`, `onSignOut` | signed out, classic token, fine-grained token, repository access yes or no | P4 | Built |
 | `DeviceCodePanel` | OAuth device code with copy and open | `grant`, `expiresAtMillis`, `onOpen` | waiting, expired | P4 | Built |
 | `McpServerRow` | MCP server with an enable switch and a Test button. Tool toggles are on `McpServerDetailScreen` | `server`, `testing`, `testResult`, `onOpen`, `onToggle`, `onTest` | connected, error, disabled | P9 | Built |
 | `BudgetEditor` | Session and daily budgets | `daily`, `session`, `canSave`, `saving`, `onDailyChange`, `onSessionChange`, `onSave` | none, set | P9 | Built |
@@ -219,6 +223,7 @@ All components start as **Planned**. Screenshot tests start with the first featu
 | Name | Purpose | Props | States | Phase | Status |
 |---|---|---|---|---|---|
 | `OnboardingPage` | One onboarding step | `step`, `onBack`, `content` | default | P10 | Built |
+| `WorkspaceStep` | Shows the private path and local data paths, with an optional shared folder choice | `state`, `sharedFolderAllowed`, `onChoose`, `onSave`, `onUsePrivate` | private default, custom path, permission needed, skip keeps private | P10 | In progress |
 | `ProviderQuickAdd` | Add the first key | `providers`, `onAdd` | empty, one added | P10 | Planned |
 | `ProjectQuickStart` | Clone, new, or import | `onPick` | default, GitHub not signed in | P10 | Planned |
 

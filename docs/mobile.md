@@ -82,7 +82,8 @@ The offline banner appears under the status line. Turns never fail only because 
 
 ### Manifest permissions
 
-Status: built for the permissions below. The manifest declares `INTERNET`, `ACCESS_NETWORK_STATE`, `USE_BIOMETRIC`, `POST_NOTIFICATIONS`, and `RECORD_AUDIO`.
+Status: built for the permissions below. The main manifest declares `INTERNET`,
+`ACCESS_NETWORK_STATE`, `USE_BIOMETRIC`, `POST_NOTIFICATIONS`, and `RECORD_AUDIO`.
 
 | Permission | Why | When asked |
 |---|---|---|
@@ -92,11 +93,13 @@ Status: built for the permissions below. The manifest declares `INTERNET`, `ACCE
 | `WAKE_LOCK` | Partial wake lock during turns | Install time |
 | `USE_BIOMETRIC` | Key reveal, Bypass, app lock | Install time |
 | `REQUEST_INSTALL_PACKAGES` (`full` only) | Install a downloaded update through `PackageInstaller` (P1-20); `play` never declares it | First tap on Install update, through the system settings screen |
+| `MANAGE_EXTERNAL_STORAGE` (`full` only) | Let the person choose a shared projects folder | When the person chooses a shared folder |
 | `RECORD_AUDIO` | Voice input in the composer. The device speech recognizer does the work; Tether records and stores no audio | First tap on the mic in the composer |
 
 Voice input shows a "Listening" sheet that fills the composer with the words it hears. Nothing is sent automatically.
 
-No location, contacts, or broad storage permissions.
+No location or contacts permissions. The Play flavor has no broad storage permission. The `full`
+flavor declares `MANAGE_EXTERNAL_STORAGE` only for its optional shared projects folder.
 
 ## 6. Notifications
 
@@ -151,7 +154,7 @@ The full model is in architecture.md section 10. Mobile-specific points:
 - Backups exclude secrets, the Linux root filesystem, runtime packs, and by default workspaces (`backup_rules.xml`, `data_extraction_rules.xml`). Memory, skills, and the vault are included in backups; they hold no secrets and writes are scanned (architecture.md section 14).
 - Network security config forbids cleartext traffic.
 - Exported components: only the main activity, the share intent filter, and the notification action receiver (which accepts only our signed `PendingIntent`s).
-- The `full` flavor's PRoot binaries and loader live in `nativeLibraryDir` and are signed as part of the APK. `extractNativeLibs` must be true in the `full` flavor so both files are available there. The Alpine root filesystem is downloaded and verified against the signed manifest.
+- The `full` flavor ships `libproot.so` and `libproot-loader.so` in `app/src/full/jniLibs/arm64-v8a/`. They are signed as part of the APK and extracted to `nativeLibraryDir` by the full manifest's `extractNativeLibs=true` setting. The Play flavor has no PRoot files. Linux mode is unavailable on x86_64 devices. The Alpine root filesystem is downloaded and verified against the signed manifest.
 
 ## 10. Budgets
 

@@ -36,7 +36,7 @@ Start times in the app process: `--version` 8 to 10 ms, a musl shell 33 to 36 ms
 
 ## 5. What Tether must do
 
-- Ship `libproot.so` and `libproot-loader.so` in `jniLibs/arm64-v8a` of the `full` flavor, with `android:extractNativeLibs="true"` (`useLegacyPackaging = true`), because the Tether manifest has `extractNativeLibs=false` today and then no file exists to execute.
+- Ship `libproot.so` and `libproot-loader.so` in `jniLibs/arm64-v8a` of the `full` flavor. The full source-set manifest sets `android:extractNativeLibs="true"`, because the default leaves no file to execute. AGP 9.5.1 exposes `useLegacyPackaging` only in the global DSL, so it is not used here.
 - Read `ApplicationInfo.nativeLibraryDir` at every start. The path changed between two installs. Never store it.
 - Always set `PROOT_LOADER=<nativeLibraryDir>/libproot-loader.so`. Make `loader_path` required in `proot.rs` (it is optional now).
 - Keep the app in a foreground state while a Linux session runs (a foreground service).
@@ -51,8 +51,8 @@ Start times in the app process: `--version` 8 to 10 ms, a musl shell 33 to 36 ms
 
 ## 7. Work that follows
 
-1. Make `proot_loader_path` required in `tether-linux` and `configure_executors`, and set `PROOT_LOADER` (Rust, tests).
-2. A reproducible build in the repo: pinned commit, talloc checksum, the patch, and a script that builds both binaries on Linux CI, with the GPL source offer.
-3. App wiring: the `full` manifest, `jniLibs`, a call to `configure_executors` at start with the `nativeLibraryDir` paths, a root filesystem signing key, a signed manifest and its hosting, and the manifest URL in the build.
+1. **Done.** `proot_loader_path` is required in `tether-linux` and `configure_executors`, and the runner sets `PROOT_LOADER`.
+2. **Done for arm64.** `third_party/proot/pins.sh` and `tools/proot/build.sh` pin the source and talloc checksum, apply the patch, build both binaries, and publish the GPL source offer.
+3. **App wiring done; tooling built; publication remains.** The `full` manifest extracts the arm64 `jniLibs`, app start configures the executor paths from `nativeLibraryDir`, and full resources hold the future rootfs key and URL. The `tether-linux-manifest` binary, `just linux-key`, and `just linux-manifest` prepare and verify the signed Alpine `manifest.json` and detached signature. Blair must run the recipes on a networked machine, keep the private key outside the repo, upload the archive, checksum, manifest, and signature to the GitHub release tagged `rootfs-<alpine version>`, then put the release manifest URL and printed public key into the full app resources.
 4. Background processes in the `run` tool, port discovery, a foreground service, cleartext to `127.0.0.1`, and the Preview of a localhost server.
-5. The `/linux` shell screen (P7-07).
+5. **Done.** The `/linux` shell screen accepts input with its terminal key row, keeps bounded scrollback, and shows the capability message in the Play flavor (P7-07).

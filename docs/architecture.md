@@ -292,6 +292,10 @@ The session tool registry includes these Git actions. `git_init` is available fo
 | `git_commit` / `git_branch` | Change local repository state | File edit rules |
 | `github_repo_create` | Create a GitHub repository, add `origin`, and save the project remote | Push rules, always except Bypass |
 | `git_push` / `pr_create` / `pr_status` | Push or use the saved remote repository | Existing remote-action rules |
+| `run` with `background: true` | Start a Linux process that stays alive until it exits or is stopped; keeps a 256 KiB log ring and detects a local port | Linux run approval; the approval says it keeps running until stopped |
+| `process_list` / `process_logs` | Read session-owned background process state and recent output | None |
+| `process_stop` | Stop one session-owned process tree | Linux run approval |
+| `preview` | Ask the app to open a guarded HTML file or an owned loopback server | None |
 
 ### Commands (Kotlin calls Rust)
 
@@ -315,7 +319,11 @@ The session tool registry includes these Git actions. `git_init` is available fo
 | `list_checkpoints(session_id)` / `rewind(checkpoint_id, what)` | Rewind |
 | `SessionRunner.rewind_to_message(message_id)` | Stop a running turn and hide that message and every later one, for edit and regenerate; files are not restored, it works without a workspace runtime, and an unknown message id is an error that changes nothing |
 | `get_diff(project_id, scope)` / `apply_hunk_action(...)` | Diff review |
-| `run_command(project_id, cmd, executor)` | User-initiated run |
+| `run_command(project_id, cmd, executor)` | User-initiated run; the model-facing `run` tool also accepts `background: true` in Linux mode |
+| `open_linux_shell(project_id, rows, cols, sink)` | Opens one interactive Alpine shell, optionally mounted on a project's `/workspace`, with its saved network policy |
+| `LinuxShellSession.write(bytes)` / `.resize(rows, cols)` / `.close()` | Sends terminal input, changes the pty size, or kills the shell; one executor runtime allows one open shell |
+| `LinuxShellSink.on_output(bytes)` / `.on_exit(code)` | Receives ordered terminal chunks of at most 8 KiB and one shell exit callback from a Rust reader thread |
+| `process_list()` / `process_logs(id, tail)` / `process_stop(id)` / `preview(path, url)` | Inspect or stop session processes, or emit a guarded Preview request; `preview` accepts exactly one target |
 | `set_provider_key(provider, key)` / `test_provider(provider)` / `list_models(provider)` | Providers |
 | `github_device_start()` / `github_device_poll(code)` / `github_set_token(token)` | GitHub auth; `github_status()` reports the persisted token kind (`CLASSIC` or `FINE_GRAINED`), scopes, login, and repository-read reach |
 | `linux_install()` / `linux_repair()` / `linux_remove()` / `linux_status()` | Linux mode |
@@ -328,9 +336,9 @@ The session tool registry includes these Git actions. `git_init` is available fo
 
 Every event for one session carries its `session_id`, so ViewModels can filter on it. `SessionUpdated` is the source of truth for session state; the turn and network events add detail the state cannot hold, and the engine emits them from the same transition so they never disagree.
 
-`SessionUpdated`, `TextDelta`, `ThinkingDelta`, `ToolProposed`, `ApprovalRequired`, `ToolStarted`, `ToolOutput` (streaming run output), `ToolFinished`, `DiffReady`, `QualityReport`, `PlanReady`, `TodoUpdated`, `AskUser`, `RunProgress`, `CompactionDone`, `UsageUpdated`, `TurnFinished`, `TurnInterrupted`, `TurnFailed`, `SessionRewound`, `LinuxStatus`, `RuntimeStatus`, `ProviderStatus`, `NetworkPaused`, `NetworkResumed`.
+`SessionUpdated`, `TextDelta`, `ThinkingDelta`, `ToolProposed`, `ApprovalRequired`, `ToolStarted`, `ToolOutput` (streaming run output), `ToolFinished`, `DiffReady`, `QualityReport`, `PlanReady`, `TodoUpdated`, `AskUser`, `RunProgress`, `CompactionDone`, `UsageUpdated`, `TurnFinished`, `TurnInterrupted`, `TurnFailed`, `SessionRewound`, `LinuxStatus`, `RuntimeStatus`, `ProviderStatus`, `NetworkPaused`, `NetworkResumed`, `ProcessChanged`, `PreviewRequested`.
 
-Status: P1-01 defines `Ready` and `Test` (from P0), `SessionUpdated`, `TextDelta`, `ThinkingDelta`, `ToolProposed`, `ApprovalRequired`, `ToolStarted`, `ToolOutput`, `ToolFinished`, `UsageUpdated`, `TurnFinished`, `TurnInterrupted`, `TurnFailed`, `NetworkPaused`, `NetworkResumed`, and `ProviderStatus`. `DiffReady`, `QualityReport`, `PlanReady`, `TodoUpdated`, `AskUser`, `RunProgress`, `CompactionDone`, `SessionRewound`, `LinuxStatus`, and `RuntimeStatus` arrive with the task that first emits them.
+Status: P1-01 defines `Ready` and `Test` (from P0), `SessionUpdated`, `TextDelta`, `ThinkingDelta`, `ToolProposed`, `ApprovalRequired`, `ToolStarted`, `ToolOutput`, `ToolFinished`, `UsageUpdated`, `TurnFinished`, `TurnInterrupted`, `TurnFailed`, `NetworkPaused`, `NetworkResumed`, and `ProviderStatus`. `ProcessChanged` and `PreviewRequested` are now defined for the core Preview flow. `DiffReady`, `QualityReport`, `PlanReady`, `TodoUpdated`, `AskUser`, `RunProgress`, `CompactionDone`, `SessionRewound`, `LinuxStatus`, and `RuntimeStatus` arrive with the task that first emits them.
 
 ### Shared types
 

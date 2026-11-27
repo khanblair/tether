@@ -90,7 +90,7 @@ All components start as **Planned**. Screenshot tests start with the first featu
 | `CodeBlock` | Highlighted code with copy | `code`, `language`, `spans` | default, long (scrolls), copied | P1 | Planned |
 | `ThinkingBlock` | The reasoning of one message as one collapsed row (brain icon, "Thinking" or "Thinking…" while it streams, chevron); tapping shows the text. State is kept per message. App module | `stateKey`, `text`, `live`, `startOpen` | collapsed, expanded, streaming | P1 | Built |
 | `UserBubble` | The user's message as a bubble on the end side, at most 85% of the row, with Copy and Edit below it. App module | `message`, `onEdit`, `onCopy`, `onLongPress` | short, long, no text | P1 | Built |
-| `MessageActionRow` | Icon row of 48 dp buttons under a message: Copy, Edit, Regenerate. App module | `onCopy`, `onEdit`, `onRegenerate` | user, agent, newest turn | P1 | Built |
+| `MessageActionRow` | Icon row under a message: Copy, Edit, Regenerate. 16 dp icons in 36 dp buttons, 4 dp apart. App module | `onCopy`, `onEdit`, `onRegenerate` | user, agent, newest turn | P1 | Built |
 | `EditMessageSheet` | Sheet with the message text and Send; replies after the message are removed and files stay as they are. App module | `text`, `onSend`, `onDismiss` | default, blank, unchanged | P1 | Built |
 | `ToolCallCard` | One tool call with status and output | `call: ToolCallUi`, `expanded`, `onToggle`, `onRunElsewhere` | proposed, awaiting approval, running, succeeded, failed, timed out, denied, blocked | P2 | Built |
 | `ToolGroupCard` | Collapsed group of read-only calls | `calls`, `expanded`, `onToggleGroup`, `onToggleCall` | collapsed, expanded | P2 | Built |

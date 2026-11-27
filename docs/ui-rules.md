@@ -244,6 +244,7 @@ Snackbars and toasts use the inverse surface: `text` as the background, `bg` as 
 
 - [ ] All text meets the contrast rules in ui-tokens.md section 3.
 - [ ] Touch targets at least 48 × 48 dp, including chips and hunk buttons.
+  Exception: the Copy, Edit, and Regenerate row under a chat message uses 36 dp targets, because the actions are secondary and sit beside each other.
 - [ ] Every icon-only control has a content description that names the action.
 - [ ] Streaming text is announced politely by TalkBack once per completed paragraph, not per delta.
 - [ ] Tool card state changes are announced: "Edit to app.py finished."

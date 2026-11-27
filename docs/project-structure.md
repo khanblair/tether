@@ -69,6 +69,8 @@ tether/
 │       │   └── src/{lib,limits,module_cache,output_pipe,pack,pack_catalog,pack_cleanup,pack_install,pack_io,pack_layout,pack_replace,runner,runner_result,runner_support,runner_validation,test_support,wasi_context}.rs; test modules (pack_tests.rs, runner_tests.rs)
 │       ├── tether-linux/      Linux mode: PRoot runs, Alpine root filesystem, apk packages, PTY shell
 │       │   └── src/{lib,error,extract,manifest,packages,proot,rootfs,rootfs_io,runner,shell}.rs; tests/ (integration and hardening tests)
+│       ├── tether-linux-tools/ Linux manifest key generation, signing, and verification binary
+│       │   └── src/main.rs; tests/cli.rs
 │       ├── tether-ci/         GitHub Actions client, workflow file, failure log parser, run poller
 │       │   └── src/{lib,client,logs,poll,workflow}.rs; folders client/ and logs/ (support.rs each); tests/ci_tests.rs
 │       ├── tether-connectors/ Web fetch, HTML to text, and public IP checks for SSRF protection
@@ -87,6 +89,7 @@ tether/
 │   │   └── src/{main, debug, release, full, play, androidTest}   TetherApp, MainActivity, di/AppModule, nav/, home/ (Projects home, project detail, drawer, Needs attention; sample sources in debug, empty sources in release), share/ (text intake and project picker), shell/ (settings and placeholder screens)
 │   │       └── main/kotlin/app/tether/
 │   │           ├── session/agent/                  Agent loop state and gateway, agent screen, agent tool cards in the transcript
+│   │           ├── session/servers/                Background server state, bar, and server preview wiring
 │   │           ├── session/approval/               Approval bar, always-allow menu, deny reason sheet, approval view model
 │   │           ├── session/cards/                  Ask-user card, plan card, checklist pin
 │   │           ├── session/tools/                  Tool call and group cards, run card, quality report, system notes, tool titles and icons
@@ -98,6 +101,7 @@ tether/
 │   │           ├── settings/github/                GitHub account, clone, and Git identity screens, device code panel
 │   │           ├── settings/mcp/                   MCP server list, server detail, add sheet, tool rows, MCP gateway
 │   │           ├── settings/executors/             Executors screen, Linux setup card, runtime packs, CI runs screen
+│   │           ├── linux/                          Pure Kotlin terminal emulator, shell gateway, ViewModel, and screen
 │   │           ├── settings/budgets/               Budgets and cost screens, budget editor, cost chart, money formatting
 │   │           └── workspace/                      ProjectArchive.kt: ZIP project folders
 │   ├── core-bridge/           CoreClient, EventBus, KeystoreSecretsPlatform, consumer-rules.pro, (gen) generated/tether_core.kt
@@ -105,17 +109,20 @@ tether/
 │   └── designsystem/          TetherTheme, TetherIcons, PrimaryButton, TetherTopBar, ListRow, ProviderRow, SecretField, InlineBanner, TestConnectionButton, TetherTextButton, TetherIconButton, NotificationBell, StatusBadge, StatusMark, ProjectRow, SessionRow, SectionTitle, ListGroup, TetherSearchField, TetherSheet, FONTS-LICENSE.txt, (gen) tokens/Tokens.kt and token colors, Plex fonts
 ├── ios/README.md              Plan for v2
 ├── runtimes/README.md  linux/README.md  bench/README.md   Planned folders, one README each
+├── third_party/proot/        PRoot source pins, patch, licenses, and talloc files
+├── third_party/linux/        Alpine rootfs publication pins
 ├── tools/
 │   ├── slop-lint/             Rust CLI with its own workspace and tests
 │   ├── site/{build.ts, site.css}   Builds the Pages site from docs/
 │   ├── prototype/             Clickable mobile UI prototype (HTML, CSS, JavaScript; no build step)
+│   ├── proot/{build.sh,check-binaries.sh}  PRoot build and binary checks
 │   └── gen-bindings.sh  gen-icons.ts  check-file-length.sh  check-commit-size.sh  check-smell-fixtures.sh  bump-version.sh  release-version.sh  setup.sh  setup-release-signing.sh
 └── .github/
     ├── workflows/{ci.yml, pr.yml, release.yml, pages.yml}
     └── pull_request_template.md  CODEOWNERS  dependabot.yml
 ```
 
-Not present yet: `LICENSE` (no license chosen, see Q5), `nightly.yml` (nothing to run until P1), `core/benches/`, `core/fixtures/repos/`, the `runtimes/` build scripts and manifest (only `runtimes/README.md` exists), the `linux/` PRoot build scripts, rootfs manifest, and package list (only `linux/README.md` exists), feature modules (the Gradle build has only `app`, `core-bridge`, and `designsystem`), `service`, and `platform`.
+Not present yet: `LICENSE` (no license chosen, see Q5), `nightly.yml` (nothing to run until P1), `core/benches/`, `core/fixtures/repos/`, the `runtimes/` build scripts and manifest (only `runtimes/README.md` exists), the `linux/` rootfs manifest and package list (only `linux/README.md` exists), feature modules (the Gradle build has only `app`, `core-bridge`, and `designsystem`), `service`, and `platform`.
 
 ## Top level
 
@@ -142,9 +149,10 @@ tether/
 ├── ios/                       Placeholder for v2
 ├── tokens/                    Design token source of truth
 ├── runtimes/                  Build scripts and manifests for sandbox runtime packs
-├── linux/                     PRoot build scripts and root filesystem manifest
+├── linux/                     Root filesystem manifest and package list
 ├── bench/                     Task suite and benchmark harness
-├── tools/                     Repo tooling: slop-lint, smell checks, codegen helpers, docs site
+├── third_party/               Pinned source and licenses for shipped third-party code
+├── tools/                     Repo tooling: PRoot, slop-lint, smell checks, codegen helpers, docs site
 └── .github/                   CI workflows, Pages workflow, templates
 ```
 
@@ -526,12 +534,12 @@ android/
 │       │       ├── drawable/ic_launcher_monochrome.xml  Single color logo for themed icons
 │       │       └── mipmap-anydpi/     Adaptive launcher icon and round icon
 │       ├── full/
-│       │   ├── AndroidManifest.xml   REQUEST_INSTALL_PACKAGES; Linux mode components arrive with P7
-│       │   ├── kotlin/app/tether/updates/  PackageInstaller installer: stages the verified APK and shows the system confirmation
-│       │   └── jniLibs/              (gen) libproot.so, libproot-loader.so per ABI (planned, P7)
+│       │   ├── AndroidManifest.xml   REQUEST_INSTALL_PACKAGES; extracted PRoot libraries
+│       │   ├── kotlin/app/tether/{linux,updates}/  Full Linux setup and PackageInstaller
+│       │   └── jniLibs/arm64-v8a/    (gen) libproot.so, libproot-loader.so
 │       └── play/
-│           ├── kotlin/app/tether/flavor/LinuxModeStub.kt  Linux mode unavailable
-│           └── kotlin/app/tether/updates/  Store link installer: opens Google Play, never installs
+│           ├── kotlin/app/tether/{linux,updates}/  Linux no-op and Store link installer
+│           └── res/                  Play-only resources
 ├── core-bridge/
 │   ├── consumer-rules.pro      Keep rules for JNA and the bindings
 │   └── src/main/kotlin/app/tether/core/
@@ -610,7 +618,6 @@ runtimes/
 
 ```
 linux/
-├── proot/build.sh           Cross-compile PRoot and talloc for arm64 and x86_64
 ├── rootfs-manifest.json     Alpine version, URLs, SHA-256 per architecture
 └── base-packages.txt        Packages installed during setup
 ```
@@ -631,6 +638,7 @@ tools/
 ├── slop-lint/               Rust CLI using tether-quality data files
 │   ├── Cargo.toml
 │   └── src/main.rs          Checks docs, strings.xml, comments, commit messages
+├── proot/                   PRoot build and committed-binary checks
 ├── check-file-length.sh     Fails on files over the limits in code-standards.md
 ├── check-commit-size.sh     Fails on a commit that touches more than 15 files
 ├── check-smell-fixtures.sh  Proves Clippy and detekt fail on a function over the line limit
@@ -665,7 +673,7 @@ tools/
 |---|---|---|
 | `android/core-bridge/.../generated/*` | `tools/gen-bindings.sh` | Yes; CI checks they match |
 | `android/designsystem/.../tokens/Tokens.kt` and `android/designsystem/src/main/res/values*/tokens_colors.xml` | `tokens/generate.ts` | Yes; CI checks they match |
-| `android/app/src/full/jniLibs/*` | `linux/proot/build.sh` | No; built in CI and by `just linux-libs` |
+| `android/app/src/full/jniLibs/*` | `tools/proot/build.sh` | Yes; the verified arm64 binaries are shipped in the full flavor |
 | `android/app/build/rustJniLibs/*/*/libtether_core.so` | cargo-ndk through Gradle | No (build output) |
 | `images/logo.png`, `images/export/*` | `tools/gen-icons.ts` | Yes |
 | `site-dist/` | `tools/site/build.ts` | No; deployed by `pages.yml` |

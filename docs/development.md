@@ -123,10 +123,26 @@ Only the four signing variables are used today. The provider and GitHub test var
 | `just site` | Build the docs site into `site-dist/` |
 | `just bench` | Core benchmarks (planned) |
 | `just packs` | Build sandbox runtime packs locally (planned, P5) |
-| `just linux-libs` | Build PRoot libraries for both ABIs (planned, P7) |
+| `just proot` | Build the pinned full-flavor PRoot libraries for arm64 and copy them into `jniLibs` |
+| `just linux-key` | Create the Linux manifest signing key outside the repository and print its public key |
+| `just linux-manifest` | Download the pinned Alpine rootfs, verify its checksum, and prepare signed release files in `dist/linux/` |
 | `just check` | `lint`, `slop`, `smells`, `smell-fixtures`, `test`, and a bindings diff check: run before every push |
 | `just release-signing` | One time: create the release keystore and store it as the four GitHub secrets (run it in your own terminal) |
 | `just release` | Build `assembleFullRelease` and `bundlePlayRelease` (needs the signing variables) |
+
+### PRoot
+
+`just proot` needs the pinned Android NDK and network access. It verifies the
+PRoot commit and the talloc archive before building. The output is arm64-only.
+Do not run it for the Play flavor.
+
+### Publishing Linux mode
+
+Run `just linux-key` on the publishing machine once. It creates the private Ed25519 key at `~/.tether-release/linux-manifest.key`, refuses to overwrite it, and prints the public key and path. Keep the private key outside the repository and never put it in logs, commits, or release files.
+
+Run `just linux-manifest` to download the Alpine archive and its published `.sha256` file, verify the archive, and write `dist/linux/manifest.json`, `manifest.json.sig`, the archive, and its checksum. The recipe signs the exact bytes written to `manifest.json`; it does not upload files.
+
+Blair's manual step is to create the GitHub release tagged `rootfs-<alpine version>` and upload the four files from `dist/linux/`. Set `linux_rootfs_manifest_url` in `android/app/src/full/res/values/linux.xml` to `https://github.com/khanblair/tether/releases/download/rootfs-<alpine version>/manifest.json`, and set `linux_rootfs_key_hex` to the public key printed by `just linux-key` or `just linux-manifest`. The app stays unavailable until this release exists and an app build carries those values.
 
 ## 8. Testing notes
 
@@ -174,7 +190,7 @@ Release builds enable R8 and resource shrinking. JNA and UniFFI classes are kept
 - The script never overwrites a keystore and refuses to replace secrets that already exist. If it stops after creating the keystore, run `just release-signing --existing` to store it. `--replace` allows replacing secrets, which locks `full` users out of updates once a release has shipped.
 - `release.yml` pins the fingerprint: it fails when an APK is signed with any other key. It also fails with a clear message while any secret or the variable is missing.
 - Back up the keystore and passwords in two separate offline places. Losing it means `full` users cannot update.
-- Runtime pack and root filesystem manifests are signed with `TETHER_MANIFEST_KEY`. The matching public key is compiled into the app; rotating it needs an app release first.
+- Runtime pack manifests use `TETHER_MANIFEST_KEY`. Linux rootfs publishing uses `~/.tether-release/linux-manifest.key`; the matching public key is compiled into the full app, so rotating it needs an app release first.
 
 ## 12. Versions
 

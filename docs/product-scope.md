@@ -57,16 +57,24 @@ Each feature lists what it is, how it works, and why it exists. IDs (F1 and so o
 
 ### F2. Projects and workspaces
 
-**What.** A project is a code repository in a private workspace folder. Create one empty, clone from GitHub, or import a zip from phone storage.
+**What.** A project is a code repository in a workspace folder. Private storage is the default. The
+`full` flavor offers a shared folder after the person grants All files access. Create one empty,
+clone from GitHub, or import a zip from phone storage.
 
 **How.**
-- Each project gets a folder under the app's private storage. Only Tether can read it; Android isolates it from other apps.
+- New projects use the app's private storage by default. Settings and onboarding show the current
+  projects folder and the other local data paths. Existing projects keep their roots when the
+  folder for new projects changes.
+- The `full` flavor can use a shared folder after `MANAGE_EXTERNAL_STORAGE` is granted. Other apps
+  and a computer can see files in that folder. The Play flavor stays private.
 - Cloning uses gitoxide over HTTPS with the user's GitHub token. Shallow clone (depth 1) is the default for repos over 200 MB, with an option for full history.
 - Zip import goes through the Android file picker. Export produces a zip through the share sheet.
 - The project home shows the repo name, branch, last session, uncommitted change count, and default executor.
 - A file index (paths, sizes, languages) is built on open and kept current with a filesystem watcher. `.gitignore` rules apply to search and agent tools.
 
-**Why.** The workspace is the boundary for everything the agent can touch. Keeping it private and indexed makes tools fast and safe.
+**Why.** The workspace is the boundary for everything the agent can touch. Private storage is
+fast and safe by default. The shared option is explicit and visible so the person can use files
+with other apps or a computer when needed.
 
 ### F3. Sessions and transcript
 
@@ -96,7 +104,10 @@ Each feature lists what it is, how it works, and why it exists. IDs (F1 and so o
 | `edit_file` | Replace an exact string in a file | Yes |
 | `multi_edit` | Several exact replacements in one file, applied together | Yes |
 | `move_file` / `delete_file` | Rename or delete | Yes |
-| `run` | Run a command through the executor router (F10) | Yes |
+| `run` | Run a command through the executor router (F10); `background: true` starts a Linux dev server that stays until stopped | Yes |
+| `process_list` / `process_logs` | Read session-owned background processes and their bounded logs | No |
+| `process_stop` | Stop a session-owned background process tree | Yes |
+| `preview` | Open a guarded project HTML file or a session-owned `127.0.0.1` server | No |
 | `git_init` | Initialize the project's local repository | Yes |
 | `git_status` / `git_diff` / `git_log` | Read repo state | No |
 | `git_commit` / `git_branch` | Change local repo state | Yes |
@@ -130,6 +141,8 @@ Each feature lists what it is, how it works, and why it exists. IDs (F1 and so o
 | Accept edits | Auto | Auto | Ask | Ask | Ask | Ask |
 | Auto | Auto | Auto | Auto | Ask | Ask | Ask |
 | Bypass | Auto | Auto | Auto | Auto | Auto | Auto, except force push |
+
+Background runs use the same Linux-mode approval as other host runs. The approval names the command and says it keeps running until stopped.
 
 **How.**
 - The mode chip in the composer shows the current mode; tapping it opens a picker. `/mode` does the same.
@@ -220,8 +233,9 @@ Each feature lists what it is, how it works, and why it exists. IDs (F1 and so o
 
 **How.**
 - The `run` tool takes a command and an optional executor. With no executor given, the router picks: the project default from `.tether/config.toml`, then a match table (for example `python`, `pytest` on pure-Python code, and `sqlite3` go to the sandbox; `npm install`, `cargo`, `gradle` go to Linux mode if installed, else CI).
+- `run` accepts `background: true` only with Linux mode. It returns a short process id, initial output, and a loopback URL when port discovery finds one. The process, its last 256 KiB of output, and its detected port belong to the session and stop when the session closes. Sandbox and CI reject background runs with `background runs need Linux mode`.
 - The sandbox gives each run a fresh instance with the workspace mounted read-write at `/workspace`, a memory cap (512 MB default), a time limit (60 s default), and no secrets in its environment. Runtime packs (Python, JavaScript, SQLite) download on first use, are verified against a signed manifest, and are precompiled on the device.
-- Linux mode is opt-in per device. Setup downloads the Alpine mini root filesystem, verifies its checksum against Tether's signed manifest, and installs base packages. Each project is bind-mounted at `/workspace`. Network access is a per-project toggle, off by default, and asks on first need.
+- Linux mode is opt-in per device. Setup downloads the Alpine mini root filesystem, verifies its checksum against Tether's signed `manifest.json` and detached `manifest.json.sig`, and installs base packages. Each project is bind-mounted at `/workspace`. Network access is a per-project toggle, off by default, and asks on first need.
 - CI uses a workflow file Tether adds to the repo (`.github/workflows/tether.yml`, shown as a diff first) that accepts a command input. The agent pushes to a work branch, dispatches the workflow, polls status, then reads logs. Failures are parsed into file and line references where the format allows.
 - A run card in the transcript shows the executor, command, live output, exit code, and duration. A **Run elsewhere** button reruns on another executor.
 

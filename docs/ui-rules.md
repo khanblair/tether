@@ -40,8 +40,11 @@ Compact (phone portrait), from top to bottom:
 ## 3. Rules per view
 
 ### Onboarding
-- Three screens maximum before the user reaches a project. Each has one primary button and a Skip text button.
-- Never ask for permissions (notifications, battery) during onboarding; ask in context when first needed.
+- Four screens maximum before the user reaches a project. Each has one primary button and a Skip text button.
+- Never ask for unrelated permissions such as notifications or battery during onboarding. A shared
+  folder choice can open All files access when the person selects it.
+- The workspace step shows the private projects path and a short list of local data paths. Private
+  storage is the default. In the `full` flavor, Choose a folder opens the shared folder controls.
 
 ### Home
 - The app opens here. Top bar: menu button (opens the drawer), the title "Home", and the bell. One scrolling column of cards, `space.4` apart. A card is `surface`, `radius.md`, a hairline `line` border, and no shadow.
@@ -104,6 +107,7 @@ Compact (phone portrait), from top to bottom:
 - Consecutive read-only tool calls (read, list, glob, grep) group into one collapsed card: "Read 6 files, searched 2 times." Tapping expands the list.
 - The newest running card shows a running indicator in its header. Nothing else animates.
 - A "Jump to latest" button appears whenever the last row is out of view, in any session. It is a round arrow button, and it becomes a pill with the count of new items when rows arrived since the reader scrolled up.
+- A running local server appears in a compact bar above the composer. The bar names its port and offers Preview and Stop. It disappears when the process exits or stops. Server preview shows the exact loopback URL, keeps other hosts blocked until network is enabled, and never restarts a stopped process.
 
 ### Diff view
 - Unified diff on compact and medium widths; side-by-side only on expanded and wider.
@@ -124,12 +128,19 @@ Compact (phone portrait), from top to bottom:
 ### Linux shell
 - Full-screen terminal with a key row above the keyboard: Esc, Tab, Ctrl, Alt, arrows, `|`, `/`, `-`, `~`.
 - The top bar shows the project folder and a network on/off badge.
+- The emulator supports shell text, ANSI colours, cursor movement, scrollback, and alternate-screen programs.
+- It does not provide mouse reporting, mouse selection, or full terminfo compatibility.
+- Long press copies the visible terminal rows. The shell has no horizontal scrolling.
 
 ### Settings
 - Grouped list matching product-scope.md F19. Each group is one screen.
 - Appearance replaces the inline theme control on the main Settings list. It contains the live
   preview, theme, interface size, text size, accent color, custom color picker, and reset actions.
 - The accent picker is not in the prototype; added by decision D41.
+- Data shows the path and size of projects, the database, secrets, checkpoints, memory, skills,
+  vault, and the crash report. The projects row opens Workspace folder.
+- Workspace folder shows the effective projects folder and whether it is private or custom. It
+  keeps the text field inside the scrolling settings page.
 - Destructive actions (delete project, remove Linux mode, clear data) are at the bottom of their group, in `color.danger`, and need confirmation that names the thing being deleted.
 
 ### Cost

@@ -65,7 +65,7 @@ The offline banner appears under the status line. Turns never fail only because 
 
 | Feature | Android API | Used for |
 |---|---|---|
-| Foreground service | `ForegroundService` with a declared type (see open question M-Q1) | Keep turns running in the background |
+| Foreground service | `ForegroundService` with `specialUse` in `full`, subtype `linux-userland` for Linux mode | Keep Linux shells and servers running in the background |
 | Partial wake lock | `PowerManager.PARTIAL_WAKE_LOCK`, held only during an active turn, released on finish, 30-minute timeout renewed per tool call | Keep CPU awake for long tool runs with the screen off |
 | Notifications with actions | `NotificationCompat` with `PendingIntent`s | Approvals, run status |
 | Keystore | AES-GCM key, StrongBox when available | Wrap secrets |
@@ -89,7 +89,7 @@ Status: built for the permissions below. The main manifest declares `INTERNET`,
 |---|---|---|
 | `INTERNET`, `ACCESS_NETWORK_STATE` | Providers, GitHub, downloads | Install time |
 | `POST_NOTIFICATIONS` (Android 13+) | Approvals and run status | First time a turn runs in the background |
-| `FOREGROUND_SERVICE` plus the type-specific permission | Long runs | Install time |
+| `FOREGROUND_SERVICE` plus `FOREGROUND_SERVICE_SPECIAL_USE` (`full` only) | Keep Linux mode running in the background | Install time |
 | `WAKE_LOCK` | Partial wake lock during turns | Install time |
 | `USE_BIOMETRIC` | Key reveal, Bypass, app lock | Install time |
 | `REQUEST_INSTALL_PACKAGES` (`full` only) | Install a downloaded update through `PackageInstaller` (P1-20); `play` never declares it | First tap on Install update, through the system settings screen |
@@ -110,6 +110,7 @@ flavor declares `MANAGE_EXTERNAL_STORAGE` only for its optional shared projects 
 | Run results | Default | "Session finished: 4 files changed, tests passing" or the failure | Open, Review diff |
 | CI | Default | "CI failed on tether/fix-login: 2 tests" | Open |
 | Linux mode setup | Low | Download and install progress | Cancel |
+| Linux session | Low, ongoing | Linux shell and server activity | Open |
 
 Rules:
 - One ongoing notification per running session; it is updated in place, never stacked.

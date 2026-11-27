@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import app.tether.linux.LinuxBackgroundController
+import app.tether.linux.LinuxBackgroundMode
 import app.tether.providers.callCore
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -28,6 +30,8 @@ class ExecutorsViewModel(
     private val build: ExecutorBuildConfig,
     private val projectId: String?,
     private val io: CoroutineDispatcher = Dispatchers.IO,
+    private val linuxBackground: LinuxBackgroundController? = null,
+    private val onLinuxReadyChanged: (Boolean) -> Unit = {},
 ) : ViewModel() {
     private val mutableState =
         MutableStateFlow(
@@ -35,6 +39,8 @@ class ExecutorsViewModel(
                 packInstallAvailable = build.packManifestUrl != null,
                 packSource = manifestHost(build.packManifestUrl),
                 linuxSetupInBuild = build.linuxSupported && build.rootfsManifestUrl != null,
+                linuxBackgroundMode =
+                    linuxBackground?.mode?.value ?: LinuxBackgroundMode.WhileRunning,
                 linuxSource = manifestHost(build.rootfsManifestUrl),
                 network = if (projectId == null) NetworkState.NoProject else NetworkState.Loading,
                 ci = if (projectId == null) CiState.NoProject else CiState.Loading,
@@ -123,6 +129,12 @@ class ExecutorsViewModel(
     /** Sets up Linux mode again, after it broke or to refresh its files. */
     fun repairLinux() {
         runLinuxSetup()
+    }
+
+    /** Saves the foreground-service rule selected in the Linux section. */
+    fun setLinuxBackgroundMode(mode: LinuxBackgroundMode) {
+        linuxBackground?.set(mode)
+        mutableState.update { it.copy(linuxBackgroundMode = mode) }
     }
 
     /** Reads the network setting again. */
@@ -253,6 +265,7 @@ class ExecutorsViewModel(
 
     private fun setLinux(linux: LinuxState) {
         mutableState.update { it.copy(linux = linux) }
+        onLinuxReadyChanged(linux == LinuxState.Ready)
     }
 
     private fun setOverride(
@@ -280,8 +293,18 @@ class ExecutorsViewModel(
             gateway: ExecutorsGateway,
             build: ExecutorBuildConfig,
             projectId: String?,
+            linuxBackground: LinuxBackgroundController? = null,
+            onLinuxReadyChanged: (Boolean) -> Unit = {},
         ) = viewModelFactory {
-            initializer { ExecutorsViewModel(gateway, build, projectId) }
+            initializer {
+                ExecutorsViewModel(
+                    gateway = gateway,
+                    build = build,
+                    projectId = projectId,
+                    linuxBackground = linuxBackground,
+                    onLinuxReadyChanged = onLinuxReadyChanged,
+                )
+            }
         }
     }
 }

@@ -1,6 +1,7 @@
 package app.tether.settings.executors
 
 import androidx.compose.runtime.Immutable
+import app.tether.linux.LinuxBackgroundMode
 
 /** One sandbox pack row's state. Each state allows one action or none. */
 sealed interface PackState {
@@ -133,6 +134,7 @@ data class ExecutorsUiState(
     val packSource: String? = null,
     val linux: LinuxState = LinuxState.Loading,
     val linuxSetupInBuild: Boolean = false,
+    val linuxBackgroundMode: LinuxBackgroundMode = LinuxBackgroundMode.WhileRunning,
     /** The host the Linux root filesystem downloads from. */
     val linuxSource: String? = null,
     val network: NetworkState = NetworkState.Loading,

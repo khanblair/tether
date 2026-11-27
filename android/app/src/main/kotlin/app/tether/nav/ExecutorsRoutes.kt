@@ -35,6 +35,8 @@ internal fun NavGraphBuilder.executorsRoutes(
                                 module.executorsGateway,
                                 module.linuxSetup.executorBuildConfig(context),
                                 projectId,
+                                linuxBackground = module.linuxBackground,
+                                onLinuxReadyChanged = module.linuxActivity::reportLinuxReady,
                             ),
                     ),
                 onBack = nav::back,

@@ -44,10 +44,10 @@ Done when:
 
 What it needs, in order:
 1. Wire the Linux mode that exists: PRoot and talloc built as `lib*.so` for arm64 and x86_64 (P7-01); an Ed25519 signing key and a signed rootfs manifest for an Alpine mini root filesystem, hosted somewhere stable, with the public key and URL in the build; the app calling `configure_executors` at start with the `nativeLibraryDir` PRoot path; and the `/linux` shell screen (P7-07). The base packages (`nodejs`, `npm`, `python3`) and the runner that binds the project at `/workspace` are already in the library.
-2. Long-running processes in the `run` tool. Today a run ends or times out (60 s default). A dev server runs until stopped, so the tool needs a background mode, a log, a stop control, and a rule that all of a session's processes die with it.
-3. Port discovery. The runner reads the server's output for its address (for example "Local: http://localhost:5173") and offers Preview. PRoot shares the phone's network, so `127.0.0.1` reaches it.
+2. Long-running processes in the `run` tool. Built in the core: Linux-only background mode, session-owned process ids, a 256 KiB log ring, process listing, logs, stop control, and shutdown when the session closes.
+3. Port discovery. Built in the core: the runner reads common server output, emits process changes, and returns a `127.0.0.1` URL. PRoot shares the phone's network, so `127.0.0.1` reaches it.
 4. Cleartext to `127.0.0.1` only, through a network security config domain rule. Any other cleartext stays off.
-5. A `preview` tool, so the agent can open the preview itself after it starts a server.
+5. A `preview` tool, so the agent can open the preview itself after it starts a server. Built in the core: file targets go through the workspace guard, and server targets must use an owned running process port.
 
 First step, a spike that decides if stage 2 is feasible: build PRoot for arm64, ship it as `libproot.so`, and run `proot --version` and an Alpine `sh -c 'echo ok'` on the emulator (Android 15 or later). The Rust side is ready for it, so the spike mostly proves the native binaries and the Android launch rules. If a current Android release blocks it, stop and report before anything else is built.
 
@@ -62,4 +62,4 @@ Risks, from `docs/product-scope.md`: Google Play may reject downloaded executabl
 ## 6. Status
 
 - Stage 1: core `read_file_bytes`, the Preview screen, and the entry points are being built.
-- Stage 2: the Rust library exists; the app wiring and the PRoot binaries do not. The spike is first.
+- Stage 2 core: background Linux processes, port discovery, process tools, preview validation, and `ProcessChanged` / `PreviewRequested` events are built. Android app wiring and the PRoot binaries remain; the spike and Android task are next.

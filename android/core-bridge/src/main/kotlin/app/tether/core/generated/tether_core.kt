@@ -689,6 +689,12 @@ internal interface UniffiCallbackInterfaceSecretsPlatformMethod0 : com.sun.jna.C
 internal interface UniffiCallbackInterfaceSecretsPlatformMethod1 : com.sun.jna.Callback {
     fun callback(`uniffiHandle`: Long,`wrapped`: RustBuffer.ByValue,`context`: RustBuffer.ByValue,`uniffiOutReturn`: RustBuffer,uniffiCallStatus: UniffiRustCallStatus,)
 }
+internal interface UniffiCallbackInterfaceLinuxShellSinkMethod0 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`bytes`: RustBuffer.ByValue,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,)
+}
+internal interface UniffiCallbackInterfaceLinuxShellSinkMethod1 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`code`: Int,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,)
+}
 internal interface UniffiCallbackInterfaceDownloadProgressMethod0 : com.sun.jna.Callback {
     fun callback(`uniffiHandle`: Long,`downloaded`: Long,`total`: Long,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,)
 }
@@ -849,6 +855,28 @@ internal open class UniffiVTableCallbackInterfaceSecretsPlatform(
         `uniffiClone` = other.`uniffiClone`
         `wrap` = other.`wrap`
         `unwrap` = other.`unwrap`
+    }
+
+}
+@Structure.FieldOrder("uniffiFree", "uniffiClone", "onOutput", "onExit")
+internal open class UniffiVTableCallbackInterfaceLinuxShellSink(
+    @JvmField internal var `uniffiFree`: UniffiCallbackInterfaceFree? = null,
+    @JvmField internal var `uniffiClone`: UniffiCallbackInterfaceClone? = null,
+    @JvmField internal var `onOutput`: UniffiCallbackInterfaceLinuxShellSinkMethod0? = null,
+    @JvmField internal var `onExit`: UniffiCallbackInterfaceLinuxShellSinkMethod1? = null,
+) : Structure() {
+    class UniffiByValue(
+        `uniffiFree`: UniffiCallbackInterfaceFree? = null,
+        `uniffiClone`: UniffiCallbackInterfaceClone? = null,
+        `onOutput`: UniffiCallbackInterfaceLinuxShellSinkMethod0? = null,
+        `onExit`: UniffiCallbackInterfaceLinuxShellSinkMethod1? = null,
+    ): UniffiVTableCallbackInterfaceLinuxShellSink(`uniffiFree`,`uniffiClone`,`onOutput`,`onExit`,), Structure.ByValue
+
+   internal fun uniffiSetValue(other: UniffiVTableCallbackInterfaceLinuxShellSink) {
+        `uniffiFree` = other.`uniffiFree`
+        `uniffiClone` = other.`uniffiClone`
+        `onOutput` = other.`onOutput`
+        `onExit` = other.`onExit`
     }
 
 }
@@ -1137,6 +1165,8 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_tether_core_checksum_method_sessionruntime_executor_availability(
     ): Int
+    external fun uniffi_tether_core_checksum_method_sessionruntime_open_linux_shell(
+    ): Int
     external fun uniffi_tether_core_checksum_method_sessionruntime_project_network(
     ): Int
     external fun uniffi_tether_core_checksum_method_sessionruntime_set_project_network(
@@ -1238,6 +1268,16 @@ internal object IntegrityCheckingUniffiLib {
     external fun uniffi_tether_core_checksum_method_sessionruntime_set_session_reasoning(
     ): Int
     external fun uniffi_tether_core_checksum_method_sessionruntime_continue_past_budget(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_linuxshellsession_close(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_linuxshellsession_resize(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_linuxshellsession_write(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_linuxshellsink_on_output(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_linuxshellsink_on_exit(
     ): Int
     external fun uniffi_tether_core_checksum_method_skillsruntime_list(
     ): Int
@@ -1347,6 +1387,7 @@ internal object UniffiLib {
         uniffiCallbackInterfaceDownloadProgress.register(this)
         uniffiCallbackInterfaceEventSink.register(this)
         uniffiCallbackInterfaceExecutorProgress.register(this)
+        uniffiCallbackInterfaceLinuxShellSink.register(this)
         uniffiCallbackInterfaceNetworkPlatform.register(this)
         uniffiCallbackInterfaceNotifyPlatform.register(this)
         uniffiCallbackInterfaceRunServicePlatform.register(this)
@@ -1680,6 +1721,8 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_tether_core_fn_method_sessionruntime_executor_availability(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_tether_core_fn_method_sessionruntime_open_linux_shell(`ptr`: Long,`projectId`: RustBuffer.ByValue,`rows`: Short,`cols`: Short,`sink`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
     external fun uniffi_tether_core_fn_method_sessionruntime_project_network(`ptr`: Long,`projectId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
     external fun uniffi_tether_core_fn_method_sessionruntime_set_project_network(`ptr`: Long,`projectId`: RustBuffer.ByValue,`allowed`: Byte,uniffi_out_err: UniffiRustCallStatus, 
@@ -1781,6 +1824,26 @@ internal object UniffiLib {
     external fun uniffi_tether_core_fn_method_sessionruntime_set_session_reasoning(`ptr`: Long,`sessionId`: RustBuffer.ByValue,`effort`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_tether_core_fn_method_sessionruntime_continue_past_budget(`ptr`: Long,`sessionId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_clone_linuxshellsession(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_tether_core_fn_free_linuxshellsession(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_method_linuxshellsession_close(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_method_linuxshellsession_resize(`ptr`: Long,`rows`: Short,`cols`: Short,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_method_linuxshellsession_write(`ptr`: Long,`bytes`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_clone_linuxshellsink(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_tether_core_fn_free_linuxshellsink(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_init_callback_vtable_linuxshellsink(`vtable`: UniffiVTableCallbackInterfaceLinuxShellSink,
+    ): Unit
+    external fun uniffi_tether_core_fn_method_linuxshellsink_on_output(`ptr`: Long,`bytes`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_method_linuxshellsink_on_exit(`ptr`: Long,`code`: Int,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_tether_core_fn_clone_skillsruntime(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
@@ -2323,6 +2386,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_tether_core_checksum_method_sessionruntime_executor_availability() and 0xFFFF) != 2158) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if ((lib.uniffi_tether_core_checksum_method_sessionruntime_open_linux_shell() and 0xFFFF) != 16275) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if ((lib.uniffi_tether_core_checksum_method_sessionruntime_project_network() and 0xFFFF) != 63292) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -2474,6 +2540,21 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_method_sessionruntime_continue_past_budget() and 0xFFFF) != 60744) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_linuxshellsession_close() and 0xFFFF) != 6266) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_linuxshellsession_resize() and 0xFFFF) != 28840) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_linuxshellsession_write() and 0xFFFF) != 19132) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_linuxshellsink_on_output() and 0xFFFF) != 53254) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_linuxshellsink_on_exit() and 0xFFFF) != 56737) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_method_skillsruntime_list() and 0xFFFF) != 627) {
@@ -2820,6 +2901,33 @@ public object FfiConverterUByte: FfiConverter<UByte, Byte> {
 
     override fun write(value: UByte, buf: ByteBuffer) {
         buf.put(value.toByte())
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterUShort: FfiConverter<UShort, Short> {
+    override fun lift(value: Short): UShort {
+        return value.toUShort()
+    }
+
+    fun lift(value: Int): UShort {
+        return value.toUShort()
+    }
+
+    override fun read(buf: ByteBuffer): UShort {
+        return lift(buf.getShort())
+    }
+
+    override fun lower(value: UShort): Short {
+        return value.toShort()
+    }
+
+    override fun allocationSize(value: UShort) = 2UL
+
+    override fun write(value: UShort, buf: ByteBuffer) {
+        buf.putShort(value.toShort())
     }
 }
 
@@ -5860,6 +5968,699 @@ public object FfiConverterTypeGitRuntime: FfiConverter<GitRuntime, Long> {
     override fun allocationSize(value: GitRuntime) = 8UL
 
     override fun write(value: GitRuntime, buf: ByteBuffer) {
+        buf.putLong(lower(value))
+    }
+}
+
+
+// This template implements a class for working with a Rust struct via a handle
+// to the live Rust struct on the other side of the FFI.
+//
+// There's some subtlety here, because we have to be careful not to operate on a Rust
+// struct after it has been dropped, and because we must expose a public API for freeing
+// theq Kotlin wrapper object in lieu of reliable finalizers. The core requirements are:
+//
+//   * Each instance holds an opaque handle to the underlying Rust struct.
+//     Method calls need to read this handle from the object's state and pass it in to
+//     the Rust FFI.
+//
+//   * When an instance is no longer needed, its handle should be passed to a
+//     special destructor function provided by the Rust FFI, which will drop the
+//     underlying Rust struct.
+//
+//   * Given an instance, calling code is expected to call the special
+//     `destroy` method in order to free it after use, either by calling it explicitly
+//     or by using a higher-level helper like the `use` method. Failing to do so risks
+//     leaking the underlying Rust struct.
+//
+//   * We can't assume that calling code will do the right thing, and must be prepared
+//     to handle Kotlin method calls executing concurrently with or even after a call to
+//     `destroy`, and to handle multiple (possibly concurrent!) calls to `destroy`.
+//
+//   * We must never allow Rust code to operate on the underlying Rust struct after
+//     the destructor has been called, and must never call the destructor more than once.
+//     Doing so may trigger memory unsafety.
+//
+//   * To mitigate many of the risks of leaking memory and use-after-free unsafety, a `Cleaner`
+//     is implemented to call the destructor when the Kotlin object becomes unreachable.
+//     This is done in a background thread. This is not a panacea, and client code should be aware that
+//      1. the thread may starve if some there are objects that have poorly performing
+//     `drop` methods or do significant work in their `drop` methods.
+//      2. the thread is shared across the whole library. This can be tuned by using `android_cleaner = true`,
+//         or `android = true` in the [`kotlin` section of the `uniffi.toml` file](https://mozilla.github.io/uniffi-rs/kotlin/configuration.html).
+//
+// If we try to implement this with mutual exclusion on access to the handle, there is the
+// possibility of a race between a method call and a concurrent call to `destroy`:
+//
+//    * Thread A starts a method call, reads the value of the handle, but is interrupted
+//      before it can pass the handle over the FFI to Rust.
+//    * Thread B calls `destroy` and frees the underlying Rust struct.
+//    * Thread A resumes, passing the already-read handle value to Rust and triggering
+//      a use-after-free.
+//
+// One possible solution would be to use a `ReadWriteLock`, with each method call taking
+// a read lock (and thus allowed to run concurrently) and the special `destroy` method
+// taking a write lock (and thus blocking on live method calls). However, we aim not to
+// generate methods with any hidden blocking semantics, and a `destroy` method that might
+// block if called incorrectly seems to meet that bar.
+//
+// So, we achieve our goals by giving each instance an associated `AtomicLong` counter to track
+// the number of in-flight method calls, and an `AtomicBoolean` flag to indicate whether `destroy`
+// has been called. These are updated according to the following rules:
+//
+//    * The initial value of the counter is 1, indicating a live object with no in-flight calls.
+//      The initial value for the flag is false.
+//
+//    * At the start of each method call, we atomically check the counter.
+//      If it is 0 then the underlying Rust struct has already been destroyed and the call is aborted.
+//      If it is nonzero them we atomically increment it by 1 and proceed with the method call.
+//
+//    * At the end of each method call, we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+//    * When `destroy` is called, we atomically flip the flag from false to true.
+//      If the flag was already true we silently fail.
+//      Otherwise we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+// Astute readers may observe that this all sounds very similar to the way that Rust's `Arc<T>` works,
+// and indeed it is, with the addition of a flag to guard against multiple calls to `destroy`.
+//
+// The overall effect is that the underlying Rust struct is destroyed only when `destroy` has been
+// called *and* all in-flight method calls have completed, avoiding violating any of the expectations
+// of the underlying Rust code.
+//
+// This makes a cleaner a better alternative to _not_ calling `destroy()` as
+// and when the object is finished with, but the abstraction is not perfect: if the Rust object's `drop`
+// method is slow, and/or there are many objects to cleanup, and it's on a low end Android device, then the cleaner
+// thread may be starved, and the app will leak memory.
+//
+// In this case, `destroy`ing manually may be a better solution.
+//
+// The cleaner can live side by side with the manual calling of `destroy`. In the order of responsiveness, uniffi objects
+// with Rust peers are reclaimed:
+//
+// 1. By calling the `destroy` method of the object, which calls `rustObject.free()`. If that doesn't happen:
+// 2. When the object becomes unreachable, AND the Cleaner thread gets to call `rustObject.free()`. If the thread is starved then:
+// 3. The memory is reclaimed when the process terminates.
+//
+// [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
+//
+
+
+/**
+ * Owns an interactive shell in the Alpine guest.
+ */
+public interface LinuxShellSessionInterface {
+    
+    /**
+     * Kills the Alpine shell. Calling this more than once is safe.
+     *
+     * # Errors
+     * Returns an executor error when the first kill cannot be delivered.
+     */
+    fun `close`()
+    
+    /**
+     * Resizes the Alpine shell pty.
+     *
+     * # Errors
+     * Returns an executor error when the shell is unavailable or the pty rejects the resize.
+     */
+    fun `resize`(`rows`: kotlin.UShort, `cols`: kotlin.UShort)
+    
+    /**
+     * Writes raw terminal input to the Alpine shell.
+     *
+     * # Errors
+     * Returns an executor error when the shell is unavailable or the pty rejects the write.
+     */
+    fun `write`(`bytes`: kotlin.ByteArray)
+    
+    companion object
+}
+
+/**
+ * Owns an interactive shell in the Alpine guest.
+ */
+open class LinuxShellSession: Disposable, AutoCloseable, LinuxShellSessionInterface
+{
+
+    @Suppress("UNUSED_PARAMETER")
+    /**
+     * @suppress
+     */
+    constructor(withHandle: UniffiWithHandle, handle: Long) {
+        this.handle = handle
+        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(handle))
+    }
+
+    /**
+     * @suppress
+     *
+     * This constructor can be used to instantiate a fake object. Only used for tests. Any
+     * attempt to actually use an object constructed this way will fail as there is no
+     * connected Rust object.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    constructor(noHandle: NoHandle) {
+        this.handle = 0
+        this.cleanable = null
+    }
+
+    protected val handle: Long
+    protected val cleanable: UniffiCleaner.Cleanable?
+
+    private val wasDestroyed = AtomicBoolean(false)
+    private val callCounter = AtomicLong(1)
+
+    /**
+     * Whether the current object has been destroyed and its reference is gone in the Rust side.
+     */
+    val uniffiIsDestroyed: Boolean get() = wasDestroyed.get()
+
+    override fun destroy() {
+        // Only allow a single call to this method.
+        // TODO: maybe we should log a warning if called more than once?
+        if (this.wasDestroyed.compareAndSet(false, true)) {
+            // This decrement always matches the initial count of 1 given at creation time.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    @Synchronized
+    override fun close() {
+        this.destroy()
+    }
+
+    internal inline fun <R> callWithHandle(block: (handle: Long) -> R): R {
+        // Check and increment the call counter, to keep the object alive.
+        // This needs a compare-and-set retry loop in case of concurrent updates.
+        do {
+            val c = this.callCounter.get()
+            if (c == 0L) {
+                throw IllegalStateException("${this.javaClass.simpleName} object has already been destroyed")
+            }
+            if (c == Long.MAX_VALUE) {
+                throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
+            }
+        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        // Now we can safely do the method call without the handle being freed concurrently.
+        try {
+            return block(this.uniffiCloneHandle())
+        } finally {
+            // This decrement always matches the increment we performed above.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    // Use a static inner class instead of a closure so as not to accidentally
+    // capture `this` as part of the cleanable's action.
+    private class UniffiCleanAction(private val handle: Long) : Runnable {
+        override fun run() {
+            if (handle == 0.toLong()) {
+                // Fake object created with `NoHandle`, don't try to free.
+                return;
+            }
+            uniffiRustCall { status ->
+                UniffiLib.uniffi_tether_core_fn_free_linuxshellsession(handle, status)
+            }
+        }
+    }
+
+    /**
+     * @suppress
+     */
+    fun uniffiCloneHandle(): Long {
+        if (handle == 0.toLong()) {
+            throw InternalException("uniffiCloneHandle() called on NoHandle object");
+        }
+        return uniffiRustCall() { status ->
+            UniffiLib.uniffi_tether_core_fn_clone_linuxshellsession(handle, status)
+        }
+    }
+
+    
+    /**
+     * Kills the Alpine shell. Calling this more than once is safe.
+     *
+     * # Errors
+     * Returns an executor error when the first kill cannot be delivered.
+     */
+    @Throws(ExecutorRuntimeException::class)override fun `close`()
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(ExecutorRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_linuxshellsession_close(
+        it,
+        _status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Resizes the Alpine shell pty.
+     *
+     * # Errors
+     * Returns an executor error when the shell is unavailable or the pty rejects the resize.
+     */
+    @Throws(ExecutorRuntimeException::class)override fun `resize`(`rows`: kotlin.UShort, `cols`: kotlin.UShort)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(ExecutorRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_linuxshellsession_resize(
+        it,
+        
+        FfiConverterUShort.lower(`rows`),
+        FfiConverterUShort.lower(`cols`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Writes raw terminal input to the Alpine shell.
+     *
+     * # Errors
+     * Returns an executor error when the shell is unavailable or the pty rejects the write.
+     */
+    @Throws(ExecutorRuntimeException::class)override fun `write`(`bytes`: kotlin.ByteArray)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(ExecutorRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_linuxshellsession_write(
+        it,
+        
+        FfiConverterByteArray.lower(`bytes`),_status)
+}
+    }
+    
+    
+
+    
+
+    
+
+
+    
+    
+    /**
+     * @suppress
+     */
+    companion object
+    
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeLinuxShellSession: FfiConverter<LinuxShellSession, Long> {
+    override fun lower(value: LinuxShellSession): Long {
+        return value.uniffiCloneHandle()
+    }
+
+    override fun lift(value: Long): LinuxShellSession {
+        return LinuxShellSession(UniffiWithHandle, value)
+    }
+
+    override fun read(buf: ByteBuffer): LinuxShellSession {
+        return lift(buf.getLong())
+    }
+
+    override fun allocationSize(value: LinuxShellSession) = 8UL
+
+    override fun write(value: LinuxShellSession, buf: ByteBuffer) {
+        buf.putLong(lower(value))
+    }
+}
+
+
+// This template implements a class for working with a Rust struct via a handle
+// to the live Rust struct on the other side of the FFI.
+//
+// There's some subtlety here, because we have to be careful not to operate on a Rust
+// struct after it has been dropped, and because we must expose a public API for freeing
+// theq Kotlin wrapper object in lieu of reliable finalizers. The core requirements are:
+//
+//   * Each instance holds an opaque handle to the underlying Rust struct.
+//     Method calls need to read this handle from the object's state and pass it in to
+//     the Rust FFI.
+//
+//   * When an instance is no longer needed, its handle should be passed to a
+//     special destructor function provided by the Rust FFI, which will drop the
+//     underlying Rust struct.
+//
+//   * Given an instance, calling code is expected to call the special
+//     `destroy` method in order to free it after use, either by calling it explicitly
+//     or by using a higher-level helper like the `use` method. Failing to do so risks
+//     leaking the underlying Rust struct.
+//
+//   * We can't assume that calling code will do the right thing, and must be prepared
+//     to handle Kotlin method calls executing concurrently with or even after a call to
+//     `destroy`, and to handle multiple (possibly concurrent!) calls to `destroy`.
+//
+//   * We must never allow Rust code to operate on the underlying Rust struct after
+//     the destructor has been called, and must never call the destructor more than once.
+//     Doing so may trigger memory unsafety.
+//
+//   * To mitigate many of the risks of leaking memory and use-after-free unsafety, a `Cleaner`
+//     is implemented to call the destructor when the Kotlin object becomes unreachable.
+//     This is done in a background thread. This is not a panacea, and client code should be aware that
+//      1. the thread may starve if some there are objects that have poorly performing
+//     `drop` methods or do significant work in their `drop` methods.
+//      2. the thread is shared across the whole library. This can be tuned by using `android_cleaner = true`,
+//         or `android = true` in the [`kotlin` section of the `uniffi.toml` file](https://mozilla.github.io/uniffi-rs/kotlin/configuration.html).
+//
+// If we try to implement this with mutual exclusion on access to the handle, there is the
+// possibility of a race between a method call and a concurrent call to `destroy`:
+//
+//    * Thread A starts a method call, reads the value of the handle, but is interrupted
+//      before it can pass the handle over the FFI to Rust.
+//    * Thread B calls `destroy` and frees the underlying Rust struct.
+//    * Thread A resumes, passing the already-read handle value to Rust and triggering
+//      a use-after-free.
+//
+// One possible solution would be to use a `ReadWriteLock`, with each method call taking
+// a read lock (and thus allowed to run concurrently) and the special `destroy` method
+// taking a write lock (and thus blocking on live method calls). However, we aim not to
+// generate methods with any hidden blocking semantics, and a `destroy` method that might
+// block if called incorrectly seems to meet that bar.
+//
+// So, we achieve our goals by giving each instance an associated `AtomicLong` counter to track
+// the number of in-flight method calls, and an `AtomicBoolean` flag to indicate whether `destroy`
+// has been called. These are updated according to the following rules:
+//
+//    * The initial value of the counter is 1, indicating a live object with no in-flight calls.
+//      The initial value for the flag is false.
+//
+//    * At the start of each method call, we atomically check the counter.
+//      If it is 0 then the underlying Rust struct has already been destroyed and the call is aborted.
+//      If it is nonzero them we atomically increment it by 1 and proceed with the method call.
+//
+//    * At the end of each method call, we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+//    * When `destroy` is called, we atomically flip the flag from false to true.
+//      If the flag was already true we silently fail.
+//      Otherwise we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+// Astute readers may observe that this all sounds very similar to the way that Rust's `Arc<T>` works,
+// and indeed it is, with the addition of a flag to guard against multiple calls to `destroy`.
+//
+// The overall effect is that the underlying Rust struct is destroyed only when `destroy` has been
+// called *and* all in-flight method calls have completed, avoiding violating any of the expectations
+// of the underlying Rust code.
+//
+// This makes a cleaner a better alternative to _not_ calling `destroy()` as
+// and when the object is finished with, but the abstraction is not perfect: if the Rust object's `drop`
+// method is slow, and/or there are many objects to cleanup, and it's on a low end Android device, then the cleaner
+// thread may be starved, and the app will leak memory.
+//
+// In this case, `destroy`ing manually may be a better solution.
+//
+// The cleaner can live side by side with the manual calling of `destroy`. In the order of responsiveness, uniffi objects
+// with Rust peers are reclaimed:
+//
+// 1. By calling the `destroy` method of the object, which calls `rustObject.free()`. If that doesn't happen:
+// 2. When the object becomes unreachable, AND the Cleaner thread gets to call `rustObject.free()`. If the thread is starved then:
+// 3. The memory is reclaimed when the process terminates.
+//
+// [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
+//
+
+
+/**
+ * Receives raw terminal output and the shell's exit status.
+ *
+ * Calls happen on a Rust reader thread. Implementations must be thread-safe and must return
+ * promptly so a guest that writes continuously cannot hold the reader thread indefinitely.
+ */
+public interface LinuxShellSink {
+    
+    /**
+     * Receives one output chunk of at most 8 KiB.
+     */
+    fun `onOutput`(`bytes`: kotlin.ByteArray)
+    
+    /**
+     * Receives the shell exit code exactly once.
+     */
+    fun `onExit`(`code`: kotlin.Int)
+    
+    companion object
+}
+
+/**
+ * Receives raw terminal output and the shell's exit status.
+ *
+ * Calls happen on a Rust reader thread. Implementations must be thread-safe and must return
+ * promptly so a guest that writes continuously cannot hold the reader thread indefinitely.
+ */
+open class LinuxShellSinkImpl: Disposable, AutoCloseable, LinuxShellSink
+{
+
+    @Suppress("UNUSED_PARAMETER")
+    /**
+     * @suppress
+     */
+    constructor(withHandle: UniffiWithHandle, handle: Long) {
+        this.handle = handle
+        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(handle))
+    }
+
+    /**
+     * @suppress
+     *
+     * This constructor can be used to instantiate a fake object. Only used for tests. Any
+     * attempt to actually use an object constructed this way will fail as there is no
+     * connected Rust object.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    constructor(noHandle: NoHandle) {
+        this.handle = 0
+        this.cleanable = null
+    }
+
+    protected val handle: Long
+    protected val cleanable: UniffiCleaner.Cleanable?
+
+    private val wasDestroyed = AtomicBoolean(false)
+    private val callCounter = AtomicLong(1)
+
+    /**
+     * Whether the current object has been destroyed and its reference is gone in the Rust side.
+     */
+    val uniffiIsDestroyed: Boolean get() = wasDestroyed.get()
+
+    override fun destroy() {
+        // Only allow a single call to this method.
+        // TODO: maybe we should log a warning if called more than once?
+        if (this.wasDestroyed.compareAndSet(false, true)) {
+            // This decrement always matches the initial count of 1 given at creation time.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    @Synchronized
+    override fun close() {
+        this.destroy()
+    }
+
+    internal inline fun <R> callWithHandle(block: (handle: Long) -> R): R {
+        // Check and increment the call counter, to keep the object alive.
+        // This needs a compare-and-set retry loop in case of concurrent updates.
+        do {
+            val c = this.callCounter.get()
+            if (c == 0L) {
+                throw IllegalStateException("${this.javaClass.simpleName} object has already been destroyed")
+            }
+            if (c == Long.MAX_VALUE) {
+                throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
+            }
+        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        // Now we can safely do the method call without the handle being freed concurrently.
+        try {
+            return block(this.uniffiCloneHandle())
+        } finally {
+            // This decrement always matches the increment we performed above.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    // Use a static inner class instead of a closure so as not to accidentally
+    // capture `this` as part of the cleanable's action.
+    private class UniffiCleanAction(private val handle: Long) : Runnable {
+        override fun run() {
+            if (handle == 0.toLong()) {
+                // Fake object created with `NoHandle`, don't try to free.
+                return;
+            }
+            uniffiRustCall { status ->
+                UniffiLib.uniffi_tether_core_fn_free_linuxshellsink(handle, status)
+            }
+        }
+    }
+
+    /**
+     * @suppress
+     */
+    fun uniffiCloneHandle(): Long {
+        if (handle == 0.toLong()) {
+            throw InternalException("uniffiCloneHandle() called on NoHandle object");
+        }
+        return uniffiRustCall() { status ->
+            UniffiLib.uniffi_tether_core_fn_clone_linuxshellsink(handle, status)
+        }
+    }
+
+    
+    /**
+     * Receives one output chunk of at most 8 KiB.
+     */override fun `onOutput`(`bytes`: kotlin.ByteArray)
+        = 
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_linuxshellsink_on_output(
+        it,
+        
+        FfiConverterByteArray.lower(`bytes`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Receives the shell exit code exactly once.
+     */override fun `onExit`(`code`: kotlin.Int)
+        = 
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_linuxshellsink_on_exit(
+        it,
+        
+        FfiConverterInt.lower(`code`),_status)
+}
+    }
+    
+    
+
+    
+
+    
+
+
+    
+    
+    /**
+     * @suppress
+     */
+    companion object
+    
+}
+
+
+
+// Put the implementation in an object so we don't pollute the top-level namespace
+internal object uniffiCallbackInterfaceLinuxShellSink {
+    internal object `onOutput`: UniffiCallbackInterfaceLinuxShellSinkMethod0 {
+        override fun callback(`uniffiHandle`: Long,`bytes`: RustBuffer.ByValue,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeLinuxShellSink.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`onOutput`(
+                    FfiConverterByteArray.lift(`bytes`),
+                )
+            }
+            val writeReturn = { _: Unit -> Unit }
+            uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
+        }
+    }
+    internal object `onExit`: UniffiCallbackInterfaceLinuxShellSinkMethod1 {
+        override fun callback(`uniffiHandle`: Long,`code`: Int,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeLinuxShellSink.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`onExit`(
+                    FfiConverterInt.lift(`code`),
+                )
+            }
+            val writeReturn = { _: Unit -> Unit }
+            uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
+        }
+    }
+
+    internal object uniffiFree: UniffiCallbackInterfaceFree {
+        override fun callback(handle: Long) {
+            FfiConverterTypeLinuxShellSink.handleMap.remove(handle)
+        }
+    }
+
+    internal object uniffiClone: UniffiCallbackInterfaceClone {
+        override fun callback(handle: Long): Long {
+            return FfiConverterTypeLinuxShellSink.handleMap.clone(handle)
+        }
+    }
+
+    internal var vtable = UniffiVTableCallbackInterfaceLinuxShellSink.UniffiByValue(
+        uniffiFree,
+        uniffiClone,
+        `onOutput`,
+        `onExit`,
+    )
+
+    // Registers the foreign callback with the Rust side.
+    // This method is generated for each callback interface.
+    internal fun register(lib: UniffiLib) {
+        lib.uniffi_tether_core_fn_init_callback_vtable_linuxshellsink(vtable)
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeLinuxShellSink: FfiConverter<LinuxShellSink, Long> {
+    internal val handleMap = UniffiHandleMap<LinuxShellSink>()
+
+    override fun lower(value: LinuxShellSink): Long {
+        if (value is LinuxShellSinkImpl) {
+             // Rust-implemented object.  Clone the handle and return it
+            return value.uniffiCloneHandle()
+         } else {
+            // Kotlin object, generate a new vtable handle and return that.
+            return handleMap.insert(value)
+         }
+    }
+
+    override fun lift(value: Long): LinuxShellSink {
+        if ((value and 1.toLong()) == 0.toLong()) {
+            // Rust-generated handle, construct a new class that uses the handle to implement the
+            // interface
+            return LinuxShellSinkImpl(UniffiWithHandle, value)
+        } else {
+            // Kotlin-generated handle, get the object from the handle map
+            return handleMap.remove(value)
+        }
+    }
+
+    override fun read(buf: ByteBuffer): LinuxShellSink {
+        return lift(buf.getLong())
+    }
+
+    override fun allocationSize(value: LinuxShellSink) = 8UL
+
+    override fun write(value: LinuxShellSink, buf: ByteBuffer) {
         buf.putLong(lower(value))
     }
 }
@@ -10782,6 +11583,17 @@ public interface SessionRuntimeInterface {
     fun `executorAvailability`(): ExecutorAvailabilityView
     
     /**
+     * Opens one interactive shell in the Alpine guest.
+     *
+     * When `project_id` is present, its workspace is mounted at `/workspace` and its saved
+     * network policy is used. Output and exit callbacks run on a Rust reader thread.
+     *
+     * # Errors
+     * Returns an error when Linux is not ready, the project is missing, or a shell is open.
+     */
+    fun `openLinuxShell`(`projectId`: kotlin.String?, `rows`: kotlin.UShort, `cols`: kotlin.UShort, `sink`: LinuxShellSink): LinuxShellSession
+    
+    /**
      * Reads one project's network access setting. It is off by default.
      *
      * # Errors
@@ -11733,6 +12545,33 @@ open class SessionRuntime: Disposable, AutoCloseable, SessionRuntimeInterface
     UniffiLib.uniffi_tether_core_fn_method_sessionruntime_executor_availability(
         it,
         _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Opens one interactive shell in the Alpine guest.
+     *
+     * When `project_id` is present, its workspace is mounted at `/workspace` and its saved
+     * network policy is used. Output and exit callbacks run on a Rust reader thread.
+     *
+     * # Errors
+     * Returns an error when Linux is not ready, the project is missing, or a shell is open.
+     */
+    @Throws(ExecutorRuntimeException::class)override fun `openLinuxShell`(`projectId`: kotlin.String?, `rows`: kotlin.UShort, `cols`: kotlin.UShort, `sink`: LinuxShellSink): LinuxShellSession {
+            return FfiConverterTypeLinuxShellSession.lift(
+    callWithHandle {
+    uniffiRustCallWithError(ExecutorRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_sessionruntime_open_linux_shell(
+        it,
+        
+        FfiConverterOptionalString.lower(`projectId`),
+        FfiConverterUShort.lower(`rows`),
+        FfiConverterUShort.lower(`cols`),
+        FfiConverterTypeLinuxShellSink.lower(`sink`),_status)
 }
     }
     )
@@ -21238,6 +22077,52 @@ sealed class CoreEventView {
         companion object
     }
     
+    /**
+     * A session-owned background process changed state.
+     */
+    data class ProcessChanged(
+        /**
+         * Session id.
+         */
+        val `sessionId`: kotlin.String, 
+        /**
+         * Short process id.
+         */
+        val `processId`: kotlin.String, 
+        /**
+         * New process state.
+         */
+        val `status`: app.tether.core.generated.ProcessStatusView, 
+        /**
+         * Detected port, if any.
+         */
+        val `port`: kotlin.UShort?) : CoreEventView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * The agent asked the app to open a Preview target.
+     */
+    data class PreviewRequested(
+        /**
+         * Session id.
+         */
+        val `sessionId`: kotlin.String, 
+        /**
+         * Preview target.
+         */
+        val `target`: app.tether.core.generated.PreviewTargetView) : CoreEventView()
+        
+    {
+        
+
+        companion object
+    }
+    
 
     
 
@@ -21368,6 +22253,16 @@ public object FfiConverterTypeCoreEventView : FfiConverterRustBuffer<CoreEventVi
                 FfiConverterTypeQualityCountsView.read(buf),
                 FfiConverterSequenceTypeQualityFindingRecordView.read(buf),
                 FfiConverterUInt.read(buf),
+                )
+            26 -> CoreEventView.ProcessChanged(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                FfiConverterTypeProcessStatusView.read(buf),
+                FfiConverterOptionalUShort.read(buf),
+                )
+            27 -> CoreEventView.PreviewRequested(
+                FfiConverterString.read(buf),
+                FfiConverterTypePreviewTargetView.read(buf),
                 )
             else -> throw RuntimeException("invalid enum value, something is very wrong!!")
         }
@@ -21589,6 +22484,24 @@ public object FfiConverterTypeCoreEventView : FfiConverterRustBuffer<CoreEventVi
                 + FfiConverterUInt.allocationSize(value.`skipped`)
             )
         }
+        is CoreEventView.ProcessChanged -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`sessionId`)
+                + FfiConverterString.allocationSize(value.`processId`)
+                + FfiConverterTypeProcessStatusView.allocationSize(value.`status`)
+                + FfiConverterOptionalUShort.allocationSize(value.`port`)
+            )
+        }
+        is CoreEventView.PreviewRequested -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`sessionId`)
+                + FfiConverterTypePreviewTargetView.allocationSize(value.`target`)
+            )
+        }
     }
 
     override fun write(value: CoreEventView, buf: ByteBuffer) {
@@ -21758,6 +22671,20 @@ public object FfiConverterTypeCoreEventView : FfiConverterRustBuffer<CoreEventVi
                 FfiConverterUInt.write(value.`skipped`, buf)
                 Unit
             }
+            is CoreEventView.ProcessChanged -> {
+                buf.putInt(26)
+                FfiConverterString.write(value.`sessionId`, buf)
+                FfiConverterString.write(value.`processId`, buf)
+                FfiConverterTypeProcessStatusView.write(value.`status`, buf)
+                FfiConverterOptionalUShort.write(value.`port`, buf)
+                Unit
+            }
+            is CoreEventView.PreviewRequested -> {
+                buf.putInt(27)
+                FfiConverterString.write(value.`sessionId`, buf)
+                FfiConverterTypePreviewTargetView.write(value.`target`, buf)
+                Unit
+            }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
     }
 }
@@ -21863,6 +22790,24 @@ sealed class ExecutorRuntimeException: kotlin.Exception() {
             get() = ""
     }
     
+    /**
+     * Linux mode is not installed or cannot be used yet.
+     */
+    class LinuxNotReady(
+        ) : ExecutorRuntimeException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
+     * One interactive Linux shell is already open for this executor runtime.
+     */
+    class LinuxShellAlreadyOpen(
+        ) : ExecutorRuntimeException() {
+        override val message
+            get() = ""
+    }
+    
 
     
 
@@ -21885,6 +22830,8 @@ public object FfiConverterTypeExecutorRuntimeError : FfiConverterRustBuffer<Exec
             1 -> ExecutorRuntimeException.InvalidConfiguration()
             2 -> ExecutorRuntimeException.Unavailable()
             3 -> ExecutorRuntimeException.ProjectNotFound()
+            4 -> ExecutorRuntimeException.LinuxNotReady()
+            5 -> ExecutorRuntimeException.LinuxShellAlreadyOpen()
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
     }
@@ -21903,6 +22850,14 @@ public object FfiConverterTypeExecutorRuntimeError : FfiConverterRustBuffer<Exec
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
             )
+            is ExecutorRuntimeException.LinuxNotReady -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is ExecutorRuntimeException.LinuxShellAlreadyOpen -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
         }
     }
 
@@ -21918,6 +22873,14 @@ public object FfiConverterTypeExecutorRuntimeError : FfiConverterRustBuffer<Exec
             }
             is ExecutorRuntimeException.ProjectNotFound -> {
                 buf.putInt(3)
+                Unit
+            }
+            is ExecutorRuntimeException.LinuxNotReady -> {
+                buf.putInt(4)
+                Unit
+            }
+            is ExecutorRuntimeException.LinuxShellAlreadyOpen -> {
+                buf.putInt(5)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
@@ -23241,6 +24204,213 @@ public object FfiConverterTypePermissionModeView: FfiConverterRustBuffer<Permiss
 
     override fun write(value: PermissionModeView, buf: ByteBuffer) {
         buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
+ * FFI view of a Preview target.
+ */
+sealed class PreviewTargetView {
+    
+    /**
+     * A project-relative HTML file.
+     */
+    data class File(
+        /**
+         * The guarded path.
+         */
+        val `path`: kotlin.String) : PreviewTargetView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * A server owned by a session process.
+     */
+    data class Server(
+        /**
+         * The loopback URL.
+         */
+        val `url`: kotlin.String, 
+        /**
+         * The owning process id.
+         */
+        val `processId`: kotlin.String) : PreviewTargetView()
+        
+    {
+        
+
+        companion object
+    }
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypePreviewTargetView : FfiConverterRustBuffer<PreviewTargetView>{
+    override fun read(buf: ByteBuffer): PreviewTargetView {
+        return when(buf.getInt()) {
+            1 -> PreviewTargetView.File(
+                FfiConverterString.read(buf),
+                )
+            2 -> PreviewTargetView.Server(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: PreviewTargetView): ULong = when(value) {
+        is PreviewTargetView.File -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`path`)
+            )
+        }
+        is PreviewTargetView.Server -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`url`)
+                + FfiConverterString.allocationSize(value.`processId`)
+            )
+        }
+    }
+
+    override fun write(value: PreviewTargetView, buf: ByteBuffer) {
+        when(value) {
+            is PreviewTargetView.File -> {
+                buf.putInt(1)
+                FfiConverterString.write(value.`path`, buf)
+                Unit
+            }
+            is PreviewTargetView.Server -> {
+                buf.putInt(2)
+                FfiConverterString.write(value.`url`, buf)
+                FfiConverterString.write(value.`processId`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+/**
+ * FFI view of a background process state.
+ */
+sealed class ProcessStatusView {
+    
+    /**
+     * The process is still running.
+     */
+    object Running : ProcessStatusView()
+    
+    
+    /**
+     * The process returned an exit code.
+     */
+    data class Exited(
+        /**
+         * The returned exit code.
+         */
+        val `code`: kotlin.Int) : ProcessStatusView()
+        
+    {
+        
+
+        companion object
+    }
+    
+    /**
+     * The process was stopped.
+     */
+    object Stopped : ProcessStatusView()
+    
+    
+
+    
+
+    
+    
+
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeProcessStatusView : FfiConverterRustBuffer<ProcessStatusView>{
+    override fun read(buf: ByteBuffer): ProcessStatusView {
+        return when(buf.getInt()) {
+            1 -> ProcessStatusView.Running
+            2 -> ProcessStatusView.Exited(
+                FfiConverterInt.read(buf),
+                )
+            3 -> ProcessStatusView.Stopped
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: ProcessStatusView): ULong = when(value) {
+        is ProcessStatusView.Running -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is ProcessStatusView.Exited -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterInt.allocationSize(value.`code`)
+            )
+        }
+        is ProcessStatusView.Stopped -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+    }
+
+    override fun write(value: ProcessStatusView, buf: ByteBuffer) {
+        when(value) {
+            is ProcessStatusView.Running -> {
+                buf.putInt(1)
+                Unit
+            }
+            is ProcessStatusView.Exited -> {
+                buf.putInt(2)
+                FfiConverterInt.write(value.`code`, buf)
+                Unit
+            }
+            is ProcessStatusView.Stopped -> {
+                buf.putInt(3)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
     }
 }
 
@@ -25843,6 +27013,38 @@ public object FfiConverterOptionalUByte: FfiConverterRustBuffer<kotlin.UByte?> {
         } else {
             buf.put(1)
             FfiConverterUByte.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalUShort: FfiConverterRustBuffer<kotlin.UShort?> {
+    override fun read(buf: ByteBuffer): kotlin.UShort? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterUShort.read(buf)
+    }
+
+    override fun allocationSize(value: kotlin.UShort?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterUShort.allocationSize(value)
+        }
+    }
+
+    override fun write(value: kotlin.UShort?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterUShort.write(value, buf)
         }
     }
 }

@@ -94,13 +94,6 @@
 
     <!-- Data and cache. -->
     <string name="settings_area_data_title">Data</string>
-    <string name="settings_area_data_stored">Stored on this phone</string>
-    <string name="settings_area_data_database">Database</string>
-    <string name="settings_area_data_database_body">Sessions, messages, and settings.</string>
-    <string name="settings_area_data_workspaces">Projects</string>
-    <string name="settings_area_data_workspaces_body">Project folders and their files.</string>
-    <string name="settings_area_data_blobs">Checkpoints</string>
-    <string name="settings_area_data_blobs_body">Copies of files before each change, for rewind.</string>
     <string name="settings_area_data_cache">Cache</string>
     <string name="settings_area_update_cache">Update cache</string>
     <string name="settings_area_clear_update_cache">Clear update cache</string>

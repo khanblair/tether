@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="linux_title">Linux</string>
+    <string name="linux_no_project">No project</string>
+    <string name="linux_clear">Clear terminal</string>
+    <string name="linux_close">Close shell</string>
+    <string name="linux_not_ready">Linux mode is not set up.</string>
+    <string name="linux_busy">A shell is already open.</string>
+    <string name="linux_failed">The Linux shell could not be opened.</string>
+    <string name="linux_not_available">Linux mode is not available in this version.</string>
+    <string name="linux_open_executors">Open executors</string>
+    <string name="linux_open_shell">Open shell</string>
+    <string name="linux_jump_to_latest">Jump to latest</string>
+    <string name="linux_copy">Copy terminal</string>
+    <string name="linux_copied">Copied</string>
+    <string name="linux_key_escape">Esc</string>
+    <string name="linux_key_tab">Tab</string>
+    <string name="linux_key_ctrl">Ctrl</string>
+    <string name="linux_key_alt">Alt</string>
+    <string name="linux_key_up">Up</string>
+    <string name="linux_key_down">Down</string>
+    <string name="linux_key_left">Left</string>
+    <string name="linux_key_right">Right</string>
+    <string name="linux_key_pipe">|</string>
+    <string name="linux_key_slash">/</string>
+    <string name="linux_key_dash">-</string>
+    <string name="linux_key_tilde">~</string>
+</resources>

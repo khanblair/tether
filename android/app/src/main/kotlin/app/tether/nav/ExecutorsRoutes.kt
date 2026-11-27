@@ -1,6 +1,5 @@
 package app.tether.nav
 
-import android.os.Build
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
@@ -11,7 +10,6 @@ import androidx.navigation.compose.composable
 import app.tether.di.AppModule
 import app.tether.settings.executors.CiRunsScreen
 import app.tether.settings.executors.CiRunsViewModel
-import app.tether.settings.executors.ExecutorBuildConfig
 import app.tether.settings.executors.ExecutorsScreen
 import app.tether.settings.executors.ExecutorsViewModel
 import kotlinx.coroutines.Dispatchers
@@ -20,23 +18,13 @@ import kotlinx.coroutines.withContext
 /** The CI runs list, opened from the Executors screen. */
 const val SETTINGS_CI_RUNS_ROUTE = "settings/executors/runs"
 
-/**
- * No runtime pack or root filesystem manifest is published yet (build plan P5-02), so this build
- * has no download address and the install buttons show as not available.
- */
-private val executorBuild =
-    ExecutorBuildConfig(
-        packManifestUrl = null,
-        rootfsManifestUrl = null,
-        linuxSupported = Build.SUPPORTED_ABIS.contains("arm64-v8a"),
-    )
-
 /** The Executors settings and the CI runs of the most recently active project. */
 internal fun NavGraphBuilder.executorsRoutes(
     module: AppModule,
     nav: TetherNav,
 ) {
     composable(SETTINGS_EXECUTORS_ROUTE) {
+        val context = LocalContext.current
         WithActiveProject(module) { projectId ->
             ExecutorsScreen(
                 viewModel =
@@ -45,12 +33,13 @@ internal fun NavGraphBuilder.executorsRoutes(
                         factory =
                             ExecutorsViewModel.factory(
                                 module.executorsGateway,
-                                executorBuild,
+                                module.linuxSetup.executorBuildConfig(context),
                                 projectId,
                             ),
                     ),
                 onBack = nav::back,
                 onOpenCiRuns = { nav.open(SETTINGS_CI_RUNS_ROUTE) },
+                onOpenLinux = { nav.open(linuxPath(projectId)) },
             )
         }
     }

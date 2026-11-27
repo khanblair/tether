@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Set after the signed manifest is published. -->
+    <string name="linux_rootfs_manifest_url"></string>
+    <string name="linux_rootfs_key_hex"></string>
+    <string name="runtime_pack_key_hex"></string>
+</resources>

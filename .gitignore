@@ -18,6 +18,9 @@ local.properties
 # Rust
 target/
 
+# Prepared release artifacts
+dist/
+
 # Android and Gradle (build output and caches at any depth)
 .gradle/
 .kotlin/

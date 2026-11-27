@@ -248,6 +248,7 @@ Rules: no motion longer than 300 ms. No bouncing or spring overshoot. With the s
 | Token | dp | Use |
 |---|---|---|
 | `size.touch-min` | 48 | Minimum touch target |
+| `size.touch-compact` | 36 | Button under a chat message (Copy, Edit, Regenerate). Exception, see ui-rules.md section 8 |
 | `size.icon` | 24 | Standard icon |
 | `size.icon-s` | 20 | Icons in dense rows and tool card headers |
 | `size.icon-xs` | 16 | Inline status icons |

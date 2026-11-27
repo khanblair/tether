@@ -235,6 +235,7 @@ object TetherRadius {
 
 object TetherSize {
     val touchMin: Dp = 48.dp
+    val touchCompact: Dp = 36.dp
     val icon: Dp = 24.dp
     val iconS: Dp = 20.dp
     val iconXs: Dp = 16.dp

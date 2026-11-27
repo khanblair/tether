@@ -14,12 +14,14 @@ mod git;
 mod git_support;
 mod git_types;
 mod github;
+mod github_token_info;
 mod knowledge;
 mod mcp;
 mod mcp_types;
 mod memory;
 mod network;
 mod notify;
+mod project_location;
 mod projects;
 mod provider_settings;
 mod quality;
@@ -63,7 +65,9 @@ pub use git_types::{
     CloneProgressView, GitBranchView, GitCommitView, GitDiffSpecView, GitRuntimeError,
     GitStatusView, ShallowChoiceView,
 };
-pub use github::{DeviceGrantView, GithubRepoView, GithubStatusView, SignInStateView};
+pub use github::{
+    DeviceGrantView, GithubRepoView, GithubStatusView, GithubTokenKindView, SignInStateView,
+};
 pub use mcp::McpRuntime;
 pub use mcp_types::{McpHeaderInput, McpRuntimeError, McpServerView, McpToolView};
 pub use memory::{
@@ -99,7 +103,7 @@ pub use views::{
     QualityCountsView, QualityFindingRecordView, ReasoningEffortView, RewindScopeView, RoleView,
     SessionRecordView, SessionStatusView, SessionUsageView, SupportView, TodoItemView,
     TodoStatusView, ToolCallStatusView, TranscriptHitView, UsageSnapshotView, UsageSummaryView,
-    UsageTotalsView,
+    UsageTotalsView, WorkspaceLocationView,
 };
 
 uniffi::setup_scaffolding!();

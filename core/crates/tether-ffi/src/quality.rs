@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use tether_engine::config::{self, ConfigOrigin, ConfigValue};
 use tether_quality::{Severity, Thresholds};
-use tether_store::Store;
+use tether_store::{Store, project_dir};
 use tether_types::ProjectId;
 
 use crate::config::ConfigIssueView;
@@ -96,7 +96,7 @@ impl QualityRuntime {
             .load_project(&ProjectId::new(project_id))
             .map_err(|_| QualityRuntimeError::Unavailable)?
             .ok_or(QualityRuntimeError::NotFound)?;
-        let root = Path::new(&self.workspaces_root).join(project.path);
+        let root = project_dir(Path::new(&self.workspaces_root), &project);
         let (project_config, mut issues) = config::load_project(&root, true);
         let (global_config, global_issues) =
             config::load_global(&global_config_path(Path::new(&self.database_path)));

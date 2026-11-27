@@ -3,7 +3,7 @@
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use tether_engine::{GitIdentityReader, GithubClientFactory, TransportFactory};
+use tether_engine::{GitIdentityReader, GitRemoteWriter, GithubClientFactory, TransportFactory};
 use tether_vcs::{
     BranchInfo, CommitInfo, Identity, RepoError, ReqwestTransport, StatusEntry, Transport,
 };
@@ -42,6 +42,21 @@ pub(crate) struct RuntimeGithub(pub(crate) Arc<GitRuntime>);
 impl GithubClientFactory for RuntimeGithub {
     fn client(&self) -> Result<tether_vcs::GithubClient, String> {
         self.0.github_client().map_err(|error| error.to_string())
+    }
+}
+
+pub(crate) struct RuntimeRemote {
+    pub(crate) runtime: Arc<GitRuntime>,
+    pub(crate) project_id: tether_types::ProjectId,
+}
+
+impl GitRemoteWriter for RuntimeRemote {
+    fn set_remote(&self, remote_url: &str, default_branch: &str) -> Result<(), String> {
+        self.runtime
+            .store()
+            .map_err(|_| "project store is unavailable".to_owned())?
+            .set_project_remote(&self.project_id, remote_url, default_branch)
+            .map_err(|_| "project remote could not be saved".to_owned())
     }
 }
 

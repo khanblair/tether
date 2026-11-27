@@ -5,7 +5,7 @@ use std::io::{self, Read};
 use std::path::Path;
 use std::sync::Arc;
 
-use tether_store::Store;
+use tether_store::{Store, project_dir};
 use tether_types::ProjectId;
 use tether_workspace::{FileIndex, PathGuard};
 
@@ -242,11 +242,11 @@ impl FilesRuntime {
     pub(crate) fn project_guard(&self, project_id: &str) -> Result<PathGuard, FilesRuntimeError> {
         let store = Store::open(Path::new(&self.database_path))
             .map_err(|_| FilesRuntimeError::Unavailable)?;
-        let project_path = store
-            .project_path(&ProjectId::new(project_id.to_owned()))
+        let project = store
+            .load_project(&ProjectId::new(project_id.to_owned()))
             .map_err(|_| FilesRuntimeError::Unavailable)?
             .ok_or(FilesRuntimeError::NotFound)?;
-        PathGuard::new(Path::new(&self.workspaces_root).join(project_path))
+        PathGuard::new(project_dir(Path::new(&self.workspaces_root), &project))
             .map_err(|_| FilesRuntimeError::Unavailable)
     }
 }

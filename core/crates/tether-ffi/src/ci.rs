@@ -7,7 +7,7 @@ use std::sync::Arc;
 use tether_ci::{CiClient, CiError, RunSummary, propose_workflow, workflow_is_current};
 use tether_engine::{CiLogResult, CiLogsRequest, ToolHandler};
 use tether_secrets::Secret;
-use tether_store::{ProjectRecord, Store};
+use tether_store::{ProjectRecord, Store, project_dir};
 use tether_types::ProjectId;
 use tether_vcs::parse_github_url;
 
@@ -62,7 +62,7 @@ impl CiRuntime {
             .ok_or(CiRuntimeError::Repository)
     }
     pub(crate) fn root(&self, project: &ProjectRecord) -> PathBuf {
-        Path::new(&self.workspaces_root).join(&project.path)
+        project_dir(Path::new(&self.workspaces_root), project)
     }
     pub(crate) fn workflow_path(&self, project: &ProjectRecord) -> PathBuf {
         self.root(project).join(".github/workflows/tether.yml")

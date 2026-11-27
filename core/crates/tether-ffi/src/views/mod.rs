@@ -22,7 +22,7 @@ pub use context::{CompactionView, ContextBreakdownView, ContextSectionView, Inte
 pub use error::{CoreErrorView, ErrorKindView};
 pub use event::{CoreEventView, QualityCountsView, QualityFindingRecordView};
 pub use plan::PlanView;
-pub use project::ProjectView;
+pub use project::{ProjectView, WorkspaceLocationView};
 pub use question::PendingQuestionView;
 pub use session::{
     ModelView, PromptSectionView, ReasoningEffortView, SessionRecordView, SessionUsageView,

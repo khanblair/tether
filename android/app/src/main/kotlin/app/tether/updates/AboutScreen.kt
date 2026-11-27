@@ -52,6 +52,7 @@ import app.tether.design.tokens.TetherRadius
 import app.tether.design.tokens.TetherSize
 import app.tether.design.tokens.TetherSpace
 import app.tether.messages.AppMessages
+import app.tether.session.MarkdownBlocks
 import app.tether.settings.ChevronTrailing
 import app.tether.shell.BackButton
 
@@ -272,8 +273,7 @@ private fun SizeText(state: UpdatesUiState) {
 @Composable
 private fun NotesBox(notes: String) {
     val shape = RoundedCornerShape(TetherRadius.sm)
-    Text(
-        text = notes,
+    Column(
         modifier =
             Modifier
                 .fillMaxWidth()
@@ -283,9 +283,9 @@ private fun NotesBox(notes: String) {
                 .border(TetherBorder.hairline, TetherTheme.colors.line, shape)
                 .verticalScroll(rememberScrollState())
                 .padding(TetherSpace.space3),
-        style = MaterialTheme.typography.bodySmall,
-        color = TetherTheme.colors.text2,
-    )
+    ) {
+        MarkdownBlocks(source = notes)
+    }
 }
 
 @Composable

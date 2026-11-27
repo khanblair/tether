@@ -3,6 +3,7 @@ package app.tether.session
 import app.tether.core.generated.CoreEventView
 import app.tether.core.generated.EventSink
 import app.tether.core.generated.MessageView
+import app.tether.core.generated.ProcessView
 import app.tether.core.generated.SecretVault
 import app.tether.core.generated.SessionRunner
 import app.tether.core.generated.SessionRuntime
@@ -12,6 +13,7 @@ import app.tether.session.agent.CoreAgentLoopGateway
 import app.tether.session.compose.CommandsGateway
 import app.tether.session.compose.CoreCommandsGateway
 import app.tether.session.compose.SkippedMention
+import app.tether.session.servers.ServerProcessRegistry
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 
@@ -31,6 +33,7 @@ class SessionConnection(
     private val sink =
         object : EventSink {
             override fun onEvent(event: CoreEventView) {
+                ServerProcessRegistry.onEvent(event)
                 events.tryEmit(event)
             }
         }
@@ -55,6 +58,10 @@ class SessionConnection(
             throw error
         }
 
+    init {
+        ServerProcessRegistry.register(sessionId, runner.listProcesses())
+    }
+
     /**
      * Model, mode, rename, and usage calls. They use this runtime, not a second one, because the
      * core drops a session's runner from the runtime that changed it.
@@ -74,6 +81,12 @@ class SessionConnection(
     val rewinder: SessionRewinder = CoreSessionRewinder { runner }
 
     fun transcript(): List<MessageView> = runtime.transcript(sessionId)
+
+    /** Reads the session's background processes without waiting for a running turn. */
+    fun listProcesses(): List<ProcessView> = runner.listProcesses()
+
+    /** Stops a session-owned background process without waiting for a running turn. */
+    fun stopProcess(processId: String) = runner.stopProcess(processId)
 
     fun status(): SessionStatus = readSessionStatus(databasePath, sessionId)
 
@@ -103,9 +116,11 @@ class SessionConnection(
         val old = runner
         runner = coreCall { openRunner() }
         old.close()
+        ServerProcessRegistry.register(sessionId, runner.listProcesses())
     }
 
     override fun close() {
+        ServerProcessRegistry.close(sessionId)
         runner.close()
         runtime.close()
     }

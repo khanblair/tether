@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Background server bar. -->
+    <string name="server_on_port">Server on port %1$d</string>
+    <plurals name="server_running_count">
+        <item quantity="one">%1$d server running</item>
+        <item quantity="other">%1$d servers running</item>
+    </plurals>
+    <string name="server_port">Port %1$d</string>
+    <string name="server_preview">Preview</string>
+    <string name="server_stop">Stop</string>
+    <string name="server_stop_failed">Could not stop the server.</string>
+    <string name="server_expand">Show servers</string>
+    <string name="server_collapse">Hide servers</string>
+    <string name="server_preview_ready">Preview ready</string>
+    <string name="server_open">Open</string>
+    <string name="server_stopped_code">Server stopped (code %1$d)</string>
+
+    <!-- The preview requested message and server preview screen. -->
+    <string name="preview_server_banner">Showing a server on this phone: %1$s</string>
+    <string name="preview_server_stopped">The server stopped</string>
+    <string name="preview_server_reload">Reload</string>
+
+    <!-- Tool titles for background processes and previews. -->
+    <string name="tools_server_run_imperative">Start a server:</string>
+    <string name="tools_server_run_present">Starting a server:</string>
+    <string name="tools_server_run_past">Started a server:</string>
+    <string name="tools_process_list_imperative">List background processes</string>
+    <string name="tools_process_list_present">Listing background processes</string>
+    <string name="tools_process_list_past">Listed background processes</string>
+    <string name="tools_process_logs_imperative">Read logs for process</string>
+    <string name="tools_process_logs_present">Reading logs for process</string>
+    <string name="tools_process_logs_past">Read logs for process</string>
+    <string name="tools_process_stop_imperative">Stop process</string>
+    <string name="tools_process_stop_present">Stopping process</string>
+    <string name="tools_process_stop_past">Stopped process</string>
+    <string name="tools_preview_imperative">Open a preview of</string>
+    <string name="tools_preview_present">Opening a preview of</string>
+    <string name="tools_preview_past">Opened a preview of</string>
+
+    <!-- Approval bar labels for server actions. -->
+    <string name="approval_kind_server">Start a server</string>
+    <string name="approval_kind_process_stop">Stop a server process</string>
+</resources>

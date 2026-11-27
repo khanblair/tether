@@ -12,9 +12,12 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalDensity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.tether.appearance.effectiveDensity
 import app.tether.design.TetherTheme
 import app.tether.nav.TetherNavHost
 import app.tether.settings.AppLockLayers
@@ -75,10 +78,15 @@ class MainActivity : ComponentActivity() {
         setContent {
             val mode by module.themeMode.collectAsStateWithLifecycle()
             val locked by (application as TetherApp).appLock.locked.collectAsStateWithLifecycle()
-            TetherTheme(mode = mode) {
-                SystemBars(dark = TetherTheme.isDark)
-                AppLockLayers(locked = locked, onUnlock = ::requestUnlock) {
-                    TetherNavHost(module = module)
+            val appearance by module.appearance.appearance.collectAsStateWithLifecycle()
+            CompositionLocalProvider(
+                LocalDensity provides effectiveDensity(LocalDensity.current, appearance),
+            ) {
+                TetherTheme(mode = mode) {
+                    SystemBars(dark = TetherTheme.isDark)
+                    AppLockLayers(locked = locked, onUnlock = ::requestUnlock) {
+                        TetherNavHost(module = module)
+                    }
                 }
             }
         }

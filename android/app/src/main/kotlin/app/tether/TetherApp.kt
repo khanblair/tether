@@ -37,6 +37,13 @@ class TetherApp : Application() {
             )
         createTetherChannels(this)
         module.core.start()
+        module.launchInBackground {
+            runQuietly({
+                module.linuxSetup.configureAtStart(this@TetherApp, module::configureExecutors)
+            }) {
+                Log.w("Tether", "Linux setup failed: ${it.javaClass.simpleName}")
+            }
+        }
         module.updates.restore()
         module.updates.checkIfDue()
     }

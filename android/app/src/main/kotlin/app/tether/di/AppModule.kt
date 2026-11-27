@@ -6,6 +6,7 @@ import app.tether.appearance.AppearanceController
 import app.tether.appearance.PrefsAppearanceStore
 import app.tether.core.CoreClient
 import app.tether.core.generated.CiRuntime
+import app.tether.core.generated.ExecutorPathsView
 import app.tether.core.generated.ProjectRuntime
 import app.tether.core.generated.ProviderSettings
 import app.tether.core.generated.SessionRuntime
@@ -21,6 +22,10 @@ import app.tether.home.CoreProjectGateway
 import app.tether.home.HomeSources
 import app.tether.home.ProjectGateway
 import app.tether.home.createHomeSources
+import app.tether.linux.CoreLinuxShellGateway
+import app.tether.linux.LinuxSetup
+import app.tether.linux.LinuxShellGateway
+import app.tether.linux.createLinuxSetup
 import app.tether.memory.MemoryAreaGateways
 import app.tether.memory.createMemoryAreaGateways
 import app.tether.messages.AppMessages
@@ -54,6 +59,10 @@ import app.tether.updates.PrefsUpdateStore
 import app.tether.updates.UpdatesController
 import app.tether.updates.createUpdateInstaller
 import app.tether.updates.isDebuggableBuild
+import app.tether.workspace.CoreWorkspaceGateway
+import app.tether.workspace.WorkspaceCapabilities
+import app.tether.workspace.WorkspaceGateway
+import app.tether.workspace.createWorkspaceCapabilities
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -89,6 +98,23 @@ class AppModule(
             lazy { ProjectRuntime(databasePath, workspacesRoot) },
         )
 
+    /** The private default and the saved root for new projects. */
+    val workspaceGateway: WorkspaceGateway =
+        CoreWorkspaceGateway(
+            lazy { ProjectRuntime(databasePath, workspacesRoot) },
+        )
+
+    /** Shared-folder access differs between the full and Play builds. */
+    val workspaceCapabilities: WorkspaceCapabilities = createWorkspaceCapabilities()
+
+    /** Linux mode setup differs between the full and Play builds. */
+    val linuxSetup: LinuxSetup = createLinuxSetup()
+
+    /** Interactive Linux shell calls over the same lazy executor runtime. */
+    val linuxShellGateway: LinuxShellGateway by lazy {
+        CoreLinuxShellGateway(executorSessionRuntime)
+    }
+
     /** Session lists and creation. The runtime opens on the first call, off the main thread. */
     val sessionGateway: SessionGateway by lazy { CoreSessionGateway(databasePath, vault) }
 
@@ -103,9 +129,14 @@ class AppModule(
     /** Runtime packs, Linux mode, project network, and CI runs. Both runtimes open on first use. */
     val executorsGateway: ExecutorsGateway by lazy {
         CoreExecutorsGateway(
-            sessionRuntime = lazy { SessionRuntime(databasePath, vault, QuietEvents) },
+            sessionRuntime = executorSessionRuntime,
             ciRuntime = lazy { CiRuntime(databasePath, workspacesRoot, vault) },
         )
+    }
+
+    /** Stores platform executor paths for the Linux and sandbox runtimes. */
+    fun configureExecutors(paths: ExecutorPathsView) {
+        executorSessionRuntime.value.configureExecutors(paths)
     }
 
     /** Budget limits and the cost summary. The runtime opens on the first call. */
@@ -210,6 +241,9 @@ class AppModule(
 
     /** Messages for the snackbar host, such as the toast after a test event. */
     val messages = AppMessages()
+
+    private val executorSessionRuntime: Lazy<SessionRuntime> =
+        lazy { SessionRuntime(databasePath, vault, QuietEvents) }
 }
 
 private const val TAG = "Tether"

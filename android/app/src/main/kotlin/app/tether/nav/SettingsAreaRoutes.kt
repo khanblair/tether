@@ -31,6 +31,9 @@ import app.tether.settings.ProfileScreen
 import app.tether.settings.ProfileViewModel
 import app.tether.settings.SettingsDeps
 import app.tether.shell.PlaceholderScreen
+import app.tether.workspace.WorkspaceScreen
+import app.tether.workspace.WorkspaceViewModel
+import app.tether.workspace.suggestedWorkspacePath
 
 /** The settings area's routes. Each row of the main Settings list opens one of these. */
 const val SETTINGS_PROFILE_ROUTE = "settings/profile"
@@ -45,6 +48,7 @@ const val SETTINGS_NOTIFICATIONS_ROUTE = "settings/notifications"
 const val SETTINGS_PRIVACY_ROUTE = "settings/privacy"
 const val SETTINGS_DATA_ROUTE = "settings/data"
 const val SETTINGS_APPEARANCE_ROUTE = "settings/appearance"
+const val SETTINGS_WORKSPACE_ROUTE = "settings/workspace"
 
 /** Skills and memory. Area A3 changes this constant when its screens exist. */
 const val SKILLS_MEMORY_ROUTE = "settings/skills-memory"
@@ -146,6 +150,7 @@ private fun NavGraphBuilder.systemRoutes(
     composable(SETTINGS_APPEARANCE_ROUTE) {
         AppearanceScreen(module = module, onBack = nav::back)
     }
+    workspaceRoutes(module, nav)
     composable(SETTINGS_NOTIFICATIONS_ROUTE) {
         val deps = settingsDepsOf(LocalContext.current)
         val context = LocalContext.current
@@ -186,6 +191,38 @@ private fun NavGraphBuilder.systemRoutes(
     dataRoutes(module, nav)
 }
 
+/** The workspace location screen. */
+private fun NavGraphBuilder.workspaceRoutes(
+    module: AppModule,
+    nav: TetherNav,
+) {
+    composable(SETTINGS_WORKSPACE_ROUTE) {
+        val context = LocalContext.current
+        val deps = settingsDepsOf(context)
+        WorkspaceScreen(
+            viewModel =
+                viewModel(
+                    factory =
+                        viewModelFactory {
+                            initializer {
+                                WorkspaceViewModel(
+                                    gateway = module.workspaceGateway,
+                                    sharedFolderAllowed =
+                                        module.workspaceCapabilities.sharedFolderAllowed,
+                                    initialAllFilesAccessGranted =
+                                        module.workspaceCapabilities.allFilesAccessGranted(context),
+                                    suggestedPath = suggestedWorkspacePath(),
+                                    paths = deps.storage::paths,
+                                )
+                            }
+                        },
+                ),
+            capabilities = module.workspaceCapabilities,
+            onBack = nav::back,
+        )
+    }
+}
+
 /** The data screen. Its clear action confirms through the snackbar host. */
 private fun NavGraphBuilder.dataRoutes(
     module: AppModule,
@@ -208,6 +245,7 @@ private fun NavGraphBuilder.dataRoutes(
                         },
                 ),
             onBack = nav::back,
+            onOpenWorkspace = { nav.open(SETTINGS_WORKSPACE_ROUTE) },
         )
     }
 }

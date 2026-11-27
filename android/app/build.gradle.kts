@@ -26,7 +26,7 @@ android {
         versionName = coreVersion
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk {
-            abiFilters += tetherAbis(providers)
+            abiFilters += listOf("arm64-v8a", "x86_64")
         }
     }
 
@@ -65,6 +65,18 @@ android {
                 "proguard-rules.pro",
             )
             signingConfig = signingConfigs.findByName("release")
+        }
+    }
+}
+
+// A local run can narrow the ABIs with tether.abis (see TetherAbis.kt). The filter above stays
+// literal because Android lint checks it for x86_64 support, so the other ABIs are dropped here.
+androidComponents {
+    onVariants { variant ->
+        val kept = tetherAbis(providers)
+        DEFAULT_ABIS.filterNot { it in kept }.forEach { abi ->
+            variant.packaging.jniLibs.excludes
+                .add("**/$abi/*.so")
         }
     }
 }

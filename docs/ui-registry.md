@@ -53,7 +53,7 @@ All components start as **Planned**. Screenshot tests start with the first featu
 
 | Name | Purpose | Props | States | Phase | Status |
 |---|---|---|---|---|---|
-| `TetherTopBar` | Top app bar | `title`, `subtitle`, `navigationIcon`, `actions` | default (scrolled shadow is planned) | P0 | Built |
+| `TetherTopBar` | Top app bar | `title`, `subtitle`, `subtitleOnClick`, `navigationIcon`, `actions` | default, clickable subtitle | P0 | Built |
 | `HomeDrawer` | Header with the theme toggle, destinations (Home, Projects, Needs attention, Usage and cost, Runs), session search and sessions by project, an "N archived sessions · Show" line that lists the archived sessions with Unarchive (not in the prototype; chosen by Blair), then New session, Settings, Skills and memory. Lives in the app module | `sessions`, `archived`, `query`, `currentRoute`, `attentionCount`, `themeMode`, `onToggleTheme`, `onDestination`, `onOpenSession`, `onNewSession`, `onOpenSettings`, `onOpenSkills` | with sessions, no sessions, search with no match, each destination selected | P1 | Built |
 | `DrawerItem` | Drawer destination row; the current one is `tonal` | `label`, `icon`, `selected`, `onClick`, `badge` | default, selected, pressed, with badge | P1 | Built |
 | `ThemeToggleButton` | Icon button that shows the theme choice (monitor, sun, moon) and cycles System, Light, Dark | `mode`, `contentDescription`, `onClick` | system, light, dark | P1 | Built |
@@ -61,6 +61,9 @@ All components start as **Planned**. Screenshot tests start with the first featu
 | `SectionTitle` | Small heading above a list group | `text` | default | P1 | Built |
 | `ListGroup` | Bordered container for stacked rows | `content` | default | P1 | Built |
 | `ProjectRow` | Project: folder icon, name, branch, summary, optional badge | `name`, `branch`, `summary`, `onClick`, `badge` | default, pressed, with badge | P1 | Built |
+| `NewSessionScreen` | Reviews project context before the first message creates a session, with the project picker and composer | `state`, `onBack`, `onSelectProject`, `onSend`, `onNewProject`, `onRetry` | loading, no project, ready, load failure, start failure | P1 | In progress |
+| `LoadedCard` | Shows the instructions file, memory entries, and available skills loaded for a new session | `preview` | file and no file, none, one, many | P1 | In progress |
+| `ProjectPickerSheet` | Modal project list with last activity and a check on the selected project | `projects`, `selectedId`, `onSelect`, `onDismiss` | list, selected row, empty | P1 | In progress |
 | `SessionRow` | Session: status mark, title, subtitle | `title`, `subtitle`, `state` (`SessionState`), `onClick` | each state | P1 | Built |
 | `ListRow` | Generic row: icon, title, subtitle, trailing | `title`, `subtitle`, `leading`, `trailing`, `onClick`, `enabled`, `danger` | default, pressed, disabled, danger | P1 | Built |
 | `TetherSheet` | Modal bottom sheet with a title. It opens fully expanded and its content rises above the keyboard | `title`, `onDismiss`, `content` | default | P1 | Built |
@@ -182,6 +185,9 @@ All components start as **Planned**. Screenshot tests start with the first featu
 | `ExecutorBadge` | Sandbox, Linux, or CI label | `executor` | sandbox, linux, ci | P5 | Built |
 | `RuntimePackRow` | Sandbox runtime pack with install state | `pack`, `source`, `onInstall`, `onCancel` | not installed, downloading, ready, failed | P5 | Built |
 | `CiRunsList` | Recent CI runs | `runs`, `onOpen` | loading, list, empty | P6 | Built |
+| `RunsScreen` | Project run history across sandbox, Linux mode, and CI | `state`, `projectName`, `onBack`, `onOpenProjectPicker`, `onOpenLocal`, `onOpenCi` | loading, no project, empty, failed, local and CI rows | P6 | In progress |
+| `RunsRunRow` | One local or CI run with status, command or workflow, metadata, and executor badge | `row`, `onOpenLocal`, `onOpenCi` | succeeded, failed, timed out, cancelled, background, CI | P6 | In progress |
+| `RunsFilterChips` | Executor filter row for All, Sandbox, Linux mode, and CI | `selected`, `onSelect` | each selected, horizontal overflow | P6 | In progress |
 | `LinuxSetupCard` | Linux mode setup and status | `state`, `source`, `onInstall`, `onRepair`, `onRemove` | not installed, each setup step, ready, broken, unavailable in `play` | P7 | Built |
 | `LinuxBackgroundSettingRow` | Chooses when the Linux foreground notification keeps Linux running | `mode`, `onClick` | while running, whenever installed, 200% font, 320 dp | C14 | In progress |
 | `LinuxBackgroundPickSheet` | Two-choice picker for the Linux foreground notification rule | `current`, `onPick`, `onDismiss` | each choice selected, light, dark, 200% font, 320 dp | C14 | In progress |

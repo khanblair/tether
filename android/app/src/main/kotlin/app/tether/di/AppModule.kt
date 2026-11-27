@@ -33,12 +33,17 @@ import app.tether.linux.linuxBackgroundStore
 import app.tether.memory.MemoryAreaGateways
 import app.tether.memory.createMemoryAreaGateways
 import app.tether.messages.AppMessages
+import app.tether.newsession.CoreNewSessionGateway
+import app.tether.newsession.NewSessionGateway
+import app.tether.newsession.PendingFirstMessage
 import app.tether.preview.InlinePreviews
 import app.tether.preview.PreviewFilesGateway
 import app.tether.projectarchive.ProjectArchiveGateway
 import app.tether.projectarchive.createProjectArchiveGateway
 import app.tether.providers.CoreProviderGateway
 import app.tether.providers.ProviderGateway
+import app.tether.runs.CoreRunsGateway
+import app.tether.runs.RunsGateway
 import app.tether.session.CoreSessionGateway
 import app.tether.session.QuietEvents
 import app.tether.session.SessionGateway
@@ -90,6 +95,7 @@ class AppModule(
             .absolutePath
     val vault = keystoreSecretVault(context.filesDir.resolve("secrets"))
     val shareInbox = ShareInbox()
+    val pendingFirstMessage = PendingFirstMessage()
 
     /** The provider database opens on the first call, which runs off the main thread. */
     val providerGateway: ProviderGateway =
@@ -132,6 +138,11 @@ class AppModule(
     /** Session lists and creation. The runtime opens on the first call, off the main thread. */
     val sessionGateway: SessionGateway by lazy { CoreSessionGateway(databasePath, vault) }
 
+    /** The context shown before a new session starts. The runtime opens on the first preview. */
+    val newSessionGateway: NewSessionGateway by lazy {
+        CoreNewSessionGateway(executorSessionRuntime)
+    }
+
     /** Memory, skills, and vault for the Skills and memory screens. */
     val memoryArea: MemoryAreaGateways = createMemoryAreaGateways(context.filesDir)
 
@@ -147,6 +158,9 @@ class AppModule(
             ciRuntime = lazy { CiRuntime(databasePath, workspacesRoot, vault) },
         )
     }
+
+    /** The local run history over the same lazy session runtime as executor settings. */
+    val runsGateway: RunsGateway by lazy { CoreRunsGateway(executorSessionRuntime) }
 
     /** Stores platform executor paths for the Linux and sandbox runtimes. */
     fun configureExecutors(paths: ExecutorPathsView) {

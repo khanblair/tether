@@ -151,7 +151,7 @@ The full model is in architecture.md section 10. Mobile-specific points:
 - Backups exclude secrets, the Linux root filesystem, runtime packs, and by default workspaces (`backup_rules.xml`, `data_extraction_rules.xml`). Memory, skills, and the vault are included in backups; they hold no secrets and writes are scanned (architecture.md section 14).
 - Network security config forbids cleartext traffic.
 - Exported components: only the main activity, the share intent filter, and the notification action receiver (which accepts only our signed `PendingIntent`s).
-- The `full` flavor's PRoot binaries live in `nativeLibraryDir` and are signed as part of the APK. The Alpine root filesystem is downloaded and verified against the signed manifest.
+- The `full` flavor's PRoot binaries and loader live in `nativeLibraryDir` and are signed as part of the APK. `extractNativeLibs` must be true in the `full` flavor so both files are available there. The Alpine root filesystem is downloaded and verified against the signed manifest.
 
 ## 10. Budgets
 

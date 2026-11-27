@@ -10,7 +10,7 @@ pub use background::{
 };
 pub use process_tools::ProcessTools;
 pub use router::{Availability, Route, RouteError, RouteInput, Router, ShellFeature, tokenize};
-pub use run::RunTools;
+pub use run::{ParsedRun, RunOutcome, RunTools, parse_run_result};
 
 use std::time::Duration;
 

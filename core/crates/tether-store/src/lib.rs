@@ -28,6 +28,7 @@ mod projects;
 mod projects_tests;
 mod prompt_snapshots;
 mod provider_configs;
+pub mod run_history;
 #[cfg(test)]
 mod schema_tests;
 mod session_archive;

@@ -7,8 +7,9 @@ use tether_workspace::PathGuard;
 use tokio_util::sync::CancellationToken;
 
 use super::RunTools;
-use super::run_support::{append_user_args, trim_output};
-use crate::executors::{CiExecutor, CiRunRequest, ExecutorError, RunReport};
+use super::run_support::{append_user_args, format_result, parse_run_result, trim_output};
+use crate::executors::{CiExecutor, CiRunRequest, ExecutorError, RunReport, RunStatus};
+use crate::permissions::Effect;
 use crate::permissions::rule_for;
 use crate::tool_loop::{ExecuteContext, ToolOutput};
 use crate::tool_loop::{PrepareContext, ToolHandler};
@@ -117,6 +118,108 @@ fn a_run_target_is_the_bare_command_so_a_saved_rule_names_the_program() {
     let rule = rule_for(call.effect, &call.tool, &call.target, call.executor).unwrap();
     assert_eq!(rule.pattern, "echo");
     std::fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+#[expect(
+    clippy::too_many_lines,
+    clippy::excessive_nesting,
+    reason = "The status matrix keeps every formatter and parser case together."
+)]
+fn formatted_run_statuses_round_trip_for_each_executor() {
+    let cases = [
+        (
+            RunStatus::Exited(0),
+            serde_json::json!({"_timeout": 30}),
+            false,
+        ),
+        (
+            RunStatus::Exited(1),
+            serde_json::json!({"_timeout": 30}),
+            false,
+        ),
+        (
+            RunStatus::TimedOut,
+            serde_json::json!({"_timeout": 30}),
+            false,
+        ),
+        (RunStatus::TimedOut, serde_json::json!({}), false),
+        (RunStatus::Cancelled, serde_json::json!({}), false),
+        (RunStatus::OutOfMemory, serde_json::json!({}), false),
+        (RunStatus::Exited(0), serde_json::json!({}), true),
+    ];
+    for executor in [
+        tether_types::Executor::Sandbox,
+        tether_types::Executor::Linux,
+        tether_types::Executor::Ci,
+    ] {
+        for (status, extra, truncated) in &cases {
+            let mut payload = serde_json::json!({"command": "echo hello"});
+            payload
+                .as_object_mut()
+                .unwrap()
+                .extend(extra.as_object().unwrap().clone());
+            let call = crate::tool_loop::PreparedCall {
+                tool: "run".into(),
+                effect: if executor == tether_types::Executor::Sandbox {
+                    Effect::RunSandbox
+                } else {
+                    Effect::RunHost
+                },
+                target: "echo hello".into(),
+                executor: Some(executor),
+                payload,
+            };
+            let text = format_result(
+                executor,
+                &call,
+                &RunReport {
+                    status: *status,
+                    output: "output".into(),
+                    duration: Duration::from_millis(123),
+                    output_truncated: *truncated,
+                },
+            );
+            let parsed = parse_run_result(&text, false);
+            assert_eq!(parsed.executor, Some(executor));
+            assert_eq!(parsed.duration_ms, Some(123));
+            assert_eq!(
+                parsed.outcome,
+                match *status {
+                    RunStatus::Exited(code) => super::run_support::RunOutcome::Exited(code),
+                    RunStatus::TimedOut => super::run_support::RunOutcome::TimedOut,
+                    RunStatus::Cancelled => super::run_support::RunOutcome::Cancelled,
+                    RunStatus::OutOfMemory => super::run_support::RunOutcome::OutOfMemory,
+                }
+            );
+        }
+    }
+}
+
+#[test]
+fn parser_handles_background_cancelled_denied_and_unknown_results() {
+    let background = parse_run_result(
+        "process: p1\nport: 5173\nurl: http://127.0.0.1:5173/\noutput:\nready",
+        false,
+    );
+    assert_eq!(background.executor, Some(tether_types::Executor::Linux));
+    assert_eq!(
+        background.outcome,
+        super::run_support::RunOutcome::Background
+    );
+    assert_eq!(background.duration_ms, None);
+    assert_eq!(
+        parse_run_result("tool cancelled before execution", true).outcome,
+        super::run_support::RunOutcome::Cancelled
+    );
+    assert_eq!(
+        parse_run_result("denied by the user: needs approval", true).outcome,
+        super::run_support::RunOutcome::Denied
+    );
+    assert_eq!(
+        parse_run_result("garbage", false).outcome,
+        super::run_support::RunOutcome::Unknown
+    );
 }
 
 fn run_tools(root: &std::path::Path) -> (RunTools, PathGuard) {

@@ -31,7 +31,11 @@ class UpdatesController(
     private val io: CoroutineDispatcher = Dispatchers.IO,
     private val clock: () -> Long = System::currentTimeMillis,
     private val fileExists: (String) -> Boolean = { File(it).isFile },
+    isDebuggable: Boolean = false,
 ) {
+    /** False in a debuggable build: nothing checks, restores, or offers an update. */
+    private val enabled = updatesEnabled(isDebuggable)
+
     /** True while a check runs, so a background check and a manual one never overlap. */
     private val checkLock = Any()
 
@@ -49,6 +53,7 @@ class UpdatesController(
             UpdatesUiState(
                 currentVersion = currentVersion,
                 installsInApp = installer.installsInApp,
+                developmentBuild = !enabled,
             ),
         )
 
@@ -57,6 +62,7 @@ class UpdatesController(
 
     /** Remembers the newer version an earlier launch found, so a banner can show at once. */
     fun restore() {
+        if (!enabled) return
         scope.launch {
             val known = withContext(io) { store.availableVersion() }
             if (known != null && isNewerVersion(known, currentVersion)) {
@@ -75,6 +81,7 @@ class UpdatesController(
 
     /** Checks in the background when the last check is over 12 hours old. Failures stay silent. */
     fun checkIfDue() {
+        if (!enabled) return
         scope.launch {
             val last = withContext(io) { store.lastCheckMs() }
             val due = last == null || clock() - last >= CHECK_INTERVAL_MS
@@ -86,6 +93,7 @@ class UpdatesController(
 
     /** Checks now and shows the result or the failure. */
     fun checkNow() {
+        if (!enabled) return
         val before = reserveCheck(showChecking = true) ?: return
         scope.launch { runCheck(manual = true, before = before) }
     }

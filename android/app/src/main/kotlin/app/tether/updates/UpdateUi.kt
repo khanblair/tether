@@ -137,6 +137,11 @@ private fun failedPrimary(state: UpdatesUiState): UpdateAction =
         else -> UpdateAction.Check
     }
 
+/** The version line on About: the release wording, or the development build wording. */
+@StringRes
+internal fun versionLabelFor(state: UpdatesUiState): Int =
+    if (state.developmentBuild) R.string.dev_build_version else R.string.about_version
+
 /** One sentence for each failed step. A test checks that every problem has its own. */
 private val problemTexts: Map<UpdateProblem, Int> =
     mapOf(

@@ -359,10 +359,11 @@ private fun UpdatesRow(
 ) {
     val version = state.newerVersion
     val subtitle =
-        if (state.updateAvailable && version != null) {
-            stringResource(R.string.settings_about_update_available, version)
-        } else {
-            stringResource(R.string.settings_about_version, state.currentVersion)
+        when {
+            state.developmentBuild -> stringResource(R.string.dev_build_settings_subtitle)
+            state.updateAvailable && version != null ->
+                stringResource(R.string.settings_about_update_available, version)
+            else -> stringResource(R.string.settings_about_version, state.currentVersion)
         }
     ListRow(
         title = stringResource(R.string.settings_about_title),

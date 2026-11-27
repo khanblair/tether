@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dev_build_version">%1$s (development build)</string>
+    <string name="dev_build_updates_off">This is a development build. Updates are off.</string>
+    <string name="dev_build_settings_subtitle">Development build</string>
+</resources>

@@ -141,7 +141,6 @@ class LinuxShellViewModel(
         onSourceClosed()
         closeScope.launch { runShellCall { handle?.let { it.close() } } }
         output.close()
-        super.onCleared()
     }
 
     private suspend fun consumeOutput() {

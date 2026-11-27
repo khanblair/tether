@@ -1,5 +1,6 @@
 package app.tether.workspace
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Environment
 import androidx.compose.foundation.layout.Column
@@ -307,12 +308,12 @@ internal fun WorkspaceDarkPreview() {
                 WorkspaceUiState(
                     location =
                         WorkspaceLocation(
-                            "/data/user/0/app/files/workspaces",
-                            "/sdcard/Tether",
-                            "/sdcard/Tether",
+                            PREVIEW_PRIVATE_ROOT,
+                            PREVIEW_SHARED_ROOT,
+                            PREVIEW_SHARED_ROOT,
                         ),
                     choice = WorkspaceChoice.Custom,
-                    pathInput = "/sdcard/Tether",
+                    pathInput = PREVIEW_SHARED_ROOT,
                     allFilesAccessGranted = true,
                 ),
         )
@@ -352,12 +353,19 @@ private fun WorkspacePreview(state: WorkspaceUiState) {
     }
 }
 
+// Sample paths for previews only. They are never used at runtime.
+@SuppressLint("SdCardPath")
+private const val PREVIEW_PRIVATE_ROOT = "/data/user/0/app/files/workspaces"
+
+@SuppressLint("SdCardPath")
+private const val PREVIEW_SHARED_ROOT = "/sdcard/Tether"
+
 private fun previewState() =
     WorkspaceUiState(
         location =
             WorkspaceLocation(
-                "/data/user/0/app/files/workspaces",
+                PREVIEW_PRIVATE_ROOT,
                 null,
-                "/data/user/0/app/files/workspaces",
+                PREVIEW_PRIVATE_ROOT,
             ),
     )

@@ -1,6 +1,6 @@
 # Preview: see what the agent built, inside the app
 
-Status: scope written 2026-11-26, updated 2026-11-27. Static preview is built. Android wiring for local servers is built; Linux setup and the emulator check remain.
+Status: scope written 2026-11-26, updated 2026-11-27. Static preview is built. Android wiring for local servers is built and the signed root file system is published (release `rootfs-3.22.2`); the emulator check remains.
 
 ## 1. What Blair asked for
 
@@ -12,7 +12,7 @@ Blair asked the agent to "create an HTML file, simple website and open it". The 
 - The `run` tool does not run shell lines. The saved call was `termux-open-file index.html 2>/dev/null || am start ...`. The router answered "no executor is available ... set up Linux mode or CI". Pipes, `||` and redirects are shell syntax, and no executor offers a shell.
 - The sandbox executor (Wasmtime, `core/crates/tether-sandbox`) is built. It runs programs from installed runtime packs (Python, QuickJS). It has no sockets, so it cannot serve a page to a WebView.
 - Linux mode's Rust library is built (backend baseline, 2026-11-21 to 23: P7-02 to P7-05). `core/crates/tether-linux` has the signed rootfs manifest check, a hardened download and extract, base package install, the PRoot command builder, the runner with output caps and a network policy, a PTY shell, and about 1,900 lines of tests. The FFI has `configure_executors`, `setup_linux_mode`, and a `linux_ready` flag, and the `run` tool already routes to a Linux executor when it is ready.
-- Linux setup still needs the signed root file system and the final emulator check. The app wiring is present in the full build, but the PRoot spike remains the release gate.
+- The signed root file system is published and the app wiring is present in the full build. Linux setup still needs the emulator check on a device.
 - The app has a WebView preview for the user's own project. Core screens remain Compose. The preview is a separate, guarded use of WebView.
 - The core reads project files only as text. `FilesRuntime.read_file` caps at 256 KiB and refuses binary files (`core/crates/tether-ffi/src/files.rs`). A page needs images, fonts, and scripts as bytes.
 - All project file access in the core goes through `PathGuard` (`tether-workspace/src/path_guard.rs`: no symlinks, no `.git`, nothing outside the root). The review rules flag any file access outside it.
@@ -65,4 +65,4 @@ Risks, from `docs/product-scope.md`: Google Play may reject downloaded executabl
 ## 6. Status
 
 - Stage 1: core `read_file_bytes`, the Preview screen, and the entry points are built.
-- Stage 2 core and Android app wiring: background Linux processes, port discovery, process tools, server preview validation, process state, and `ProcessChanged` / `PreviewRequested` handling are built. PRoot packaging, signed root file system hosting, and the emulator check remain.
+- Stage 2 core and Android app wiring: background Linux processes, port discovery, process tools, server preview validation, process state, and `ProcessChanged` / `PreviewRequested` handling are built. PRoot packaging and the signed root file system release are done. The emulator check remains.

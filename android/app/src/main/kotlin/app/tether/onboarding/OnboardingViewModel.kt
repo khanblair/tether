@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.update
 enum class OnboardingStep {
     Welcome,
     AddKey,
+    Workspace,
     OpenProject,
 }
 

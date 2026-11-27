@@ -3,6 +3,7 @@ package app.tether.settings
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.tether.workspace.WorkspaceDataPaths
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,6 +19,7 @@ import kotlinx.coroutines.launch
 @Immutable
 data class DataUiState(
     val usage: StorageUsage? = null,
+    val paths: WorkspaceDataPaths? = null,
     val cacheFailed: Boolean = false,
 )
 
@@ -40,7 +42,7 @@ class DataViewModel(
     fun refresh() {
         viewModelScope.launch(io) {
             val usage = source.usage()
-            mutableState.update { it.copy(usage = usage) }
+            mutableState.update { it.copy(usage = usage, paths = source.paths()) }
         }
     }
 

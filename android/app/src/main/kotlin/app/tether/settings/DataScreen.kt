@@ -16,6 +16,7 @@ import app.tether.design.components.ListGroup
 import app.tether.design.components.ListRow
 import app.tether.design.components.SectionTitle
 import app.tether.design.components.TetherTextButton
+import app.tether.workspace.WorkspaceDataPaths
 
 /**
  * Storage by kind, and the update cache with its one clear action. Nothing here deletes projects.
@@ -24,32 +25,25 @@ import app.tether.design.components.TetherTextButton
 fun DataScreen(
     viewModel: DataViewModel,
     onBack: () -> Unit,
+    onOpenWorkspace: () -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val usage = state.usage
+    val paths = state.paths
 
     val unknown = stringResource(R.string.settings_area_size_unknown)
 
     fun sizeOf(bytes: Long?): String =
         bytes?.let { Formatter.formatShortFileSize(context, it) } ?: unknown
     SettingsPage(title = stringResource(R.string.settings_area_data_title), onBack = onBack) {
-        SectionTitle(text = stringResource(R.string.settings_area_data_stored))
-        ListGroup {
-            ListRow(
-                title = stringResource(R.string.settings_area_data_database),
-                subtitle = stringResource(R.string.settings_area_data_database_body),
-                trailing = { SizeText(sizeOf(usage?.database)) },
-            )
-            ListRow(
-                title = stringResource(R.string.settings_area_data_workspaces),
-                subtitle = stringResource(R.string.settings_area_data_workspaces_body),
-                trailing = { SizeText(sizeOf(usage?.workspaces)) },
-            )
-            ListRow(
-                title = stringResource(R.string.settings_area_data_blobs),
-                subtitle = stringResource(R.string.settings_area_data_blobs_body),
-                trailing = { SizeText(sizeOf(usage?.checkpointBlobs)) },
+        SectionTitle(text = stringResource(R.string.workspace_data_title))
+        if (usage != null && paths != null) {
+            DataLocations(
+                paths = paths,
+                usage = usage,
+                sizeOf = ::sizeOf,
+                onOpenWorkspace = onOpenWorkspace,
             )
         }
         SectionTitle(text = stringResource(R.string.settings_area_data_cache))
@@ -73,6 +67,45 @@ fun DataScreen(
         }
     }
 }
+
+@Composable
+private fun DataLocations(
+    paths: WorkspaceDataPaths,
+    usage: StorageUsage,
+    sizeOf: (Long?) -> String,
+    onOpenWorkspace: () -> Unit,
+) {
+    ListGroup {
+        dataLocations(paths, usage).forEach { location ->
+            ListRow(
+                title = dataLocationTitle(location.kind),
+                subtitle = location.path,
+                trailing = { SizeText(sizeOf(location.size)) },
+                onClick =
+                    if (location.kind == DataLocationKind.Projects) {
+                        onOpenWorkspace
+                    } else {
+                        null
+                    },
+            )
+        }
+    }
+}
+
+@Composable
+private fun dataLocationTitle(kind: DataLocationKind): String =
+    stringResource(
+        when (kind) {
+            DataLocationKind.Projects -> R.string.workspace_data_projects
+            DataLocationKind.Database -> R.string.workspace_data_database
+            DataLocationKind.Secrets -> R.string.workspace_data_secrets
+            DataLocationKind.Checkpoints -> R.string.workspace_data_checkpoints
+            DataLocationKind.Memory -> R.string.workspace_data_memory
+            DataLocationKind.Skills -> R.string.workspace_data_skills
+            DataLocationKind.Vault -> R.string.workspace_data_vault
+            DataLocationKind.CrashReport -> R.string.workspace_data_crash_report
+        },
+    )
 
 /** A size shown at the end of a row. The row's title carries the name of the item. */
 @Composable

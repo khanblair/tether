@@ -24,12 +24,15 @@ class OnboardingViewModelTest {
         vm.next()
         assertEquals(OnboardingStep.AddKey, vm.state.value.step)
         vm.next()
+        assertEquals(OnboardingStep.Workspace, vm.state.value.step)
+        vm.next()
         assertEquals(OnboardingStep.OpenProject, vm.state.value.step)
     }
 
     @Test
     fun next_on_the_last_step_stays_there() {
         val vm = OnboardingViewModel(FakeSettingsStore())
+        vm.next()
         vm.next()
         vm.next()
 
@@ -43,7 +46,10 @@ class OnboardingViewModelTest {
         val vm = OnboardingViewModel(FakeSettingsStore())
         vm.next()
         vm.next()
+        vm.next()
 
+        vm.back()
+        assertEquals(OnboardingStep.Workspace, vm.state.value.step)
         vm.back()
         assertEquals(OnboardingStep.AddKey, vm.state.value.step)
         vm.back()
@@ -94,6 +100,7 @@ class OnboardingViewModelTest {
         val vm = OnboardingViewModel(settings)
         vm.next()
         vm.next()
+        vm.next()
 
         vm.openNewProject()
 
@@ -107,6 +114,7 @@ class OnboardingViewModelTest {
         val vm = OnboardingViewModel(settings)
         vm.next()
         vm.next()
+        vm.next()
 
         vm.openClone()
 
@@ -118,6 +126,7 @@ class OnboardingViewModelTest {
     fun choosing_import_saves_done_and_opens_the_import_screen() {
         val settings = FakeSettingsStore()
         val vm = OnboardingViewModel(settings)
+        vm.next()
         vm.next()
         vm.next()
 

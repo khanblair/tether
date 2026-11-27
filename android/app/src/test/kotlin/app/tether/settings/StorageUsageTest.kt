@@ -1,5 +1,6 @@
 package app.tether.settings
 
+import app.tether.workspace.WorkspaceDataPaths
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -57,6 +58,26 @@ class StorageUsageTest {
 
         assertEquals(7L, usage.appData)
         assertFalse(usage.appData == 107L)
+    }
+
+    @Test
+    fun data_locations_keep_paths_without_reading_secret_values() {
+        val paths =
+            WorkspaceDataPaths(
+                projects = "/private/projects",
+                database = "/private/db/tether.db",
+                secrets = "/private/secrets",
+                checkpoints = "/private/blobs",
+                memory = "/private/memory",
+                skills = "/private/skills",
+                vault = "/private/vault",
+                crashReport = "/private/crash/last.txt",
+            )
+        val rows = dataLocations(paths, StorageUsage(1L, 2L, 3L, 4L))
+        val secrets = rows.single { it.kind == DataLocationKind.Secrets }
+
+        assertEquals("/private/secrets", secrets.path)
+        assertFalse(rows.toString().contains("secret-value"))
     }
 
     private fun source(

@@ -183,6 +183,21 @@ impl From<CoreEvent> for CoreEventView {
                 findings: findings.into_iter().map(Into::into).collect(),
                 skipped,
             },
+            CoreEvent::ProcessChanged {
+                session_id,
+                process_id,
+                status,
+                port,
+            } => Self::ProcessChanged {
+                session_id: session_id.into(),
+                process_id,
+                status: status.into(),
+                port,
+            },
+            CoreEvent::PreviewRequested { session_id, target } => Self::PreviewRequested {
+                session_id: session_id.into(),
+                target: target.into(),
+            },
         }
     }
 }

@@ -229,6 +229,7 @@ impl SessionRuntime {
             .map_err(|_| SessionRuntimeError::Unavailable)?
             .remove(&SessionId::new(session_id))
         {
+            runner.shutdown_background();
             runner.valid.store(false, Ordering::Release);
         }
         Ok(())

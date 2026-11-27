@@ -83,6 +83,7 @@ pub struct SessionRuntime {
     pub(crate) network: Arc<tether_engine::network::NetworkControl>,
     pub(crate) notify: Arc<crate::notify::NotifyState>,
     pub(crate) mcp_manager: Arc<tether_engine::McpManager>,
+    pub(crate) linux_shell_slot: Arc<crate::shell::ShellSlot>,
 }
 
 #[uniffi::export]
@@ -118,6 +119,7 @@ impl SessionRuntime {
             network: Arc::new(tether_engine::network::NetworkControl::new()),
             notify: Arc::new(crate::notify::NotifyState::new()),
             mcp_manager,
+            linux_shell_slot: crate::shell::ShellSlot::new(),
         }))
     }
 
@@ -305,6 +307,21 @@ pub struct SessionRunner {
     pub(crate) handle: SessionHandle,
     runtime: Arc<tokio::runtime::Runtime>,
     valid: AtomicBool,
+    pub(crate) background: Option<Arc<tether_engine::BackgroundProcesses>>,
+}
+
+impl SessionRunner {
+    pub(crate) fn shutdown_background(&self) {
+        if let Some(background) = &self.background {
+            background.shutdown();
+        }
+    }
+}
+
+impl Drop for SessionRunner {
+    fn drop(&mut self) {
+        self.shutdown_background();
+    }
 }
 
 #[uniffi::export]

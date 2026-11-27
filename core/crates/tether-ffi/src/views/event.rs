@@ -1,8 +1,9 @@
 //! The event view the platform layer receives.
 
 use super::{
-    BudgetScopeView, ConnectionStatusView, CoreErrorView, PlanView, ProviderView,
-    SessionStatusView, TodoItemView, ToolCallStatusView, UsageSnapshotView,
+    BudgetScopeView, ConnectionStatusView, CoreErrorView, PlanView, PreviewTargetView,
+    ProcessStatusView, ProviderView, SessionStatusView, TodoItemView, ToolCallStatusView,
+    UsageSnapshotView,
 };
 
 #[path = "event_from.rs"]
@@ -243,6 +244,24 @@ pub enum CoreEventView {
         findings: Vec<QualityFindingRecordView>,
         /// Number of skipped changed files.
         skipped: u32,
+    },
+    /// A session-owned background process changed state.
+    ProcessChanged {
+        /// Session id.
+        session_id: String,
+        /// Short process id.
+        process_id: String,
+        /// New process state.
+        status: ProcessStatusView,
+        /// Detected port, if any.
+        port: Option<u16>,
+    },
+    /// The agent asked the app to open a Preview target.
+    PreviewRequested {
+        /// Session id.
+        session_id: String,
+        /// Preview target.
+        target: PreviewTargetView,
     },
 }
 

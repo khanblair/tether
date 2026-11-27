@@ -1,10 +1,15 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::sync::mpsc::{self, Receiver, Sender};
+use std::time::Duration;
 
 use tempfile::TempDir;
 
 use super::*;
-use crate::{CoreEventView, EventSink, SecretVault, SecretsPlatform, SecretsPlatformFailure};
+use crate::{
+    CoreEventView, EventSink, LinuxShellSession, LinuxShellSink, SecretVault, SecretsPlatform,
+    SecretsPlatformFailure,
+};
 
 struct PlainPlatform;
 
@@ -183,4 +188,179 @@ fn linux_readiness_requires_the_loader_file() {
     assert!(!runtime.executor_availability().unwrap().linux_ready);
     std::fs::write(loader, b"loader").unwrap();
     assert!(runtime.executor_availability().unwrap().linux_ready);
+}
+
+enum ShellEvent {
+    Output(Vec<u8>),
+    Exit(i32),
+}
+
+struct ShellSink(Sender<ShellEvent>);
+
+impl LinuxShellSink for ShellSink {
+    fn on_output(&self, bytes: Vec<u8>) {
+        self.0.send(ShellEvent::Output(bytes)).unwrap();
+    }
+
+    fn on_exit(&self, code: i32) {
+        self.0.send(ShellEvent::Exit(code)).unwrap();
+    }
+}
+
+fn shell_fixture(ready: bool) -> (TempDir, Arc<SessionRuntime>) {
+    let (directory, runtime) = runtime_fixture();
+    let workspace = directory.path().join("workspace");
+    std::fs::create_dir(&workspace).unwrap();
+    let proot = fake_shell_proot(directory.path(), &workspace);
+    let loader = directory.path().join("loader");
+    std::fs::write(&loader, b"loader").unwrap();
+    let linux_root = directory.path().join("linux");
+    std::fs::create_dir_all(linux_root.join("tmp")).unwrap();
+    std::fs::create_dir_all(linux_root.join("etc")).unwrap();
+    std::fs::write(linux_root.join("etc/resolv.empty"), b"").unwrap();
+    std::fs::write(
+        linux_root.join("etc/resolv.conf"),
+        b"nameserver 127.0.0.1\n",
+    )
+    .unwrap();
+    if ready {
+        ready_rootfs(&linux_root);
+    }
+    runtime
+        .configure_executors(paths(directory.path(), Some(proot), Some(loader)))
+        .unwrap();
+    (directory, runtime)
+}
+
+fn fake_shell_proot(root: &Path, workspace: &Path) -> PathBuf {
+    let path = root.join("proot");
+    let script = format!(
+        "#!/bin/sh\nwhile [ \"$#\" -gt 0 ]; do\n  case \"$1\" in\n    -r|-w) shift 2 ;;\n    -b) bind=\"$2\"; case \"$bind\" in *:/workspace) cd \"${{bind%:/workspace}}\" ;; esac; shift 2 ;;\n    -0|--link2symlink|--kill-on-exit) shift ;;\n    *) break ;;\n  esac\ndone\ncd \"{}\"\nexec \"$@\"\n",
+        workspace.display()
+    );
+    std::fs::write(&path, script).unwrap();
+    let mut permissions = std::fs::metadata(&path).unwrap().permissions();
+    std::os::unix::fs::PermissionsExt::set_mode(&mut permissions, 0o755);
+    std::fs::set_permissions(&path, permissions).unwrap();
+    path
+}
+
+fn open_shell(runtime: &SessionRuntime) -> (Arc<LinuxShellSession>, Receiver<ShellEvent>) {
+    let (sender, receiver) = mpsc::channel();
+    let sink = Arc::new(ShellSink(sender));
+    let session = runtime.open_linux_shell(None, 24, 80, sink).unwrap();
+    (session, receiver)
+}
+
+fn collect_until_exit(receiver: &Receiver<ShellEvent>) -> (Vec<Vec<u8>>, Vec<i32>) {
+    let mut output = Vec::new();
+    let mut exits = Vec::new();
+    loop {
+        match receiver.recv_timeout(Duration::from_secs(2)).unwrap() {
+            ShellEvent::Output(bytes) => output.push(bytes),
+            ShellEvent::Exit(code) => {
+                exits.push(code);
+                break;
+            }
+        }
+    }
+    (output, exits)
+}
+
+#[test]
+fn linux_shell_forwards_output_in_order_and_caps_chunks() {
+    let (_directory, runtime) = shell_fixture(true);
+    let (session, receiver) = open_shell(&runtime);
+
+    session
+        .write(b"stty -echo; printf first; printf second; exit\n".to_vec())
+        .unwrap();
+    let (chunks, exits) = collect_until_exit(&receiver);
+    let output: Vec<u8> = chunks.iter().flatten().copied().collect();
+    let first = output.windows(5).position(|part| part == b"first");
+    let second = output.windows(6).position(|part| part == b"second");
+
+    assert!(first.is_some());
+    assert!(second.is_some());
+    assert!(first.unwrap() < second.unwrap());
+    assert!(chunks.iter().all(|chunk| chunk.len() <= 8 * 1024));
+    assert_eq!(exits, vec![0]);
+}
+
+#[test]
+fn linux_shell_write_reaches_the_guest() {
+    let (_directory, runtime) = shell_fixture(true);
+    let (session, receiver) = open_shell(&runtime);
+
+    session.write(b"printf reached; exit\n".to_vec()).unwrap();
+    let (chunks, _exits) = collect_until_exit(&receiver);
+    let output: Vec<u8> = chunks.iter().flatten().copied().collect();
+
+    assert!(output.windows(7).any(|part| part == b"reached"));
+}
+
+#[test]
+fn linux_shell_exit_callback_fires_once_with_the_code() {
+    let (_directory, runtime) = shell_fixture(true);
+    let (session, receiver) = open_shell(&runtime);
+
+    session.write(b"exit 7\n".to_vec()).unwrap();
+    let (_chunks, exits) = collect_until_exit(&receiver);
+
+    assert_eq!(exits, vec![7]);
+    assert!(receiver.recv_timeout(Duration::from_millis(100)).is_err());
+}
+
+#[test]
+fn linux_shell_close_is_safe_to_call_twice() {
+    let (_directory, runtime) = shell_fixture(true);
+    let (session, receiver) = open_shell(&runtime);
+    session.write(b"sleep 10\n".to_vec()).unwrap();
+
+    session.close().unwrap();
+    session.close().unwrap();
+    let (_chunks, exits) = collect_until_exit(&receiver);
+
+    assert_eq!(exits.len(), 1);
+}
+
+#[test]
+fn linux_shell_rejects_a_second_open_until_the_first_exits() {
+    let (_directory, runtime) = shell_fixture(true);
+    let (first, receiver) = open_shell(&runtime);
+    let (sender, _second_receiver) = mpsc::channel();
+    let second_sink = Arc::new(ShellSink(sender));
+
+    let result = runtime.open_linux_shell(None, 24, 80, second_sink);
+
+    assert!(matches!(
+        result,
+        Err(ExecutorRuntimeError::LinuxShellAlreadyOpen)
+    ));
+    first.close().unwrap();
+    let (_chunks, _exits) = collect_until_exit(&receiver);
+}
+
+#[test]
+fn linux_shell_reports_not_ready_as_a_typed_error() {
+    let (_directory, runtime) = shell_fixture(false);
+    let (sender, _receiver) = mpsc::channel();
+    let sink = Arc::new(ShellSink(sender));
+
+    assert!(matches!(
+        runtime.open_linux_shell(None, 24, 80, sink),
+        Err(ExecutorRuntimeError::LinuxNotReady)
+    ));
+}
+
+#[test]
+fn dropping_linux_shell_kills_the_guest() {
+    let (_directory, runtime) = shell_fixture(true);
+    let (session, receiver) = open_shell(&runtime);
+    session.write(b"sleep 10\n".to_vec()).unwrap();
+
+    drop(session);
+    let (_chunks, exits) = collect_until_exit(&receiver);
+
+    assert_eq!(exits.len(), 1);
 }

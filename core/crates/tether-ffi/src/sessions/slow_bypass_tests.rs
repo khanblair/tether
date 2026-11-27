@@ -121,6 +121,7 @@ fn fake_runtime(
         handle,
         runtime: Arc::clone(&runtime.runtime),
         valid: AtomicBool::new(true),
+        background: None,
     });
     runtime
         .runners

@@ -9,10 +9,10 @@ use tether_engine::config;
 use tether_engine::executors::{CiExecutor, NotConfigured, RunTools};
 use tether_linux::{LinuxRunner, NetworkPolicy, ProotConfig, RootfsManager, RootfsStatus};
 use tether_sandbox::installed_programs;
-use tether_store::Store;
+use tether_store::{Store, project_dir};
 use tether_types::{ProjectId, SessionId};
 
-use crate::SessionRuntime;
+use crate::{LinuxShellSession, LinuxShellSink, SessionRuntime};
 
 #[path = "executors_download.rs"]
 mod downloads;
@@ -58,6 +58,12 @@ pub enum ExecutorRuntimeError {
     /// The requested project does not exist.
     #[error("project not found")]
     ProjectNotFound,
+    /// Linux mode is not installed or cannot be used yet.
+    #[error("Linux mode is not ready")]
+    LinuxNotReady,
+    /// One interactive Linux shell is already open for this executor runtime.
+    #[error("a Linux shell is already open")]
+    LinuxShellAlreadyOpen,
 }
 
 #[uniffi::export]
@@ -148,6 +154,60 @@ impl SessionRuntime {
                 _ => ExecutorRuntimeError::Unavailable,
             })
     }
+
+    /// Opens one interactive shell in the Alpine guest.
+    ///
+    /// When `project_id` is present, its workspace is mounted at `/workspace` and its saved
+    /// network policy is used. Output and exit callbacks run on a Rust reader thread.
+    ///
+    /// # Errors
+    /// Returns an error when Linux is not ready, the project is missing, or a shell is open.
+    #[expect(
+        clippy::needless_pass_by_value,
+        reason = "UniFFI transfers the optional project id as an owned value"
+    )]
+    pub fn open_linux_shell(
+        &self,
+        project_id: Option<String>,
+        rows: u16,
+        cols: u16,
+        sink: Arc<dyn LinuxShellSink>,
+    ) -> Result<Arc<LinuxShellSession>, ExecutorRuntimeError> {
+        let paths = read_paths(&self.files_root)?;
+        let (workspace, network) = self.linux_shell_project(project_id.as_deref())?;
+        let config = linux_shell_config(&paths, workspace, network)?;
+        let lease = self.linux_shell_slot.acquire()?;
+        LinuxShellSession::open(&config, rows, cols, sink, lease)
+    }
+}
+
+impl SessionRuntime {
+    fn linux_shell_project(
+        &self,
+        project_id: Option<&str>,
+    ) -> Result<(Option<PathBuf>, NetworkPolicy), ExecutorRuntimeError> {
+        let Some(project_id) = project_id else {
+            return Ok((None, NetworkPolicy::Off));
+        };
+        let store = self
+            .store()
+            .map_err(|_| ExecutorRuntimeError::Unavailable)?;
+        let id = ProjectId::new(project_id);
+        let project = store
+            .load_project(&id)
+            .map_err(|_| ExecutorRuntimeError::Unavailable)?
+            .ok_or(ExecutorRuntimeError::ProjectNotFound)?;
+        let workspace = project_dir(&self.files_root.join("workspaces"), &project);
+        let network = if store
+            .project_network(&id)
+            .map_err(|_| ExecutorRuntimeError::Unavailable)?
+        {
+            NetworkPolicy::On
+        } else {
+            NetworkPolicy::Off
+        };
+        Ok((Some(workspace), network))
+    }
 }
 
 #[derive(Debug)]
@@ -237,6 +297,32 @@ fn linux_runners(
         Some(make(NetworkPolicy::Off)),
         Some(make(NetworkPolicy::On)),
     )
+}
+
+fn linux_shell_config(
+    paths: &ExecutorPaths,
+    workspace: Option<PathBuf>,
+    network: NetworkPolicy,
+) -> Result<ProotConfig, ExecutorRuntimeError> {
+    let Some(proot_path) = paths.proot_path.clone() else {
+        return Err(ExecutorRuntimeError::LinuxNotReady);
+    };
+    let ready = proot_path.is_file()
+        && paths.loader_path.is_file()
+        && matches!(
+            RootfsManager::new(&paths.linux_root).status(),
+            Ok(RootfsStatus::Ready { .. })
+        );
+    if !ready {
+        return Err(ExecutorRuntimeError::LinuxNotReady);
+    }
+    Ok(ProotConfig {
+        proot_path,
+        loader_path: paths.loader_path.clone(),
+        linux_root: paths.linux_root.clone(),
+        workspace,
+        network,
+    })
 }
 
 fn files_root(database_path: &Path) -> PathBuf {

@@ -164,6 +164,12 @@ impl EventSink for NoopSink {
     fn on_event(&self, _event: crate::CoreEventView) {}
 }
 
+struct EngineNoopSink;
+
+impl tether_engine::EventSink for EngineNoopSink {
+    fn on_event(&self, _event: tether_types::CoreEvent) {}
+}
+
 fn seeded_session(db: &Path) -> SessionId {
     let mut store = Store::open(db).unwrap();
     let project = ProjectId::new("01TESTPROJECT00000000000000");
@@ -266,10 +272,11 @@ fn workspace_session_requires_a_saved_project_folder() {
             approver: Arc::new(ApprovalBroker::new()),
             vault,
             mcp_manager,
+            sink: Arc::new(EngineNoopSink),
         },
     )
     .unwrap();
-    assert!(!tools.approver.interactive());
+    assert!(!tools.0.approver.interactive());
     assert!(
         runtime
             .open_session_with_workspace(session_id.as_str(), root.to_str().unwrap())
@@ -301,10 +308,11 @@ fn plain_project_sessions_advertise_git_tools_for_initialization() {
             approver: Arc::new(ApprovalBroker::new()),
             vault,
             mcp_manager,
+            sink: Arc::new(EngineNoopSink),
         },
     )
     .unwrap();
-    let registry = ToolLoop::with_handlers(tools.guard, tools.handlers).unwrap();
+    let registry = ToolLoop::with_handlers(tools.0.guard, tools.0.handlers).unwrap();
     let names: Vec<_> = registry.specs().into_iter().map(|spec| spec.name).collect();
     assert!(names.contains(&"git_init".to_owned()));
     assert!(names.contains(&"github_repo_create".to_owned()));

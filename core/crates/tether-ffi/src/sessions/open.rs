@@ -39,8 +39,8 @@ impl SessionRuntime {
         provider_key(&self.vault, session.provider)?;
         let provider_factory = session_provider_factory(Arc::clone(&self.vault), session.provider);
         let sink = self.session_sink();
-        let (actor, handle) = if let Some(root) = workspaces_root {
-            let tools = session_tool_runtime(
+        let (actor, handle, background) = if let Some(root) = workspaces_root {
+            let (tools, background) = session_tool_runtime(
                 &store,
                 &session,
                 ToolWiring {
@@ -50,6 +50,7 @@ impl SessionRuntime {
                     approver: Arc::clone(&self.broker),
                     vault: Arc::clone(&self.vault),
                     mcp_manager: Arc::clone(&self.mcp_manager),
+                    sink: Arc::clone(&sink),
                 },
             )?;
             let project = store
@@ -82,6 +83,7 @@ impl SessionRuntime {
                     network: Some(Arc::clone(&self.network)),
                 },
             )
+            .map(|(actor, handle)| (actor, handle, Some(background)))
         } else {
             let project = store
                 .load_project(&session.project_id)
@@ -101,6 +103,7 @@ impl SessionRuntime {
                     network: Some(Arc::clone(&self.network)),
                 },
             )
+            .map(|(actor, handle)| (actor, handle, None))
         }
         .map_err(|_| SessionRuntimeError::Unavailable)?;
         self.runtime.spawn(actor.run());
@@ -108,6 +111,7 @@ impl SessionRuntime {
             handle,
             runtime: Arc::clone(&self.runtime),
             valid: AtomicBool::new(true),
+            background,
         });
         runners.insert(id, Arc::clone(&runner));
         Ok(runner)
@@ -128,6 +132,8 @@ pub(super) struct ToolWiring<'a> {
     pub(super) vault: Arc<crate::SecretVault>,
     /// Shared MCP manager for this process runtime.
     pub(super) mcp_manager: Arc<tether_engine::McpManager>,
+    /// Event sink for process and preview events.
+    pub(super) sink: Arc<dyn tether_engine::EventSink>,
 }
 
 #[expect(
@@ -138,7 +144,7 @@ pub(super) fn session_tool_runtime(
     store: &Store,
     session: &SessionRecord,
     wiring: ToolWiring<'_>,
-) -> Result<ToolRuntime, SessionRuntimeError> {
+) -> Result<(ToolRuntime, Arc<tether_engine::BackgroundProcesses>), SessionRuntimeError> {
     let root = wiring.root;
     let project = store
         .load_project(&session.project_id)
@@ -162,6 +168,10 @@ pub(super) fn session_tool_runtime(
         wiring.files_root,
         &session.project_id,
     )?;
+    let background = Arc::new(tether_engine::BackgroundProcesses::new(
+        session.id.clone(),
+        Arc::clone(&wiring.sink),
+    ));
     let git_handler = git_tool_handler(store, session, &wiring)?;
     let mut handlers: Vec<Arc<dyn tether_engine::ToolHandler>> = vec![
         Arc::new(
@@ -170,7 +180,8 @@ pub(super) fn session_tool_runtime(
                 &project_root,
                 &session.project_id,
             )
-            .map_err(|_| SessionRuntimeError::Unavailable)?,
+            .map_err(|_| SessionRuntimeError::Unavailable)?
+            .with_background_manager(Arc::clone(&background)),
         ),
         Arc::new(tether_engine::SessionTools::new(
             wiring.approver.questions(),
@@ -192,14 +203,20 @@ pub(super) fn session_tool_runtime(
         wiring.files_root.join("memory").join("vault"),
         Arc::new(Mutex::new(knowledge_store)),
     )));
+    handlers.push(Arc::new(tether_engine::ProcessTools::new(Arc::clone(
+        &background,
+    ))));
     let approver_dyn: Arc<dyn tether_engine::Approver> = wiring.approver;
-    Ok(ToolRuntime {
-        guard,
-        blobs,
-        approver: approver_dyn,
-        mode: Arc::new(Mutex::new(session.mode)),
-        handlers,
-    })
+    Ok((
+        ToolRuntime {
+            guard,
+            blobs,
+            approver: approver_dyn,
+            mode: Arc::new(Mutex::new(session.mode)),
+            handlers,
+        },
+        background,
+    ))
 }
 
 fn skill_catalog(

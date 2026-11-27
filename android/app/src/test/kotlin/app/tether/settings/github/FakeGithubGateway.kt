@@ -20,6 +20,8 @@ class FakeGithubGateway : GithubGateway {
 
     var tokenFailure: GithubFailure? = null
     val tokensReceived = mutableListOf<String>()
+    var tokenKindAfterSignIn: GithubTokenKind? = GithubTokenKind.Classic
+    var canReadReposAfterSignIn = true
     var signOutCalls = 0
 
     var identityFailure: GithubFailure? = null
@@ -60,7 +62,12 @@ class FakeGithubGateway : GithubGateway {
     override fun signInWithToken(token: String) {
         tokenFailure?.let { throw GithubFailureException(it) }
         tokensReceived += token
-        status = status.copy(signedIn = true)
+        status =
+            status.copy(
+                signedIn = true,
+                tokenKind = tokenKindAfterSignIn,
+                canReadRepos = canReadReposAfterSignIn,
+            )
     }
 
     override fun signOut() {

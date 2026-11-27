@@ -7,13 +7,22 @@
     <string name="github_account_name">Name</string>
     <string name="github_account_email">Email</string>
     <string name="github_account_scopes">Scopes: %1$s</string>
+    <string name="github_account_token_type">Token type</string>
+    <string name="github_account_token_kind_classic">Classic</string>
+    <string name="github_account_token_kind_fine_grained">Fine-grained</string>
+    <string name="github_account_token_kind_unknown">Unknown</string>
+    <string name="github_account_repositories">Can read your repositories</string>
+    <string name="github_account_repositories_yes">Yes</string>
+    <string name="github_account_repositories_no">No</string>
+    <string name="github_account_repositories_no_hint">Give the token access to the repositories you want to use.</string>
+    <string name="github_account_fine_grained_access_hint">Access is set when you create the token on GitHub.</string>
     <string name="github_account_sign_in">Sign in with GitHub</string>
     <string name="github_account_sign_out">Sign out</string>
     <string name="github_account_edit_identity">Edit Git identity</string>
     <string name="github_account_token_title">Personal access token</string>
     <string name="github_account_token_label">Token</string>
     <string name="github_account_token_placeholder">Paste a token</string>
-    <string name="github_account_token_hint">The token needs the repo scope. It stays on this phone.</string>
+    <string name="github_account_token_hint">Paste a personal access token. A fine-grained token needs read and write access to Contents and Pull requests. A classic token needs the repo scope to create repositories.</string>
     <string name="github_account_token_paste">Paste</string>
     <string name="github_account_token_reveal">Show token</string>
     <string name="github_account_token_hide">Hide token</string>
@@ -107,4 +116,12 @@
     <string name="github_clone_received_total">%1$s MB of %2$s MB</string>
     <string name="github_clone_received_only">%1$s MB received</string>
     <string name="github_clone_canceled">Clone canceled. Nothing was kept.</string>
+
+    <!-- GitHub tool cards. -->
+    <string name="github_tool_git_init_imperative">Initialize a repository</string>
+    <string name="github_tool_git_init_present">Initializing a repository</string>
+    <string name="github_tool_git_init_past">Initialized a repository</string>
+    <string name="github_tool_repo_create_imperative">Create a repository</string>
+    <string name="github_tool_repo_create_present">Creating a repository</string>
+    <string name="github_tool_repo_create_past">Created repository</string>
 </resources>

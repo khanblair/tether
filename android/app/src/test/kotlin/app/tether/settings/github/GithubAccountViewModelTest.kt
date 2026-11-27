@@ -198,6 +198,8 @@ class GithubAccountViewModelTest {
         assertEquals(listOf("ghp_example"), gateway.tokensReceived)
         assertEquals("", vm.state.value.token)
         assertTrue(vm.state.value.status.signedIn)
+        assertEquals(GithubTokenKind.Classic, vm.state.value.status.tokenKind)
+        assertTrue(vm.state.value.status.canReadRepos)
     }
 
     @Test

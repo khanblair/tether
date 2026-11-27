@@ -1,10 +1,30 @@
 package app.tether.settings.github
 
 import app.tether.core.generated.GitRuntimeException
+import app.tether.core.generated.GithubStatusView
+import app.tether.core.generated.GithubTokenKindView
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class GithubMappingTest {
+    @Test
+    fun github_status_maps_token_kind_repository_reach_and_scopes() {
+        val status =
+            GithubStatusView(
+                signedIn = true,
+                login = "octo",
+                name = "Octo Cat",
+                email = "octo@example.com",
+                scopes = listOf("read:user"),
+                tokenKind = GithubTokenKindView.FINE_GRAINED,
+                canReadRepos = true,
+            ).toGithubStatus()
+
+        assertEquals(GithubTokenKind.FineGrained, status.tokenKind)
+        assertEquals(true, status.canReadRepos)
+        assertEquals(listOf("read:user"), status.scopes)
+    }
+
     @Test
     fun every_core_error_maps_to_its_own_failure() {
         val cases =

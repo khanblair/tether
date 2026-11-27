@@ -19,8 +19,8 @@ import app.tether.design.tokens.TetherBorder
 import app.tether.design.tokens.TetherSpace
 
 /**
- * The saved account: login, name, email, and scopes, with Sign out. When no account is saved it
- * shows one sentence of what signing in does. Signing in is a separate control on the screen.
+ * The saved account: login, identity, token access, and Sign out. When no account is saved it shows
+ * one sentence of what signing in does. Signing in is a separate control on the screen.
  */
 @Composable
 fun GitHubAccountCard(
@@ -31,6 +31,7 @@ fun GitHubAccountCard(
     Column(modifier = modifier.fillMaxWidth()) {
         if (status.signedIn) {
             val login = status.login ?: status.name.orEmpty()
+            val access = status.accountAccess()
             Text(
                 text = stringResource(R.string.github_account_signed_in_as, login),
                 style = MaterialTheme.typography.titleSmall,
@@ -53,12 +54,38 @@ fun GitHubAccountCard(
                     )
                 }
                 ListRow(
-                    title =
-                        stringResource(
-                            R.string.github_account_scopes,
-                            status.scopes.joinToString(", "),
-                        ),
+                    title = stringResource(R.string.github_account_token_type),
+                    subtitle =
+                        access.tokenKind?.let { stringResource(it.labelRes()) }
+                            ?: stringResource(R.string.github_account_token_kind_unknown),
                 )
+                HorizontalDivider(
+                    thickness = TetherBorder.hairline,
+                    color = TetherTheme.colors.line,
+                )
+                ListRow(
+                    title = stringResource(R.string.github_account_repositories),
+                    subtitle = stringResource(access.repositoryAccess.labelRes()),
+                )
+                if (access.scopePresentation == GithubScopePresentation.ClassicScopes) {
+                    HorizontalDivider(
+                        thickness = TetherBorder.hairline,
+                        color = TetherTheme.colors.line,
+                    )
+                    ListRow(
+                        title =
+                            stringResource(
+                                R.string.github_account_scopes,
+                                access.scopes.joinToString(", "),
+                            ),
+                    )
+                }
+            }
+            if (access.repositoryAccess == GithubRepositoryAccess.No) {
+                AccessHint(R.string.github_account_repositories_no_hint)
+            }
+            if (access.scopePresentation == GithubScopePresentation.FineGrained) {
+                AccessHint(R.string.github_account_fine_grained_access_hint)
             }
             TetherTextButton(
                 label = stringResource(R.string.github_account_sign_out),
@@ -74,4 +101,17 @@ fun GitHubAccountCard(
             )
         }
     }
+}
+
+/** A short explanation below the account details. */
+@Composable
+private fun AccessHint(
+    @androidx.annotation.StringRes textRes: Int,
+) {
+    Text(
+        text = stringResource(textRes),
+        style = MaterialTheme.typography.bodySmall,
+        color = TetherTheme.colors.text2,
+        modifier = Modifier.padding(top = TetherSpace.space2),
+    )
 }

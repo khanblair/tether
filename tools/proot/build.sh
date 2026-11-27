@@ -64,7 +64,8 @@ TALLOC_BUILD="$WORK_DIR/talloc-build"
 rm -rf "$WORK_DIR"
 mkdir -p "$WORK_DIR" "$OUTPUT_DIR"
 
-git clone "$PROOT_REPOSITORY" "$PROOT_DIR"
+# No tags: PRoot bakes `git describe` into the binary, and a tag added upstream later would change it.
+git clone --no-tags "$PROOT_REPOSITORY" "$PROOT_DIR"
 git -C "$PROOT_DIR" checkout --detach "$PROOT_COMMIT"
 ACTUAL_COMMIT=$(git -C "$PROOT_DIR" rev-parse HEAD)
 if [ "$ACTUAL_COMMIT" != "$PROOT_COMMIT" ]; then
@@ -92,9 +93,13 @@ if [ -f "$TALLOC_DIR/talloc_compat1.h" ]; then
 fi
 
 TALLOC_CFLAGS='-D_GNU_SOURCE -D__STDC_WANT_LIB_EXT1__=1 -DHAVE_CONFIG_H -fPIC -O2'
-"$CC" $TALLOC_CFLAGS -I"$TALLOC_DIR" -I"$TALLOC_DIR/lib/replace" -c "$TALLOC_DIR/talloc.c" \
+# talloc embeds __FILE__ in its error strings. Map the build folder away so the binary does not
+# depend on where the repository is checked out.
+"$CC" $TALLOC_CFLAGS "-fmacro-prefix-map=$TALLOC_DIR/=" "-ffile-prefix-map=$TALLOC_DIR/=" \
+    -I"$TALLOC_DIR" -I"$TALLOC_DIR/lib/replace" -c "$TALLOC_DIR/talloc.c" \
     -o "$TALLOC_BUILD/obj/talloc.o"
-"$CC" $TALLOC_CFLAGS -I"$TALLOC_DIR" -I"$TALLOC_DIR/lib/replace" -c \
+"$CC" $TALLOC_CFLAGS "-fmacro-prefix-map=$ROOT_DIR/=" "-ffile-prefix-map=$ROOT_DIR/=" \
+    -I"$TALLOC_DIR" -I"$TALLOC_DIR/lib/replace" -c \
     "$ROOT_DIR/third_party/proot/talloc/memset_explicit.c" \
     -o "$TALLOC_BUILD/obj/memset_explicit.o"
 "$AR" rcs "$TALLOC_BUILD/lib/libtalloc.a" \

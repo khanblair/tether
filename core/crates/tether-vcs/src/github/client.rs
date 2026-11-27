@@ -1,10 +1,11 @@
 use super::helpers::{
-    base64_encode, issue_comments, map_status, number, parse_pr, parse_repo, review_comments,
-    string,
+    base64_encode, issue_comments, map_status, number, parse_created_repo, parse_pr, parse_repo,
+    review_comments, string,
 };
 use super::{
-    API_URL, BTreeMap, CheckRun, GithubClient, GithubError, GithubIdentity, HttpClient,
-    HttpRequest, MAX_BODY, PullRequestComment, PullRequestDraft, PullRequestInfo, RepoInfo, Secret,
+    API_URL, BTreeMap, CheckRun, CreatedRepository, GithubClient, GithubError, GithubIdentity,
+    HttpClient, HttpRequest, MAX_BODY, PullRequestComment, PullRequestDraft, PullRequestInfo,
+    RepoInfo, Secret,
 };
 use std::sync::Arc;
 impl GithubClient {
@@ -97,6 +98,24 @@ impl GithubClient {
             .iter()
             .map(parse_repo)
             .collect()
+    }
+
+    /// Creates a repository for the authenticated user.
+    ///
+    /// # Errors
+    /// Returns a typed GitHub error.
+    pub async fn create_repository(
+        &self,
+        name: &str,
+        private: bool,
+        description: Option<&str>,
+    ) -> Result<CreatedRepository, GithubError> {
+        let body = serde_json::json!({
+            "name": name,
+            "private": private,
+            "description": description.unwrap_or_default(),
+        });
+        parse_created_repo(&self.post("/user/repos", body).await?)
     }
 
     /// Creates a pull request.

@@ -1,4 +1,6 @@
-use super::{GithubError, HttpResponse, PullRequestComment, PullRequestInfo, RepoInfo};
+use super::{
+    CreatedRepository, GithubError, HttpResponse, PullRequestComment, PullRequestInfo, RepoInfo,
+};
 
 /// Returns whether a repository should use a shallow clone.
 #[must_use]
@@ -107,6 +109,21 @@ pub(super) fn parse_repo(value: &serde_json::Value) -> Result<RepoInfo, GithubEr
         size_kb: number(value, "size")?,
         clone_url: string(value, "clone_url")?,
         permissions,
+    })
+}
+
+pub(super) fn parse_created_repo(
+    value: &serde_json::Value,
+) -> Result<CreatedRepository, GithubError> {
+    Ok(CreatedRepository {
+        clone_url: string(value, "clone_url")?,
+        html_url: string(value, "html_url")?,
+        default_branch: value
+            .get("default_branch")
+            .and_then(|value| value.as_str())
+            .filter(|value| !value.is_empty())
+            .unwrap_or("main")
+            .to_owned(),
     })
 }
 pub(super) fn parse_pr(v: &serde_json::Value) -> Result<PullRequestInfo, GithubError> {

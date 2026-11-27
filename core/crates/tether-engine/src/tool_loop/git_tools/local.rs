@@ -19,13 +19,23 @@ pub(super) struct LocalDeps {
     pub(super) cancel: CancellationToken,
 }
 
+pub(super) fn init(root: &std::path::Path, payload: &Value) -> Result<String, String> {
+    if root.join(".git").exists() {
+        return Err("this project is already a git repository".into());
+    }
+    let branch = optional_string(payload, "default_branch")?.unwrap_or("main");
+    Repo::init(root, branch)
+        .map(|_| format!("Initialized Git repository on {branch}"))
+        .map_err(|error| error.to_string())
+}
+
 pub(super) fn execute(
     root: &std::path::Path,
     name: &str,
     payload: &Value,
     deps: &LocalDeps,
 ) -> Result<String, String> {
-    let repo = Repo::open(root).map_err(|error| error.to_string())?;
+    let repo = Repo::open(root).map_err(|_| super::no_repository_error())?;
     if deps.cancel.is_cancelled() {
         return Err("git operation cancelled".into());
     }

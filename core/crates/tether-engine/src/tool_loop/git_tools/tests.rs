@@ -13,7 +13,8 @@ use tokio_util::sync::CancellationToken;
 
 use super::remote::find_pr_number;
 use super::{
-    GitIdentityReader, GitTools, GitToolsConfig, GithubClientFactory, TransportFactory, cap_diff,
+    GitIdentityReader, GitRemoteWriter, GitTools, GitToolsConfig, GithubClientFactory,
+    TransportFactory, cap_diff,
 };
 use crate::tool_loop::{ExecuteContext, PrepareContext, ToolHandler};
 
@@ -85,6 +86,13 @@ impl GithubClientFactory for NoGithub {
     }
 }
 
+struct NoRemote;
+impl GitRemoteWriter for NoRemote {
+    fn set_remote(&self, _: &str, _: &str) -> Result<(), String> {
+        Ok(())
+    }
+}
+
 /// Fails like the production transport does when it is used on an async thread: it starts
 /// its own runtime, which panics inside a running one.
 struct NestedRuntimeTransport;
@@ -116,6 +124,8 @@ fn tools(default_branch: &str) -> GitTools {
         identity: Arc::new(NoIdentity),
         transport: Arc::new(NestedFactory),
         github: Arc::new(NoGithub),
+        github_owner: Some("blair".into()),
+        remote_writer: Arc::new(NoRemote),
         gates: Vec::new(),
     })
 }
@@ -123,6 +133,141 @@ fn tools(default_branch: &str) -> GitTools {
 fn prepare(repo: &Repo, tool: &str, args: &str) -> Result<crate::tool_loop::PreparedCall, String> {
     let guard = PathGuard::new(repo.path()).unwrap();
     tools("main").prepare(tool, args, &PrepareContext { guard: &guard })
+}
+
+async fn execute_call(
+    handler: &GitTools,
+    root: &Path,
+    call: crate::tool_loop::PreparedCall,
+) -> Result<String, String> {
+    let guard = PathGuard::new(root).unwrap();
+    let session = SessionId::new("git-test".to_owned());
+    let call_id = ToolCallId::new("git-call");
+    let mut before_edit = |_: &[PathBuf]| Ok(());
+    handler
+        .execute(
+            call,
+            ExecuteContext {
+                session_id: &session,
+                tool_call_id: &call_id,
+                cancel: CancellationToken::new(),
+                sink: None,
+                guard: &guard,
+                before_edit: &mut before_edit,
+            },
+        )
+        .await
+        .map(|output| output.text)
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn repo_less_git_tools_explain_that_git_init_is_required() {
+    let directory = tempfile::tempdir().unwrap();
+    let handler = tools("main");
+    let cases = [
+        ("git_status", "{}"),
+        ("git_diff", "{}"),
+        ("git_log", "{}"),
+        ("git_branch", r#"{"name":"topic"}"#),
+        ("git_commit", r#"{"message":"save"}"#),
+        ("git_push", r#"{"branch":"main"}"#),
+        ("pr_status", r#"{"number":1}"#),
+    ];
+    for (tool, args) in cases {
+        let guard = PathGuard::new(directory.path()).unwrap();
+        let call = handler
+            .prepare(tool, args, &PrepareContext { guard: &guard })
+            .unwrap();
+        assert_eq!(
+            execute_call(&handler, directory.path(), call)
+                .await
+                .unwrap_err(),
+            "this project is not a git repository; run git_init first",
+            "{tool}"
+        );
+    }
+    let guard = PathGuard::new(directory.path()).unwrap();
+    assert_eq!(
+        handler
+            .prepare(
+                "pr_create",
+                r#"{"title":"T"}"#,
+                &PrepareContext { guard: &guard }
+            )
+            .unwrap_err(),
+        "this project is not a git repository; run git_init first"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn git_init_accepts_existing_files_and_refuses_a_second_init() {
+    let directory = tempfile::tempdir().unwrap();
+    std::fs::write(directory.path().join("note.txt"), "hello\n").unwrap();
+    let handler = tools("main");
+    let guard = PathGuard::new(directory.path()).unwrap();
+    let call = handler
+        .prepare(
+            "git_init",
+            r#"{"default_branch":"develop"}"#,
+            &PrepareContext { guard: &guard },
+        )
+        .unwrap();
+    execute_call(&handler, directory.path(), call)
+        .await
+        .expect("init");
+    assert_eq!(
+        tether_vcs::Repo::open(directory.path())
+            .unwrap()
+            .current_branch()
+            .unwrap(),
+        Some("develop".into())
+    );
+    let guard = PathGuard::new(directory.path()).unwrap();
+    let second = handler
+        .prepare("git_init", "{}", &PrepareContext { guard: &guard })
+        .unwrap();
+    assert_eq!(
+        execute_call(&handler, directory.path(), second)
+            .await
+            .unwrap_err(),
+        "this project is already a git repository"
+    );
+}
+
+#[test]
+fn github_repository_creation_validates_names_and_names_visibility() {
+    let repo = Repo::on_branch("main");
+    let public = prepare(
+        &repo,
+        "github_repo_create",
+        r#"{"name":"new.repo","private":false}"#,
+    )
+    .unwrap();
+    assert_eq!(
+        public.target,
+        "create GitHub repository blair/new.repo (public)"
+    );
+    assert_eq!(public.effect, crate::permissions::Effect::Push);
+    for name in ["", ".", "..", "bad/name", "bad name"] {
+        assert!(
+            prepare(
+                &repo,
+                "github_repo_create",
+                &format!(r#"{{"name":{name:?}}}"#)
+            )
+            .is_err(),
+            "{name}"
+        );
+    }
+    let long_name = "a".repeat(101);
+    assert!(
+        prepare(
+            &repo,
+            "github_repo_create",
+            &format!(r#"{{"name":{long_name:?}}}"#)
+        )
+        .is_err()
+    );
 }
 
 #[test]

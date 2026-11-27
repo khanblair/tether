@@ -44,8 +44,8 @@ pub use session::{
 pub use session_provider::provider_for;
 pub use tool_loop::ci_tools::{CiLogResult, CiLogsRequest, CiRunService, CiTools};
 pub use tool_loop::git_tools::{
-    CommitGate, CommitInput, GateFinding, GateSeverity, GitIdentityReader, GitTools,
-    GitToolsConfig, GithubClientFactory, TransportFactory,
+    CommitGate, CommitInput, GateFinding, GateSeverity, GitIdentityReader, GitRemoteWriter,
+    GitTools, GitToolsConfig, GithubClientFactory, TransportFactory,
 };
 pub use tool_loop::knowledge_tools::{KnowledgeTools, staged_skill_change};
 pub use tool_loop::mcp_tools::{

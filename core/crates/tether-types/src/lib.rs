@@ -15,7 +15,10 @@ mod todo;
 mod usage;
 
 pub use error::CoreError;
-pub use event::{BudgetScope, CoreEvent, QualityCounts, QualityFindingRecord, QualitySeverity};
+pub use event::{
+    BudgetScope, CoreEvent, PreviewTarget, ProcessStatus, QualityCounts, QualityFindingRecord,
+    QualitySeverity,
+};
 pub use ids::{MessageId, ProjectId, SessionId, ToolCallId};
 pub use message::{Message, MessagePart, Role};
 pub use model::{ModelCaps, ModelInfo, ModelPrice, PriceSource, ReasoningEffort, Support};

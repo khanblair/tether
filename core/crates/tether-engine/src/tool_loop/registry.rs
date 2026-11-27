@@ -41,12 +41,27 @@ impl PreparedCall {
     /// `[linux] ls -la`. Never use it for permission rules.
     #[must_use]
     pub fn display_target(&self) -> String {
+        let background = self
+            .payload
+            .get("_background")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
         match self.executor {
             Some(Executor::Sandbox) if self.tool == "run" => format!("[sandbox] {}", self.target),
-            Some(Executor::Linux) if self.tool == "run" => format!("[linux] {}", self.target),
+            Some(Executor::Linux) if self.tool == "run" => {
+                format!("[linux] {}{}", self.target, background_suffix(background))
+            }
             Some(Executor::Ci) if self.tool == "run" => format!("[ci] {}", self.target),
             _ => self.target.clone(),
         }
+    }
+}
+
+fn background_suffix(background: bool) -> &'static str {
+    if background {
+        " (keeps running until stopped)"
+    } else {
+        ""
     }
 }
 

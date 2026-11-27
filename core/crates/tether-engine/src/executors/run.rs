@@ -4,6 +4,12 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
+use super::{
+    BackgroundProcesses, CiExecutor, CiRunRequest, LinuxRunnerLike, RouteInput, Router, RunReport,
+};
+use crate::ToolHandler;
+use crate::permissions::Effect;
+use crate::tool_loop::{ExecuteContext, PrepareContext, PreparedCall, ToolOutput};
 use serde_json::{Value, json};
 use tether_linux::{LinuxRunner, RunCommand, RunRequest};
 use tether_providers::{BoxFuture, ToolSpec};
@@ -13,31 +19,27 @@ use tether_sandbox::{
 use tether_types::{Executor, ProjectId, SessionId};
 use tokio_util::sync::CancellationToken;
 
-use super::{CiExecutor, CiRunRequest, RouteInput, Router, RunReport};
-use crate::ToolHandler;
-use crate::permissions::Effect;
-use crate::tool_loop::{ExecuteContext, PrepareContext, PreparedCall, ToolOutput};
-
 const OUTPUT_HEAD: usize = 4_000;
 const OUTPUT_TAIL: usize = 12_000;
 
+mod background;
 mod run_support;
 use run_support::{
     append_user_args, format_result, guest_cwd, parse_cwd, parse_executor, parse_timeout,
     run_blocking, string,
 };
-
 /// Dependencies used by the `run` tool.
 pub struct RunTools {
     packs_root: PathBuf,
     cache: Arc<ModuleCache>,
-    linux_off: Option<Arc<LinuxRunner>>,
-    linux_on: Option<Arc<LinuxRunner>>,
+    linux_off: Option<Arc<dyn LinuxRunnerLike>>,
+    linux_on: Option<Arc<dyn LinuxRunnerLike>>,
     ci: Arc<dyn CiExecutor>,
     ci_ready: bool,
     project_default: Option<Executor>,
     network_allowed: Arc<dyn Fn(&SessionId) -> bool + Send + Sync>,
     project_id: Arc<dyn Fn(&SessionId) -> ProjectId + Send + Sync>,
+    background: Option<Arc<BackgroundProcesses>>,
 }
 
 struct RunContext<'a> {
@@ -47,6 +49,8 @@ struct RunContext<'a> {
     sink: Option<&'a dyn crate::EventSink>,
     workspace: PathBuf,
 }
+
+type PreparedRun = (Value, String, String, Option<u64>, bool, super::Route);
 
 impl RunTools {
     /// Creates a sandbox-only handler with CI left unconfigured.
@@ -65,6 +69,7 @@ impl RunTools {
             project_default: None,
             network_allowed: Arc::new(|_| false),
             project_id: Arc::new(|session| ProjectId::new(session.as_str())),
+            background: None,
         })
     }
 
@@ -77,8 +82,8 @@ impl RunTools {
         project_default: Option<Executor>,
         network_allowed: Arc<dyn Fn(&SessionId) -> bool + Send + Sync>,
     ) -> Self {
-        self.linux_off.clone_from(&linux);
-        self.linux_on = linux;
+        self.linux_off = linux.map(|runner| runner as Arc<dyn LinuxRunnerLike>);
+        self.linux_on = self.linux_off.clone();
         self.ci_ready = ci.is_configured();
         self.ci = ci;
         self.project_default = project_default;
@@ -96,7 +101,8 @@ impl RunTools {
         project_default: Option<Executor>,
         network_allowed: Arc<dyn Fn(&SessionId) -> bool + Send + Sync>,
     ) -> Self {
-        (self.linux_off, self.linux_on) = runners;
+        self.linux_off = runners.0.map(|runner| runner as Arc<dyn LinuxRunnerLike>);
+        self.linux_on = runners.1.map(|runner| runner as Arc<dyn LinuxRunnerLike>);
         self.ci_ready = ci.is_configured();
         self.ci = ci;
         self.project_default = project_default;
@@ -111,6 +117,13 @@ impl RunTools {
         project_id: Arc<dyn Fn(&SessionId) -> ProjectId + Send + Sync>,
     ) -> Self {
         self.project_id = project_id;
+        self
+    }
+
+    /// Attaches the process table owned by the current session.
+    #[must_use]
+    pub fn with_background_manager(mut self, background: Arc<BackgroundProcesses>) -> Self {
+        self.background = Some(background);
         self
     }
 
@@ -136,7 +149,8 @@ impl ToolHandler for RunTools {
                     "command":{"type":"string"},
                     "executor":{"type":"string","enum":["sandbox","linux","ci"]},
                     "cwd":{"type":"string"},
-                    "timeout_seconds":{"type":"integer","minimum":1,"maximum":600}
+                    "timeout_seconds":{"type":"integer","minimum":1,"maximum":600},
+                    "background":{"type":"boolean"}
                 },
                 "required":["command"],
                 "additionalProperties":false
@@ -150,7 +164,7 @@ impl ToolHandler for RunTools {
         args_json: &str,
         context: &PrepareContext<'_>,
     ) -> Result<PreparedCall, String> {
-        let (mut payload, command, cwd, timeout, route) =
+        let (mut payload, command, cwd, timeout, background, route) =
             self.prepare_payload(name, args_json, context)?;
         let target_command = route
             .argv
@@ -169,6 +183,7 @@ impl ToolHandler for RunTools {
         );
         payload_object.insert("_argv".into(), json!(route.argv));
         payload_object.insert("_reason".into(), Value::String(route.reason.clone()));
+        payload_object.insert("_background".into(), Value::Bool(background));
         Ok(PreparedCall {
             tool: "run".into(),
             effect: if route.executor == Executor::Sandbox {
@@ -197,7 +212,7 @@ impl RunTools {
         name: &str,
         args_json: &str,
         context: &PrepareContext<'_>,
-    ) -> Result<(Value, String, String, Option<u64>, super::Route), String> {
+    ) -> Result<PreparedRun, String> {
         if name != "run" {
             return Err("unknown tool".into());
         }
@@ -205,7 +220,13 @@ impl RunTools {
         let object = value
             .as_object()
             .ok_or("tool arguments must be an object")?;
-        let allowed = ["command", "executor", "cwd", "timeout_seconds"];
+        let allowed = [
+            "command",
+            "executor",
+            "cwd",
+            "timeout_seconds",
+            "background",
+        ];
         if object.keys().any(|key| !allowed.contains(&key.as_str())) {
             return Err("unknown run argument".into());
         }
@@ -218,6 +239,14 @@ impl RunTools {
         let requested = object.get("executor").map(parse_executor).transpose()?;
         let cwd = parse_cwd(object, context)?;
         let timeout = parse_timeout(object)?;
+        let background = object
+            .get("background")
+            .map(|value| value.as_bool().ok_or("background must be a boolean"))
+            .transpose()?
+            .unwrap_or(false);
+        if background && requested.is_some_and(|executor| executor != Executor::Linux) {
+            return Err("background runs need Linux mode".into());
+        }
         let route = Router::route(&RouteInput {
             command: command.clone(),
             requested,
@@ -225,7 +254,10 @@ impl RunTools {
             availability: self.availability(),
         })
         .map_err(|error| error.to_string())?;
-        Ok((value, command, cwd, timeout, route))
+        if background && route.executor != Executor::Linux {
+            return Err("background runs need Linux mode".into());
+        }
+        Ok((value, command, cwd, timeout, background, route))
     }
 
     async fn execute_call<'a>(
@@ -244,8 +276,18 @@ impl RunTools {
         let command = string(&call.payload, "command")?;
         let cwd = string(&call.payload, "_cwd")?;
         let timeout = call.payload.get("_timeout").and_then(Value::as_u64);
+        let background = call
+            .payload
+            .get("_background")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
         let output = match executor {
             Executor::Sandbox => self.run_sandbox(&call, cwd, timeout, &run_context).await?,
+            Executor::Linux if background => {
+                return self
+                    .run_background(command.to_owned(), cwd.to_owned(), &run_context)
+                    .await;
+            }
             Executor::Linux => self.run_linux(command, cwd, timeout, &run_context).await?,
             Executor::Ci => self.run_ci(command, &run_context).await?,
         };
@@ -353,6 +395,5 @@ impl RunTools {
             .map_err(|error| error.to_string())
     }
 }
-
 #[cfg(test)]
 mod tests;

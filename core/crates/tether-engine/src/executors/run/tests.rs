@@ -1,11 +1,16 @@
 use std::sync::Arc;
+use std::time::Duration;
 
+use super::super::{BackgroundProcesses, LinuxRunnerLike};
+use tether_linux::{LinuxError, LinuxRunReport, OutputSink, RunOutcome, RunRequest};
 use tether_workspace::PathGuard;
+use tokio_util::sync::CancellationToken;
 
 use super::RunTools;
 use super::run_support::{append_user_args, trim_output};
 use crate::executors::{CiExecutor, CiRunRequest, ExecutorError, RunReport};
 use crate::permissions::rule_for;
+use crate::tool_loop::{ExecuteContext, ToolOutput};
 use crate::tool_loop::{PrepareContext, ToolHandler};
 use tether_providers::BoxFuture;
 
@@ -18,6 +23,34 @@ impl CiExecutor for TestCi {
         _sink: Option<&'a dyn crate::EventSink>,
     ) -> BoxFuture<'a, Result<RunReport, ExecutorError>> {
         Box::pin(std::future::ready(Err(ExecutorError::NotConfigured)))
+    }
+}
+
+struct TestSink;
+
+impl crate::EventSink for TestSink {
+    fn on_event(&self, _event: tether_types::CoreEvent) {}
+}
+
+struct BackgroundRunner;
+
+impl LinuxRunnerLike for BackgroundRunner {
+    fn run(
+        &self,
+        _request: &RunRequest,
+        sink: &mut dyn OutputSink,
+        cancel: &CancellationToken,
+    ) -> Result<LinuxRunReport, LinuxError> {
+        sink.stdout(b"Local: http://localhost:5173/\n");
+        while !cancel.is_cancelled() {
+            std::thread::park_timeout(Duration::from_millis(1));
+        }
+        Ok(LinuxRunReport {
+            outcome: RunOutcome::Cancelled,
+            elapsed: Duration::from_millis(1),
+            output_bytes: 32,
+            output_truncated: false,
+        })
     }
 }
 
@@ -123,4 +156,63 @@ fn run_cwd_rejects_escapes_and_absolute_paths() {
             .unwrap_err();
         assert_eq!(error, "cwd must stay inside the workspace", "cwd {cwd:?}");
     }
+}
+
+#[test]
+fn background_runs_refuse_sandbox_and_ci_with_the_same_error() {
+    let root = tempfile::tempdir().unwrap();
+    let (tools, guard) = run_tools(root.path());
+    for executor in ["sandbox", "ci"] {
+        let args = serde_json::json!({
+            "command": "npm run dev",
+            "executor": executor,
+            "background": true
+        });
+        assert_eq!(
+            tools
+                .prepare("run", &args.to_string(), &PrepareContext { guard: &guard })
+                .unwrap_err(),
+            "background runs need Linux mode"
+        );
+    }
+}
+
+#[tokio::test]
+async fn background_run_returns_process_id_and_loopback_url() {
+    let root = tempfile::tempdir().unwrap();
+    let guard = PathGuard::new(root.path()).unwrap();
+    let sink: Arc<dyn crate::EventSink> = Arc::new(TestSink);
+    let manager = Arc::new(BackgroundProcesses::new(
+        tether_types::SessionId::new("session"),
+        sink,
+    ));
+    let mut tools = RunTools::new(root.path().join("packs")).unwrap();
+    tools.linux_off = Some(Arc::new(BackgroundRunner));
+    tools.linux_on = tools.linux_off.clone();
+    tools.background = Some(Arc::clone(&manager));
+    let call = tools
+        .prepare(
+            "run",
+            r#"{"command":"npm run dev","executor":"linux","background":true}"#,
+            &PrepareContext { guard: &guard },
+        )
+        .unwrap();
+    let mut before_edit = |_paths: &[std::path::PathBuf]| Ok(());
+    let output: ToolOutput = tools
+        .execute(
+            call,
+            ExecuteContext {
+                session_id: &tether_types::SessionId::new("session"),
+                tool_call_id: &tether_types::ToolCallId::new("call"),
+                cancel: CancellationToken::new(),
+                sink: None,
+                guard: &guard,
+                before_edit: &mut before_edit,
+            },
+        )
+        .await
+        .unwrap();
+    assert!(output.text.contains("process: p1"));
+    assert!(output.text.contains("url: http://127.0.0.1:5173/"));
+    manager.shutdown();
 }

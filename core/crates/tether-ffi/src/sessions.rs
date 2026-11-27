@@ -21,6 +21,8 @@ mod provider;
 use provider::{provider_key, session_provider_factory};
 #[path = "sessions/open.rs"]
 mod open;
+#[path = "sessions/processes.rs"]
+mod processes;
 #[path = "sessions/prompt.rs"]
 mod prompt;
 #[path = "sessions/recovery.rs"]
@@ -411,6 +413,9 @@ mod reasoning_tests;
 #[cfg(test)]
 #[path = "sessions/archive_tests.rs"]
 mod archive_tests;
+#[cfg(test)]
+#[path = "sessions/process_tests.rs"]
+mod process_tests;
 #[cfg(test)]
 mod rewind_message_tests;
 #[cfg(test)]

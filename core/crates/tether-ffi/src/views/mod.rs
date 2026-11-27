@@ -9,6 +9,7 @@ mod context;
 mod error;
 mod event;
 mod plan;
+mod process;
 mod project;
 mod question;
 mod session;
@@ -22,6 +23,7 @@ pub use context::{CompactionView, ContextBreakdownView, ContextSectionView, Inte
 pub use error::{CoreErrorView, ErrorKindView};
 pub use event::{CoreEventView, QualityCountsView, QualityFindingRecordView};
 pub use plan::PlanView;
+pub use process::ProcessView;
 pub use project::{ProjectView, WorkspaceLocationView};
 pub use question::PendingQuestionView;
 pub use session::{

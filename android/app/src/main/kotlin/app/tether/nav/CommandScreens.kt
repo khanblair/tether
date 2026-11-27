@@ -28,7 +28,8 @@ internal fun openCommandScreen(
             CommandScreen.Skills -> SKILLS_ROUTE
             CommandScreen.Memory -> MEMORY_ROUTE
             CommandScreen.Vault -> if (arguments == "lint") VAULT_LINT_ROUTE else VAULT_ROUTE
-            CommandScreen.Linux, CommandScreen.Context, CommandScreen.Help -> null
+            CommandScreen.Linux -> linuxPath(projectId)
+            CommandScreen.Context, CommandScreen.Help -> null
         }
     if (path == null) missing() else nav.open(path)
 }

@@ -30,6 +30,7 @@ fun ExecutorsScreen(
     viewModel: ExecutorsViewModel,
     onBack: () -> Unit,
     onOpenCiRuns: () -> Unit,
+    onOpenLinux: (() -> Unit)? = null,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val repair: (() -> Unit)? = if (state.linuxSetupInBuild) viewModel::repairLinux else null
@@ -48,6 +49,7 @@ fun ExecutorsScreen(
                 onInstall = viewModel::installLinux,
                 onRepair = repair,
                 source = state.linuxSource,
+                onOpenShell = onOpenLinux,
             )
         }
         SectionTitle(text = stringResource(R.string.executors_section_ci))

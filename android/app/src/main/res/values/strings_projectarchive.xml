@@ -27,6 +27,7 @@
     <string name="archive_reason_cancelled">The operation was cancelled. Nothing was saved.</string>
     <string name="archive_reason_project_not_found">That project no longer exists.</string>
     <string name="archive_reason_unavailable">Tether could not reach the project storage. Try again.</string>
+    <string name="archive_reason_invalid_workspace_folder">That folder cannot be used for projects.</string>
     <string name="archive_reason_read">Tether could not read the file. Choose it again.</string>
     <string name="archive_reason_write">Tether could not save the ZIP to that place. Choose another place.</string>
     <string name="archive_reason_unexpected">Tether could not finish the ZIP. Try again.</string>

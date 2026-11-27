@@ -40,6 +40,9 @@ enum class ArchiveReason {
     /** The project database or workspace folder could not be used. */
     Unavailable,
 
+    /** The selected workspace folder failed validation. */
+    InvalidWorkspaceFolder,
+
     /** The core reported an error that cannot come from an archive call. */
     Unexpected,
 
@@ -85,12 +88,32 @@ fun archiveReasonForDetail(detail: String): ArchiveReason =
 
 /** Maps every core error variant to the reason shown to the person. */
 fun ProjectRuntimeException.toArchiveReason(): ArchiveReason =
+    if (isWorkspaceFolderProblem()) {
+        ArchiveReason.InvalidWorkspaceFolder
+    } else {
+        when (this) {
+            is ProjectRuntimeException.InvalidName -> ArchiveReason.InvalidName
+            is ProjectRuntimeException.InvalidDefaults -> ArchiveReason.Unexpected
+            is ProjectRuntimeException.BypassNeedsConfirmation -> ArchiveReason.Unexpected
+            is ProjectRuntimeException.Archive -> archiveReasonForDetail(detail)
+            is ProjectRuntimeException.Cancelled -> ArchiveReason.Cancelled
+            is ProjectRuntimeException.NotFound -> ArchiveReason.ProjectNotFound
+            is ProjectRuntimeException.Unavailable -> ArchiveReason.Unavailable
+            else -> ArchiveReason.Unexpected
+        }
+    }
+
+private fun ProjectRuntimeException.isWorkspaceFolderProblem(): Boolean =
     when (this) {
-        is ProjectRuntimeException.InvalidName -> ArchiveReason.InvalidName
-        is ProjectRuntimeException.InvalidDefaults -> ArchiveReason.Unexpected
-        is ProjectRuntimeException.BypassNeedsConfirmation -> ArchiveReason.Unexpected
-        is ProjectRuntimeException.Archive -> archiveReasonForDetail(detail)
-        is ProjectRuntimeException.Cancelled -> ArchiveReason.Cancelled
-        is ProjectRuntimeException.NotFound -> ArchiveReason.ProjectNotFound
-        is ProjectRuntimeException.Unavailable -> ArchiveReason.Unavailable
+        is ProjectRuntimeException.RootNotAbsolute,
+        is ProjectRuntimeException.RootCannotBeCreated,
+        is ProjectRuntimeException.RootNotDirectory,
+        is ProjectRuntimeException.RootIsSymlink,
+        is ProjectRuntimeException.RootNotWritable,
+        is ProjectRuntimeException.RootInsidePrivateRoot,
+        is ProjectRuntimeException.RootIsFilesystemRoot,
+        is ProjectRuntimeException.RootInsideProject,
+        is ProjectRuntimeException.RootUnavailable,
+        -> true
+        else -> false
     }

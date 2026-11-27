@@ -172,8 +172,8 @@ pub(crate) fn test_release(base_url: &str, size: u64) -> Release {
 }
 
 pub(crate) fn digest_line(bytes: &[u8], name: &str) -> String {
-    let digest = Sha256::digest(bytes);
-    format!("{digest:02x}  {name}\n")
+    let digest = hex(&Sha256::digest(bytes));
+    format!("{digest}  {name}\n")
 }
 
 pub(crate) fn release_json(
@@ -244,4 +244,12 @@ async fn write_reply(socket: &mut tokio::net::TcpStream, reply: &Reply) {
     } else {
         socket.write_all(&reply.body).await.unwrap();
     }
+}
+
+fn hex(bytes: &[u8]) -> String {
+    use std::fmt::Write;
+    bytes.iter().fold(String::new(), |mut output, byte| {
+        write!(output, "{byte:02x}").expect("writing to a String cannot fail");
+        output
+    })
 }

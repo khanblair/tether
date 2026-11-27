@@ -66,7 +66,7 @@ fn manifest() -> PackManifest {
 }
 
 fn manifest_with_module(module: &[u8]) -> PackManifest {
-    let hash = format!("{:x}", Sha256::digest(module));
+    let hash = hex(&Sha256::digest(module));
     PackManifest {
         format: 1,
         packs: vec![PackEntry {
@@ -548,4 +548,12 @@ impl OutputSink for PackSink {
     }
 
     fn stderr(&mut self, _bytes: &[u8]) {}
+}
+
+fn hex(bytes: &[u8]) -> String {
+    use std::fmt::Write;
+    bytes.iter().fold(String::new(), |mut output, byte| {
+        write!(output, "{byte:02x}").expect("writing to a String cannot fail");
+        output
+    })
 }

@@ -171,10 +171,7 @@ fn sign_records_the_archive_digest_and_size() {
         &fs::read(directory.path().join("manifest.json")).expect("manifest should exist"),
     )
     .expect("manifest should be JSON");
-    assert_eq!(
-        manifest.images[0].sha256,
-        format!("{:x}", Sha256::digest(FIXTURE))
-    );
+    assert_eq!(manifest.images[0].sha256, hex(&Sha256::digest(FIXTURE)));
     assert_eq!(manifest.images[0].size_bytes, FIXTURE.len() as u64);
 }
 
@@ -236,4 +233,12 @@ fn signature_file_verifies_with_the_public_key_bytes_used_by_the_app() {
             .expect("private key should be 32 bytes"),
     );
     assert_eq!(signing_key.verifying_key().to_bytes(), key);
+}
+
+fn hex(bytes: &[u8]) -> String {
+    use std::fmt::Write;
+    bytes.iter().fold(String::new(), |mut output, byte| {
+        write!(output, "{byte:02x}").expect("writing to a String cannot fail");
+        output
+    })
 }

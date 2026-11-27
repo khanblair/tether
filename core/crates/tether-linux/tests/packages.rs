@@ -20,7 +20,7 @@ fn image(bytes: &[u8]) -> RootfsImage {
     RootfsImage {
         arch: "x86_64".into(),
         url: "https://example.invalid/image".into(),
-        sha256: format!("{:x}", Sha256::digest(bytes)),
+        sha256: hex(&Sha256::digest(bytes)),
         size_bytes: bytes.len() as u64,
         max_extracted_bytes: 1024,
     }
@@ -202,4 +202,12 @@ fn failing_base_package_setup_returns_last_four_kib_and_stays_installed() {
             alpine_version: "3.20".into()
         }
     );
+}
+
+fn hex(bytes: &[u8]) -> String {
+    use std::fmt::Write;
+    bytes.iter().fold(String::new(), |mut output, byte| {
+        write!(output, "{byte:02x}").expect("writing to a String cannot fail");
+        output
+    })
 }

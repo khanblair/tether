@@ -91,7 +91,7 @@ fn image(bytes: &[u8], max_extracted_bytes: u64) -> RootfsImage {
     RootfsImage {
         arch: "x86_64".into(),
         url: "https://example.invalid/image".into(),
-        sha256: format!("{:x}", Sha256::digest(bytes)),
+        sha256: hex(&Sha256::digest(bytes)),
         size_bytes: bytes.len() as u64,
         max_extracted_bytes,
     }
@@ -414,4 +414,12 @@ fn assert_rejected_archive(bytes: Vec<u8>, max_extracted_bytes: u64) {
     assert!(!folder.path().join("linux/rootfs/alpine.partial").exists());
     assert!(!folder.path().join("linux/rootfs/alpine").exists());
     assert!(!folder.path().join("linux/rootfs/alpine.json").exists());
+}
+
+fn hex(bytes: &[u8]) -> String {
+    use std::fmt::Write;
+    bytes.iter().fold(String::new(), |mut output, byte| {
+        write!(output, "{byte:02x}").expect("writing to a String cannot fail");
+        output
+    })
 }

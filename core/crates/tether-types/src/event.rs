@@ -53,6 +53,34 @@ pub struct QualityFindingRecord {
     pub advice: String,
 }
 
+/// The lifecycle state of one session-owned background process.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProcessStatus {
+    /// The process is still running.
+    Running,
+    /// The process returned an exit code.
+    Exited(i32),
+    /// The process was stopped by the app or session.
+    Stopped,
+}
+
+/// A target the app can show in its Preview screen.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PreviewTarget {
+    /// A project-relative HTML file.
+    File {
+        /// The guarded project-relative path.
+        path: String,
+    },
+    /// A local server owned by one background process.
+    Server {
+        /// The loopback URL to open.
+        url: String,
+        /// The owning process id.
+        process_id: String,
+    },
+}
+
 /// One event emitted by the core. Changing this enum changes the FFI surface;
 /// regenerate the Kotlin bindings with `just bindings`.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -261,6 +289,24 @@ pub enum CoreEvent {
         findings: Vec<QualityFindingRecord>,
         /// Changed files skipped by the gate.
         skipped: u32,
+    },
+    /// A session-owned background process changed state.
+    ProcessChanged {
+        /// The session that owns the process.
+        session_id: SessionId,
+        /// The short process id.
+        process_id: String,
+        /// The new process state.
+        status: ProcessStatus,
+        /// The detected listening port, if any.
+        port: Option<u16>,
+    },
+    /// The agent asked the app to open a project preview.
+    PreviewRequested {
+        /// The session that requested the preview.
+        session_id: SessionId,
+        /// The guarded preview target.
+        target: PreviewTarget,
     },
 }
 

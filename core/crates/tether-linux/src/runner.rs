@@ -187,8 +187,7 @@ fn stream_process(
     cancel: &CancellationToken,
 ) -> Result<LinuxRunReport, LinuxError> {
     let started = Instant::now();
-    let timeout = request.timeout.unwrap_or(Duration::from_secs(120));
-    let deadline = started + timeout;
+    let deadline = request.timeout.map(|timeout| started + timeout);
     let mut capped = CappedOutput::new(sink, request.output_cap_bytes);
     let mut closed = 0_u8;
     let mut reason = None;
@@ -225,12 +224,12 @@ fn stream_process(
 fn stop_reason(
     child: &mut Child,
     cancel: &CancellationToken,
-    deadline: Instant,
+    deadline: Option<Instant>,
 ) -> Option<RunOutcome> {
     if cancel.is_cancelled() {
         kill_child(child);
         Some(RunOutcome::Cancelled)
-    } else if Instant::now() >= deadline {
+    } else if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
         kill_child(child);
         Some(RunOutcome::TimedOut)
     } else {

@@ -1,8 +1,14 @@
 //! Command executors and the built-in executor router.
 
+pub mod background;
+mod process_tools;
 mod router;
 mod run;
 
+pub use background::{
+    BackgroundProcesses, BackgroundStart, LinuxRunnerLike, ProcessSnapshot, detect_port,
+};
+pub use process_tools::ProcessTools;
 pub use router::{Availability, Route, RouteError, RouteInput, Router, ShellFeature, tokenize};
 pub use run::RunTools;
 

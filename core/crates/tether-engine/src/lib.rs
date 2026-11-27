@@ -35,6 +35,10 @@ pub mod updates;
 mod usage;
 
 pub use checkpoint_capture::capture_checkpoint;
+pub use executors::{
+    BackgroundProcesses, BackgroundStart, LinuxRunnerLike, ProcessSnapshot, ProcessTools,
+    detect_port,
+};
 pub use provider_connection::{ProviderCheck, check_provider, provider_test_targets};
 pub use rewind::{RewindError, RewindScope, rewind_checkpoint, rewind_conversation_only};
 pub use session::{

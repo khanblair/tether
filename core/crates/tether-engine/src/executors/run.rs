@@ -24,6 +24,7 @@ const OUTPUT_TAIL: usize = 12_000;
 
 mod background;
 mod run_support;
+pub use run_support::{ParsedRun, RunOutcome, parse_run_result};
 use run_support::{
     append_user_args, format_result, guest_cwd, parse_cwd, parse_executor, parse_timeout,
     run_blocking, string,

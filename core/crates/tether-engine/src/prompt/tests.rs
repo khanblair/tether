@@ -131,6 +131,90 @@ fn instruction_precedence_truncation_and_safe_skips_are_visible() {
 }
 
 #[test]
+fn project_instruction_preview_uses_the_prompt_file_order() {
+    let dir = tempfile::tempdir().unwrap();
+    fs::write(dir.path().join("AGENTS.md"), "one\ntwo").unwrap();
+    let ProjectInstructionRead::Found(instructions) = load_project_instructions(dir.path()) else {
+        panic!("expected the AGENTS.md file to be found");
+    };
+    assert_eq!(instructions.file_name, "AGENTS.md");
+    assert_eq!(instructions.text.lines().count(), 2);
+}
+
+#[test]
+fn project_instruction_preview_prefers_tether_and_handles_missing_files() {
+    let dir = tempfile::tempdir().unwrap();
+    fs::write(dir.path().join("TETHER.md"), "tether").unwrap();
+    fs::write(dir.path().join("CLAUDE.md"), "claude").unwrap();
+    let ProjectInstructionRead::Found(instructions) = load_project_instructions(dir.path()) else {
+        panic!("expected the TETHER.md file to be found");
+    };
+    assert_eq!(instructions.file_name, "TETHER.md");
+    let empty = tempfile::tempdir().unwrap();
+    assert_eq!(
+        load_project_instructions(empty.path()),
+        ProjectInstructionRead::Missing
+    );
+}
+
+#[test]
+fn project_instruction_preview_reports_a_missing_root_as_skipped() {
+    let dir = tempfile::tempdir().unwrap();
+    let missing = dir.path().join("no-such-root");
+    assert_eq!(
+        load_project_instructions(&missing),
+        ProjectInstructionRead::Skipped {
+            file_name: String::new(),
+            note: "[project root is unavailable]".to_owned(),
+        }
+    );
+}
+
+#[test]
+fn project_instruction_preview_counts_the_capped_text() {
+    let dir = tempfile::tempdir().unwrap();
+    fs::write(dir.path().join("AGENTS.md"), "line\n".repeat(20_000)).unwrap();
+    let ProjectInstructionRead::Found(instructions) = load_project_instructions(dir.path()) else {
+        panic!("expected the AGENTS.md file to be found");
+    };
+    assert!(instructions.text.lines().count() < 20_000);
+}
+
+#[cfg(unix)]
+#[test]
+fn project_instruction_preview_skips_symlinks() {
+    let dir = tempfile::tempdir().unwrap();
+    let outside = tempfile::tempdir().unwrap();
+    fs::write(outside.path().join("AGENTS.md"), "outside").unwrap();
+    std::os::unix::fs::symlink(
+        outside.path().join("AGENTS.md"),
+        dir.path().join("AGENTS.md"),
+    )
+    .unwrap();
+    let ProjectInstructionRead::Skipped { file_name, note } = load_project_instructions(dir.path())
+    else {
+        panic!("expected the symlinked file to be skipped");
+    };
+    assert_eq!(file_name, "AGENTS.md");
+    assert!(note.contains("symlinked"));
+}
+
+#[test]
+fn project_instruction_preview_skips_non_utf8_files() {
+    let dir = tempfile::tempdir().unwrap();
+    fs::write(dir.path().join("AGENTS.md"), [0xff, 0xfe]).unwrap();
+    let ProjectInstructionRead::Skipped { file_name, note } = load_project_instructions(dir.path())
+    else {
+        panic!("expected the non-UTF-8 file to be skipped");
+    };
+    assert_eq!(file_name, "AGENTS.md");
+    assert_eq!(
+        note,
+        "[project instruction AGENTS.md were skipped: non-UTF-8 file]"
+    );
+}
+
+#[test]
 fn vault_slice_finds_map_by_alias_and_caps_the_combined_text() {
     let dir = tempfile::tempdir().unwrap();
     let store = tether_memory::vault::VaultStore::new(dir.path());

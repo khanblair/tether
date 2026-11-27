@@ -14,6 +14,32 @@ pub struct InstructionBlocks {
     pub project: String,
 }
 
+/// A project instruction file and the capped text read from it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProjectInstruction {
+    /// The selected file name.
+    pub file_name: String,
+    /// The file text after the prompt's cap is applied.
+    pub text: String,
+}
+
+/// What reading the project instruction file found.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ProjectInstructionRead {
+    /// The first safe file in prompt order, with its capped text.
+    Found(ProjectInstruction),
+    /// A file exists but was not used. `note` is the exact text the prompt shows the model.
+    /// `file_name` is empty when the project root itself is unavailable.
+    Skipped {
+        /// The file that was skipped, or empty when no file was selected.
+        file_name: String,
+        /// The bracketed note the prompt shows in place of the instructions.
+        note: String,
+    },
+    /// No instruction file exists.
+    Missing,
+}
+
 /// Reads global and project instructions for one turn.
 #[must_use]
 pub fn load_instructions(
@@ -27,8 +53,26 @@ pub fn load_instructions(
 }
 
 fn read_project(root: &Path) -> String {
+    match load_project_instructions(root) {
+        ProjectInstructionRead::Found(instruction) => format!(
+            "project instruction {}\n<instructions>\n{}\n</instructions>",
+            instruction.file_name, instruction.text
+        ),
+        ProjectInstructionRead::Skipped { note, .. } => note,
+        ProjectInstructionRead::Missing => String::new(),
+    }
+}
+
+/// Reads the first project instruction file in prompt order.
+///
+/// A file that exists but cannot be used gives `Skipped` with the note the prompt shows.
+#[must_use]
+pub fn load_project_instructions(root: &Path) -> ProjectInstructionRead {
     let Ok(guard) = PathGuard::new(root) else {
-        return note("project root is unavailable");
+        return ProjectInstructionRead::Skipped {
+            file_name: String::new(),
+            note: note("project root is unavailable"),
+        };
     };
     for name in ["TETHER.md", "AGENTS.md", "CLAUDE.md"] {
         let path = root.join(name);
@@ -37,23 +81,41 @@ fn read_project(root: &Path) -> String {
         }
         return read_guarded(&guard, name);
     }
-    String::new()
+    ProjectInstructionRead::Missing
 }
 
-fn read_guarded(guard: &PathGuard, name: &str) -> String {
+fn read_guarded(guard: &PathGuard, name: &str) -> ProjectInstructionRead {
     if fs::symlink_metadata(guard.root().join(name))
         .is_ok_and(|metadata| metadata.file_type().is_symlink())
     {
-        return note(&format!(
-            "project instruction {name} was skipped: symlinked file"
-        ));
+        return skipped(
+            name,
+            &format!("project instruction {name} was skipped: symlinked file"),
+        );
     }
     let Ok(path) = guard.resolve(name) else {
-        return note(&format!(
-            "project instruction {name} was skipped: unsafe path"
-        ));
+        return skipped(
+            name,
+            &format!("project instruction {name} was skipped: unsafe path"),
+        );
     };
-    read_file(&path, &format!("project instruction {name}"))
+    match read_utf8(&path) {
+        Ok(text) => ProjectInstructionRead::Found(ProjectInstruction {
+            file_name: name.to_owned(),
+            text: truncate_at_line(&text),
+        }),
+        Err(reason) => skipped(
+            name,
+            &format!("project instruction {name} were skipped: {reason}"),
+        ),
+    }
+}
+
+fn skipped(name: &str, reason: &str) -> ProjectInstructionRead {
+    ProjectInstructionRead::Skipped {
+        file_name: name.to_owned(),
+        note: note(reason),
+    }
 }
 
 fn read_unchecked(path: &Path) -> String {
@@ -64,14 +126,19 @@ fn read_unchecked(path: &Path) -> String {
 }
 
 fn read_file(path: &Path, label: &str) -> String {
-    let Ok(bytes) = fs::read(path) else {
-        return note(&format!("{label} were skipped: unreadable file"));
-    };
-    let Ok(text) = String::from_utf8(bytes) else {
-        return note(&format!("{label} were skipped: non-UTF-8 file"));
-    };
-    let text = truncate_at_line(&text);
-    format!("{label}\n<instructions>\n{text}\n</instructions>")
+    match read_utf8(path) {
+        Ok(text) => {
+            let text = truncate_at_line(&text);
+            format!("{label}\n<instructions>\n{text}\n</instructions>")
+        }
+        Err(reason) => note(&format!("{label} were skipped: {reason}")),
+    }
+}
+
+/// Reads a file as UTF-8. The error is the reason shown in the prompt note.
+fn read_utf8(path: &Path) -> Result<String, &'static str> {
+    let bytes = fs::read(path).map_err(|_| "unreadable file")?;
+    String::from_utf8(bytes).map_err(|_| "non-UTF-8 file")
 }
 
 fn truncate_at_line(text: &str) -> String {

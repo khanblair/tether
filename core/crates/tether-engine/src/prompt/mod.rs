@@ -16,7 +16,10 @@ mod vault;
 mod tests;
 
 pub use builder::PromptBuilder;
-pub use instructions::{InstructionBlocks, load_instructions};
+pub use instructions::{
+    InstructionBlocks, ProjectInstruction, ProjectInstructionRead, load_instructions,
+    load_project_instructions,
+};
 pub use vault::load_vault_slice;
 
 /// Paths and optional environment values used to build a session prompt.

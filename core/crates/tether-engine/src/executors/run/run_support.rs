@@ -1,7 +1,7 @@
 //! Shared parsing, output, and report helpers for the run handler.
 
 use serde_json::Value;
-use tether_sandbox::{OutputSink, RunOutcome};
+use tether_sandbox::{OutputSink, RunOutcome as SandboxRunOutcome};
 use tether_types::Executor;
 use tokio::sync::mpsc;
 
@@ -75,6 +75,147 @@ pub(super) fn executor_name(executor: Executor) -> &'static str {
     }
 }
 
+const EXIT_CODE_PREFIX: &str = "exit code ";
+const TIMED_OUT: &str = "timed out";
+const TIMED_OUT_AFTER_PREFIX: &str = "timed out after ";
+const CANCELLED: &str = "cancelled";
+const OUT_OF_MEMORY: &str = "out of memory";
+const CANCELLED_BEFORE_EXECUTION: &str = "tool cancelled before execution";
+const DENIED_BY_USER: &str = "denied by the user";
+
+/// The outcome read from a saved `run` result.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RunOutcome {
+    /// The command returned an exit code.
+    Exited(i32),
+    /// The executor stopped at its time limit.
+    TimedOut,
+    /// The caller cancelled the command.
+    Cancelled,
+    /// The command exceeded its memory limit.
+    OutOfMemory,
+    /// The user denied the call before execution.
+    Denied,
+    /// Linux started a background process.
+    Background,
+    /// The saved text did not match a known result shape.
+    Unknown,
+}
+
+/// The parsed executor, outcome, and duration of a saved `run` result.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ParsedRun {
+    /// Executor named by the result, or Linux for a background result.
+    pub executor: Option<Executor>,
+    /// Parsed terminal outcome.
+    pub outcome: RunOutcome,
+    /// Duration in milliseconds for a foreground result.
+    pub duration_ms: Option<u64>,
+}
+
+/// Parses the exact result text written by the `run` tool and its cancellation paths.
+#[must_use]
+pub fn parse_run_result(text: &str, is_error: bool) -> ParsedRun {
+    if is_background_result(text) {
+        return ParsedRun {
+            executor: Some(Executor::Linux),
+            outcome: RunOutcome::Background,
+            duration_ms: None,
+        };
+    }
+    if is_error && text == CANCELLED_BEFORE_EXECUTION {
+        return parsed_without_executor(RunOutcome::Cancelled);
+    }
+    if is_error && is_denied_result(text) {
+        return parsed_without_executor(RunOutcome::Denied);
+    }
+    parse_foreground_result(text).unwrap_or_else(|| parsed_without_executor(RunOutcome::Unknown))
+}
+
+fn status_text(status: RunStatus, call: &PreparedCall) -> String {
+    match status {
+        RunStatus::Exited(code) => format!("{EXIT_CODE_PREFIX}{code}"),
+        RunStatus::TimedOut => call
+            .payload
+            .get("_timeout")
+            .and_then(Value::as_u64)
+            .map_or_else(
+                || TIMED_OUT.to_owned(),
+                |seconds| format!("{TIMED_OUT_AFTER_PREFIX}{seconds}s"),
+            ),
+        RunStatus::Cancelled => CANCELLED.to_owned(),
+        RunStatus::OutOfMemory => OUT_OF_MEMORY.to_owned(),
+    }
+}
+
+fn parse_foreground_result(text: &str) -> Option<ParsedRun> {
+    let mut lines = text.split('\n');
+    let executor = parse_executor_name(lines.next()?.strip_prefix("executor: ")?)?;
+    lines.next()?.strip_prefix("reason: ")?;
+    let outcome = parse_status(lines.next()?)?;
+    let duration_ms = parse_duration(lines.next()?)?;
+    Some(ParsedRun {
+        executor: Some(executor),
+        outcome,
+        duration_ms: Some(duration_ms),
+    })
+}
+
+fn parse_status(line: &str) -> Option<RunOutcome> {
+    if let Some(code) = line.strip_prefix(EXIT_CODE_PREFIX) {
+        return code.parse().ok().map(RunOutcome::Exited);
+    }
+    if line == TIMED_OUT {
+        return Some(RunOutcome::TimedOut);
+    }
+    if line
+        .strip_prefix(TIMED_OUT_AFTER_PREFIX)
+        .and_then(|seconds| seconds.strip_suffix('s'))
+        .and_then(|seconds| seconds.parse::<u64>().ok())
+        .is_some()
+    {
+        return Some(RunOutcome::TimedOut);
+    }
+    match line {
+        CANCELLED => Some(RunOutcome::Cancelled),
+        OUT_OF_MEMORY => Some(RunOutcome::OutOfMemory),
+        _ => None,
+    }
+}
+
+fn parse_duration(line: &str) -> Option<u64> {
+    line.strip_prefix("duration: ")?
+        .strip_suffix(" ms")?
+        .parse()
+        .ok()
+}
+
+fn parse_executor_name(name: &str) -> Option<Executor> {
+    match name {
+        "sandbox" => Some(Executor::Sandbox),
+        "linux" => Some(Executor::Linux),
+        "ci" => Some(Executor::Ci),
+        _ => None,
+    }
+}
+
+fn parsed_without_executor(outcome: RunOutcome) -> ParsedRun {
+    ParsedRun {
+        executor: None,
+        outcome,
+        duration_ms: None,
+    }
+}
+
+fn is_background_result(text: &str) -> bool {
+    text.starts_with("process: ") && text.contains("\noutput:\n")
+}
+
+fn is_denied_result(text: &str) -> bool {
+    text.strip_prefix(DENIED_BY_USER)
+        .is_some_and(|suffix| suffix.is_empty() || suffix.starts_with(':'))
+}
+
 pub(super) fn string<'a>(value: &'a Value, key: &str) -> Result<&'a str, String> {
     value
         .get(key)
@@ -83,19 +224,7 @@ pub(super) fn string<'a>(value: &'a Value, key: &str) -> Result<&'a str, String>
 }
 
 pub(super) fn format_result(executor: Executor, call: &PreparedCall, report: &RunReport) -> String {
-    let status = match report.status {
-        RunStatus::Exited(code) => format!("exit code {code}"),
-        RunStatus::TimedOut => call
-            .payload
-            .get("_timeout")
-            .and_then(Value::as_u64)
-            .map_or_else(
-                || "timed out".to_owned(),
-                |seconds| format!("timed out after {seconds}s"),
-            ),
-        RunStatus::Cancelled => "cancelled".into(),
-        RunStatus::OutOfMemory => "out of memory".into(),
-    };
+    let status = status_text(report.status, call);
     let output = trim_output(&report.output);
     let truncation = if report.output_truncated || output.1 > 0 {
         format!("\noutput truncated: {} characters omitted", output.1)
@@ -196,11 +325,11 @@ impl IntoRunReport for tether_sandbox::RunReport {
     fn into_run_report(self) -> RunReport {
         RunReport {
             status: match self.outcome {
-                RunOutcome::Exited(code) => RunStatus::Exited(code),
-                RunOutcome::TimedOut => RunStatus::TimedOut,
-                RunOutcome::Cancelled => RunStatus::Cancelled,
-                RunOutcome::OutOfMemory => RunStatus::OutOfMemory,
-                RunOutcome::Trapped(_) => RunStatus::Exited(1),
+                SandboxRunOutcome::Exited(code) => RunStatus::Exited(code),
+                SandboxRunOutcome::TimedOut => RunStatus::TimedOut,
+                SandboxRunOutcome::Cancelled => RunStatus::Cancelled,
+                SandboxRunOutcome::OutOfMemory => RunStatus::OutOfMemory,
+                SandboxRunOutcome::Trapped(_) => RunStatus::Exited(1),
             },
             output: String::new(),
             duration: self.elapsed,

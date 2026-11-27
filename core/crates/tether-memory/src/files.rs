@@ -105,6 +105,15 @@ impl MemoryStore {
         read_file(&self.root.join(target.name()))
     }
 
+    /// Counts the non-empty entries in one memory file.
+    ///
+    /// # Errors
+    /// Returns I/O failures other than a missing file.
+    pub fn count(&self, target: MemoryTarget) -> Result<u32, MemoryError> {
+        let content = self.read(target)?;
+        Ok(entry_count(&content))
+    }
+
     /// Applies an add, exact patch, or exact removal and writes it atomically.
     ///
     /// # Errors
@@ -120,11 +129,7 @@ impl MemoryStore {
             .map_err(|_| io::Error::other("memory lock poisoned"))?;
         let path = self.root.join(target.name());
         let original = read_file(&path)?;
-        let mut entries: Vec<String> = original
-            .split(SEPARATOR)
-            .filter(|part| !part.trim().is_empty())
-            .map(str::to_owned)
-            .collect();
+        let mut entries: Vec<String> = entries(&original).map(str::to_owned).collect();
         if !apply_action(&mut entries, action)? {
             return Ok(MemoryResult {
                 changed: false,
@@ -188,6 +193,16 @@ fn read_file(path: &Path) -> Result<String, MemoryError> {
         Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(String::new()),
         Err(error) => Err(error.into()),
     }
+}
+
+fn entries(content: &str) -> impl Iterator<Item = &str> {
+    content
+        .split(SEPARATOR)
+        .filter(|part| !part.trim().is_empty())
+}
+
+fn entry_count(content: &str) -> u32 {
+    u32::try_from(entries(content).count()).unwrap_or(u32::MAX)
 }
 
 fn validate_entry(entry: &str) -> Result<(), MemoryError> {

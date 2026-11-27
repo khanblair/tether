@@ -123,3 +123,21 @@ fn planted_injection_credential_and_hidden_text_are_rejected() {
     }
     assert!(!fixture.path.join("MEMORY.md").exists());
 }
+
+#[test]
+fn count_ignores_blank_entries_and_counts_each_memory_file() {
+    let fixture = Fixture::new();
+    fs::create_dir_all(&fixture.path).unwrap();
+    fs::write(
+        fixture.path.join("MEMORY.md"),
+        "one\n§\n\n§\n two\n§\nthree",
+    )
+    .unwrap();
+    fs::write(fixture.path.join("USER.md"), "four\n§\n\n§\n five").unwrap();
+    let store = fixture.store();
+
+    assert_eq!(store.count(MemoryTarget::Memory).unwrap(), 3);
+    assert_eq!(store.count(MemoryTarget::User).unwrap(), 2);
+    fs::write(fixture.path.join("USER.md"), "\n§\n  \n").unwrap();
+    assert_eq!(store.count(MemoryTarget::User).unwrap(), 0);
+}

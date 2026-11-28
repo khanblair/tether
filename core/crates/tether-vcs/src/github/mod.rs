@@ -9,8 +9,10 @@ use std::time::Duration;
 use tether_secrets::Secret;
 use thiserror::Error;
 
+mod api;
 mod client;
 mod helpers;
+pub use api::GithubApiResponse;
 pub use helpers::{parse_github_url, should_clone_shallow};
 
 const API_URL: &str = "https://api.github.com";

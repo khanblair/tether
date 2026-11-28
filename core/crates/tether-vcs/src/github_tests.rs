@@ -204,6 +204,57 @@ fn current_user_uses_verified_primary_email_or_noreply_fallback() {
 }
 
 #[test]
+fn github_api_returns_status_headers_next_path_and_redacted_body() {
+    let http = Arc::new(FakeHttp::new(vec![Ok(HttpResponse {
+        status: 200,
+        headers: [
+            (
+                String::from("Link"),
+                String::from("<https://api.github.com/user/repos?page=2>; rel=\"next\", <https://evil.test/x>; rel=\"next\""),
+            ),
+            (String::from("x-ratelimit-remaining"), String::from("7")),
+        ]
+        .into_iter()
+        .collect(),
+        body: br#"{"token":"ghp_test_token_123"}"#.to_vec(),
+    })]));
+    let api = GithubClient::new(http.clone(), Secret::from_text("ghp_test_token_123"));
+    let response = block_on(api.api("GET", "/user/repos?per_page=1", None)).expect("API call");
+
+    assert_eq!(response.status, 200);
+    assert_eq!(response.next.as_deref(), Some("/user/repos?page=2"));
+    assert_eq!(response.rate_limit_remaining, Some(7));
+    assert!(response.body.contains("[REDACTED]"));
+    assert!(!response.body.contains("ghp_test_token_123"));
+    let request = http.request(0);
+    assert_eq!(request.method, "GET");
+    assert_eq!(request.url, "https://api.github.com/user/repos?per_page=1");
+    assert_eq!(
+        request.headers.get("accept"),
+        Some(&String::from("application/vnd.github+json"))
+    );
+    assert!(request.headers.contains_key("authorization"));
+
+    let foreign_http = Arc::new(FakeHttp::new(vec![Ok(HttpResponse {
+        status: 200,
+        headers: [(
+            String::from("Link"),
+            String::from("<https://evil.test/x?page=2>; rel=\"next\""),
+        )]
+        .into_iter()
+        .collect(),
+        body: b"{}".to_vec(),
+    })]));
+    let foreign_api = GithubClient::new(foreign_http, Secret::from_text("token-123"));
+    assert_eq!(
+        block_on(foreign_api.api("GET", "/user", None))
+            .expect("foreign link response")
+            .next,
+        None
+    );
+}
+
+#[test]
 fn github_errors_are_typed_and_do_not_leak_tokens() {
     let cases = [
         (401, "{}", GithubError::BadCredentials),

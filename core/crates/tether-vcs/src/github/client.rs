@@ -1,11 +1,10 @@
 use super::helpers::{
-    base64_encode, issue_comments, map_status, number, parse_created_repo, parse_pr, parse_repo,
-    review_comments, string,
+    issue_comments, map_status, number, parse_created_repo, parse_pr, parse_repo, review_comments,
+    string,
 };
 use super::{
-    API_URL, BTreeMap, CheckRun, CreatedRepository, GithubClient, GithubError, GithubIdentity,
-    HttpClient, HttpRequest, MAX_BODY, PullRequestComment, PullRequestDraft, PullRequestInfo,
-    RepoInfo, Secret,
+    API_URL, CheckRun, CreatedRepository, GithubClient, GithubError, GithubIdentity, HttpClient,
+    MAX_BODY, PullRequestComment, PullRequestDraft, PullRequestInfo, RepoInfo, Secret,
 };
 use std::sync::Arc;
 impl GithubClient {
@@ -248,37 +247,7 @@ impl GithubClient {
         path: &str,
         body: Option<serde_json::Value>,
     ) -> Result<serde_json::Value, GithubError> {
-        let token = self
-            .token
-            .expose_text()
-            .map_err(|_| GithubError::InvalidRequest)?;
-        let mut headers = BTreeMap::from([
-            (
-                String::from("accept"),
-                String::from("application/vnd.github+json"),
-            ),
-            (String::from("user-agent"), String::from("Tether")),
-        ]);
-        headers.insert(
-            String::from("authorization"),
-            format!(
-                "Basic {}",
-                base64_encode(format!("x-access-token:{token}").as_bytes())
-            ),
-        );
-        let body = body
-            .map(|value| serde_json::to_vec(&value).map_err(|_| GithubError::InvalidRequest))
-            .transpose()?;
-        let response = self
-            .http
-            .send(HttpRequest {
-                method: method.to_owned(),
-                url: format!("{}{}", self.base_url, path),
-                headers,
-                body,
-            })
-            .await
-            .map_err(|_| GithubError::Retryable)?;
+        let response = self.send_request(method, path, body).await?;
         map_status(&response)?;
         if response.body.len() > MAX_BODY {
             return Err(GithubError::InvalidResponse);

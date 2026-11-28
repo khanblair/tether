@@ -58,16 +58,19 @@ fun PreviewScreen(
                 title = title ?: stringResource(R.string.preview_title),
                 navigationIcon = { BackButton(onBack) },
                 actions = {
-                    TetherIconButton(
-                        icon = TetherIcons.RefreshCw,
-                        contentDescription = stringResource(R.string.preview_reload),
-                        onClick = onReload,
-                    )
-                    NetworkChip(
-                        allowed = state.networkAllowed,
-                        locked = state.networkLocked,
-                        onToggle = { onNetworkChange(!state.networkAllowed) },
-                    )
+                    // An expired inline preview has no page to reload and no network to switch.
+                    if (state.load != PreviewLoad.Expired) {
+                        TetherIconButton(
+                            icon = TetherIcons.RefreshCw,
+                            contentDescription = stringResource(R.string.preview_reload),
+                            onClick = onReload,
+                        )
+                        NetworkChip(
+                            allowed = state.networkAllowed,
+                            locked = state.networkLocked,
+                            onToggle = { onNetworkChange(!state.networkAllowed) },
+                        )
+                    }
                 },
             )
         },

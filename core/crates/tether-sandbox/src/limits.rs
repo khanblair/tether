@@ -89,7 +89,7 @@ impl<'a> CappedOutput<'a> {
         let count = bytes.len().min(self.limit.saturating_sub(self.sent));
         if count > 0 {
             self.send(&bytes[..count], stderr);
-            self.sent += count;
+            self.sent = self.sent.saturating_add(count);
         }
         if count < bytes.len() {
             self.truncated = true;
@@ -137,6 +137,17 @@ mod tests {
         assert_eq!(capped.sent(), 5);
         assert!(capped.truncated());
         assert_eq!(collected.0, b"onetw");
+    }
+
+    #[test]
+    fn sent_count_saturates_at_usize_max() {
+        let mut collected = Collected(Vec::new());
+        let mut capped = CappedOutput::new(&mut collected, usize::MAX);
+        capped.sent = usize::MAX - 1;
+
+        capped.stdout(b"12345");
+
+        assert_eq!(capped.sent(), usize::MAX);
     }
 
     #[test]

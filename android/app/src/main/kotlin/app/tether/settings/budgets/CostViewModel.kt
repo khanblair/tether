@@ -28,8 +28,9 @@ enum class CostRange(
 }
 
 /**
- * What the cost screen shows. [summary] is null until the first load succeeds. [spentInRange]
- * sums the chart's days, and [empty] is true when that sum is zero.
+ * What the cost screen shows. [summary] is null until the first load succeeds. [spentInRange] and
+ * [tokensInRange] sum the days of the range. [empty] is true when there is no usage at all, and
+ * [freeOnly] when there are tokens but no spend, as with free models.
  */
 @Immutable
 data class CostUiState(
@@ -42,9 +43,17 @@ data class CostUiState(
     val spentInRange: Long
         get() = summary?.byDay?.sumOf { it.costMicros } ?: 0L
 
-    /** True when the summary loaded and no day in the range has spend. */
+    /** The tokens, in and out, over the days of the selected range. */
+    val tokensInRange: Long
+        get() = summary?.byDay?.sumOf { it.tokens } ?: 0L
+
+    /** True when the summary loaded and the range has no spend and no tokens. */
     val empty: Boolean
-        get() = summary != null && spentInRange == 0L
+        get() = summary != null && spentInRange == 0L && tokensInRange == 0L
+
+    /** True when the range has tokens and no spend, such as usage of free models only. */
+    val freeOnly: Boolean
+        get() = summary != null && spentInRange == 0L && tokensInRange > 0L
 }
 
 /**

@@ -10,12 +10,17 @@ data class BudgetLimits(
     val sessionMicros: Long?,
 )
 
-/** Spend on one UTC day. [day] is `YYYY-MM-DD`. */
+/** Spend and tokens on one UTC day. [day] is `YYYY-MM-DD`. A free model has tokens and no spend. */
 @Immutable
 data class CostDay(
     val day: String,
     val costMicros: Long,
-)
+    val tokensIn: Long = 0L,
+    val tokensOut: Long = 0L,
+) {
+    /** The tokens of the day, in and out. */
+    val tokens: Long get() = tokensIn + tokensOut
+}
 
 /** Tokens and spend over one window. */
 @Immutable
@@ -25,20 +30,24 @@ data class CostTotals(
     val costMicros: Long,
 )
 
-/** Spend of one project. [name] is empty when the project was deleted. */
+/** Spend and tokens of one project. [name] is empty when the project was deleted. */
 @Immutable
 data class ProjectCost(
     val projectId: String,
     val name: String,
     val costMicros: Long,
+    val tokensIn: Long = 0L,
+    val tokensOut: Long = 0L,
 )
 
-/** Spend of one model. */
+/** Spend and tokens of one model. A free model shows its tokens with no spend. */
 @Immutable
 data class ModelCost(
     val provider: ProviderView,
     val modelId: String,
     val costMicros: Long,
+    val tokensIn: Long = 0L,
+    val tokensOut: Long = 0L,
 )
 
 /** The usage the cost screen shows. [byDay] is zero-filled and oldest first. */
@@ -73,3 +82,6 @@ class BudgetsFailure(
 /** The problem behind a failed budgets call. Any other failure counts as unavailable. */
 internal fun Throwable.budgetsProblem(): BudgetsProblem =
     (this as? BudgetsFailure)?.problem ?: BudgetsProblem.Unavailable
+
+/** What the daily bars measure: spend, or tokens when the usage is all free. */
+internal enum class CostMetric { Spend, Tokens }

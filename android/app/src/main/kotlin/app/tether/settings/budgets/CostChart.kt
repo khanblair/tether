@@ -16,31 +16,44 @@ import app.tether.R
 import app.tether.design.TetherTheme
 import app.tether.design.components.UsageBarChart
 import app.tether.design.tokens.TetherSpace
+import app.tether.home.formatTokens
 
 /**
- * Daily spend as bars, oldest day first, with the first and last dates under the plot. The
- * chart reads as one node for TalkBack: the range, the highest day, and its cost. [days] must
- * not be empty.
+ * Daily spend or tokens as bars, oldest day first, with the first and last dates under the plot.
+ * The chart reads as one node for TalkBack: the range, the highest day, and its value. [days]
+ * must not be empty.
  */
 @Composable
 internal fun CostChart(
     days: List<CostDay>,
     modifier: Modifier = Modifier,
+    metric: CostMetric = CostMetric.Spend,
 ) {
     val locale = LocalConfiguration.current.locales[0]
-    val peak = days.maxBy { it.costMicros }
+    val values = days.map { if (metric == CostMetric.Tokens) it.tokens else it.costMicros }
+    val peakIndex = values.indices.maxBy { values[it] }
+    val peak = days[peakIndex]
     val span = pluralStringResource(R.plurals.budgets_days, days.size, days.size)
     val description =
-        stringResource(
-            R.string.budgets_chart_description,
-            span,
-            dayLabel(peak.day, locale),
-            dollarsText(peak.costMicros),
-        )
+        if (metric == CostMetric.Tokens) {
+            stringResource(
+                R.string.budgets_chart_description_tokens,
+                span,
+                dayLabel(peak.day, locale),
+                formatTokens(peak.tokens),
+            )
+        } else {
+            stringResource(
+                R.string.budgets_chart_description,
+                span,
+                dayLabel(peak.day, locale),
+                dollarsText(peak.costMicros),
+            )
+        }
     val axis = TetherTheme.chart.axisText
     Column(modifier = modifier.fillMaxWidth()) {
         UsageBarChart(
-            values = days.map { it.costMicros },
+            values = values,
             labels = emptyList(),
             contentDescription = description,
         )

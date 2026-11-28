@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
@@ -38,6 +40,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import app.tether.R
 import app.tether.design.components.TetherSnackbarHost
+import app.tether.design.components.TetherToastHost
+import app.tether.design.tokens.TetherSpace
 import app.tether.di.AppModule
 import app.tether.home.AttentionViewModel
 import app.tether.home.HomeDrawer
@@ -77,12 +81,13 @@ fun TetherNavHost(module: AppModule) {
             ?.route
     LaunchedEffect(currentRoute) { attentionModel.refresh() }
     val snackbars = remember { SnackbarHostState() }
+    val toasts = remember { SnackbarHostState() }
     val shared by module.shareInbox.pending.collectAsStateWithLifecycle()
     LaunchedEffect(shared?.value) {
         if (shared != null && currentRoute != "share-project") nav.open("share-project")
     }
     BackHandler(enabled = drawerState.isOpen) { scope.launch { drawerState.close() } }
-    SnackbarMessages(module = module, snackbars = snackbars)
+    SnackbarMessages(module = module, snackbars = snackbars, toasts = toasts)
     ModalNavigationDrawer(
         drawerState = drawerState,
         gesturesEnabled = currentRoute == Route.Home.path || currentRoute == Route.Projects.path,
@@ -149,30 +154,41 @@ fun TetherNavHost(module: AppModule) {
                         .align(Alignment.BottomCenter)
                         .windowInsetsPadding(WindowInsets.navigationBars),
             )
+            TetherToastHost(
+                hostState = toasts,
+                modifier =
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .windowInsetsPadding(WindowInsets.statusBars)
+                        .padding(top = TetherSpace.space2),
+            )
         }
     }
 }
 
-/** Shows each message from [AppModule.messages] in the snackbar host, and runs its action. */
+/**
+ * Shows each message from [AppModule.messages]. A message with an action is a snackbar at the
+ * bottom and runs its action; one without is a toast at the top.
+ */
 @Composable
 private fun SnackbarMessages(
     module: AppModule,
     snackbars: SnackbarHostState,
+    toasts: SnackbarHostState,
 ) {
     LaunchedEffect(module) {
         module.messages.flow.collect { message ->
-            val result =
-                snackbars.showSnackbar(
-                    message = message.text,
-                    actionLabel = message.actionLabel,
-                    duration =
-                        if (message.actionLabel == null) {
-                            SnackbarDuration.Short
-                        } else {
-                            SnackbarDuration.Long
-                        },
-                )
-            if (result == SnackbarResult.ActionPerformed) message.onAction?.invoke()
+            if (message.actionLabel == null) {
+                toasts.showSnackbar(message = message.text, duration = SnackbarDuration.Short)
+            } else {
+                val result =
+                    snackbars.showSnackbar(
+                        message = message.text,
+                        actionLabel = message.actionLabel,
+                        duration = SnackbarDuration.Long,
+                    )
+                if (result == SnackbarResult.ActionPerformed) message.onAction?.invoke()
+            }
         }
     }
 }

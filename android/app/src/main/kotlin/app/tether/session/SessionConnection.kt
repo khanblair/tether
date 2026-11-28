@@ -14,6 +14,7 @@ import app.tether.session.compose.CommandsGateway
 import app.tether.session.compose.CoreCommandsGateway
 import app.tether.session.compose.SkippedMention
 import app.tether.session.servers.ServerProcessRegistry
+import app.tether.session.servers.SessionProcessControl
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 
@@ -27,7 +28,8 @@ class SessionConnection(
     vault: SecretVault,
     val sessionId: String,
     private val workspacesRoot: String? = null,
-) : AutoCloseable {
+) : AutoCloseable,
+    SessionProcessControl {
     private val events = MutableSharedFlow<CoreEventView>(extraBufferCapacity = 64)
     val changes: SharedFlow<CoreEventView> = events
     private val sink =
@@ -60,6 +62,7 @@ class SessionConnection(
 
     init {
         ServerProcessRegistry.register(sessionId, runner.listProcesses())
+        ServerProcessRegistry.attach(sessionId, this)
     }
 
     /**
@@ -83,10 +86,10 @@ class SessionConnection(
     fun transcript(): List<MessageView> = runtime.transcript(sessionId)
 
     /** Reads the session's background processes without waiting for a running turn. */
-    fun listProcesses(): List<ProcessView> = runner.listProcesses()
+    override fun listProcesses(): List<ProcessView> = runner.listProcesses()
 
     /** Stops a session-owned background process without waiting for a running turn. */
-    fun stopProcess(processId: String) = runner.stopProcess(processId)
+    override fun stopProcess(processId: String) = runner.stopProcess(processId)
 
     /** Sends a turn and returns the `@` mentions the core could not attach, with the reasons. */
     fun send(text: String): List<SkippedMention> {

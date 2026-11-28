@@ -30,6 +30,7 @@ fun TranscriptScreen(
     sheets: SessionSheetEnv? = null,
     onOpenBudgets: (() -> Unit)? = null,
     emptyState: (@Composable () -> Unit)? = null,
+    initialDraft: String? = null,
 ) {
     var snapshot by remember(connection) { mutableStateOf<TranscriptSnapshot?>(null) }
     var failed by remember(connection) { mutableStateOf(false) }
@@ -174,6 +175,7 @@ fun TranscriptScreen(
                         supportsImages = snapshot?.supportsImages == true,
                         onOpenMode = sheetOpener(sheets, sheetControl, SessionSheetKind.Mode),
                         onOpenModel = sheetOpener(sheets, sheetControl, SessionSheetKind.Model),
+                        initialDraft = initialDraft,
                     )
                 }
             },

@@ -33,6 +33,7 @@ internal fun SessionRoute(
     module: AppModule,
     nav: TetherNav,
     sessionId: String?,
+    draft: String? = null,
 ) {
     val onBack: () -> Unit = nav::back
     val scope = rememberCoroutineScope()
@@ -97,6 +98,7 @@ internal fun SessionRoute(
                 ),
             onOpenBudgets = { nav.open(SETTINGS_BUDGETS_ROUTE) },
             emptyState = loads?.let { found -> { SessionLoadsCard(found) } },
+            initialDraft = draft,
         )
     }
 }

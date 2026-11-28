@@ -100,6 +100,7 @@ internal fun ComposerControls(
     supportsImages: Boolean = false,
     onOpenMode: (() -> Unit)? = null,
     onOpenModel: (() -> Unit)? = null,
+    initialDraft: String? = null,
 ) {
     val scope = rememberCoroutineScope()
     val skippedText = stringResource(R.string.compose_skipped_files)
@@ -123,6 +124,7 @@ internal fun ComposerControls(
         supportsImages = supportsImages,
         sendBlocked = sendBlocked,
         assist = assist,
+        initialDraft = initialDraft,
     )
 }
 

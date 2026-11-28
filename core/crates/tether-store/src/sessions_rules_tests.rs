@@ -20,17 +20,17 @@ fn text(value: &str) -> MessagePart {
 }
 
 #[test]
-fn title_is_the_first_80_characters_of_the_trimmed_first_message() {
+fn title_is_at_most_60_characters_with_whole_words() {
     let mut store = Store::open_in_memory().unwrap();
     let project = seed_project(&store);
     let long = store
         .create_session(&project, &anthropic(), PermissionMode::Ask, 1)
         .unwrap();
-    let padded = format!("  {}  ", "a".repeat(200));
+    let padded = format!("  {}  ", "a".repeat(80));
     store.begin_turn(&long.id, &padded, 2).unwrap();
     assert_eq!(
         store.load_session(&long.id).unwrap().unwrap().title,
-        "a".repeat(80)
+        format!("{}…", "a".repeat(59))
     );
 
     let short = store
@@ -45,10 +45,10 @@ fn title_is_the_first_80_characters_of_the_trimmed_first_message() {
     let accented = store
         .create_session(&project, &anthropic(), PermissionMode::Ask, 5)
         .unwrap();
-    store.begin_turn(&accented.id, &"é".repeat(81), 6).unwrap();
+    store.begin_turn(&accented.id, &"é".repeat(80), 6).unwrap();
     assert_eq!(
         store.load_session(&accented.id).unwrap().unwrap().title,
-        "é".repeat(80)
+        format!("{}…", "é".repeat(59))
     );
 }
 
@@ -281,7 +281,7 @@ fn a_multi_line_first_message_gives_a_one_line_title() {
 }
 
 #[test]
-fn a_long_multi_line_title_is_cut_to_80_characters_after_collapsing() {
+fn a_long_multi_line_title_is_cut_to_60_characters_after_collapsing() {
     let mut store = Store::open_in_memory().unwrap();
     let project = seed_project(&store);
     let session = store
@@ -290,9 +290,10 @@ fn a_long_multi_line_title_is_cut_to_80_characters_after_collapsing() {
     let message = format!("{}\n\n", "é".repeat(50)).repeat(3);
     store.begin_turn(&session.id, &message, 2).unwrap();
     let title = store.load_session(&session.id).unwrap().unwrap().title;
-    assert_eq!(title.chars().count(), 80);
+    assert!(title.chars().count() <= 60);
     assert!(!title.contains('\n'));
-    assert_eq!(title, format!("{} {}", "é".repeat(50), "é".repeat(29)));
+    assert!(title.ends_with('…'));
+    assert_eq!(title, format!("{}…", "é".repeat(50)));
 }
 
 #[test]

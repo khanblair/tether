@@ -1,6 +1,7 @@
 use std::fs::{self, OpenOptions};
-use std::io;
+use std::io::{self, Write};
 use std::path::Path;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::LinuxError;
 use crate::error::io_error;
@@ -94,6 +95,51 @@ pub(crate) fn touch(path: &Path) -> Result<(), LinuxError> {
         .open(path)
         .map(|_| ())
         .map_err(|_| io_error("create Linux resolver file"))
+}
+
+/// The guest's `/etc/hosts` content.
+///
+/// There is no `::1` line on purpose. A server that listens on `localhost` must land on
+/// `127.0.0.1`, because the app reaches servers there.
+pub(crate) const LOOPBACK_HOSTS: &[u8] = b"127.0.0.1\tlocalhost localhost.localdomain\n";
+
+static HOSTS_TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+/// Makes sure the hosts file holds exactly `LOOPBACK_HOSTS`.
+///
+/// The file is replaced by a rename from a new temp file in the same folder. It is
+/// never truncated in place, so a bind that happens during the write never sees an
+/// empty file, and a file the guest made unreadable (mode 000) is still replaced.
+pub(crate) fn ensure_hosts(path: &Path) -> Result<(), LinuxError> {
+    match fs::symlink_metadata(path) {
+        Ok(metadata) if metadata.file_type().is_symlink() => {
+            return Err(LinuxError::Path("Linux hosts file is a symlink".into()));
+        }
+        Ok(metadata) if metadata.is_dir() => {
+            return Err(LinuxError::Path("Linux hosts file is not a file".into()));
+        }
+        _ => {}
+    }
+    if fs::read(path).is_ok_and(|bytes| bytes == LOOPBACK_HOSTS) {
+        return Ok(());
+    }
+    let parent = path
+        .parent()
+        .ok_or_else(|| io_error("write Linux hosts file"))?;
+    let counter = HOSTS_TEMP_COUNTER.fetch_add(1, Ordering::Relaxed);
+    let temp = parent.join(format!("hosts.tmp-{}-{counter}", std::process::id()));
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&temp)
+        .map_err(|_| io_error("write Linux hosts file"))?;
+    let replaced = file
+        .write_all(LOOPBACK_HOSTS)
+        .and_then(|()| fs::rename(&temp, path));
+    if replaced.is_err() {
+        fs::remove_file(&temp).ok();
+    }
+    replaced.map_err(|_| io_error("write Linux hosts file"))
 }
 
 pub(crate) fn remove_path(path: &Path) -> Result<(), LinuxError> {

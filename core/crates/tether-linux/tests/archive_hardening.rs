@@ -3,7 +3,7 @@
 use std::fs;
 use std::io::Write;
 use std::os::unix::fs::{MetadataExt, PermissionsExt};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{
     Arc,
     atomic::{AtomicUsize, Ordering},
@@ -167,6 +167,80 @@ impl RootfsProgress for CancelAfterFirstExtraction {
             self.cancel.cancel();
         }
     }
+}
+
+#[derive(Default)]
+struct RecordingProgress {
+    entries: usize,
+}
+
+impl RootfsProgress for RecordingProgress {
+    fn extracting(&mut self, entries: usize) {
+        self.entries = entries;
+    }
+}
+
+#[test]
+fn extracts_an_archive_whose_first_entry_is_the_dot_root() {
+    let bytes = archive(vec![
+        Entry::Directory("./".into(), 0o700),
+        Entry::Directory("./bin/".into(), 0o755),
+        Entry::File("./bin/busybox".into(), b"busybox".to_vec(), 0o755),
+        Entry::Symlink("./bin/sh".into(), "/bin/busybox".into()),
+        Entry::Directory("./etc/".into(), 0o755),
+    ]);
+    let folder = tempdir().unwrap();
+    let manager = RootfsManager::new(folder.path().join("linux"));
+    let image = image(&bytes, 1024);
+    let fetcher = BytesFetcher {
+        bytes: Arc::new(bytes),
+    };
+    let mut progress = RecordingProgress::default();
+
+    manager
+        .install(&image, &fetcher, &mut progress, &CancellationToken::new())
+        .unwrap();
+
+    let root = folder.path().join("linux/rootfs/alpine");
+    assert_eq!(progress.entries, 5);
+    assert!(root.join("bin/busybox").is_file());
+    assert_eq!(
+        fs::read_link(root.join("bin/sh")).unwrap(),
+        PathBuf::from("/bin/busybox")
+    );
+    assert_eq!(fs::read_dir(&root).unwrap().count(), 2);
+}
+
+#[test]
+fn a_dot_root_entry_that_is_not_a_directory_is_still_rejected() {
+    let bytes = archive(vec![Entry::File(
+        "./".into(),
+        b"not a root".to_vec(),
+        0o644,
+    )]);
+    let folder = tempdir().unwrap();
+    let manager = RootfsManager::new(folder.path().join("linux"));
+    let image = image(&bytes, 1024);
+    let fetcher = BytesFetcher {
+        bytes: Arc::new(bytes),
+    };
+
+    let error = manager
+        .install(
+            &image,
+            &fetcher,
+            &mut NoopProgress,
+            &CancellationToken::new(),
+        )
+        .unwrap_err();
+
+    assert_eq!(
+        error.to_string(),
+        "Linux root filesystem archive rejected: archive path rejected"
+    );
+    assert!(!folder.path().join("linux/rootfs/alpine.partial").exists());
+    assert!(!folder.path().join("linux/rootfs/alpine").exists());
+    assert!(!folder.path().join("linux/rootfs/alpine.json").exists());
 }
 
 #[test]
@@ -391,6 +465,72 @@ fn cancellation_mid_extract_removes_partial_rootfs() {
     ));
     assert!(!folder.path().join("linux/rootfs/alpine.partial").exists());
     assert!(!folder.path().join("linux/rootfs/alpine").exists());
+}
+
+#[test]
+fn real_alpine_archive_extracts_completely() {
+    let archive_path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../..")
+        .join("dist/linux/alpine-minirootfs-3.22.2-aarch64.tar.gz");
+    if !archive_path.exists() {
+        eprintln!("real Alpine archive not found: {}", archive_path.display());
+        return;
+    }
+    let bytes = fs::read(&archive_path).unwrap();
+    assert_eq!(
+        hex(&Sha256::digest(&bytes)),
+        "6bf491907b705caa5fc65773fbbc1d0954530b6c455d4446f670a4c1fdcea489"
+    );
+
+    let folder = tempdir().unwrap();
+    let manager = RootfsManager::new(folder.path().join("linux"));
+    let image = image(&bytes, u64::MAX);
+    let fetcher = BytesFetcher {
+        bytes: Arc::new(bytes),
+    };
+    let mut progress = RecordingProgress::default();
+
+    manager
+        .install(&image, &fetcher, &mut progress, &CancellationToken::new())
+        .unwrap();
+
+    let root = folder.path().join("linux/rootfs/alpine");
+    let state = fs::read(folder.path().join("linux/rootfs/alpine.json")).unwrap();
+    let state: serde_json::Value = serde_json::from_slice(&state).unwrap();
+    let (symlinks, directories) = count_tree(&root);
+    assert_eq!(state["files"].as_array().unwrap().len(), 87);
+    assert_eq!(progress.entries, 520);
+    assert_eq!(symlinks, 335);
+    assert_eq!(directories, 97);
+    assert!(
+        fs::symlink_metadata(root.join("bin/busybox"))
+            .unwrap()
+            .is_file()
+    );
+    assert!(
+        fs::symlink_metadata(root.join("bin/sh"))
+            .unwrap()
+            .file_type()
+            .is_symlink()
+    );
+}
+
+fn count_tree(root: &Path) -> (usize, usize) {
+    let mut symlinks = 0;
+    let mut directories = 0;
+    for item in fs::read_dir(root).unwrap() {
+        let path = item.unwrap().path();
+        let metadata = fs::symlink_metadata(&path).unwrap();
+        if metadata.file_type().is_symlink() {
+            symlinks += 1;
+        } else if metadata.is_dir() {
+            directories += 1;
+            let (nested_symlinks, nested_directories) = count_tree(&path);
+            symlinks += nested_symlinks;
+            directories += nested_directories;
+        }
+    }
+    (symlinks, directories)
 }
 
 fn assert_rejected_archive(bytes: Vec<u8>, max_extracted_bytes: u64) {

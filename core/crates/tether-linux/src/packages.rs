@@ -9,6 +9,9 @@ use crate::rootfs::{RootfsManager, RootfsProgress, RootfsStatus};
 use crate::runner::{LinuxRunner, RunCommand, RunRequest};
 use crate::{LinuxError, OutputSink};
 
+/// Maximum time allowed for installing Alpine's base packages.
+const PACKAGE_INSTALL_TIMEOUT: Duration = Duration::from_secs(900);
+
 /// Inputs for signed Linux environment setup.
 pub struct SetupRequest<'a> {
     /// Exact signed manifest bytes.
@@ -50,7 +53,7 @@ pub fn install_base_packages(
         command: RunCommand::Argv(command),
         cwd: "/".into(),
         extra_env: Vec::new(),
-        timeout: Some(Duration::from_secs(120)),
+        timeout: Some(PACKAGE_INSTALL_TIMEOUT),
         output_cap_bytes: 1024 * 1024,
     };
     let mut tail = TailOutput::new(4096);

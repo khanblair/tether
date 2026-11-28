@@ -1,5 +1,7 @@
 package app.tether.linux
 
+import java.io.ByteArrayOutputStream
+
 /** Keys exposed by the terminal row or the Android keyboard. */
 sealed interface TerminalKey {
     data object Escape : TerminalKey
@@ -48,6 +50,35 @@ class TerminalKeys(
             }
             else -> sendKey(key)
         }
+
+    /**
+     * Maps text typed on the Android keyboard through the same sticky modifiers as [press]. The
+     * first character takes an armed Ctrl or Alt, and both reset after it.
+     */
+    fun type(text: String): ByteArray {
+        val output = ByteArrayOutputStream()
+        var index = 0
+        while (index < text.length) {
+            val width = Character.charCount(text.codePointAt(index))
+            output.write(
+                if (width == 1) {
+                    press(TerminalKey.Character(text[index]))
+                } else {
+                    typeLiteral(text.substring(index, index + width))
+                },
+            )
+            index += width
+        }
+        return output.toByteArray()
+    }
+
+    private fun typeLiteral(text: String): ByteArray {
+        val alt = altArmed
+        ctrlArmed = false
+        altArmed = false
+        val bytes = text.toByteArray(Charsets.UTF_8)
+        return if (alt) byteArrayOf(ESC) + bytes else bytes
+    }
 
     private fun sendKey(key: TerminalKey): ByteArray {
         val alt = altArmed

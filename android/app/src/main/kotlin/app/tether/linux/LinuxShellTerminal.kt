@@ -31,6 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -70,6 +71,8 @@ internal fun ShellTerminal(
     val scope = rememberCoroutineScope()
     val focusRequester = remember { FocusRequester() }
     var input by remember { mutableStateOf("") }
+    val latestInput by rememberUpdatedState(onInput)
+    val keyboard = remember { TerminalKeyboard { bytes -> latestInput(bytes) } }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
     LaunchedEffect(Unit) { listState.scrollToItem(frame.lines.lastIndex) }
     val showJump by remember(frame) {
@@ -86,9 +89,9 @@ internal fun ShellTerminal(
                 modifier = Modifier.align(Alignment.BottomEnd).padding(TetherSpace.space3),
             )
         }
-        TerminalInput(input, { input = it }, onInput, focusRequester)
+        TerminalInput(input, { input = it }, keyboard, focusRequester)
     }
-    KeyRow(onInput = onInput)
+    KeyRow(keyboard)
 }
 
 @Composable
@@ -141,13 +144,13 @@ private fun TerminalOutput(
 private fun TerminalInput(
     value: String,
     onValueChange: (String) -> Unit,
-    onInput: (ByteArray) -> Unit,
+    keyboard: TerminalKeyboard,
     focusRequester: FocusRequester,
 ) {
     BasicTextField(
         value = value,
         onValueChange = { changed ->
-            if (changed.isNotEmpty()) onInput(changed.toByteArray(Charsets.UTF_8))
+            if (changed.isNotEmpty()) keyboard.type(changed)
             onValueChange("")
         },
         modifier = Modifier.size(TetherSpace.space0_5).alpha(0f).focusRequester(focusRequester),
@@ -199,10 +202,7 @@ private fun TerminalLineText(
 }
 
 @Composable
-private fun KeyRow(onInput: (ByteArray) -> Unit) {
-    val keys = remember { TerminalKeys() }
-    var ctrlArmed by remember { mutableStateOf(false) }
-    var altArmed by remember { mutableStateOf(false) }
+private fun KeyRow(keyboard: TerminalKeyboard) {
     val labels = terminalKeyLabels()
     Row(
         modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -213,15 +213,11 @@ private fun KeyRow(onInput: (ByteArray) -> Unit) {
                 label = stringResource(label),
                 armed =
                     when (key) {
-                        TerminalKey.Ctrl -> ctrlArmed
-                        TerminalKey.Alt -> altArmed
+                        TerminalKey.Ctrl -> keyboard.ctrlArmed
+                        TerminalKey.Alt -> keyboard.altArmed
                         else -> false
                     },
-                onClick = {
-                    onInput(keys.press(key))
-                    ctrlArmed = keys.ctrlArmed
-                    altArmed = keys.altArmed
-                },
+                onClick = { keyboard.press(key) },
             )
         }
     }

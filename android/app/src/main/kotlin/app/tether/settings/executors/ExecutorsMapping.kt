@@ -24,10 +24,15 @@ fun ExecutorRuntimeException.toFailure(): ExecutorsFailure =
         is ExecutorRuntimeException.InvalidConfiguration -> ExecutorsFailure.NotConfigured
         is ExecutorRuntimeException.Unavailable -> ExecutorsFailure.Unavailable
         is ExecutorRuntimeException.VerificationFailed -> ExecutorsFailure.VerificationFailed
+        is ExecutorRuntimeException.SetupFailed -> ExecutorsFailure.SetupFailed
         is ExecutorRuntimeException.ProjectNotFound -> ExecutorsFailure.ProjectNotFound
         is ExecutorRuntimeException.LinuxNotReady -> ExecutorsFailure.Unavailable
         is ExecutorRuntimeException.LinuxShellAlreadyOpen -> ExecutorsFailure.Unknown
     }
+
+/** The core's short reason for a failed Linux setup, or null for every other error. */
+fun ExecutorRuntimeException.detail(): String? =
+    (this as? ExecutorRuntimeException.SetupFailed)?.reason
 
 /**
  * Maps a core CI error to the failure the screens show. The GitHub detail is dropped on purpose.
@@ -44,6 +49,9 @@ fun CiRuntimeException.toFailure(): ExecutorsFailure =
 /** The failure behind an error a ViewModel caught. Other errors are [ExecutorsFailure.Unknown]. */
 fun Throwable.toExecutorsFailure(): ExecutorsFailure =
     if (this is ExecutorsCallFailed) failure else ExecutorsFailure.Unknown
+
+/** The core's short reason behind an error a ViewModel caught, or null when it has none. */
+fun Throwable.toExecutorsDetail(): String? = (this as? ExecutorsCallFailed)?.detail
 
 /**
  * CI readiness from the core's status fields. The core sends one reason per stage, so the reason

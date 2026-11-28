@@ -51,6 +51,7 @@
     <string name="executors_error_no_remote">This project has no GitHub remote.</string>
     <string name="executors_error_github">GitHub returned an error. Try again later.</string>
     <string name="executors_error_verification">The download failed its check. Try again.</string>
+    <string name="executors_error_setup">Setup did not finish.</string>
     <string name="executors_error_unknown">This step did not finish. Try again.</string>
 
     <!-- CI readiness. -->

@@ -25,6 +25,19 @@ class ExecutorsMappingTest {
             ExecutorsFailure.VerificationFailed,
             ExecutorRuntimeException.VerificationFailed().toFailure(),
         )
+        assertEquals(
+            ExecutorsFailure.SetupFailed,
+            ExecutorRuntimeException.SetupFailed("HTTP 503").toFailure(),
+        )
+    }
+
+    @Test
+    fun a_failed_setup_keeps_its_reason_and_other_errors_have_none() {
+        assertEquals("HTTP 503", ExecutorRuntimeException.SetupFailed("HTTP 503").detail())
+        assertEquals(null, ExecutorRuntimeException.Unavailable().detail())
+        val thrown: Throwable = ExecutorsCallFailed(ExecutorsFailure.SetupFailed, "HTTP 503")
+        assertEquals("HTTP 503", thrown.toExecutorsDetail())
+        assertEquals(null, RuntimeException("x").toExecutorsDetail())
     }
 
     @Test

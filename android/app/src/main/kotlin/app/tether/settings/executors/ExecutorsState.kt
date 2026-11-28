@@ -76,6 +76,7 @@ sealed interface LinuxState {
     /** The last setup or the readiness check failed. Repair is offered. */
     data class Broken(
         val failure: ExecutorsFailure,
+        val detail: String? = null,
     ) : LinuxState
 }
 

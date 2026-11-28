@@ -83,7 +83,7 @@ class CoreExecutorsGateway(
         try {
             block()
         } catch (error: ExecutorRuntimeException) {
-            throw ExecutorsCallFailed(error.toFailure())
+            throw ExecutorsCallFailed(error.toFailure(), error.detail())
         }
 
     /** The core's error message can hold the GitHub detail, so it is never kept or shown. */

@@ -115,6 +115,7 @@ jobs:
           TETHER_KEYSTORE_PASSWORD: ${{ secrets.TETHER_KEYSTORE_PASSWORD }}
           TETHER_KEY_ALIAS: ${{ secrets.TETHER_KEY_ALIAS }}
           TETHER_KEY_PASSWORD: ${{ secrets.TETHER_KEY_PASSWORD }}
+          TETHER_GITHUB_CLIENT_ID: ${{ vars.TETHER_GITHUB_CLIENT_ID }}
         run: ./gradlew --no-daemon assembleFullRelease bundlePlayRelease
         working-directory: android
 

@@ -291,6 +291,7 @@ The session tool registry includes these Git actions. `git_init` is available fo
 | `git_status` / `git_diff` / `git_log` | Read local repository state | None |
 | `git_commit` / `git_branch` | Change local repository state | File edit rules |
 | `github_repo_create` | Create a GitHub repository, add `origin`, and save the project remote | Push rules, always except Bypass |
+| `github_api` | Call the GitHub REST API or GraphQL (`POST /graphql`) as the signed-in user, for anything the token allows. The host is always `api.github.com`; the token is added in the core and never shown to the model; paths are checked after percent-decoding; responses are redacted and capped at 48 KiB | GET and GraphQL queries: network rules (ask, except Bypass). POST, PUT, PATCH, GraphQL mutations: push rules. DELETE and sensitive paths (keys, emails, hooks, collaborators, members, secrets, transfer, installations): always ask |
 | `git_push` / `pr_create` / `pr_status` | Push or use the saved remote repository | Existing remote-action rules |
 | `run` with `background: true` | Start a Linux process that stays alive until it exits or is stopped; keeps a 256 KiB log ring and detects a local port | Linux run approval; the approval says it keeps running until stopped |
 | `process_list` / `process_logs` | Read session-owned background process state and recent output | None |

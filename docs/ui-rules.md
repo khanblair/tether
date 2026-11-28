@@ -56,7 +56,7 @@ Compact (phone portrait), from top to bottom:
   5. **Recent projects.** The three most recently active projects, and **All projects**.
   6. **Providers.** "2 of 5 providers have a key" with one row per provider ("Key saved" or "No key yet"). It counts saved keys and says nothing about whether a key works. With no key at all, the card says sessions need a key and shows one primary button, **Add a key**.
 - Charts are bars with `chart` colors, a text summary, and a data table. No pie or donut charts. Each chart has a content description with the same sentence.
-- Debug builds show sample numbers. Release builds show only real data: with no usage the Usage card says "No usage yet. It appears here after your first session."
+- Every build shows only real data, never sample numbers: with no usage the Usage card says "No usage yet. It appears here after your first session."
 - The cards are not a grid of equal tiles: each has its own shape and one clear action.
 
 ### Drawer

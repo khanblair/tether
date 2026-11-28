@@ -73,7 +73,7 @@ Stored in `.env` at the repo root, read by `just` recipes and test runners. Neve
 | `TETHER_TEST_OPENROUTER_KEY` | Live smoke tests | OpenRouter key |
 | `TETHER_TEST_GITHUB_TOKEN` | GitHub tests | Fine-grained token for the test repo |
 | `TETHER_TEST_REPO` | GitHub and CI tests | `owner/name` of a dedicated test repo |
-| `TETHER_GITHUB_CLIENT_ID` | Build | OAuth app client ID for the device flow (public, not secret) |
+| `TETHER_GITHUB_CLIENT_ID` | Build | OAuth app client ID for Sign in with GitHub (the device flow). Public, not a secret. Read by `android/app/build.gradle.kts` into the `github_oauth_client_id` string. The release workflow takes it from the repository variable of the same name. With no value the app says sign-in with GitHub is not set up and offers a token. See "GitHub sign-in" below. |
 | `TETHER_KEYSTORE_PATH` | Release builds | Path to the release keystore |
 | `TETHER_KEYSTORE_PASSWORD` | Release builds | Keystore password |
 | `TETHER_KEY_ALIAS` | Release builds | Signing key alias |
@@ -228,3 +228,15 @@ Release builds enable R8 and resource shrinking. JNA and UniFFI classes are kept
 | Long runs stop on Samsung or Xiaomi | Battery optimization | Follow the in-app guidance; check "Never sleeping apps" on Samsung |
 | Live smoke test returns 429 | Provider rate limit | Wait, or lower concurrency with `TETHER_SMOKE_SERIAL=1` |
 | Approval notification does nothing when tapped | Notification permission denied on Android 13+ | Grant notifications in system settings |
+
+## GitHub sign-in with a code (device flow)
+
+The app can sign in to GitHub by showing a one-time code. It needs the client ID of a GitHub OAuth app. The ID is public. No client secret is used.
+
+1. On github.com open Settings, Developer settings, OAuth Apps, New OAuth App. Use the name Tether, the homepage `https://github.com/khanblair/tether`, and any callback URL (the device flow does not use it).
+2. Open the app's page and tick Enable Device Flow, then save.
+3. Copy the client ID (it looks like `Iv1.` or `Ov23` followed by letters and digits).
+4. For release builds, store it as the repository variable: `gh variable set TETHER_GITHUB_CLIENT_ID --body "<client id>"`.
+5. For a local build, export `TETHER_GITHUB_CLIENT_ID` before running Gradle.
+
+The sign-in asks GitHub for the scopes `repo workflow gist read:org read:user user:email notifications`, so the agent's `github_api` tool can work with repositories, Actions, gists, organizations, and notifications. It does not ask for `delete_repo` or any admin scope. A pasted token keeps whatever scopes it has.

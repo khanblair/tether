@@ -86,7 +86,7 @@ tether/
 │   ├── config/{detekt.yml, lint.xml}
 │   ├── smell-fixtures/        Module with a function over the line limit; detekt must fail on it (built only with -Ptether.smellFixtures)
 │   ├── app/                   build.gradle.kts (flavors play and full; app version read from core/Cargo.toml), proguard-rules.pro
-│   │   └── src/{main, debug, release, full, play, androidTest}   TetherApp, MainActivity, di/AppModule, nav/, home/ (Projects home, project detail, drawer, Needs attention; sample sources in debug, empty sources in release), share/ (text intake and project picker), shell/ (settings and placeholder screens)
+│   │   └── src/{main, debug, release, full, play, androidTest}   TetherApp, MainActivity, di/AppModule, nav/, home/ (Projects home, project detail, drawer, Needs attention; real sources in every build, usage empty until the core reports it), share/ (text intake and project picker), shell/ (settings and placeholder screens)
 │   │       └── main/kotlin/app/tether/
 │   │           ├── session/agent/                  Agent loop state and gateway, agent screen, agent tool cards in the transcript
 │   │           ├── session/servers/                Background server state, bar, and server preview wiring

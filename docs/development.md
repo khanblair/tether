@@ -148,6 +148,8 @@ The app downloads the manifest, its signature, and the root filesystem with its 
 
 Two more things the first real Install on an emulator showed. The Alpine archive starts with a `./` root directory entry, which the extractor now skips (only a directory made of `.` components; every other path rule is unchanged). And installing the base packages rewrites some of the 87 files indexed from the archive (the musl libc, the package database, the certificate bundle, `etc/shells`), so when `apk add` finishes the setup stops tracking the files that changed. Without that, the integrity check reported "needs repair", the card went back to "Not set up", and Repair would have restored the old libc over the installed packages. A file the package manager did not change that goes missing is still reported and repaired. The package step may take up to 15 minutes.
 
+A server that the agent starts in Linux mode must be reachable at `127.0.0.1`, because the Preview and the server bar load that address. Alpine's own `/etc/hosts` also maps `localhost` to `::1`, so Vite (Node) listened on IPv6 loopback only and the Preview showed `net::ERR_CONNECTION_REFUSED` while the server was running. Every PRoot command now binds a private `etc/hosts` file from the Linux storage folder over `/etc/hosts`. It lists `127.0.0.1` only, and the command builder writes it when it is missing or different, so phones that already installed Linux mode get it without a reinstall. The rootfs's own `etc/hosts` is not touched, so the integrity index stays valid.
+
 ## 8. Testing notes
 
 - Engine tests use the fake provider. Write a script in `core/fixtures/scripts/` for each scenario.

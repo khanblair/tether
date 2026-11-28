@@ -242,7 +242,7 @@ Critical flows that must have UI tests (code-standards.md section 7): send and s
 | Success after action | Snackbar for undoable actions only; otherwise the state change is the feedback |
 | Short confirmation | Toast, such as "Copied". No action, gone after 2 s |
 
-Snackbars and toasts use the inverse surface: `text` as the background, `bg` as the text, `tonal` for the action. They follow the app theme (System, Light, Dark), not the device's. The app never calls the platform `Toast`, because it ignores the app theme. Both sit above the bottom edge on `layer.snackbar` and are announced politely to TalkBack.
+A snackbar has an action. It uses the inverse surface: `text` as the background, `bg` as the text, `tonal` for the action. It sits above the bottom edge. A toast has no action. It is a pill on `surface-raised` with a hairline `line-input` border and `text` as the text, so it follows the theme instead of inverting it. It sits at the top, below the status bar. Both follow the app theme (System, Light, Dark), not the device's, sit on `layer.snackbar`, and are announced politely to TalkBack. The app never calls the platform `Toast`, because it ignores the app theme.
 
 ## 7. Writing rules
 

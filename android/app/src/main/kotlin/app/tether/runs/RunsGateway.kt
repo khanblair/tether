@@ -4,6 +4,7 @@ import app.tether.core.generated.ExecutorView
 import app.tether.core.generated.RunHistoryView
 import app.tether.core.generated.RunOutcomeView
 import app.tether.core.generated.SessionRuntime
+import app.tether.session.servers.ServerProcessRegistry
 import app.tether.session.tools.RunExecutor
 
 /** The local run history the Runs screen needs, without exposing UniFFI types to its UI. */
@@ -39,6 +40,36 @@ interface RunsGateway {
         projectId: String,
         limit: Int,
     ): List<LocalRun>
+}
+
+/** The processes that open sessions run now, and the way to stop one. Callers run it off main. */
+interface RunsProcesses {
+    /** The running background processes of every open session. */
+    fun open(): List<OpenProcess>
+
+    /** Stops one process of an open session. */
+    fun stop(
+        sessionId: String,
+        processId: String,
+    )
+}
+
+/** The real source: the registry of the open session connections. */
+object RegistryRunsProcesses : RunsProcesses {
+    override fun open(): List<OpenProcess> =
+        ServerProcessRegistry.running().map { registered ->
+            OpenProcess(
+                sessionId = registered.sessionId,
+                processId = registered.process.id,
+                command = registered.process.command,
+                startedAtMs = registered.process.startedAtMs.toLong(),
+            )
+        }
+
+    override fun stop(
+        sessionId: String,
+        processId: String,
+    ) = ServerProcessRegistry.stopProcess(sessionId, processId)
 }
 
 /** The local history call failed without exposing core details to the UI. */

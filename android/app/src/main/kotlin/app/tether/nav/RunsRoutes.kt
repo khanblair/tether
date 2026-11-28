@@ -9,9 +9,11 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import app.tether.R
 import app.tether.di.AppModule
 import app.tether.home.ProjectPickerSheet
 import app.tether.home.ProjectSummary
@@ -64,6 +66,7 @@ private fun RunsRoute(
     LaunchedEffect(model, selectedId) { model.selectProject(selectedId) }
     val projectName = projects?.firstOrNull { it.id == selectedId }?.name
     val context = LocalContext.current
+    val restartDraft = stringResource(R.string.runs_restart_draft)
     RunsScreen(
         viewModel = model,
         projectName = projectName,
@@ -71,6 +74,10 @@ private fun RunsRoute(
         onOpenProjectPicker = { pickerOpen = true },
         onOpenLocal = { sessionId -> nav.open("session/${Uri.encode(sessionId)}") },
         onOpenCi = { url -> openHttpsUrl(context, url) },
+        onRestart = { row ->
+            val draft = Uri.encode(restartDraft.format(row.run.command))
+            nav.open("session/${Uri.encode(row.run.sessionId)}?draft=$draft")
+        },
     )
     if (pickerOpen && projects != null) {
         ProjectPickerSheet(

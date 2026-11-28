@@ -6,6 +6,44 @@ import app.tether.session.tools.RunExecutor
 import app.tether.settings.executors.CiRunRow
 import app.tether.settings.executors.CiRunState
 import app.tether.settings.executors.CiRunsContent
+import kotlin.math.abs
+
+/** A background process that is alive in an open session, matched to one run row. */
+data class LiveProcess(
+    val sessionId: String,
+    val processId: String,
+)
+
+/** One process that an open session runs now, as the registry reports it. */
+data class OpenProcess(
+    val sessionId: String,
+    val processId: String,
+    val command: String,
+    val startedAtMs: Long,
+)
+
+/** What a local row shows: its process still runs, its process is gone, or it ended by itself. */
+enum class LocalRunStatus {
+    Live,
+    Stopped,
+    Finished,
+}
+
+/** Live when a process is matched, Stopped for a background run without one, else Finished. */
+fun RunRow.Local.status(): LocalRunStatus =
+    when {
+        live != null -> LocalRunStatus.Live
+        run.background || run.outcome == RunOutcome.Background -> LocalRunStatus.Stopped
+        else -> LocalRunStatus.Finished
+    }
+
+/** The status mark of a local row. A background run only shows Running while its process runs. */
+fun RunRow.Local.markState(): SessionState =
+    when (status()) {
+        LocalRunStatus.Live -> SessionState.Running
+        LocalRunStatus.Stopped -> SessionState.Idle
+        LocalRunStatus.Finished -> run.sessionState()
+    }
 
 /** The executor filter shown above the list. */
 enum class RunsFilter {
@@ -19,9 +57,13 @@ enum class RunsFilter {
 sealed interface RunRow {
     val startedAtMs: Long?
 
-    /** A command saved by the local session runtime. */
+    /**
+     * A command saved by the local session runtime. [live] is the process that still runs for a
+     * background command in an open session, and null for every other run.
+     */
     data class Local(
         val run: LocalRun,
+        val live: LiveProcess? = null,
     ) : RunRow {
         override val startedAtMs: Long = run.startedAtMs
     }
@@ -118,3 +160,36 @@ internal fun CiRunRow.toRunRow(): RunRow.Ci =
         startedAtMs = startedAtMs,
         htmlUrl = htmlUrl,
     )
+
+/** The history keeps the first 500 characters of a command, so processes compare on those. */
+private const val COMMAND_COMPARE_LENGTH = 500
+
+/**
+ * Pairs each background run with the process of the same session and command that is alive now.
+ * One process serves one run: the newest run takes the process whose start is nearest to its own.
+ * The result maps a run's call id to its process.
+ */
+fun matchLive(
+    runs: List<LocalRun>,
+    processes: List<OpenProcess>,
+): Map<String, LiveProcess> {
+    val free = processes.toMutableList()
+    val matched = mutableMapOf<String, LiveProcess>()
+    runs
+        .filter { it.background || it.outcome == RunOutcome.Background }
+        .sortedByDescending { it.startedAtMs }
+        .forEach { run ->
+            val process =
+                free
+                    .filter { it.sessionId == run.sessionId && it.sameCommandAs(run) }
+                    .minByOrNull { abs(it.startedAtMs - run.startedAtMs) }
+            if (process != null) {
+                free.remove(process)
+                matched[run.callId] = LiveProcess(process.sessionId, process.processId)
+            }
+        }
+    return matched
+}
+
+private fun OpenProcess.sameCommandAs(run: LocalRun): Boolean =
+    command.take(COMMAND_COMPARE_LENGTH) == run.command.take(COMMAND_COMPARE_LENGTH)

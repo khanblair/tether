@@ -37,6 +37,7 @@ fun RunsScreen(
     onOpenProjectPicker: () -> Unit,
     onOpenLocal: (String) -> Unit,
     onOpenCi: (String) -> Unit,
+    onRestart: (RunRow.Local) -> Unit,
 ) {
     val state = viewModel.state.collectAsStateWithLifecycle().value
     Scaffold(
@@ -63,6 +64,7 @@ fun RunsScreen(
             onOpenProjectPicker = onOpenProjectPicker,
             onOpenLocal = onOpenLocal,
             onOpenCi = onOpenCi,
+            onRestart = onRestart,
             modifier = Modifier.padding(padding),
         )
     }
@@ -76,6 +78,7 @@ private fun RunsBody(
     onOpenProjectPicker: () -> Unit,
     onOpenLocal: (String) -> Unit,
     onOpenCi: (String) -> Unit,
+    onRestart: (RunRow.Local) -> Unit,
     modifier: Modifier,
 ) {
     val ciFailure = state.ciContent as? CiRunsContent.Failed
@@ -105,6 +108,8 @@ private fun RunsBody(
                 onRetry = viewModel::refresh,
                 onOpenLocal = onOpenLocal,
                 onOpenCi = onOpenCi,
+                onStop = viewModel::stop,
+                onRestart = onRestart,
                 modifier = Modifier.fillMaxSize(),
                 ciContent = state.ciContent.takeIf { state.filter == RunsFilter.Ci },
                 failureText = failureText,

@@ -54,6 +54,7 @@ class RunsViewModel(
     private val executorsGateway: ExecutorsGateway,
     projectId: String? = null,
     private val io: CoroutineDispatcher = Dispatchers.IO,
+    private val processes: RunsProcesses = RegistryRunsProcesses,
 ) : ViewModel() {
     private val mutableState =
         MutableStateFlow(
@@ -131,19 +132,18 @@ class RunsViewModel(
         loadJob =
             viewModelScope.launch {
                 val localResult = call { runsGateway.localRuns(project, RUNS_LIMIT) }
-                val local =
-                    localResult.fold(
-                        onSuccess = { rows -> rows.map { RunRow.Local(it) } },
-                        onFailure = { error ->
-                            mutableState.update {
-                                it.copy(
-                                    content = RunsContent.Failed(error.toRunsFailure()),
-                                    refreshing = false,
-                                )
-                            }
-                            return@launch
-                        },
-                    )
+                val runs =
+                    localResult.getOrElse { error ->
+                        mutableState.update {
+                            it.copy(
+                                content = RunsContent.Failed(error.toRunsFailure()),
+                                refreshing = false,
+                            )
+                        }
+                        return@launch
+                    }
+                val live = matchLive(runs, call { processes.open() }.getOrDefault(emptyList()))
+                val local = runs.map { RunRow.Local(it, live[it.callId]) }
                 val ci = loadCi(project)
                 loaded = LoadedRuns(local = local, ci = ci)
                 val current = mutableState.value
@@ -154,6 +154,15 @@ class RunsViewModel(
                         refreshing = false,
                     )
             }
+    }
+
+    /** Stops the process of a live row, then reads the history again so the row updates. */
+    fun stop(row: RunRow.Local) {
+        val live = row.live ?: return
+        viewModelScope.launch {
+            call { processes.stop(live.sessionId, live.processId) }
+            refresh()
+        }
     }
 
     private suspend fun loadCi(projectId: String): CiLoad {

@@ -98,6 +98,21 @@ class CommandEffectTest {
         )
     }
 
+    @Test fun skillCommandSendsItsPromptWhateverItsName() {
+        val text = "Use the \"tdd\" skill for this request. Load it first with skill_view."
+        assertEquals(
+            SendPrompt(text),
+            commandEffectOf(resolved("tdd", "skill", arguments = "fix it", prompt = text)),
+        )
+    }
+
+    @Test fun skillCommandWithoutPromptTextIsUnsupported() {
+        assertEquals(
+            Unsupported("tdd"),
+            commandEffectOf(resolved("tdd", "skill", prompt = null)),
+        )
+    }
+
     @Test fun kindMismatchIsUnsupported() {
         assertEquals(Unsupported("new"), commandEffectOf(resolved("new", "open")))
         assertEquals(Unsupported("diff"), commandEffectOf(resolved("diff", "action")))

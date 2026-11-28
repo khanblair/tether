@@ -15,6 +15,7 @@ import app.tether.session.compose.CommandEffect.Unsupported
 private const val KIND_ACTION = "action"
 private const val KIND_OPEN = "open"
 private const val KIND_PROMPT = "prompt"
+private const val KIND_SKILL = "skill"
 
 /**
  * One row of the command table. [kind] is the core kind the command must have. [effect] builds
@@ -68,10 +69,12 @@ private val commandTable: Map<String, CommandRow> =
 
 /**
  * Maps a resolved core command to the effect the app runs. A name the table does not know, or a
- * core kind that does not match the table, gives [Unsupported]. A prompt command without its
- * prompt text also gives [Unsupported].
+ * core kind that does not match the table, gives [Unsupported]; an unknown name is never sent as
+ * a prompt. The `skill` kind is the one exception (see [skillEffect]). A prompt command without
+ * its prompt text also gives [Unsupported].
  */
 fun commandEffectOf(resolved: CommandResolution.Resolved): CommandEffect {
+    if (resolved.kind == KIND_SKILL) return skillEffect(resolved)
     val row = commandTable[resolved.name]
     return if (row != null && row.kind == resolved.kind) {
         row.effect(resolved)
@@ -79,3 +82,11 @@ fun commandEffectOf(resolved: CommandResolution.Resolved): CommandEffect {
         Unsupported(resolved.name)
     }
 }
+
+/**
+ * A skill command, such as `/tdd fix the bug`. Only the core's installed skills have this kind, so
+ * the name is not checked against the table; a project command file never gets here. The prompt
+ * text tells the agent to load the skill. Without it the command is [Unsupported].
+ */
+private fun skillEffect(resolved: CommandResolution.Resolved): CommandEffect =
+    resolved.prompt?.let { SendPrompt(it) } ?: Unsupported(resolved.name)

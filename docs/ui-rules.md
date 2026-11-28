@@ -44,7 +44,7 @@ Compact (phone portrait), from top to bottom:
 - Never ask for unrelated permissions such as notifications or battery during onboarding. A shared
   folder choice can open All files access when the person selects it.
 - The workspace step shows the private projects path and a short list of local data paths. Private
-  storage is the default. In the `full` flavor, Choose a folder opens the shared folder controls.
+  storage is the default. In the `full` flavor on Android 11 and later, Choose a folder opens the shared folder controls.
 
 ### Home
 - The app opens here. Top bar: menu button (opens the drawer), the title "Home", and the bell. One scrolling column of cards, `space.4` apart. A card is `surface`, `radius.md`, a hairline `line` border, and no shadow.
@@ -126,7 +126,7 @@ Compact (phone portrait), from top to bottom:
 - CI runs list shows workflow, branch, status, duration, and a link to the run on GitHub.
 
 ### Linux shell
-- Full-screen terminal with a key row above the keyboard: Esc, Tab, Ctrl, Alt, arrows, `|`, `/`, `-`, `~`.
+- Full-screen terminal with a key row above the keyboard: Esc, Tab, Ctrl, Alt, arrows, `|`, `/`, `-`, `~`. Ctrl and Alt stay armed for one key, and the next key counts whether it comes from the row or from the Android keyboard (Ctrl then C sends the interrupt).
 - The top bar shows the project folder and a network on/off badge.
 - The emulator supports shell text, ANSI colours, cursor movement, scrollback, and alternate-screen programs.
 - It does not provide mouse reporting, mouse selection, or full terminfo compatibility.

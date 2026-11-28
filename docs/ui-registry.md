@@ -187,6 +187,7 @@ All components start as **Planned**. Screenshot tests start with the first featu
 | `CiRunsList` | Recent CI runs | `runs`, `onOpen` | loading, list, empty | P6 | Built |
 | `RunsScreen` | Project run history across sandbox, Linux mode, and CI | `viewModel`, `projectName`, `onBack`, `onOpenProjectPicker`, `onOpenLocal`, `onOpenCi`, `onRestart` | loading, no project, empty, failed, local and CI rows | P6 | In progress |
 | `RunsRunRow` | One local or CI run with status, command or workflow, metadata, session name, executor badge, and a Stop (running) or Restart (not running) icon on local rows | `row`, `onOpenLocal`, `onOpenCi`, `onStop`, `onRestart` | succeeded, failed, timed out, cancelled, running with Stop, stopped with Restart, CI | P6 | In progress |
+| `SampleSkillsScreen` | The sample skills gallery: one row per bundled skill with Install, Installing, or Installed, and a Sources and licenses row | `viewModel`, `onBack` | loading, list, installing, installed, failed, licenses open | P11 | Built |
 | `RunsFilterChips` | Executor filter row for All, Sandbox, Linux mode, and CI | `selected`, `onSelect` | each selected, horizontal overflow | P6 | In progress |
 | `LinuxSetupCard` | Linux mode setup and status | `state`, `source`, `onInstall`, `onRepair`, `onRemove` | not installed, each setup step, ready, broken, unavailable in `play` | P7 | Built |
 | `LinuxBackgroundSettingRow` | Chooses when the Linux foreground notification keeps Linux running | `mode`, `onClick` | while running, whenever installed, 200% font, 320 dp | C14 | In progress |

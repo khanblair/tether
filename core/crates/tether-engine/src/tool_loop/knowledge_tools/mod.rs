@@ -250,12 +250,15 @@ fn skill_specs() -> Vec<ToolSpec> {
         ),
         spec(
             SKILL_MANAGE,
-            "Create, patch, or delete a user skill. Use patch for an exact small change.",
+            "Create, patch, or delete a user skill. create without file writes SKILL.md: content must be a full file starting with a --- frontmatter block containing name (the skill name, lowercase letters, digits, hyphens, at most 64 characters) and description (what it does and when to use it, at most 1,024 characters), followed by Markdown instructions. create with file adds a reference or script such as references/guide.md or scripts/run.sh; patch replaces exact old with new; delete removes the skill or the named file.",
             &json!({"action":"string","name":"string","content":"string","old":"string","new":"string","file":"string"}),
             &["action", "name"],
         ),
     ]
 }
+
+#[cfg(test)]
+mod spec_tests;
 
 fn memory_specs() -> Vec<ToolSpec> {
     vec![

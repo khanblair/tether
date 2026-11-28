@@ -5,6 +5,7 @@ mod archive;
 mod callbacks;
 mod ci;
 mod commands;
+mod commands_skills;
 mod config;
 mod context;
 mod executors;
@@ -33,6 +34,7 @@ mod sessions;
 mod shell;
 mod skills;
 mod skills_install;
+mod skills_samples;
 mod updater;
 mod usage;
 mod vault;
@@ -89,6 +91,7 @@ pub use skills_install::{
     InstalledSkillView, QuarantineFileView, QuarantineView, ScanFindingView, ScanReportView,
     ScanSeverityView, ScanVerdictView, SkillScopeView, SkillStateView, UpkeepActionView,
 };
+pub use skills_samples::SampleSkillView;
 pub use updater::{DownloadProgress, ReleaseView, UpdateCheckView, Updater, UpdaterError};
 pub use usage::{UsageRuntime, UsageRuntimeError};
 pub use vault::{

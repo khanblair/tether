@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="skill_samples_title">Sample skills</string>
+    <string name="skill_samples_intro">Real skills from open repositories. Install one, then run it in a chat by typing / and its name, for example /tdd.</string>
+    <string name="skill_samples_install">Install</string>
+    <string name="skill_samples_install_named">Install %1$s</string>
+    <string name="skill_samples_installing">Installing</string>
+    <string name="skill_samples_installed">Installed</string>
+    <string name="skill_samples_sources">Sources and licenses</string>
+    <string name="skill_samples_sources_description">Sources and licenses. Tap to show or hide.</string>
+</resources>

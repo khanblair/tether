@@ -7,6 +7,7 @@ use tether_engine::commands::{ExportSession, export_session_markdown};
 use tether_types::SessionId;
 
 use crate::SessionRuntime;
+use crate::commands_skills::skill_commands;
 
 /// A command sheet row.
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
@@ -64,13 +65,15 @@ pub(crate) fn current_capabilities() -> Capabilities {
 
 #[uniffi::export]
 impl SessionRuntime {
-    /// Lists built-in commands for the composer.
+    /// Lists built-in commands and installed skills for the composer.
     #[must_use]
     pub fn command_sheet(&self) -> Vec<CommandView> {
-        command_views(&CommandRegistry::builtin(), current_capabilities())
+        let registry = CommandRegistry::builtin();
+        let skills = skill_commands(self);
+        command_views(&registry, current_capabilities(), &skills)
     }
 
-    /// Resolves a built-in command for the composer.
+    /// Resolves a built-in command or installed skill for the composer.
     ///
     /// # Errors
     /// Returns unknown or unavailable command details.
@@ -79,9 +82,15 @@ impl SessionRuntime {
         input: &str,
     ) -> Result<CommandResolutionView, CommandRuntimeError> {
         let registry = CommandRegistry::builtin();
+        let skills = skill_commands(self);
         registry
-            .resolve(input, &current_capabilities(), &[])
-            .map(command_view)
+            .resolve(input, &current_capabilities(), &skills)
+            .map(|resolved| {
+                let is_skill = skills
+                    .iter()
+                    .any(|skill| skill.name == resolved.command.name);
+                command_view(resolved, is_skill)
+            })
             .map_err(map_error)
     }
 
@@ -136,8 +145,12 @@ impl From<MentionResolution> for SendOutcomeView {
     }
 }
 
-fn command_views(registry: &CommandRegistry, capabilities: Capabilities) -> Vec<CommandView> {
-    registry
+fn command_views(
+    registry: &CommandRegistry,
+    capabilities: Capabilities,
+    skills: &[tether_engine::commands::CustomCommand],
+) -> Vec<CommandView> {
+    let mut views: Vec<_> = registry
         .commands()
         .iter()
         .map(|command| CommandView {
@@ -149,12 +162,29 @@ fn command_views(registry: &CommandRegistry, capabilities: Capabilities) -> Vec<
                 .is_none_or(|feature| capabilities.contains(feature)),
             requires: command.requires.map(|feature| feature.as_str().into()),
         })
-        .collect()
+        .collect();
+    let mut skill_views = skills
+        .iter()
+        .map(|skill| CommandView {
+            name: skill.name.clone(),
+            description: skill.description.clone(),
+            args_hint: None,
+            available: true,
+            requires: None,
+        })
+        .collect::<Vec<_>>();
+    skill_views.sort_by(|left, right| left.name.cmp(&right.name));
+    views.extend(skill_views);
+    views
 }
 
-fn command_view(resolved: tether_engine::commands::Resolved) -> CommandResolutionView {
+fn command_view(
+    resolved: tether_engine::commands::Resolved,
+    is_skill: bool,
+) -> CommandResolutionView {
     let (kind, prompt) = match resolved.command.kind {
         CommandKind::Action(_) => ("action", None),
+        CommandKind::Prompt(prompt) if is_skill => ("skill", Some(prompt.trim_end().to_owned())),
         CommandKind::Prompt(prompt) => ("prompt", Some(prompt)),
         CommandKind::Open(_) => ("open", None),
         CommandKind::Run => ("run", None),

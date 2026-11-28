@@ -29,8 +29,9 @@ import app.tether.design.tokens.TetherSpace
 /**
  * A list row with an optional leading and trailing slot. It is clickable when [onClick] is set,
  * and a pressed row turns the sunken surface color. [onLongClick] needs [onClick] to be set too.
- * A [danger] row shows its title in the danger color, unless it is disabled. The title wraps
- * without limit unless [titleMaxLines] is set, and then it ends in an ellipsis.
+ * A [danger] row shows its title in the danger color, unless it is disabled. The title and the
+ * subtitle wrap without limit unless [titleMaxLines] or [subtitleMaxLines] is set, and then they
+ * end in an ellipsis.
  */
 @Composable
 fun ListRow(
@@ -44,6 +45,7 @@ fun ListRow(
     onLongClick: (() -> Unit)? = null,
     danger: Boolean = false,
     titleMaxLines: Int = Int.MAX_VALUE,
+    subtitleMaxLines: Int = Int.MAX_VALUE,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
@@ -97,6 +99,8 @@ fun ListRow(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = TetherTheme.colors.text2,
+                    maxLines = subtitleMaxLines,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }

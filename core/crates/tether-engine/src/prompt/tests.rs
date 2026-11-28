@@ -65,6 +65,7 @@ fn base_names_only_tools_present_in_the_registry() {
     assert!(!without_tools.text.contains("todo_write"));
     assert!(!without_tools.text.contains("ask_user"));
     assert!(!without_tools.text.contains("submit_plan"));
+    assert!(!without_tools.text.contains("standard SKILL.md format"));
 
     let tools = [
         spec("run"),
@@ -81,6 +82,12 @@ fn base_names_only_tools_present_in_the_registry() {
     assert!(with_tools.text.contains("ask_user"));
     assert!(with_tools.text.contains("submit_plan"));
     assert!(!with_tools.text.contains("Bypass"));
+
+    let skill_tools = [spec("skill_manage")];
+    let with_skill_tools = PromptBuilder::build(&inputs(&skill_tools, "today"));
+    assert!(with_skill_tools.text.contains(
+        "When the user asks to add or change a skill, use skill_manage and keep the standard SKILL.md format; when the user types /<skill name>, load that skill with skill_view."
+    ));
 }
 
 #[test]

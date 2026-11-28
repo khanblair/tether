@@ -52,24 +52,48 @@ class FakeMemoryGateway(
 class FakeSkillsGateway(
     val items: List<SkillItem> = emptyList(),
     val details: Map<String, SkillDetail> = emptyMap(),
+    val sampleItems: MutableList<SampleSkillItem> = mutableListOf(),
+    val notice: String = "",
 ) : SkillsGateway {
+    /** Names passed to a successful [installSample], in order. */
+    val installs = mutableListOf<String>()
+
     /** Throws this from the next call of any kind, then clears itself. */
     var failure: Exception? = null
 
-    override fun list(): List<SkillItem> {
+    private fun failIfSet() {
         failure?.let {
             failure = null
             throw it
         }
+    }
+
+    override fun list(): List<SkillItem> {
+        failIfSet()
         return items
     }
 
     override fun read(folder: String): SkillDetail {
-        failure?.let {
-            failure = null
-            throw it
-        }
+        failIfSet()
         return details[folder] ?: throw AreaFailure(AreaProblem.NotFound)
+    }
+
+    override fun samples(): List<SampleSkillItem> {
+        failIfSet()
+        return sampleItems.toList()
+    }
+
+    override fun installSample(name: String) {
+        failIfSet()
+        val slot = sampleItems.indexOfFirst { it.name == name }
+        if (slot < 0) throw AreaFailure(AreaProblem.NotFound)
+        installs += name
+        sampleItems[slot] = sampleItems[slot].copy(installed = true)
+    }
+
+    override fun samplesNotice(): String {
+        failIfSet()
+        return notice
     }
 }
 

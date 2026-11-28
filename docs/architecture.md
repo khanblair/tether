@@ -461,7 +461,7 @@ Three features that let the agent keep what it learns. They borrow designs from 
 
 ### Skills (F21, `tether-skills`)
 
-A skill is a folder with a `SKILL.md`: YAML frontmatter, then Markdown instructions. P11-01 starts with a scalar frontmatter parser and validator; block scalars and full YAML syntax remain to be added. The format follows the open Agent Skills standard (agentskills.io), so skills written for other agents load unchanged.
+A skill is a folder with a `SKILL.md`: YAML frontmatter, then Markdown instructions. The frontmatter parser reads one-line scalars, single and double quoted scalars, YAML block scalars (`>`, `>-`, `|`, `|-`), multi line plain scalars, and a one level `metadata:` map, and skips nested blocks it does not use (a `hooks:` map, a list), so skills written for Claude Code and Codex load unchanged. The format follows the open Agent Skills standard (agentskills.io), so skills written for other agents load unchanged.
 
 | Frontmatter field | Rule |
 |---|---|

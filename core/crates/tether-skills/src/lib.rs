@@ -3,15 +3,22 @@
 use std::collections::BTreeMap;
 
 mod discovery;
+mod frontmatter;
 mod index;
+pub mod samples;
 mod scan;
 mod scan_rules;
 mod upkeep;
+
+use frontmatter::{Frontmatter, frontmatter_fields};
 
 pub use discovery::{
     BundledSkill, DiscoverInput, Skill, SkillIssue, SkillSource, SkillView, SkillsCatalog,
 };
 pub use index::skills_index;
+pub use samples::{
+    SampleFile, SampleInstall, SampleSkill, install_sample, sample_notice, sample_skills,
+};
 pub use scan::{ScanFinding, ScanReport, ScanSeverity, ScanVerdict, SkillFile, scan_skill};
 pub use upkeep::{SkillScope, SkillState, SkillUsage, UpkeepAction, plan_upkeep};
 
@@ -61,12 +68,6 @@ pub enum SkillError {
     NotFound,
 }
 
-struct Frontmatter {
-    fields: BTreeMap<String, String>,
-    metadata: BTreeMap<String, String>,
-    body: String,
-}
-
 /// Parses the common scalar form of Agent Skills frontmatter.
 ///
 /// # Errors
@@ -91,6 +92,10 @@ pub fn parse_skill(folder: &str, source: &str) -> Result<SkillDocument, SkillErr
     let description = fields
         .remove("description")
         .ok_or(SkillError::MissingField("description"))?;
+    let description = description
+        .strip_suffix('\n')
+        .unwrap_or(&description)
+        .to_owned();
     if description.trim().is_empty() {
         return Err(SkillError::MissingField("description"));
     }
@@ -108,65 +113,8 @@ pub fn parse_skill(folder: &str, source: &str) -> Result<SkillDocument, SkillErr
     })
 }
 
-fn frontmatter_fields(source: &str) -> Result<Frontmatter, SkillError> {
-    let mut lines = source.lines();
-    if lines.next().map(str::trim) != Some("---") {
-        return Err(SkillError::MissingFrontmatter);
-    }
-    let mut fields = BTreeMap::new();
-    let mut metadata = BTreeMap::new();
-    let mut in_metadata = false;
-    let mut closed = false;
-    for line in lines.by_ref() {
-        if line.trim() == "---" {
-            closed = true;
-            break;
-        }
-        if line.trim().is_empty() {
-            continue;
-        }
-        if line.trim() == "metadata:" {
-            in_metadata = true;
-            continue;
-        }
-        let (key, value) = line.split_once(':').ok_or(SkillError::InvalidFrontmatter)?;
-        let key = key.trim();
-        let value = scalar(value.trim());
-        if key.is_empty() {
-            return Err(SkillError::InvalidFrontmatter);
-        }
-        if line.starts_with(' ') && in_metadata {
-            metadata.insert(key.to_owned(), value);
-        } else if !line.starts_with(' ') {
-            in_metadata = false;
-            fields.insert(key.to_owned(), value);
-        } else {
-            return Err(SkillError::InvalidFrontmatter);
-        }
-    }
-    if !closed {
-        return Err(SkillError::MissingFrontmatter);
-    }
-    Ok(Frontmatter {
-        fields,
-        metadata,
-        body: lines.collect::<Vec<_>>().join("\n"),
-    })
-}
-
-fn scalar(value: &str) -> String {
-    value
-        .strip_prefix('"')
-        .and_then(|text| text.strip_suffix('"'))
-        .or_else(|| {
-            value
-                .strip_prefix('\'')
-                .and_then(|text| text.strip_suffix('\''))
-        })
-        .unwrap_or(value)
-        .to_owned()
-}
-
+#[cfg(test)]
+mod frontmatter_tests;
 #[cfg(test)]
 mod scan_tests;
 #[cfg(test)]

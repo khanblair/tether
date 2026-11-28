@@ -47,6 +47,33 @@ fn file_changed(rootfs: &Path, file: &IndexedFile) -> Result<bool, LinuxError> {
     Ok(size != file.size || digest != file.sha256)
 }
 
+/// Stops tracking indexed files that the package manager changed.
+///
+/// A file is removed only when it still exists as a regular file with a different
+/// size or digest. Missing and unchanged files stay indexed, so repair still restores them.
+/// On error, `files` is left empty, so callers must discard it.
+///
+/// # Errors
+/// Returns a storage error when a file cannot be read.
+pub(crate) fn prune_changed(
+    rootfs: &Path,
+    files: &mut Vec<IndexedFile>,
+) -> Result<usize, LinuxError> {
+    let mut kept = Vec::with_capacity(files.len());
+    let mut removed = 0;
+    for file in std::mem::take(files) {
+        let is_regular =
+            fs::symlink_metadata(rootfs.join(&file.path)).is_ok_and(|metadata| metadata.is_file());
+        if is_regular && file_changed(rootfs, &file)? {
+            removed += 1;
+        } else {
+            kept.push(file);
+        }
+    }
+    *files = kept;
+    Ok(removed)
+}
+
 pub(crate) fn file_missing_or_changed(rootfs: &Path, file: &IndexedFile) -> bool {
     match fs::symlink_metadata(rootfs.join(&file.path)) {
         Ok(metadata) if metadata.is_file() => {

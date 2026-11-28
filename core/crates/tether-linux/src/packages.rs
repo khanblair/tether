@@ -54,14 +54,33 @@ pub fn install_base_packages(
         cwd: "/".into(),
         extra_env: Vec::new(),
         timeout: Some(PACKAGE_INSTALL_TIMEOUT),
-        output_cap_bytes: 1024 * 1024,
+        // The tail buffer is the bound, so the output is not capped.
+        output_cap_bytes: usize::MAX,
     };
     let mut tail = TailOutput::new(4096);
     let report = runner.run(&request, &mut tail, cancel)?;
-    if !matches!(report.outcome, crate::RunOutcome::Exited(0)) {
-        return Err(LinuxError::Packages(tail.text()));
+    if let Some(error) = package_failure(report.outcome, &tail.text()) {
+        return Err(error);
     }
     manager.mark_ready()
+}
+
+/// Maps the apk process outcome to an error, or `None` when apk succeeded.
+fn package_failure(outcome: crate::RunOutcome, tail: &str) -> Option<LinuxError> {
+    match outcome {
+        crate::RunOutcome::Exited(0) => None,
+        crate::RunOutcome::Cancelled => Some(LinuxError::Cancelled),
+        crate::RunOutcome::TimedOut => Some(LinuxError::Packages(format!(
+            "timed out after {} minutes",
+            PACKAGE_INSTALL_TIMEOUT.as_secs() / 60
+        ))),
+        crate::RunOutcome::Killed(signal) => Some(LinuxError::Packages(format!(
+            "apk was stopped by signal {signal}: {tail}"
+        ))),
+        crate::RunOutcome::Exited(code) => Some(LinuxError::Packages(format!(
+            "apk exited with {code}: {tail}"
+        ))),
+    }
 }
 
 /// Verifies a signed manifest, installs its image, then installs base packages.
@@ -145,5 +164,52 @@ impl OutputSink for TailOutput {
     }
     fn stderr(&mut self, bytes: &[u8]) {
         self.append(bytes);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{LinuxError, package_failure};
+    use crate::RunOutcome;
+
+    #[test]
+    fn successful_exit_is_not_a_failure() {
+        assert!(package_failure(RunOutcome::Exited(0), "").is_none());
+    }
+
+    #[test]
+    fn cancellation_maps_to_cancelled() {
+        assert!(matches!(
+            package_failure(RunOutcome::Cancelled, "tail"),
+            Some(LinuxError::Cancelled)
+        ));
+    }
+
+    #[test]
+    fn timeout_names_the_limit_even_with_empty_tail() {
+        let Some(LinuxError::Packages(text)) = package_failure(RunOutcome::TimedOut, "") else {
+            panic!("expected a package error");
+        };
+        assert!(text.contains("timed out after 15 minutes"));
+        assert_ne!(text, "");
+    }
+
+    #[test]
+    fn signal_names_the_signal() {
+        let Some(LinuxError::Packages(text)) = package_failure(RunOutcome::Killed(9), "") else {
+            panic!("expected a package error");
+        };
+        assert!(text.contains("signal 9"));
+    }
+
+    #[test]
+    fn exit_code_keeps_the_tail_text() {
+        let Some(LinuxError::Packages(text)) =
+            package_failure(RunOutcome::Exited(7), "ERROR: no such package")
+        else {
+            panic!("expected a package error");
+        };
+        assert!(text.contains("exited with 7"));
+        assert!(text.contains("ERROR: no such package"));
     }
 }

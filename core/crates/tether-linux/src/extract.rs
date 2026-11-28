@@ -58,6 +58,11 @@ pub(crate) fn extract_archive(
             return Err(LinuxError::Cancelled);
         }
         validate_header_path(&entry)?;
+        if is_root_directory(&entry) {
+            context.report.entries = context.entries;
+            progress.extracting(context.entries);
+            continue;
+        }
         extract_entry(&mut entry, &mut context, cancel)?;
         progress.extracting(context.entries);
     }
@@ -80,6 +85,9 @@ pub(crate) fn repair_archive(
     {
         let mut entry = item.map_err(|_| archive_error("read archive entry"))?;
         validate_header_path(&entry)?;
+        if is_root_directory(&entry) {
+            continue;
+        }
         let path = safe_entry_path(entry.path_bytes().as_ref())?;
         if !wanted.contains(&path) {
             continue;
@@ -127,6 +135,16 @@ impl<'a> ExtractContext<'a> {
 
 struct RepairContext<'a> {
     destination: &'a Path,
+}
+
+fn is_root_directory(entry: &tar::Entry<'_, GzDecoder<File>>) -> bool {
+    let bytes = entry.path_bytes();
+    entry.header().entry_type().is_dir()
+        && !bytes.is_empty()
+        && bytes.first() == Some(&b'.')
+        && bytes
+            .split(|byte| *byte == b'/')
+            .all(|component| component.is_empty() || component == b".")
 }
 
 fn extract_entry(

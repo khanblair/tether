@@ -8,7 +8,9 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering},
 };
 
+use flate2::{Compression, write::GzEncoder};
 use sha2::{Digest, Sha256};
+use tar::{Builder, EntryType, Header};
 use tempfile::tempdir;
 use tether_linux::{NoopProgress, RootfsImage, RootfsManager, RootfsStatus};
 use tokio_util::sync::CancellationToken;
@@ -25,6 +27,38 @@ fn image(bytes: &[u8]) -> RootfsImage {
 
 fn simple_archive() -> Vec<u8> {
     fixtures::simple_archive()
+}
+
+fn archive_with_dot_root() -> Vec<u8> {
+    let mut compressed = GzEncoder::new(Vec::new(), Compression::default());
+    {
+        let mut builder = Builder::new(&mut compressed);
+        let mut root = Header::new_gnu();
+        root.set_path("./").unwrap();
+        root.set_entry_type(EntryType::dir());
+        root.set_size(0);
+        root.set_mode(0o755);
+        root.set_cksum();
+        builder.append(&root, &[][..]).unwrap();
+
+        let mut directory = Header::new_gnu();
+        directory.set_path("./bin/").unwrap();
+        directory.set_entry_type(EntryType::dir());
+        directory.set_size(0);
+        directory.set_mode(0o755);
+        directory.set_cksum();
+        builder.append(&directory, &[][..]).unwrap();
+
+        let bytes = b"busybox";
+        let mut file = Header::new_gnu();
+        file.set_path("./bin/busybox").unwrap();
+        file.set_size(bytes.len() as u64);
+        file.set_mode(0o755);
+        file.set_cksum();
+        builder.append(&file, &bytes[..]).unwrap();
+        builder.finish().unwrap();
+    }
+    compressed.finish().unwrap()
 }
 
 #[test]
@@ -60,6 +94,34 @@ fn repair_fetches_again_when_cached_archive_is_removed() {
         .unwrap();
 
     assert_eq!(calls.load(Ordering::SeqCst), 2);
+}
+
+#[test]
+fn repair_skips_the_dot_root_entry() {
+    let folder = tempdir().unwrap();
+    let bytes = archive_with_dot_root();
+    let image = image(&bytes);
+    let fetcher = fixtures::BytesFetcher {
+        bytes: Arc::new(bytes),
+        calls: Arc::new(AtomicUsize::new(0)),
+    };
+    let manager = RootfsManager::new(folder.path().join("linux"));
+    manager
+        .install(
+            &image,
+            &fetcher,
+            &mut NoopProgress,
+            &CancellationToken::new(),
+        )
+        .unwrap();
+    let busybox = folder.path().join("linux/rootfs/alpine/bin/busybox");
+    fs::remove_file(&busybox).unwrap();
+
+    manager
+        .repair(&fetcher, &mut NoopProgress, &CancellationToken::new())
+        .unwrap();
+
+    assert_eq!(fs::read(busybox).unwrap(), b"busybox");
 }
 
 #[test]

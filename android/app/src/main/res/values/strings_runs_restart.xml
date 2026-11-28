@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="runs_restart_draft">Run this command again: %1$s</string>
+</resources>

@@ -11,7 +11,10 @@
     <string name="runs_failed">Could not read runs. Try again.</string>
     <string name="runs_try_again">Try again</string>
     <string name="runs_workflow_branch">%1$s · %2$s</string>
-    <string name="runs_background_meta">%1$s · %2$s</string>
+    <string name="runs_meta_running">Running · %1$s</string>
+    <string name="runs_meta_stopped">Stopped · %1$s</string>
+    <string name="runs_stop">Stop %1$s</string>
+    <string name="runs_restart">Run %1$s again</string>
     <string name="runs_exit_duration_time">exit %1$d · %2$s · %3$s</string>
     <string name="runs_duration_time">%1$s · %2$s</string>
     <string name="runs_outcome_time">%1$s · %2$s</string>

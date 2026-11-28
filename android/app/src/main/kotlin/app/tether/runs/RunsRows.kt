@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -33,18 +34,16 @@ import app.tether.design.tokens.TetherSize
 import app.tether.design.tokens.TetherSpace
 import app.tether.home.relativeTime
 import app.tether.home.text
+import app.tether.session.sessionTitleText
 import app.tether.session.tools.ExecutorBadge
 import app.tether.session.tools.RunExecutor
 import app.tether.settings.executors.CiRunRow
 import app.tether.settings.executors.CiRunState
 import app.tether.settings.executors.CiRunsContent
-import app.tether.settings.executors.DurationParts
-import app.tether.settings.executors.durationParts
 import app.tether.settings.executors.labelRes
 import app.tether.settings.executors.text as executorText
 
 private const val SKELETON_ROWS = 3
-private const val MILLISECONDS_PER_SECOND = 1_000L
 
 /** The scrollable list and its loading, empty, error, and no-project states. */
 @Composable
@@ -53,6 +52,8 @@ fun RunsList(
     onRetry: () -> Unit,
     onOpenLocal: (String) -> Unit,
     onOpenCi: (String) -> Unit,
+    onStop: (RunRow.Local) -> Unit,
+    onRestart: (RunRow.Local) -> Unit,
     modifier: Modifier = Modifier,
     ciContent: CiRunsContent? = null,
     failureText: String? = null,
@@ -63,6 +64,8 @@ fun RunsList(
             onRetry = onRetry,
             onOpenCi = onOpenCi,
             onOpenLocal = onOpenLocal,
+            onStop = onStop,
+            onRestart = onRestart,
             modifier = modifier,
             failureText = failureText,
         )
@@ -83,7 +86,8 @@ fun RunsList(
                 onRetry = onRetry,
                 modifier = modifier,
             )
-        is RunsContent.Runs -> RunRowsList(content.rows, onOpenLocal, onOpenCi, modifier)
+        is RunsContent.Runs ->
+            RunRowsList(content.rows, onOpenLocal, onOpenCi, onStop, onRestart, modifier)
     }
 }
 
@@ -93,6 +97,8 @@ private fun CiRunsListContent(
     onRetry: () -> Unit,
     onOpenLocal: (String) -> Unit,
     onOpenCi: (String) -> Unit,
+    onStop: (RunRow.Local) -> Unit,
+    onRestart: (RunRow.Local) -> Unit,
     modifier: Modifier,
     failureText: String?,
 ) {
@@ -120,6 +126,8 @@ private fun CiRunsListContent(
                 rows = content.rows.map(CiRunRow::toRunRow),
                 onOpenLocal = onOpenLocal,
                 onOpenCi = onOpenCi,
+                onStop = onStop,
+                onRestart = onRestart,
                 modifier = modifier,
             )
     }
@@ -140,6 +148,8 @@ private fun RunRowsList(
     rows: List<RunRow>,
     onOpenLocal: (String) -> Unit,
     onOpenCi: (String) -> Unit,
+    onStop: (RunRow.Local) -> Unit,
+    onRestart: (RunRow.Local) -> Unit,
     modifier: Modifier,
 ) {
     LazyColumn(
@@ -147,7 +157,13 @@ private fun RunRowsList(
         verticalArrangement = Arrangement.spacedBy(TetherSpace.space1),
     ) {
         items(items = rows, key = { row -> row.key() }) { row ->
-            RunsRunRow(row = row, onOpenLocal = onOpenLocal, onOpenCi = onOpenCi)
+            RunsRunRow(
+                row = row,
+                onOpenLocal = onOpenLocal,
+                onOpenCi = onOpenCi,
+                onStop = onStop,
+                onRestart = onRestart,
+            )
         }
     }
 }
@@ -158,6 +174,8 @@ fun RunsRunRow(
     row: RunRow,
     onOpenLocal: (String) -> Unit,
     onOpenCi: (String) -> Unit,
+    onStop: (RunRow.Local) -> Unit,
+    onRestart: (RunRow.Local) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state = row.sessionState()
@@ -194,10 +212,26 @@ fun RunsRunRow(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
+            if (row is RunRow.Local) {
+                Text(
+                    text = sessionTitleText(row.run.sessionTitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TetherTheme.colors.text3,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
         if (executor != null) {
             Spacer(Modifier.width(TetherSpace.space3))
-            ExecutorBadge(executor = executor)
+            ExecutorBadge(
+                executor = executor,
+                modifier = Modifier.wrapContentWidth(unbounded = true),
+            )
+        }
+        if (row is RunRow.Local) {
+            Spacer(Modifier.width(TetherSpace.space1))
+            LocalRunAction(row = row, onStop = onStop, onRestart = onRestart)
         }
     }
 }
@@ -270,7 +304,7 @@ private fun RunRow.title(): String =
 @Composable
 private fun RunRow.subtitle(): String =
     when (this) {
-        is RunRow.Local -> localMeta(run)
+        is RunRow.Local -> localMeta(this)
         is RunRow.Ci -> ciMeta(this)
     }
 
@@ -282,7 +316,7 @@ private fun RunRow.executor(): RunExecutor? =
 
 private fun RunRow.sessionState(): SessionState =
     when (this) {
-        is RunRow.Local -> run.sessionState()
+        is RunRow.Local -> markState()
         is RunRow.Ci -> state.sessionState()
     }
 
@@ -293,25 +327,6 @@ private fun RunRow.key(): String =
     }
 
 @Composable
-private fun localMeta(run: LocalRun): String {
-    val age = relativeTime(System.currentTimeMillis(), run.startedAtMs).text()
-    val duration = run.durationMs?.let { durationText(it / MILLISECONDS_PER_SECOND) }
-    return when (metaKind(run)) {
-        RunMetaKind.Background -> stringResource(R.string.runs_background_meta, run.command, age)
-        RunMetaKind.ExitAndDuration ->
-            stringResource(
-                R.string.runs_exit_duration_time,
-                run.exitCode ?: 0,
-                duration.orEmpty(),
-                age,
-            )
-        RunMetaKind.DurationOnly ->
-            stringResource(R.string.runs_duration_time, duration.orEmpty(), age)
-        RunMetaKind.Outcome -> stringResource(R.string.runs_outcome_time, outcomeText(run), age)
-    }
-}
-
-@Composable
 private fun ciMeta(row: RunRow.Ci): String {
     val state = stringResource(row.state.labelRes())
     val duration = durationText(row.durationSeconds)
@@ -320,33 +335,6 @@ private fun ciMeta(row: RunRow.Ci): String {
         stringResource(R.string.runs_ci_meta, state, duration)
     } else {
         stringResource(R.string.runs_ci_meta_time, state, duration, started)
-    }
-}
-
-@Composable
-private fun outcomeText(run: LocalRun): String =
-    stringResource(
-        when (run.outcome) {
-            RunOutcome.Succeeded -> R.string.runs_outcome_succeeded
-            RunOutcome.Failed -> R.string.runs_outcome_failed
-            RunOutcome.TimedOut -> R.string.runs_outcome_timed_out
-            RunOutcome.Cancelled -> R.string.runs_outcome_cancelled
-            RunOutcome.OutOfMemory -> R.string.runs_outcome_out_of_memory
-            RunOutcome.Denied -> R.string.runs_outcome_denied
-            RunOutcome.Background -> R.string.runs_outcome_background
-            RunOutcome.Unknown -> R.string.runs_outcome_unknown
-        },
-    )
-
-@Composable
-private fun durationText(seconds: Long): String {
-    val parts: DurationParts = durationParts(seconds)
-    return when {
-        parts.hours > 0L ->
-            stringResource(R.string.executors_duration_hours, parts.hours, parts.minutes)
-        parts.minutes > 0L ->
-            stringResource(R.string.executors_duration_minutes, parts.minutes, parts.seconds)
-        else -> stringResource(R.string.executors_duration_seconds, parts.seconds)
     }
 }
 

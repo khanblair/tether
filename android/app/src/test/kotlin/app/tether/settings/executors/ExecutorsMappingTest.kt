@@ -21,6 +21,10 @@ class ExecutorsMappingTest {
             ExecutorsFailure.ProjectNotFound,
             ExecutorRuntimeException.ProjectNotFound().toFailure(),
         )
+        assertEquals(
+            ExecutorsFailure.VerificationFailed,
+            ExecutorRuntimeException.VerificationFailed().toFailure(),
+        )
     }
 
     @Test

@@ -86,10 +86,33 @@ impl RootfsProgress for ProgressAdapter {
 }
 
 pub(super) fn http_client() -> Result<Client, ExecutorRuntimeError> {
+    client_with(redirect_allowed)
+}
+
+pub(super) fn client_with(rule: fn(&Url, usize) -> bool) -> Result<Client, ExecutorRuntimeError> {
     Client::builder()
-        .redirect(reqwest::redirect::Policy::none())
+        .redirect(reqwest::redirect::Policy::custom(move |attempt| {
+            let previous_hops = attempt.previous().len().saturating_sub(1);
+            if rule(attempt.url(), previous_hops) {
+                attempt.follow()
+            } else {
+                attempt.stop()
+            }
+        }))
         .build()
         .map_err(|_| ExecutorRuntimeError::Unavailable)
+}
+
+pub(super) fn redirect_allowed(target: &Url, previous_hops: usize) -> bool {
+    const MAX_REDIRECT_HOPS: usize = 5;
+
+    target.scheme() == "https"
+        && previous_hops < MAX_REDIRECT_HOPS
+        && target.host_str().is_some_and(|host| {
+            host == "github.com"
+                || host == "githubusercontent.com"
+                || host.ends_with(".githubusercontent.com")
+        })
 }
 
 pub(super) async fn fetch_manifest(
@@ -101,7 +124,7 @@ pub(super) async fn fetch_manifest(
     Ok((manifest, signature))
 }
 
-async fn fetch_bytes(
+pub(super) async fn fetch_bytes(
     client: &Client,
     url: &str,
     cap: usize,
@@ -111,9 +134,10 @@ async fn fetch_bytes(
         .get(url)
         .send()
         .await
-        .map_err(|_| ExecutorRuntimeError::Unavailable)?
-        .error_for_status()
         .map_err(|_| ExecutorRuntimeError::Unavailable)?;
+    if !response.status().is_success() {
+        return Err(ExecutorRuntimeError::Unavailable);
+    }
     if response
         .content_length()
         .is_some_and(|length| length > cap as u64)
@@ -162,9 +186,10 @@ async fn copy_download<F: Fn(u64, u64)>(
         .get(download.url)
         .send()
         .await
-        .map_err(|_| "download failed".to_owned())?
-        .error_for_status()
         .map_err(|_| "download failed".to_owned())?;
+    if !response.status().is_success() {
+        return Err("download failed".to_owned());
+    }
     let mut written = 0_u64;
     while let Some(chunk) = response
         .chunk()
@@ -203,22 +228,15 @@ fn pack_file_url(base: &str, pack: &PackEntry, file: &PackFile) -> Result<String
         .map_err(|_| ())
 }
 
-fn require_https(url: &str) -> Result<(), ExecutorRuntimeError> {
+pub(super) fn require_https(url: &str) -> Result<(), ExecutorRuntimeError> {
     let parsed = Url::parse(url).map_err(|_| ExecutorRuntimeError::InvalidConfiguration)?;
-    if parsed.scheme() == "https" {
+    #[cfg(test)]
+    let local_test_http = parsed.scheme() == "http" && parsed.host_str() == Some("127.0.0.1");
+    #[cfg(not(test))]
+    let local_test_http = false;
+    if parsed.scheme() == "https" || local_test_http {
         Ok(())
     } else {
         Err(ExecutorRuntimeError::InvalidConfiguration)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn download_urls_require_https() {
-        assert!(require_https("http://example.test/manifest.json").is_err());
-        assert!(require_https("https://example.test/manifest.json").is_ok());
     }
 }

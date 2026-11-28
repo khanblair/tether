@@ -13,6 +13,8 @@ import app.tether.R
 import app.tether.memory.MemoryAreaGateways
 import app.tether.memory.MemoryScreen
 import app.tether.memory.MemoryViewModel
+import app.tether.memory.SampleSkillsScreen
+import app.tether.memory.SampleSkillsViewModel
 import app.tether.memory.SkillDetailScreen
 import app.tether.memory.SkillDetailViewModel
 import app.tether.memory.SkillsMemoryHubScreen
@@ -40,7 +42,7 @@ const val SKILLS_ROUTE = "skills-memory/skills"
 /** One skill. The argument is the skill's folder name. */
 const val SKILL_DETAIL_ROUTE = "skills-memory/skills/{folder}"
 
-/** Installing a skill. Not available until the core can install and approve skills. */
+/** The sample skills gallery. Installing a sample copies it into the skills folder. */
 const val SKILL_INSTALL_ROUTE = "skills-memory/install-skill"
 
 /** The vault's Notes tab. */
@@ -113,7 +115,16 @@ private fun NavGraphBuilder.hubAndMemoryRoutes(
         )
     }
     composable(SKILL_INSTALL_ROUTE) {
-        NotAvailable(nav, R.string.skills_install_na_title, R.string.skills_install_na_body)
+        SampleSkillsScreen(
+            viewModel =
+                viewModel(
+                    factory =
+                        viewModelFactory {
+                            initializer { SampleSkillsViewModel(gateways.skills) }
+                        },
+                ),
+            onBack = nav::back,
+        )
     }
 }
 

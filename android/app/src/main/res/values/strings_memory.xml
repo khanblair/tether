@@ -47,8 +47,6 @@
     <string name="skills_field_tools">Allowed tools</string>
     <string name="skills_body_title">SKILL.md body</string>
     <string name="skills_problem_invalid">This skill could not be read. Check its frontmatter, then open it again.</string>
-    <string name="skills_install_na_title">Install a skill</string>
-    <string name="skills_install_na_body">Installing needs a review step that the core cannot run yet. Skills can be read here, but not added.</string>
 
     <!-- Vault: list, note, editor, map, and lint. -->
     <string name="vault_title">Vault</string>

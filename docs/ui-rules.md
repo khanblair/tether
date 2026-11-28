@@ -125,6 +125,9 @@ Compact (phone portrait), from top to bottom:
 - Run console shows command (mono), executor badge, live output, exit code, duration.
 - **Run elsewhere** offers the other available executors.
 - CI runs list shows workflow, branch, status, duration, and a link to the run on GitHub.
+- The Runs screen lists the history of the selected project. A local row shows the command (mono) as its title, a line with the status and the time (`Running · 3 min ago`, `Stopped · 21 min ago`, or the exit code and duration), and the session name on one line. The executor badge sits at the end, then one icon button.
+- A background command shows a spinner and a **Stop** icon only while its process runs in an open session. When the process is gone (the app was restarted, or the session screen was closed, which ends its processes), the row shows a Stopped mark and no spinner. Stop ends the process and the row updates.
+- A local row that is not running shows a **Restart** icon. It opens the session that ran the command with "Run this command again: `<command>`" in the message box. The agent runs it only after you press Send and approve it, like any command. CI rows have no buttons.
 
 ### Linux shell
 - Full-screen terminal with a key row above the keyboard: Esc, Tab, Ctrl, Alt, arrows, `|`, `/`, `-`, `~`. Ctrl and Alt stay armed for one key, and the next key counts whether it comes from the row or from the Android keyboard (Ctrl then C sends the interrupt).

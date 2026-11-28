@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="project_picker_title">Choose a project</string>
+    <string name="project_picker_last_active">Last active %1$s</string>
+    <string name="project_picker_no_projects">No projects yet.</string>
+    <string name="project_picker_selected">Selected</string>
+    <string name="start_session_no_project">Create a project before starting a session.</string>
+</resources>

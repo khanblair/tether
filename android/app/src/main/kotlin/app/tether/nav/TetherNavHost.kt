@@ -120,7 +120,6 @@ fun TetherNavHost(module: AppModule) {
                 previewRoutes(module = module, nav = nav)
                 linuxRoutes(module = module, nav = nav)
                 runsRoutes(module = module, nav = nav)
-                newSessionRoutes(module = module, nav = nav)
                 composable("share-project") {
                     val projects by produceState(emptyList<ProjectSummary>()) {
                         value = withContext(Dispatchers.IO) { module.home.projects.projects() }
@@ -206,6 +205,7 @@ private fun DrawerHost(
     val themeMode by module.themeMode.collectAsStateWithLifecycle()
     val now = remember(drawerState.currentValue) { System.currentTimeMillis() }
     val rename = sessionRenameViewModel(module.sessionGateway)
+    val newSession = rememberNewSessionLauncher(module, nav)
     val scope = rememberCoroutineScope()
     val restored = stringResource(R.string.drawer_archived_restored)
     val restoreFailed = stringResource(R.string.drawer_archived_restore_failed)
@@ -234,13 +234,14 @@ private fun DrawerHost(
         onDestination = { route -> nav.closeThen { nav.goTopLevel(route) } },
         onOpenSession = { nav.closeThen { nav.open("session/${Uri.encode(it)}") } },
         onRenameSession = { rename.start(it.id, it.title) },
-        onNewSession = { nav.closeThen { nav.go(Route.NewSession) } },
+        onNewSession = { nav.closeThen { newSession.start() } },
         onOpenSettings = { nav.closeThen { nav.go(Route.Settings) } },
         onOpenSkills = { nav.closeThen { nav.open(SKILLS_MEMORY_ROUTE) } },
         now = now,
         onSearchMessages = { query -> nav.closeThen { nav.open(searchPath(query)) } },
     )
     SessionRenameHost(rename = rename, onRenamed = { reloads.intValue++ })
+    NewSessionPicker(newSession)
 }
 
 /** The drawer's two session lists, loaded together. */

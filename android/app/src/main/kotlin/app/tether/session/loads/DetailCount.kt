@@ -1,4 +1,4 @@
-package app.tether.newsession
+package app.tether.session.loads
 
 /** The count bucket used to choose a pluralized detail line. */
 internal enum class DetailCount {

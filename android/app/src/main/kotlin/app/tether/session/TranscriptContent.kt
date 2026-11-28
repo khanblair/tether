@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -74,6 +75,7 @@ fun TranscriptContent(
     serverPreview: ServerPreviewTarget? = null,
     onPreviewServer: (ServerPreviewTarget) -> Unit = {},
     onStopServer: (String) -> Unit = {},
+    emptyState: (@Composable () -> Unit)? = null,
 ) {
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
@@ -131,6 +133,7 @@ fun TranscriptContent(
                     onRegenerate = onRegenerate,
                     toasts = toasts,
                     onPreviewHtml = onPreviewHtml,
+                    emptyState = emptyState,
                 )
                 JumpToLatest(
                     pill = jump,
@@ -169,4 +172,25 @@ fun TranscriptContent(
             composer?.invoke()
         }
     }
+}
+
+/**
+ * What an empty transcript shows: [emptyState] when the session has one (a new session shows what
+ * it loads), otherwise the empty or failed line.
+ */
+@Composable
+internal fun EmptyTranscript(
+    failed: Boolean,
+    emptyState: (@Composable () -> Unit)?,
+) {
+    if (!failed && emptyState != null) {
+        emptyState()
+        return
+    }
+    val label = if (failed) R.string.transcript_load_failed else R.string.transcript_empty
+    Text(
+        text = stringResource(label),
+        color = TetherTheme.colors.text2,
+        modifier = Modifier.padding(TetherSpace.space4),
+    )
 }

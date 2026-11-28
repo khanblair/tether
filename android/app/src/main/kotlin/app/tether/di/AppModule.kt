@@ -34,9 +34,6 @@ import app.tether.linux.linuxBackgroundStore
 import app.tether.memory.MemoryAreaGateways
 import app.tether.memory.createMemoryAreaGateways
 import app.tether.messages.AppMessages
-import app.tether.newsession.CoreNewSessionGateway
-import app.tether.newsession.NewSessionGateway
-import app.tether.newsession.PendingFirstMessage
 import app.tether.preview.InlinePreviews
 import app.tether.preview.PreviewFilesGateway
 import app.tether.projectarchive.ProjectArchiveGateway
@@ -51,6 +48,8 @@ import app.tether.session.SessionGateway
 import app.tether.session.SessionSettingsGateway
 import app.tether.session.SessionStarter
 import app.tether.session.createSessionSettingsGateway
+import app.tether.session.loads.CoreSessionLoadsGateway
+import app.tether.session.loads.SessionLoadsGateway
 import app.tether.session.servers.ServerProcessRegistry
 import app.tether.settings.PrefsSettingsStore
 import app.tether.settings.budgets.BudgetsGateway
@@ -99,7 +98,6 @@ class AppModule(
     /** The public client ID of the GitHub OAuth app for the device flow. Blank when not set. */
     private val githubClientId: String = context.getString(R.string.github_oauth_client_id)
     val shareInbox = ShareInbox()
-    val pendingFirstMessage = PendingFirstMessage()
 
     /** The provider database opens on the first call, which runs off the main thread. */
     val providerGateway: ProviderGateway =
@@ -142,9 +140,9 @@ class AppModule(
     /** Session lists and creation. The runtime opens on the first call, off the main thread. */
     val sessionGateway: SessionGateway by lazy { CoreSessionGateway(databasePath, vault) }
 
-    /** The context shown before a new session starts. The runtime opens on the first preview. */
-    val newSessionGateway: NewSessionGateway by lazy {
-        CoreNewSessionGateway(executorSessionRuntime)
+    /** What a project loads into a session. The runtime opens on the first read. */
+    val sessionLoadsGateway: SessionLoadsGateway by lazy {
+        CoreSessionLoadsGateway(executorSessionRuntime)
     }
 
     /** Memory, skills, and vault for the Skills and memory screens. */

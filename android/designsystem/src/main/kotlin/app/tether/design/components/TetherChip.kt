@@ -4,7 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.padding
@@ -42,7 +42,9 @@ private class ChipPalette(
 
 /**
  * A small pill for a setting, such as the mode or the model. [tone] sets the fill and outline. A
- * null [onClick] draws the chip without a click. The touch target is at least 48 dp tall.
+ * null [onClick] draws the chip without a click. The touch target is at least 48 dp tall. In a
+ * bounded width a long label ends in an ellipsis and keeps the chevron; in an unbounded width,
+ * such as a horizontally scrolling row, the label takes its own width.
  */
 @Composable
 fun TetherChip(
@@ -61,10 +63,12 @@ fun TetherChip(
         } else {
             Modifier
         }
-    Box(
+    BoxWithConstraints(
         modifier = modifier.minimumInteractiveComponentSize().then(clickable),
         contentAlignment = Alignment.Center,
     ) {
+        // A weighted child gets no width in an unbounded row, so the label would vanish.
+        val bounded = constraints.hasBoundedWidth
         Row(
             modifier =
                 Modifier
@@ -85,7 +89,7 @@ fun TetherChip(
                 color = palette.content,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f, fill = false),
+                modifier = if (bounded) Modifier.weight(1f, fill = false) else Modifier,
             )
             if (trailingChevron) {
                 TetherIcon(

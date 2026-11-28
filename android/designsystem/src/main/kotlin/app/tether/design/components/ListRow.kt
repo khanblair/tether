@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import app.tether.design.TetherTheme
 import app.tether.design.tokens.TetherSize
 import app.tether.design.tokens.TetherSpace
@@ -28,7 +29,8 @@ import app.tether.design.tokens.TetherSpace
 /**
  * A list row with an optional leading and trailing slot. It is clickable when [onClick] is set,
  * and a pressed row turns the sunken surface color. [onLongClick] needs [onClick] to be set too.
- * A [danger] row shows its title in the danger color, unless it is disabled.
+ * A [danger] row shows its title in the danger color, unless it is disabled. The title wraps
+ * without limit unless [titleMaxLines] is set, and then it ends in an ellipsis.
  */
 @Composable
 fun ListRow(
@@ -41,6 +43,7 @@ fun ListRow(
     enabled: Boolean = true,
     onLongClick: (() -> Unit)? = null,
     danger: Boolean = false,
+    titleMaxLines: Int = Int.MAX_VALUE,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
@@ -86,6 +89,8 @@ fun ListRow(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge,
                 color = titleColor,
+                maxLines = titleMaxLines,
+                overflow = TextOverflow.Ellipsis,
             )
             if (subtitle != null) {
                 Text(

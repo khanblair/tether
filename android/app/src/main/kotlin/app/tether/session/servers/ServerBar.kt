@@ -2,6 +2,7 @@ package app.tether.session.servers
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,6 +21,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import app.tether.R
 import app.tether.design.TetherIcons
 import app.tether.design.TetherTheme
@@ -69,6 +72,9 @@ fun ServerBar(
     }
 }
 
+/** The narrowest bar width, in dp, that holds the title and both actions on one line. */
+private val SAME_LINE_MIN_WIDTH = 260.dp
+
 @Composable
 private fun RunningServers(
     running: List<ServerProcess>,
@@ -85,49 +91,92 @@ private fun RunningServers(
             is ServerBarLabel.Count ->
                 pluralStringResource(R.plurals.server_running_count, label.count, label.count)
         }
-    Column {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            TetherIcon(
-                icon = TetherIcons.Globe,
-                contentDescription = null,
-                tint = TetherTheme.colors.text2,
-                size = TetherSize.iconS,
-            )
-            Spacer(Modifier.width(TetherSpace.space2))
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                color = TetherTheme.colors.text,
-                modifier = Modifier.weight(1f),
-            )
-            if (running.size > 1) {
-                TetherIconButton(
-                    icon = if (expanded) TetherIcons.ChevronUp else TetherIcons.ChevronDown,
-                    contentDescription =
-                        stringResource(
-                            if (expanded) R.string.server_collapse else R.string.server_expand,
-                        ),
-                    onClick = onToggleExpanded,
-                )
+    val chevron: @Composable () -> Unit = {
+        if (running.size > 1) ExpandButton(expanded = expanded, onClick = onToggleExpanded)
+    }
+    val actions: @Composable () -> Unit = {
+        ServerActions(
+            canPreview = preview != null,
+            onPreview = { preview?.let(onPreview) },
+            onStop = { onStop(first.id) },
+        )
+    }
+    BoxWithConstraints {
+        if (maxWidth >= SAME_LINE_MIN_WIDTH) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                ServerTitle(title = title, modifier = Modifier.weight(1f))
+                chevron()
+                actions()
+            }
+        } else {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    ServerTitle(title = title, modifier = Modifier.weight(1f))
+                    chevron()
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) { actions() }
             }
         }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TetherTextButton(
-                label = stringResource(R.string.server_preview),
-                onClick = { preview?.let(onPreview) },
-                enabled = preview != null,
-            )
-            TetherTextButton(
-                label = stringResource(R.string.server_stop),
-                onClick = { onStop(first.id) },
-                tone = TextButtonTone.Danger,
-            )
-        }
     }
+}
+
+/** The globe and the one-line title. The title ends in an ellipsis when the actions need room. */
+@Composable
+private fun ServerTitle(
+    title: String,
+    modifier: Modifier = Modifier,
+) {
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        TetherIcon(
+            icon = TetherIcons.Globe,
+            contentDescription = null,
+            tint = TetherTheme.colors.text2,
+            size = TetherSize.iconS,
+        )
+        Spacer(Modifier.width(TetherSpace.space2))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            color = TetherTheme.colors.text,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+private fun ExpandButton(
+    expanded: Boolean,
+    onClick: () -> Unit,
+) {
+    TetherIconButton(
+        icon = if (expanded) TetherIcons.ChevronUp else TetherIcons.ChevronDown,
+        contentDescription =
+            stringResource(if (expanded) R.string.server_collapse else R.string.server_expand),
+        onClick = onClick,
+    )
+}
+
+@Composable
+private fun ServerActions(
+    canPreview: Boolean,
+    onPreview: () -> Unit,
+    onStop: () -> Unit,
+) {
+    TetherTextButton(
+        label = stringResource(R.string.server_preview),
+        onClick = onPreview,
+        enabled = canPreview,
+    )
+    TetherTextButton(
+        label = stringResource(R.string.server_stop),
+        onClick = onStop,
+        tone = TextButtonTone.Danger,
+    )
 }
 
 @Composable

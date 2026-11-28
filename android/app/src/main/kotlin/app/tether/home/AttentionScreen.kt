@@ -156,6 +156,7 @@ internal fun ApprovalRow(
         leading = { StatusMark(state = SessionState.Waiting) },
         trailing = { Chevron() },
         onClick = onClick,
+        titleMaxLines = 1,
     )
 }
 
@@ -172,6 +173,7 @@ internal fun FailureRow(
         leading = { StatusMark(state = SessionState.Failed) },
         trailing = { Chevron() },
         onClick = onClick,
+        titleMaxLines = 1,
     )
 }
 

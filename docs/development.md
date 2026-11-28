@@ -97,6 +97,10 @@ Only the four signing variables are used today. The provider and GitHub test var
 - Linux mode needs a real download of the Alpine root filesystem; use Wi-Fi.
 - Keep a monthly spend limit on every test key at the provider's dashboard.
 
+### Sample skills
+
+The sample skills live in `core/crates/tether-skills/samples/`, one folder per skill, with `NOTICE.md` and the license texts in `licenses/`. Each is an unmodified copy of a skill from a public repository (the Codex-only `agents/` folder and repository READMEs are left out). `src/samples.rs` embeds every file with `include_str!` in a table, and a test checks that each embedded file equals the file on disk, that each `SKILL.md` passes `parse_skill`, and that the scanner does not block it. To add a sample: copy the folder, add its files to the table, add a row to `NOTICE.md` with its source, license, and copyright (and the license text to `licenses/` when it is a new one), then run `cargo test -p tether-skills`. Only add skills whose license allows redistribution.
+
 ## 7. Everyday commands
 
 | Command | What it does |

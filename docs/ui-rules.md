@@ -129,6 +129,11 @@ Compact (phone portrait), from top to bottom:
 - A background command shows a spinner and a **Stop** icon only while its process runs in an open session. When the process is gone (the app was restarted, or the session screen was closed, which ends its processes), the row shows a Stopped mark and no spinner. Stop ends the process and the row updates.
 - A local row that is not running shows a **Restart** icon. It opens the session that ran the command with "Run this command again: `<command>`" in the message box. The agent runs it only after you press Send and approve it, like any command. CI rows have no buttons.
 
+### Skills
+- Reached from the drawer (Skills and memory, Skills) and from `/skills`. The list shows every skill folder with its description; a skill that cannot be read shows its error.
+- **Install** opens **Sample skills**: eleven real skills from open repositories (`tdd`, `diagnosing-bugs`, `code-review`, `handoff`, `caveman`, and more), each with an **Install** button. Installing copies the skill into the user skills folder, so it shows in the list and can be run with `/name`. An installed sample shows **Installed**; installing again changes nothing, so edits the user made stay. A **Sources and licenses** row at the end shows where each sample comes from and its license.
+- Skills the user or the agent adds later are ordinary user skills: the agent can create, change, and delete them with `skill_manage`, and it writes the standard `SKILL.md` format.
+
 ### Linux shell
 - Full-screen terminal with a key row above the keyboard: Esc, Tab, Ctrl, Alt, arrows, `|`, `/`, `-`, `~`. Ctrl and Alt stay armed for one key, and the next key counts whether it comes from the row or from the Android keyboard (Ctrl then C sends the interrupt).
 - The top bar shows the project folder and a network on/off badge.
@@ -193,6 +198,7 @@ Compact (phone portrait), from top to bottom:
 
 - Send becomes Stop (square icon) while a turn runs.
 - The plus button opens attachments, commands, and file mention.
+- Typing `/` lists the built-in commands and then one command for each installed skill, named like the skill (`/tdd`, `/caveman`). Sending `/tdd fix the login bug` sends a message that tells the agent to load that skill and follow it for the text after the name. This works like `/name` in Claude Code and Codex. A skill that is turned off does not appear.
 - Mode chip shows the mode name; accent fill only for Auto, red outline and label for Bypass.
 
 ### Status line

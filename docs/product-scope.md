@@ -360,6 +360,8 @@ Background runs use the same Linux-mode approval as other host runs. The approva
 - Install from a GitHub URL or a zip goes through quarantine: Tether shows the files and the result of a static scan, and installs only on approval. Skill scripts run only inside the executors, under the permission mode.
 - A prune-only job marks unused skills stale after 14 days and archives them after 30. It never deletes and makes no model calls.
 - `/skills` lists and opens skills. The user can also edit a skill in the file viewer.
+- Every installed user skill is also a slash command named like the skill: `/tdd fix the bug` sends a message that tells the agent to load the skill with `skill_view` and follow it. Built-in commands win a name clash, and a skill that is turned off is not a command. The core marks these commands with the kind `skill`, so the app can run them and still refuse any other unknown name.
+- Tether ships eleven real sample skills (copied unchanged from public repositories, with their licenses) that the user installs from Skills, Install. Installing copies the folder into the user skills folder and never overwrites an existing skill.
 
 **Why.** Repeat work should get cheaper and better. Loading skills on demand keeps the prompt small, and the open format means the user can bring skills from other tools. Approval by default follows "show before doing".
 

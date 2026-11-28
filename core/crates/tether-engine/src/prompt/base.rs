@@ -62,6 +62,9 @@ fn conditional_lines(names: &HashSet<&str>) -> Vec<String> {
         lines.push("Use github_api for anything on GitHub. It acts as the account the user signed in with in Settings, so never ask for a token.".to_owned());
         lines.push("If github_api says GitHub is not signed in, tell the user to sign in under Settings, GitHub.".to_owned());
     }
+    if names.contains("skill_manage") {
+        lines.push("When the user asks to add or change a skill, use skill_manage and keep the standard SKILL.md format; when the user types /<skill name>, load that skill with skill_view.".to_owned());
+    }
     lines
 }
 

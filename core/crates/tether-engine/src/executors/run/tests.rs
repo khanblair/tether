@@ -55,6 +55,38 @@ impl LinuxRunnerLike for BackgroundRunner {
     }
 }
 
+const FILLER_LINE_BYTES: usize = 1_024;
+const FILLER_LINES: usize = 301;
+
+struct NoisyBackgroundRunner;
+
+impl LinuxRunnerLike for NoisyBackgroundRunner {
+    fn run(
+        &self,
+        request: &RunRequest,
+        sink: &mut dyn OutputSink,
+        cancel: &CancellationToken,
+    ) -> Result<LinuxRunReport, LinuxError> {
+        let mut capped = tether_linux::CappedOutput::new(sink, request.output_cap_bytes);
+        let filler = format!("{}\n", "x".repeat(FILLER_LINE_BYTES - 1));
+        for _ in 0..FILLER_LINES {
+            capped.stdout(filler.as_bytes());
+        }
+        capped.stdout(b"Local: http://localhost:5199/\n");
+        let output_bytes = capped.sent();
+        let output_truncated = capped.truncated();
+        while !cancel.is_cancelled() {
+            std::thread::park_timeout(Duration::from_millis(1));
+        }
+        Ok(LinuxRunReport {
+            outcome: RunOutcome::Cancelled,
+            elapsed: Duration::from_millis(1),
+            output_bytes,
+            output_truncated,
+        })
+    }
+}
+
 #[test]
 fn output_cut_keeps_head_tail_and_exact_omitted_count() {
     let output = format!(
@@ -317,5 +349,49 @@ async fn background_run_returns_process_id_and_loopback_url() {
         .unwrap();
     assert!(output.text.contains("process: p1"));
     assert!(output.text.contains("url: http://127.0.0.1:5173/"));
+    manager.shutdown();
+}
+
+#[tokio::test]
+async fn background_run_forwards_logs_after_the_output_cap() {
+    let root = tempfile::tempdir().unwrap();
+    let guard = PathGuard::new(root.path()).unwrap();
+    let sink: Arc<dyn crate::EventSink> = Arc::new(TestSink);
+    let manager = Arc::new(BackgroundProcesses::new(
+        tether_types::SessionId::new("session"),
+        sink,
+    ));
+    let mut tools = RunTools::new(root.path().join("packs")).unwrap();
+    let runner: Arc<dyn LinuxRunnerLike> = Arc::new(NoisyBackgroundRunner);
+    tools.linux_off = Some(Arc::clone(&runner));
+    tools.linux_on = Some(runner);
+    tools.background = Some(Arc::clone(&manager));
+    let call = tools
+        .prepare(
+            "run",
+            r#"{"command":"npm run dev","executor":"linux","background":true}"#,
+            &PrepareContext { guard: &guard },
+        )
+        .unwrap();
+    let mut before_edit = |_paths: &[std::path::PathBuf]| Ok(());
+    let output = tools
+        .execute(
+            call,
+            ExecuteContext {
+                session_id: &tether_types::SessionId::new("session"),
+                tool_call_id: &tether_types::ToolCallId::new("call"),
+                cancel: CancellationToken::new(),
+                sink: None,
+                guard: &guard,
+                before_edit: &mut before_edit,
+            },
+        )
+        .await
+        .unwrap();
+
+    let logs = manager.logs("p1", 1).unwrap();
+    assert!(logs.ends_with("Local: http://localhost:5199/"));
+    assert_eq!(manager.list().unwrap()[0].port, Some(5199));
+    assert!(output.text.contains("url: http://127.0.0.1:5199/"));
     manager.shutdown();
 }

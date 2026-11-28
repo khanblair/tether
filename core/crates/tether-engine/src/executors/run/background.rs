@@ -28,7 +28,9 @@ impl RunTools {
             cwd: guest_cwd(&cwd),
             extra_env: Vec::new(),
             timeout: None,
-            output_cap_bytes: 256 * 1024,
+            // OutputRing is the only limit on retained output.
+            // A per-run cap would stop log forwarding once reached.
+            output_cap_bytes: usize::MAX,
         };
         let result =
             tokio::task::spawn_blocking(move || manager.start(runner, request, command, cwd))

@@ -86,13 +86,14 @@ internal suspend fun SessionConnection.snapshot(): TranscriptSnapshot =
             modelLookup.find(details.provider, details.modelId) {
                 settings.models(details.provider)
             }
+        val usage = settings.usage(sessionId)
         TranscriptSnapshot(
             messages = transcript().filterNot(MessageView::rewound).sortedBy(MessageView::seq),
-            status = status(),
+            status = statusFrom(details, usage, model?.contextWindow),
             details = details,
             modelName = modelDisplayName(details.modelId, listOfNotNull(model)),
             supportsImages = model?.images == true,
-            usage = settings.usage(sessionId),
+            usage = usage,
             processes = listProcesses(),
             bypass =
                 sessionCall(Dispatchers.IO) { settings.bypassActive(sessionId) }

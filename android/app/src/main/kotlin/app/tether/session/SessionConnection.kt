@@ -88,8 +88,6 @@ class SessionConnection(
     /** Stops a session-owned background process without waiting for a running turn. */
     fun stopProcess(processId: String) = runner.stopProcess(processId)
 
-    fun status(): SessionStatus = readSessionStatus(databasePath, sessionId)
-
     /** Sends a turn and returns the `@` mentions the core could not attach, with the reasons. */
     fun send(text: String): List<SkippedMention> {
         val outcome = runner.sendMessageWithOutcome(text)

@@ -12,4 +12,5 @@ internal data class InlineStyles(
     val link: SpanStyle = SpanStyle(textDecoration = TextDecoration.Underline),
     val bold: SpanStyle = SpanStyle(fontWeight = FontWeight.Bold),
     val italic: SpanStyle = SpanStyle(fontStyle = FontStyle.Italic),
+    val strike: SpanStyle = SpanStyle(textDecoration = TextDecoration.LineThrough),
 )

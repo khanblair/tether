@@ -25,6 +25,7 @@ private fun AnnotatedString.Builder.appendInline(
             when {
                 text[i] == '`' -> appendCode(text, i, styles)
                 text.startsWith("**", i) -> appendEmphasis(text, i, "**", styles.bold, styles)
+                text.startsWith("~~", i) -> appendEmphasis(text, i, "~~", styles.strike, styles)
                 text[i] == '*' -> appendEmphasis(text, i, "*", styles.italic, styles)
                 text[i] == '[' -> appendLink(text, i, styles)
                 else -> 0

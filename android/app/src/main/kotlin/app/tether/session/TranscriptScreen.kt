@@ -17,7 +17,6 @@ import app.tether.session.agent.rememberAgentLoop
 import app.tether.session.agent.rememberAgentScreen
 import app.tether.session.compose.CommandScreen
 import app.tether.session.compose.commandHooksOf
-import app.tether.session.compose.skippedMentionsLine
 import app.tether.session.servers.ServerPreviewTarget
 import app.tether.session.servers.ServerStateHolder
 import app.tether.session.servers.serverPreviewAction
@@ -27,11 +26,10 @@ import app.tether.session.servers.serverStopAction
 @Composable
 fun TranscriptScreen(
     connection: SessionConnection?,
-    initialMessage: String? = null,
-    onInitialMessageStarted: () -> Unit = {},
     onBack: () -> Unit,
     sheets: SessionSheetEnv? = null,
     onOpenBudgets: (() -> Unit)? = null,
+    emptyState: (@Composable () -> Unit)? = null,
 ) {
     var snapshot by remember(connection) { mutableStateOf<TranscriptSnapshot?>(null) }
     var failed by remember(connection) { mutableStateOf(false) }
@@ -51,7 +49,6 @@ fun TranscriptScreen(
     val previewReady = stringResource(R.string.server_preview_ready)
     val openLabel = stringResource(R.string.server_open)
     val stoppedFormat = stringResource(R.string.server_stopped_code)
-    val skippedText = stringResource(R.string.compose_skipped_files)
     val openServerPreview = serverPreviewAction(sheets)
     val stopServer =
         serverStopAction(scope, connection) { sheets?.messages?.show(stopFailed) }
@@ -98,22 +95,6 @@ fun TranscriptScreen(
             onFailed = { turn = turn.onSendFailed() },
         )
     LaunchedEffect(agent) { agent?.hydrate() }
-    SendInitialMessage(
-        connection = connection,
-        initialMessage = initialMessage,
-        send = { active, text ->
-            scope.sendTurn(
-                connection = active,
-                text = text,
-                onStart = { startTurn() },
-                onFailed = { turn = turn.onSendFailed() },
-                onSkipped = { skipped ->
-                    sheets?.messages?.show(skippedText.format(skippedMentionsLine(skipped)))
-                },
-            )
-        },
-        onStarted = onInitialMessageStarted,
-    )
     SnapshotReload(
         connection = connection,
         reloads = sheetControl.reloads,
@@ -171,6 +152,7 @@ fun TranscriptScreen(
                 { text: String -> sendPlanEdit(active, text) }
             },
         onOpenBudgets = onOpenBudgets ?: {},
+        emptyState = emptyState,
         servers = servers,
         serverPreview = serverPreview,
         onPreviewServer = openServerPreview,

@@ -1,9 +1,9 @@
-package app.tether.newsession
+package app.tether.session.loads
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-class NewSessionDetailsTest {
+class SessionLoadsDetailsTest {
     @Test
     fun detail_count_chooses_none_one_or_many() {
         assertEquals(DetailCount.None, detailCount(0))

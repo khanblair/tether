@@ -1,10 +1,10 @@
-package app.tether.newsession
+package app.tether.session.loads
 
 import app.tether.core.generated.NewSessionPreviewView
 import app.tether.core.generated.SessionRuntime
 
-/** The context that will be loaded when the first turn starts. */
-data class NewSessionPreview(
+/** The context a session in one project loads when its first turn starts. */
+data class SessionLoads(
     val instructionsFile: String?,
     val instructionsLines: Int,
     val memoryEntries: Int,
@@ -13,24 +13,24 @@ data class NewSessionPreview(
     val lastSessionUpdatedAtMs: Long?,
 )
 
-/** Reads the pre-session context for a project. Calls block and must run off the main thread. */
-interface NewSessionGateway {
-    /** Reads the context that a new session in [projectId] will use. */
-    fun preview(projectId: String): NewSessionPreview
+/** Reads what a project loads into a session. Calls block, so run them off the main thread. */
+interface SessionLoadsGateway {
+    /** Reads the context that a session in [projectId] loads. */
+    fun loads(projectId: String): SessionLoads
 }
 
 /** The real gateway over the lazy UniFFI session runtime. */
-class CoreNewSessionGateway(
+class CoreSessionLoadsGateway(
     lazyRuntime: Lazy<SessionRuntime>,
-) : NewSessionGateway {
+) : SessionLoadsGateway {
     private val runtime: SessionRuntime by lazyRuntime
 
-    override fun preview(projectId: String): NewSessionPreview =
-        runtime.newSessionPreview(projectId).toPreview()
+    override fun loads(projectId: String): SessionLoads =
+        runtime.newSessionPreview(projectId).toLoads()
 }
 
-private fun NewSessionPreviewView.toPreview(): NewSessionPreview =
-    NewSessionPreview(
+private fun NewSessionPreviewView.toLoads(): SessionLoads =
+    SessionLoads(
         instructionsFile = instructionsFile,
         instructionsLines = instructionsLines.toInt(),
         memoryEntries = memoryEntries.toInt(),

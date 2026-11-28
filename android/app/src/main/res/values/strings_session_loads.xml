@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="session_loads_loaded_title">Loaded for this session</string>
+    <string name="session_loads_no_instructions">No instructions file</string>
+    <string name="session_loads_instructions_helper">Add TETHER.md or AGENTS.md to the project</string>
+    <plurals name="session_loads_instruction_lines">
+        <item quantity="one">%d line</item>
+        <item quantity="other">%d lines</item>
+    </plurals>
+    <string name="session_loads_memory_title">Memory</string>
+    <string name="session_loads_memory_none">No entries yet</string>
+    <plurals name="session_loads_memory_entries">
+        <item quantity="one">%d entry · applies from this session on</item>
+        <item quantity="other">%d entries · applies from this session on</item>
+    </plurals>
+    <string name="session_loads_skills_title">Skills</string>
+    <string name="session_loads_skills_none">None enabled</string>
+    <plurals name="session_loads_skills_available">
+        <item quantity="one">%d available, loaded when a task needs them</item>
+        <item quantity="other">%d available, loaded when a task needs them</item>
+    </plurals>
+    <string name="session_loads_last_session">Last session in this project: %1$s · %2$s</string>
+</resources>

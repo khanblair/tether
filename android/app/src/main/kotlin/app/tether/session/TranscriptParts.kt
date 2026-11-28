@@ -148,6 +148,7 @@ internal fun TranscriptList(
     onRegenerate: (() -> Unit)? = null,
     toasts: AppMessages? = null,
     onPreviewHtml: ((String) -> Unit)? = null,
+    emptyState: (@Composable () -> Unit)? = null,
 ) {
     val footer = turn.hasFooter
     val rowModifier = Modifier.widthIn(max = TetherSize.transcriptMax).fillMaxWidth()
@@ -156,12 +157,7 @@ internal fun TranscriptList(
     val copy = rememberCopyMessage(toasts)
     val liveId = if (turn.running) messages.lastOrNull()?.id else null
     if (messages.isEmpty() && !footer && !hasLive) {
-        val emptyLabel = if (failed) R.string.transcript_load_failed else R.string.transcript_empty
-        Text(
-            text = stringResource(emptyLabel),
-            color = TetherTheme.colors.text2,
-            modifier = Modifier.padding(TetherSpace.space4),
-        )
+        EmptyTranscript(failed, emptyState)
         return
     }
     LazyColumn(

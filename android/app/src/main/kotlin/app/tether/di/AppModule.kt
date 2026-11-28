@@ -2,6 +2,7 @@ package app.tether.di
 
 import android.content.Context
 import android.util.Log
+import app.tether.R
 import app.tether.appearance.AppearanceController
 import app.tether.appearance.PrefsAppearanceStore
 import app.tether.core.CoreClient
@@ -94,6 +95,9 @@ class AppModule(
             .apply { mkdirs() }
             .absolutePath
     val vault = keystoreSecretVault(context.filesDir.resolve("secrets"))
+
+    /** The public client ID of the GitHub OAuth app for the device flow. Blank when not set. */
+    private val githubClientId: String = context.getString(R.string.github_oauth_client_id)
     val shareInbox = ShareInbox()
     val pendingFirstMessage = PendingFirstMessage()
 
@@ -148,7 +152,7 @@ class AppModule(
 
     /** GitHub sign-in, the Git identity, and cloning. The runtime opens on the first call. */
     val githubGateway: GithubGateway by lazy {
-        createGithubGateway(databasePath, workspacesRoot, vault)
+        createGithubGateway(databasePath, workspacesRoot, vault, githubClientId)
     }
 
     /** Runtime packs, Linux mode, project network, and CI runs. Both runtimes open on first use. */

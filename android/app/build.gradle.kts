@@ -16,6 +16,13 @@ val coreVersion: String =
         }
 val (major, minor, patch) = coreVersion.split(".").map { it.toInt() }
 
+// The client ID of the GitHub OAuth app behind Sign in with GitHub (the device flow). It is public,
+// not a secret. With no value the app says sign-in with GitHub is not set up and offers a token.
+val githubClientId: String = System.getenv("TETHER_GITHUB_CLIENT_ID").orEmpty().trim()
+require(Regex("[A-Za-z0-9._-]{0,64}").matches(githubClientId)) {
+    "TETHER_GITHUB_CLIENT_ID may hold only letters, digits, dot, dash, and underscore"
+}
+
 android {
     namespace = "app.tether"
 
@@ -24,10 +31,16 @@ android {
         // MAJOR * 1_000_000 + MINOR * 10_000 + PATCH * 100 + ABI, where ABI is 0 for a universal APK.
         versionCode = major * 1_000_000 + minor * 10_000 + patch * 100
         versionName = coreVersion
+        resValue("string", "github_oauth_client_id", githubClientId)
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk {
             abiFilters += listOf("arm64-v8a", "x86_64")
         }
+    }
+
+    buildFeatures {
+        // The GitHub client ID is added as a generated string resource (see githubClientId above).
+        resValues = true
     }
 
     flavorDimensions += "distribution"

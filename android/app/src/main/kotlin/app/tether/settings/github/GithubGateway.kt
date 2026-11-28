@@ -135,10 +135,29 @@ class CoreGithubGateway(
 
 /**
  * The GitHub gateway over the app's database and workspaces, with the token vault. The runtime
- * opens on the first call, so creating the gateway never blocks the UI.
+ * opens on the first call, so creating the gateway never blocks the UI. [clientId] is the public
+ * client ID of the GitHub OAuth app. With it, Sign in with GitHub works; without it the runtime
+ * reports that sign-in is not set up and the person uses a token.
  */
 fun createGithubGateway(
     databasePath: String,
     workspacesRoot: String,
     vault: SecretVault,
-): GithubGateway = CoreGithubGateway(lazy { GitRuntime(databasePath, workspacesRoot, vault) })
+    clientId: String = "",
+): GithubGateway =
+    CoreGithubGateway(
+        lazy {
+            GitRuntime(databasePath, workspacesRoot, vault).also { runtime ->
+                configureDeviceFlow(clientId, runtime::configureGithub)
+            }
+        },
+    )
+
+/** Gives the runtime the OAuth client ID when the build has one. A blank ID changes nothing. */
+internal fun configureDeviceFlow(
+    clientId: String,
+    configure: (String) -> Unit,
+) {
+    val id = clientId.trim()
+    if (id.isNotEmpty()) configure(id)
+}

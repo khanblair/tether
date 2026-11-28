@@ -21,7 +21,6 @@ internal fun NavGraphBuilder.placeholderRoutes(nav: TetherNav) {
             Route.About,
             Route.Onboarding,
             Route.Linux,
-            Route.NewSession,
             Route.Runs,
         )
     Route.entries.filter { it !in real && it != Route.Session }.forEach { route ->

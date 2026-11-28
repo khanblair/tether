@@ -30,7 +30,7 @@ fun ProjectPickerSheet(
     onDismiss: () -> Unit,
 ) {
     TetherSheet(
-        title = stringResource(R.string.new_session_project_picker_title),
+        title = stringResource(R.string.project_picker_title),
         onDismiss = onDismiss,
     ) {
         if (projects.isEmpty()) {
@@ -39,7 +39,7 @@ fun ProjectPickerSheet(
                 verticalArrangement = Arrangement.spacedBy(TetherSpace.space3),
             ) {
                 Text(
-                    text = stringResource(R.string.new_session_no_projects),
+                    text = stringResource(R.string.project_picker_no_projects),
                     style = MaterialTheme.typography.bodyMedium,
                     color = TetherTheme.colors.text2,
                 )
@@ -64,7 +64,7 @@ fun ProjectPickerSheet(
                                 TetherIcon(
                                     icon = TetherIcons.CircleCheck,
                                     contentDescription =
-                                        stringResource(R.string.new_session_selected),
+                                        stringResource(R.string.project_picker_selected),
                                     tint = TetherTheme.colors.accent,
                                 )
                             }
@@ -84,6 +84,6 @@ private fun projectLastActivity(
     now: Long,
 ): String =
     stringResource(
-        R.string.new_session_last_active,
+        R.string.project_picker_last_active,
         relativeTime(now, project.lastActivityAt).text(),
     )

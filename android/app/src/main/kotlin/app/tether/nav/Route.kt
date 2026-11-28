@@ -15,7 +15,6 @@ enum class Route(
     Attention("attention", R.string.route_attention_title),
     ProjectHome("project-home", R.string.route_project_home_title),
     Session("session", R.string.route_session_title),
-    NewSession("new-session", R.string.route_new_session_title),
     Skills("skills", R.string.route_skills_title),
     CloneProject("clone-project", R.string.route_clone_title),
     NewProject("new-project", R.string.route_new_project_title),

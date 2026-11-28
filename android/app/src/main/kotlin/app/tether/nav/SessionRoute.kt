@@ -2,12 +2,9 @@ package app.tether.nav
 
 import android.util.Log
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -20,6 +17,8 @@ import app.tether.session.SessionConnection
 import app.tether.session.SessionSheetEnv
 import app.tether.session.SessionUnavailableScreen
 import app.tether.session.TranscriptScreen
+import app.tether.session.loads.SessionLoads
+import app.tether.session.loads.SessionLoadsCard
 import app.tether.session.restoreArchivedSession
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -38,7 +37,7 @@ internal fun SessionRoute(
     val onBack: () -> Unit = nav::back
     val scope = rememberCoroutineScope()
     val screenMissing = stringResource(R.string.compose_command_screen_missing)
-    val newSessionFailed = stringResource(R.string.compose_command_new_failed)
+    val startMessages = rememberStartMessages()
     val changeFailed = stringResource(R.string.session_error_settings)
     val holder: SessionConnectionHolder<SessionConnection> =
         viewModel(
@@ -48,7 +47,7 @@ internal fun SessionRoute(
                     initializer {
                         SessionConnectionHolder(
                             sessionId = sessionId,
-                            release = { opened -> module.closeInBackground(opened::close) },
+                            release = { opened -> leaveSession(module, opened) },
                             launch = module::launchInBackground,
                             open = { id -> openSession(module, id) },
                         )
@@ -57,21 +56,16 @@ internal fun SessionRoute(
         )
     val open by holder.state.collectAsStateWithLifecycle()
     val connection = (open as? SessionOpen.Opened)?.connection
-    var initialMessage by rememberSaveable(sessionId) { mutableStateOf<String?>(null) }
-    LaunchedEffect(sessionId, connection) {
-        if (sessionId != null && connection != null && initialMessage == null) {
-            initialMessage = module.pendingFirstMessage.take(sessionId)
-        }
-    }
     val projectId = connection?.projectId
+    val loads by produceState<SessionLoads?>(null, projectId) {
+        value = projectId?.let { readLoads(module, it) }
+    }
     val unavailable = open as? SessionOpen.Unavailable
     if (unavailable != null) {
         SessionUnavailableScreen(onBack = onBack, reason = unavailable.reason)
     } else {
         TranscriptScreen(
             connection = connection,
-            initialMessage = initialMessage,
-            onInitialMessageStarted = { initialMessage = null },
             onBack = onBack,
             sheets =
                 SessionSheetEnv(
@@ -85,9 +79,7 @@ internal fun SessionRoute(
                         }
                     },
                     newSession = {
-                        startNewSession(module, nav, projectId, scope) {
-                            module.messages.show(newSessionFailed)
-                        }
+                        startNewSession(module, nav, projectId, scope, startMessages)
                     },
                     openDrawer = nav::openDrawer,
                     projects = module.home.projects,
@@ -104,6 +96,7 @@ internal fun SessionRoute(
                     openInlinePreview = nav.previewInline(module.inlinePreviews),
                 ),
             onOpenBudgets = { nav.open(SETTINGS_BUDGETS_ROUTE) },
+            emptyState = loads?.let { found -> { SessionLoadsCard(found) } },
         )
     }
 }
@@ -139,5 +132,43 @@ private suspend fun openSession(
             SessionOpen.Unavailable(reason = name)
         }
     }
+
+/** What the project loads into a session, or null when it cannot be read. */
+@Suppress("TooGenericExceptionCaught")
+private suspend fun readLoads(
+    module: AppModule,
+    projectId: String,
+): SessionLoads? =
+    withContext(Dispatchers.IO) {
+        try {
+            module.sessionLoadsGateway.loads(projectId)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+/**
+ * Closes a session connection when its screen leaves the back stack. A session that was opened
+ * and never got a message is deleted first, so starting a session nobody used leaves nothing in
+ * the lists.
+ */
+private fun leaveSession(
+    module: AppModule,
+    opened: SessionConnection,
+) {
+    module.closeInBackground {
+        closeDiscardingEmpty(
+            isEmpty = { opened.transcript().isEmpty() },
+            delete = {
+                opened.settings.delete(opened.sessionId)
+                module.sessionChanges.notifySessionsChanged()
+            },
+            close = opened::close,
+            failed = { Log.w(TAG, "discard failed: ${it.javaClass.simpleName}") },
+        )
+    }
+}
 
 private const val TAG = "Tether"

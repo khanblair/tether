@@ -43,6 +43,5 @@
     <string name="compose_command_cleared">Context cleared. The transcript stays.</string>
     <string name="compose_command_plan_on">Plan mode is on.</string>
     <string name="compose_command_export_done">Session saved.</string>
-    <string name="compose_command_new_failed">Could not start a new session. Check your provider key and model.</string>
     <string name="compose_command_screen_missing">That screen is not available yet.</string>
 </resources>

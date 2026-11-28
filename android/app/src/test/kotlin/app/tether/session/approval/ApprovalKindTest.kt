@@ -24,6 +24,10 @@ class ApprovalKindTest {
             ApprovalKind.GithubRepoCreate,
             approvalKind("github_repo_create", "create GitHub repository blair/app (private)"),
         )
+        assertEquals(
+            ApprovalKind.GithubApi,
+            approvalKind("github_api", "GET https://api.github.com/user/repos"),
+        )
         assertEquals(ApprovalKind.Other, approvalKind("mcp__docs__read", "docs: read {}"))
     }
 

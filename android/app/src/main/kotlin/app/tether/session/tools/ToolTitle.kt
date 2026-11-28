@@ -29,6 +29,7 @@ enum class ToolTitleKind {
     GithubRepoCreate,
     PrCreate,
     PrStatus,
+    GithubApi,
     Unknown,
 }
 
@@ -76,6 +77,7 @@ private val TITLE_KINDS: Map<String, ToolTitleKind> =
         "github_repo_create" to ToolTitleKind.GithubRepoCreate,
         "pr_create" to ToolTitleKind.PrCreate,
         "pr_status" to ToolTitleKind.PrStatus,
+        "github_api" to ToolTitleKind.GithubApi,
     )
 
 /** The kind of action for a core tool name. An unknown name gives [ToolTitleKind.Unknown]. */
@@ -120,6 +122,7 @@ fun toolTitle(call: ToolCallUi): ToolTitle {
             ToolTitleKind.Preview -> previewTargetLabel(call.target)
             ToolTitleKind.GitInit -> gitInitTarget(call.target, call.output)
             ToolTitleKind.GithubRepoCreate -> githubRepoTarget(call.target, call.output)
+            ToolTitleKind.GithubApi -> githubApiTarget(call.target)
             else -> call.target
         }
     return ToolTitle(kind, toolTense(call.status), target, call.tool)
@@ -147,8 +150,15 @@ internal fun savedToolTarget(
                 repositoryName = stringArgument(argsJson, "name"),
                 isPrivate = booleanArgument(argsJson, "private"),
             )
+        "github_api" ->
+            listOfNotNull(stringArgument(argsJson, "method"), stringArgument(argsJson, "path"))
+                .joinToString(" ")
         else -> ""
     }
+
+/** The GitHub API target without the host: `GET /user/repos`, not the full URL. */
+private fun githubApiTarget(target: String): String =
+    target.replaceFirst(" https://api.github.com", " ")
 
 private fun savedGitInitTarget(
     argsJson: String,

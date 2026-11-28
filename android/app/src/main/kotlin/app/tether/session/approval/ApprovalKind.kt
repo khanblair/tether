@@ -13,6 +13,7 @@ enum class ApprovalKind {
     ForcePush,
     PullRequest,
     GithubRepoCreate,
+    GithubApi,
     Other,
 }
 
@@ -47,6 +48,7 @@ private val TOOL_KINDS: Map<String, ApprovalKind> =
         "git_push" to ApprovalKind.Push,
         "pr_create" to ApprovalKind.PullRequest,
         "github_repo_create" to ApprovalKind.GithubRepoCreate,
+        "github_api" to ApprovalKind.GithubApi,
     )
 
 /**

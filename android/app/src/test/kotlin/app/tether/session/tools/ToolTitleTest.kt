@@ -34,6 +34,7 @@ class ToolTitleTest {
                 "github_repo_create" to ToolTitleKind.GithubRepoCreate,
                 "pr_create" to ToolTitleKind.PrCreate,
                 "pr_status" to ToolTitleKind.PrStatus,
+                "github_api" to ToolTitleKind.GithubApi,
             )
         table.forEach { (tool, kind) -> assertEquals(tool, kind, toolTitleKind(tool)) }
     }
@@ -155,6 +156,22 @@ class ToolTitleTest {
         assertEquals(
             "blair/app · public · https://github.com/blair/app",
             toolTitle(call).target,
+        )
+    }
+
+    @Test
+    fun a_github_api_call_shows_its_method_and_path_without_the_host() {
+        val live = call("github_api", "GET https://api.github.com/user/repos?per_page=5")
+
+        assertEquals(ToolTitleKind.GithubApi, toolTitle(live).kind)
+        assertEquals("GET /user/repos?per_page=5", toolTitle(live).target)
+        assertEquals(
+            "POST /repos/blair/app/issues",
+            savedToolTarget(
+                "github_api",
+                """{"method":"POST","path":"/repos/blair/app/issues","body":{"title":"x"}}""",
+                "",
+            ),
         )
     }
 

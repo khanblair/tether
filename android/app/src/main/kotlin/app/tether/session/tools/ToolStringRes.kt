@@ -131,6 +131,12 @@ private val VERB_TABLE: Map<ToolTitleKind, VerbRes> =
                 R.string.github_tool_repo_create_present,
                 R.string.github_tool_repo_create_past,
             ),
+        ToolTitleKind.GithubApi to
+            VerbRes(
+                R.string.github_tool_api_imperative,
+                R.string.github_tool_api_present,
+                R.string.github_tool_api_past,
+            ),
         ToolTitleKind.Unknown to
             VerbRes(
                 R.string.tools_verb_unknown_imperative,
@@ -166,6 +172,7 @@ internal fun fixedTitleRes(kind: ToolTitleKind): Int? =
         ToolTitleKind.Preview,
         ToolTitleKind.GitInit,
         ToolTitleKind.GithubRepoCreate,
+        ToolTitleKind.GithubApi,
         ToolTitleKind.Unknown,
         -> null
     }

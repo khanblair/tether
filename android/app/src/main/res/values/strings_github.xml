@@ -124,4 +124,7 @@
     <string name="github_tool_repo_create_imperative">Create a repository</string>
     <string name="github_tool_repo_create_present">Creating a repository</string>
     <string name="github_tool_repo_create_past">Created repository</string>
+    <string name="github_tool_api_imperative">Call GitHub</string>
+    <string name="github_tool_api_present">Calling GitHub</string>
+    <string name="github_tool_api_past">Called GitHub</string>
 </resources>

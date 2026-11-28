@@ -61,9 +61,8 @@ All components start as **Planned**. Screenshot tests start with the first featu
 | `SectionTitle` | Small heading above a list group | `text` | default | P1 | Built |
 | `ListGroup` | Bordered container for stacked rows | `content` | default | P1 | Built |
 | `ProjectRow` | Project: folder icon, name, branch, summary, optional badge | `name`, `branch`, `summary`, `onClick`, `badge` | default, pressed, with badge | P1 | Built |
-| `NewSessionScreen` | Reviews project context before the first message creates a session, with the project picker and composer | `state`, `onBack`, `onSelectProject`, `onSend`, `onNewProject`, `onRetry` | loading, no project, ready, load failure, start failure | P1 | In progress |
-| `LoadedCard` | Shows the instructions file, memory entries, and available skills loaded for a new session | `preview` | file and no file, none, one, many | P1 | In progress |
-| `ProjectPickerSheet` | Modal project list with last activity and a check on the selected project | `projects`, `selectedId`, `onSelect`, `onDismiss` | list, selected row, empty | P1 | In progress |
+| `SessionLoadsCard` | Shows the instructions file, memory entries, available skills, and the last session of the project. It is the empty state of a session transcript, so a new session shows what it loads before the first message | `loads` | file and no file, none, one, many, last session | P1 | Built |
+| `ProjectPickerSheet` | Modal project list with last activity and a check on the selected project | `projects`, `selectedId`, `onSelect`, `onDismiss` | list, selected row, empty | P1 | Built |
 | `SessionRow` | Session: status mark, title, subtitle | `title`, `subtitle`, `state` (`SessionState`), `onClick` | each state | P1 | Built |
 | `ListRow` | Generic row: icon, title, subtitle, trailing | `title`, `subtitle`, `leading`, `trailing`, `onClick`, `enabled`, `danger` | default, pressed, disabled, danger | P1 | Built |
 | `TetherSheet` | Modal bottom sheet with a title. It opens fully expanded and its content rises above the keyboard | `title`, `onDismiss`, `content` | default | P1 | Built |

@@ -1,53 +1,35 @@
-# Session creation: scope for one New session screen
+# Session creation: one way to start a session
 
-Status: scope written 28 Nov 2026. Nothing below is built. Base: `main` at v0.0.12. Blair asked for the duplicate session-creation screens to be scoped, so this is a plan to approve, not a change.
+Status: built on 28 Nov 2026 on the branch of pull request #224. Scope written the same day, then changed after Blair tried it: the first plan kept the New session screen and removed the other start paths, and the screen turned out to be the broken one. Blair chose the reverse (option A below).
 
-## 1. How this was checked
+## 1. What was wrong
 
-- Read every Kotlin caller of `SessionStarter` and every route that can end in a new session: `nav/HomeRoutes.kt`, `nav/NewSessionRoutes.kt`, `nav/SessionRoute.kt`, `nav/CommandScreens.kt`, `nav/TetherNavHost.kt`, `home/ProjectHomeScreen.kt`, `home/ProjectHomeViewModel.kt`, `newsession/NewSessionViewModel.kt`, `session/SessionStarter.kt`.
-- Not available: a device run. The behavior below comes from the code.
+There were three ways to start a session, and two had their own screens.
 
-## 2. What exists today
+| # | Entry point | What it did |
+|---|---|---|
+| 1 | Drawer, New session | Opened a separate New session screen with its own composer. The session was created on the first Send. |
+| 2 | Project home, New session | Created an empty session and opened the real session screen. Worked. |
+| 3 | `/new` in a session | Created an empty session and opened the real session screen. Worked. |
 
-There are three ways to start a session, and two of them are full screens that overlap.
+The separate screen (1) was a stripped-down copy of the session screen. Its model chip and mode chip did nothing, it had no slash or mention panel and no image attach, its status line was fixed at zero, and the composer cleared the typed text on Send even when the session could not start, so the message was lost. The real session screen had all of these working.
 
-| # | Entry point | What it does | Code |
-|---|---|---|---|
-| 1 | Drawer, New session | Opens the New session screen: what the session will load (instructions file, memory, skills), the last session, a project picker, and a composer. The session is created on the first Send and the screen is replaced by the session. | `newsession/`, `nav/NewSessionRoutes.kt` |
-| 2 | Project home, New session button | Creates an empty session at once and opens it. Before that it shows its own start banners: no key, no models, testing the connection, test failed, start failed. | `home/ProjectHomeScreen.kt`, `home/ProjectHomeViewModel.kt` (`StartPhase`) |
-| 3 | `/new` in a session | Creates an empty session at once in the same project and opens it on top of the current one. | `nav/CommandScreens.kt` (`startNewSession`) |
+## 2. What was built (option A)
 
-Both 1 and 2 call `SessionStarter.start(projectId)`, so session creation itself is shared. The duplication is in the screens around it.
+- Every way to start a session creates the session and opens the real session screen: the drawer's New session, New session on a project home, and `/new`.
+- The drawer starts in the only project, opens a project picker first when there are several, and opens New project when there are none (`nav/NewSessionLauncher.kt`).
+- One failure path for the drawer and `/new` (`startNewSession`): no key and no models show a message with an action to Providers, and any other failure says so. Project home keeps its own inline banners with Test connection.
+- The empty transcript of a new session shows what it loads (`session/loads/SessionLoadsCard.kt`): the instructions file, memory entries, skills, and the last session of the project.
+- A session opened and left with no message is deleted when its screen closes (`nav/DiscardEmptySession.kt`), so a session nobody used leaves nothing in the lists.
+- Deleted: the New session screen, its view model, its route, the first-message handoff between the two screens, and the strings only they used. Nothing is left that sends a message from anywhere but the real composer.
 
-### Where they overlap
+## 3. Done when
 
-- Two start paths with different results. From the drawer the person lands on a composer with context. From Project home the person lands in an empty transcript.
-- Two copies of the start failure handling. `StartPhase` (Project home) and `NewSessionStartError` (New session) both handle no key, no models, and a failed start, with different wording and different recovery. Only Project home can test the connection from the banner.
-- `newSessionPath(projectId)` in `nav/NewSessionRoutes.kt` already builds the route with a project selected, and nothing calls it. It was written for this merge.
-- `/new` stacks a new session over the old one. The old session keeps its connection until it leaves the back stack.
+- Every control that starts a session ends on the real session screen. True in the code; Blair checks the flows in the emulator.
+- Tests cover the start notices, the discard rule, and the loads detail rules. They pass in `just check`.
 
-## 3. Proposal
+## 4. Not done, and open
 
-One screen, the New session screen, is the only place that starts a session. The other two entry points open it.
-
-1. Project home, New session: open `newSessionPath(projectId)` instead of calling `home::startSession`. Remove `StartPhase`, `startSession`, `StartBlock`, and the matching strings from Project home.
-2. `/new`: open `newSessionPath(projectId)` for the current session's project. Remove `startNewSession` from `CommandScreens.kt`.
-3. Move the one useful piece of Project home into the New session screen: Test connection for the no-models and failed-connection cases (today only a snackbar with an Open Providers action).
-4. Keep the drawer entry as it is. With no project given, the screen picks the most recent project, as it does now.
-5. Delete the dead code and strings this leaves, and update `docs/ui-registry.md` and `docs/ui-rules.md`.
-
-### Done when
-
-- Every control that starts a session opens the New session screen, with the project selected when the control knows it.
-- No second start path or second set of start banners remains in the code.
-- No key, no models, a failed connection, and a failed start each show one message with one recovery, on the one screen.
-- Android tests cover the three entry points and the failure states; `just check` and both assemble tasks pass; Blair checks the flows in the emulator.
-
-## 4. Open questions for Blair
-
-- Should the Project home button open the screen with that project selected and locked, or selected but changeable? Proposed: selected and changeable.
-- Should `/new` keep the old session open under the new one, or replace it? Proposed: replace it, so a session you left does not keep running tools unseen.
-
-## 5. Size
-
-Small to medium. About 8 Kotlin files change, no core change, no new dependency. One pull request, written by Claude with Haiku for the mechanical string and test moves. No Codex task, because there is no Rust.
+- Project home still has its own start banners and a Test connection button. They work, so they stay. Merging them into the shared message path is possible later.
+- A renamed empty session is also deleted on leave. This is rare and loses nothing but the name.
+- The first plan asked two questions (a locked project on the Project home button, and `/new` replacing or stacking). Both are moot: `/new` opens the new session on top of the old one as before, and the old one is discarded only when it has no message.

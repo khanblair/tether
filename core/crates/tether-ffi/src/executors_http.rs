@@ -1,5 +1,6 @@
 //! HTTPS fetchers shared by executor installers.
 
+use std::fmt::Display;
 use std::io::Write;
 use std::sync::Arc;
 
@@ -99,6 +100,7 @@ pub(super) fn client_with(rule: fn(&Url, usize) -> bool) -> Result<Client, Execu
                 attempt.stop()
             }
         }))
+        .referer(false)
         .build()
         .map_err(|_| ExecutorRuntimeError::Unavailable)
 }
@@ -119,8 +121,14 @@ pub(super) async fn fetch_manifest(
     client: &Client,
     manifest_url: &str,
 ) -> Result<(Vec<u8>, Vec<u8>), ExecutorRuntimeError> {
-    let manifest = fetch_bytes(client, manifest_url, MANIFEST_CAP).await?;
-    let signature = fetch_bytes(client, &format!("{manifest_url}.sig"), SIGNATURE_CAP).await?;
+    let manifest = fetch_bytes(client, manifest_url, MANIFEST_CAP, "manifest").await?;
+    let signature = fetch_bytes(
+        client,
+        &format!("{manifest_url}.sig"),
+        SIGNATURE_CAP,
+        "signature",
+    )
+    .await?;
     Ok((manifest, signature))
 }
 
@@ -128,15 +136,19 @@ pub(super) async fn fetch_bytes(
     client: &Client,
     url: &str,
     cap: usize,
+    file: &str,
 ) -> Result<Vec<u8>, ExecutorRuntimeError> {
     require_https(url)?;
     let mut response = client
         .get(url)
         .send()
         .await
-        .map_err(|_| ExecutorRuntimeError::Unavailable)?;
+        .map_err(|error| fetch_failure(file, classify_request_error(&error)))?;
     if !response.status().is_success() {
-        return Err(ExecutorRuntimeError::Unavailable);
+        return Err(fetch_failure(
+            file,
+            format!("HTTP {}", response.status().as_u16()),
+        ));
     }
     if response
         .content_length()
@@ -148,7 +160,7 @@ pub(super) async fn fetch_bytes(
     while let Some(chunk) = response
         .chunk()
         .await
-        .map_err(|_| ExecutorRuntimeError::Unavailable)?
+        .map_err(|_| fetch_failure(file, "connection lost while downloading"))?
     {
         if bytes.len().saturating_add(chunk.len()) > cap {
             return Err(ExecutorRuntimeError::InvalidConfiguration);
@@ -158,12 +170,18 @@ pub(super) async fn fetch_bytes(
     Ok(bytes)
 }
 
+pub(super) fn fetch_failure(file: &str, reason: impl Display) -> ExecutorRuntimeError {
+    ExecutorRuntimeError::SetupFailed {
+        reason: format!("{file}: {reason}"),
+    }
+}
+
 /// One HTTPS download: where it comes from, its size cap, and its cancel token.
-struct Download<'a> {
-    client: &'a Client,
-    url: &'a str,
-    limit: u64,
-    cancel: &'a CancellationToken,
+pub(super) struct Download<'a> {
+    pub(super) client: &'a Client,
+    pub(super) url: &'a str,
+    pub(super) limit: u64,
+    pub(super) cancel: &'a CancellationToken,
 }
 
 fn download_sync<F: Fn(u64, u64)>(
@@ -176,7 +194,7 @@ fn download_sync<F: Fn(u64, u64)>(
     handle.block_on(copy_download(download, out, &progress))
 }
 
-async fn copy_download<F: Fn(u64, u64)>(
+pub(super) async fn copy_download<F: Fn(u64, u64)>(
     download: &Download<'_>,
     out: &mut dyn Write,
     progress: &F,
@@ -186,15 +204,15 @@ async fn copy_download<F: Fn(u64, u64)>(
         .get(download.url)
         .send()
         .await
-        .map_err(|_| "download failed".to_owned())?;
+        .map_err(|error| classify_request_error(&error).to_owned())?;
     if !response.status().is_success() {
-        return Err("download failed".to_owned());
+        return Err(format!("HTTP {}", response.status().as_u16()));
     }
     let mut written = 0_u64;
     while let Some(chunk) = response
         .chunk()
         .await
-        .map_err(|_| "download failed".to_owned())?
+        .map_err(|_| "connection lost while downloading".to_owned())?
     {
         written = accept_chunk(download, written, chunk.len())?;
         out.write_all(&chunk)
@@ -205,6 +223,20 @@ async fn copy_download<F: Fn(u64, u64)>(
         return Err("download size mismatch".to_owned());
     }
     Ok(())
+}
+
+fn classify_request_error(error: &reqwest::Error) -> &'static str {
+    if error.is_timeout() {
+        "timed out"
+    } else if error.is_connect() {
+        "could not connect"
+    } else if error.is_redirect() {
+        "too many redirects"
+    } else if error.is_request() {
+        "request was not sent"
+    } else {
+        "network error"
+    }
 }
 
 /// Checks one received chunk against cancellation and the size cap.

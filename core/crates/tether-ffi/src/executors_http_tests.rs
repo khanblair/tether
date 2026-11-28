@@ -1,11 +1,16 @@
-use std::io::{Read, Write};
-use std::net::{TcpListener, TcpStream};
+use std::io::{ErrorKind, Read, Write};
+use std::net::{Shutdown, TcpListener, TcpStream};
 use std::thread::{self, JoinHandle};
+use std::time::{Duration, Instant};
 
 use reqwest::Url;
 
-use super::http::{client_with, fetch_bytes, redirect_allowed};
+use super::http::{
+    Download, client_with, copy_download, fetch_bytes, fetch_failure, fetch_manifest,
+    redirect_allowed,
+};
 use super::{ExecutorPaths, ExecutorRuntimeError, rootfs_image, rootfs_key};
+use tokio_util::sync::CancellationToken;
 
 #[test]
 fn download_urls_require_https() {
@@ -90,7 +95,19 @@ fn loopback_redirect_downloads_the_body() {
     let client = client_with(|_, hops| hops < 5).unwrap();
     let runtime = tokio::runtime::Runtime::new().unwrap();
 
-    let result = runtime.block_on(fetch_bytes(&client, &url, 1024));
+    let result = runtime.block_on(fetch_bytes(&client, &url, 1024, "manifest"));
+    server.join().unwrap();
+
+    assert_eq!(result.unwrap(), b"downloaded body");
+}
+
+#[test]
+fn loopback_redirect_omits_referer_header() {
+    let (url, server) = start_server(ServerResponse::Redirect);
+    let client = client_with(|_, hops| hops < 5).unwrap();
+    let runtime = tokio::runtime::Runtime::new().unwrap();
+
+    let result = runtime.block_on(fetch_bytes(&client, &url, 1024, "manifest"));
     server.join().unwrap();
 
     assert_eq!(result.unwrap(), b"downloaded body");
@@ -102,7 +119,7 @@ fn loopback_rejected_redirect_is_an_error() {
     let client = client_with(|_, _| false).unwrap();
     let runtime = tokio::runtime::Runtime::new().unwrap();
 
-    let result = runtime.block_on(fetch_bytes(&client, &url, 1024));
+    let result = runtime.block_on(fetch_bytes(&client, &url, 1024, "manifest"));
     server.join().unwrap();
 
     assert!(result.is_err());
@@ -114,10 +131,95 @@ fn loopback_final_404_is_an_error() {
     let client = client_with(|_, hops| hops < 5).unwrap();
     let runtime = tokio::runtime::Runtime::new().unwrap();
 
-    let result = runtime.block_on(fetch_bytes(&client, &url, 1024));
+    let result = runtime.block_on(fetch_bytes(&client, &url, 1024, "manifest"));
     server.join().unwrap();
 
     assert!(result.is_err());
+}
+
+#[test]
+fn loopback_manifest_503_is_a_setup_failure() {
+    let (url, server) = start_server(ServerResponse::Unavailable);
+    let client = client_with(|_, _| false).unwrap();
+    let runtime = tokio::runtime::Runtime::new().unwrap();
+
+    let result = runtime.block_on(fetch_manifest(&client, &url));
+    server.join().unwrap();
+
+    assert!(matches!(
+        result,
+        Err(ExecutorRuntimeError::SetupFailed { reason })
+            if reason.contains("manifest: HTTP 503")
+    ));
+}
+
+#[test]
+fn loopback_refused_manifest_reports_connection_failure() {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let address = listener.local_addr().unwrap();
+    drop(listener);
+    let client = client_with(|_, _| false).unwrap();
+    let runtime = tokio::runtime::Runtime::new().unwrap();
+    let url = format!("http://{address}/manifest");
+
+    let result = runtime.block_on(fetch_manifest(&client, &url));
+
+    assert!(matches!(
+        result,
+        Err(ExecutorRuntimeError::SetupFailed { reason })
+            if reason.contains("manifest: could not connect")
+    ));
+}
+
+#[test]
+fn signature_fetch_failures_are_prefixed() {
+    let error = fetch_failure("signature", "timed out");
+
+    assert!(matches!(
+        error,
+        ExecutorRuntimeError::SetupFailed { reason }
+            if reason == "signature: timed out"
+    ));
+}
+
+#[test]
+fn loopback_http_503_reports_the_status() {
+    let (url, server) = start_server(ServerResponse::Unavailable);
+    let client = client_with(|_, _| false).unwrap();
+    let runtime = tokio::runtime::Runtime::new().unwrap();
+    let cancel = CancellationToken::new();
+    let download = Download {
+        client: &client,
+        url: &url,
+        limit: 1,
+        cancel: &cancel,
+    };
+    let mut output = Vec::new();
+
+    let result = runtime.block_on(copy_download(&download, &mut output, &|_, _| {}));
+    server.join().unwrap();
+
+    assert!(result.unwrap_err().contains("HTTP 503"));
+}
+
+#[test]
+fn loopback_mid_body_reports_connection_loss() {
+    let (url, server) = start_server(ServerResponse::MidBody);
+    let client = client_with(|_, _| false).unwrap();
+    let runtime = tokio::runtime::Runtime::new().unwrap();
+    let cancel = CancellationToken::new();
+    let download = Download {
+        client: &client,
+        url: &url,
+        limit: 15,
+        cancel: &cancel,
+    };
+    let mut output = Vec::new();
+
+    let result = runtime.block_on(copy_download(&download, &mut output, &|_, _| {}));
+    server.join().unwrap();
+
+    assert!(result.unwrap_err().contains("connection lost"));
 }
 
 enum ServerResponse {
@@ -126,53 +228,97 @@ enum ServerResponse {
     /// A redirect on one connection only, for a client that does not follow it.
     RedirectOnly,
     NotFound,
+    Unavailable,
+    MidBody,
 }
 
 fn start_server(response: ServerResponse) -> (String, JoinHandle<()>) {
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    listener.set_nonblocking(true).unwrap();
     let address = listener.local_addr().unwrap();
     let url = format!("http://{address}/start");
-    let thread = thread::spawn(move || match response {
-        ServerResponse::Redirect => {
-            let (mut first, _) = listener.accept().unwrap();
-            read_request(&mut first);
-            write_response(
-                &mut first,
-                &format!(
-                    "HTTP/1.1 302 Found\r\nLocation: http://{address}/file\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
-                ),
-            );
-
-            let (mut second, _) = listener.accept().unwrap();
-            read_request(&mut second);
-            write_response(
-                &mut second,
-                "HTTP/1.1 200 OK\r\nContent-Length: 15\r\nConnection: close\r\n\r\ndownloaded body",
-            );
-        }
-        ServerResponse::RedirectOnly => {
-            let (mut stream, _) = listener.accept().unwrap();
-            read_request(&mut stream);
-            write_response(
-                &mut stream,
-                &format!(
-                    "HTTP/1.1 302 Found\r\nLocation: http://{address}/file\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
-                ),
-            );
-        }
-        ServerResponse::NotFound => {
-            let (mut stream, _) = listener.accept().unwrap();
-            read_request(&mut stream);
-            write_response(
-                &mut stream,
-                "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
-            );
-        }
-    });
+    let thread = thread::spawn(move || serve_response(&listener, address, &response));
     (url, thread)
 }
 
-fn read_request(stream: &mut TcpStream) {
+fn serve_response(
+    listener: &TcpListener,
+    address: std::net::SocketAddr,
+    response: &ServerResponse,
+) {
+    match response {
+        ServerResponse::Redirect => serve_redirect(listener, address, true),
+        ServerResponse::RedirectOnly => serve_redirect(listener, address, false),
+        ServerResponse::NotFound => serve_single_response(
+            listener,
+            "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+        ),
+        ServerResponse::Unavailable => serve_single_response(
+            listener,
+            "HTTP/1.1 503 Service Unavailable\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+        ),
+        ServerResponse::MidBody => serve_mid_body(listener),
+    }
+}
+
+fn serve_redirect(listener: &TcpListener, address: std::net::SocketAddr, serve_file: bool) {
+    let (mut first, _) = accept_with_deadline(listener);
+    let _first_request = read_request(&mut first);
+    write_response(
+        &mut first,
+        &format!(
+            "HTTP/1.1 302 Found\r\nLocation: http://{address}/file\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+        ),
+    );
+    if serve_file {
+        let (mut second, _) = accept_with_deadline(listener);
+        let second_request = read_request(&mut second);
+        assert!(!has_header(&second_request, "referer"));
+        write_response(
+            &mut second,
+            "HTTP/1.1 200 OK\r\nContent-Length: 15\r\nConnection: close\r\n\r\ndownloaded body",
+        );
+    }
+}
+
+fn serve_single_response(listener: &TcpListener, response: &str) {
+    let (mut stream, _) = accept_with_deadline(listener);
+    let _request = read_request(&mut stream);
+    write_response(&mut stream, response);
+}
+
+fn serve_mid_body(listener: &TcpListener) {
+    let (mut stream, _) = accept_with_deadline(listener);
+    let _request = read_request(&mut stream);
+    write_response(
+        &mut stream,
+        "HTTP/1.1 200 OK\r\nContent-Length: 15\r\nConnection: close\r\n\r\nshort",
+    );
+    stream.shutdown(Shutdown::Both).unwrap();
+}
+
+fn accept_with_deadline(listener: &TcpListener) -> (TcpStream, std::net::SocketAddr) {
+    let deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        match listener.accept() {
+            Ok((stream, address)) => {
+                // On some systems an accepted socket inherits the listener's non-blocking mode.
+                stream.set_nonblocking(false).unwrap();
+                stream
+                    .set_read_timeout(Some(Duration::from_secs(5)))
+                    .unwrap();
+                return (stream, address);
+            }
+            Err(error) if error.kind() == ErrorKind::WouldBlock => {
+                assert!(Instant::now() < deadline, "the client never connected");
+                thread::sleep(Duration::from_millis(10));
+            }
+            Err(error) => panic!("accept failed: {error}"),
+        }
+    }
+}
+
+fn read_request(stream: &mut TcpStream) -> Vec<u8> {
     let mut request = Vec::new();
     let mut buffer = [0_u8; 1024];
     while !request.windows(4).any(|window| window == b"\r\n\r\n") {
@@ -182,6 +328,16 @@ fn read_request(stream: &mut TcpStream) {
         }
         request.extend_from_slice(&buffer[..count]);
     }
+    request
+}
+
+fn has_header(request: &[u8], expected: &str) -> bool {
+    request.split(|byte| *byte == b'\n').any(|line| {
+        let Some(colon) = line.iter().position(|byte| *byte == b':') else {
+            return false;
+        };
+        std::str::from_utf8(&line[..colon]).is_ok_and(|name| name.eq_ignore_ascii_case(expected))
+    })
 }
 
 fn write_response(stream: &mut TcpStream, response: &str) {

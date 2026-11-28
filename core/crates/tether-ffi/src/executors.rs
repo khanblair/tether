@@ -62,6 +62,13 @@ pub enum ExecutorRuntimeError {
     /// The download did not pass its signature or content check.
     #[error("the download did not pass its signature check")]
     VerificationFailed,
+    /// A setup or install did not finish. `reason` is a short, safe description.
+    #[error("setup failed: {reason}")]
+    SetupFailed {
+        /// What failed, in a sentence. It can include the end of the package installer's output,
+        /// which names package repositories but never a token or file contents.
+        reason: String,
+    },
     /// The requested project does not exist.
     #[error("project not found")]
     ProjectNotFound,

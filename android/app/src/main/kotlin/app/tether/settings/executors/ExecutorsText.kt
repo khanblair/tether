@@ -17,6 +17,7 @@ internal fun ExecutorsFailure.messageRes(): Int =
         ExecutorsFailure.NoRemote -> R.string.executors_error_no_remote
         ExecutorsFailure.GithubError -> R.string.executors_error_github
         ExecutorsFailure.VerificationFailed -> R.string.executors_error_verification
+        ExecutorsFailure.SetupFailed -> R.string.executors_error_setup
         ExecutorsFailure.Unknown -> R.string.executors_error_unknown
     }
 

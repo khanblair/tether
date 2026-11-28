@@ -111,6 +111,9 @@ private fun BrokenBody(
 ) {
     val body = MaterialTheme.typography.bodySmall
     Text(text = state.failure.text(), style = body, color = TetherTheme.colors.text2)
+    state.detail?.let { detail ->
+        Text(text = detail, style = TetherTheme.mono, color = TetherTheme.colors.text2)
+    }
     if (onRepair != null) {
         Text(
             text = stringResource(R.string.executors_linux_broken_body),

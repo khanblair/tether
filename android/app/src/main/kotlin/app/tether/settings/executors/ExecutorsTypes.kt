@@ -29,13 +29,20 @@ enum class ExecutorsFailure {
     /** A downloaded pack or root filesystem failed its check. */
     VerificationFailed,
 
+    /** A setup or install did not finish. The core's short reason is kept with the failure. */
+    SetupFailed,
+
     /** Any other failure. */
     Unknown,
 }
 
-/** Thrown by [ExecutorsGateway] calls. Its message is the failure name only. */
+/**
+ * Thrown by [ExecutorsGateway] calls. Its message is the failure name only. [detail] is a short,
+ * safe reason from the core for a failed Linux setup, and null for every other failure.
+ */
 class ExecutorsCallFailed(
     val failure: ExecutorsFailure,
+    val detail: String? = null,
 ) : Exception(failure.name)
 
 /** Reports byte progress of a download. [total] is 0 when the size is not known yet. */

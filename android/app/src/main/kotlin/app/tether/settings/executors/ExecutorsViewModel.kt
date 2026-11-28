@@ -197,7 +197,7 @@ class ExecutorsViewModel(
         viewModelScope.launch {
             call { gateway.linuxReady() }
                 .onSuccess { ready -> setLinux(readyState(ready)) }
-                .onFailure { error -> setLinux(linuxFailureState(error.toExecutorsFailure())) }
+                .onFailure { error -> setLinux(error.toLinuxFailureState()) }
         }
     }
 
@@ -229,7 +229,7 @@ class ExecutorsViewModel(
             if (setupToken.get() != token) return@launch
             result
                 .onSuccess { loadLinux() }
-                .onFailure { error -> setLinux(linuxFailureState(error.toExecutorsFailure())) }
+                .onFailure { error -> setLinux(error.toLinuxFailureState()) }
         }
     }
 
@@ -324,10 +324,17 @@ private fun progressState(
         PackState.Downloading(downloaded, total)
     }
 
+/** The Linux card state for an error a ViewModel caught, with the core's reason when it has one. */
+private fun Throwable.toLinuxFailureState(): LinuxState =
+    linuxFailureState(toExecutorsFailure(), toExecutorsDetail())
+
 /** The Linux state after a failed check or setup. A missing build key means it cannot be done. */
-private fun linuxFailureState(failure: ExecutorsFailure): LinuxState =
+private fun linuxFailureState(
+    failure: ExecutorsFailure,
+    detail: String? = null,
+): LinuxState =
     if (failure == ExecutorsFailure.NotConfigured) {
         LinuxState.Unavailable(LinuxUnavailable.NotConfigured)
     } else {
-        LinuxState.Broken(failure)
+        LinuxState.Broken(failure, detail)
     }

@@ -84,6 +84,22 @@ fn base_names_only_tools_present_in_the_registry() {
 }
 
 #[test]
+fn base_mentions_github_api_only_when_it_is_available() {
+    let without_tool = PromptBuilder::build(&inputs(&[], "today"));
+    assert!(!without_tool.text.contains("Use github_api"));
+    assert!(!without_tool.text.contains("sign in under Settings, GitHub"));
+
+    let tools = [spec("github_api")];
+    let with_tool = PromptBuilder::build(&inputs(&tools, "today"));
+    assert!(with_tool.text.contains(
+        "Use github_api for anything on GitHub. It acts as the account the user signed in with in Settings, so never ask for a token."
+    ));
+    assert!(with_tool
+        .text
+        .contains("If github_api says GitHub is not signed in, tell the user to sign in under Settings, GitHub."));
+}
+
+#[test]
 fn changing_only_today_changes_only_the_last_line() {
     let tools: [ToolSpec; 0] = [];
     let first = PromptBuilder::build(&inputs(&tools, "first"));

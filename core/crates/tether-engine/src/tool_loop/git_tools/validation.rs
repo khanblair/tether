@@ -3,6 +3,7 @@ use std::path::Path;
 use serde_json::{Value, json};
 use tether_vcs::Repo;
 
+use super::github_api;
 use super::{
     MAX_PATH, MAX_TEXT, optional_bool, optional_string, optional_usize, require_object, string,
     target_tool,
@@ -22,6 +23,7 @@ pub(super) fn allowed_fields(name: &str) -> Option<&'static [&'static str]> {
         "pr_create" => &["title", "body", "base", "draft"],
         "pr_status" => &["number"],
         "github_repo_create" => &["name", "private", "description"],
+        "github_api" => &["method", "path", "body"],
         _ => return None,
     })
 }
@@ -50,6 +52,7 @@ pub(super) fn prepare(
         "pr_create" => pr_create(value, default_branch, root),
         "pr_status" => pr_status(value),
         "github_repo_create" => github_repo_create(value, github_owner),
+        "github_api" => github_api::prepare(value),
         _ => Err("unknown tool".into()),
     }
 }

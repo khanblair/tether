@@ -52,12 +52,13 @@ pub(super) fn prepare(value: Value) -> Result<PreparedCall, String> {
     validate_path(path)?;
     validate_body(method, &value)?;
     let effect = effect(method, path, &value);
-    Ok(target_tool(
-        "github_api",
-        effect,
-        format!("{method} https://api.github.com{path}"),
-        value,
-    ))
+    let decoded_path = decoded_path(path);
+    let mut target = format!("{method} https://api.github.com{path}");
+    if let Some(body) = value.get("body") {
+        target.push(' ');
+        target.push_str(&body_summary(&decoded_path, body));
+    }
+    Ok(target_tool("github_api", effect, target, value))
 }
 
 pub(super) async fn execute(
@@ -184,9 +185,7 @@ fn effect(method: &str, path: &str, value: &Value) -> Effect {
     if method == "DELETE" {
         return Effect::ForcePush;
     }
-    let path_without_query = path.split_once('?').map_or(path, |(path, _)| path);
-    let decoded_path =
-        decode_path_part(path_without_query).unwrap_or_else(|| path_without_query.to_owned());
+    let decoded_path = decoded_path(path);
     let lower_path = decoded_path.to_ascii_lowercase();
     if lower_path.starts_with("/applications")
         || SENSITIVE_PATHS
@@ -195,24 +194,120 @@ fn effect(method: &str, path: &str, value: &Value) -> Effect {
     {
         return Effect::ForcePush;
     }
+    if is_forced_ref_update(&lower_path, value) {
+        return Effect::ForcePush;
+    }
     if decoded_path == "/graphql" {
-        let query = value
-            .get("body")
-            .and_then(Value::as_object)
-            .and_then(|body| body.get("query"))
-            .and_then(Value::as_str)
-            .unwrap_or_default();
-        if !contains_word(query, "mutation") {
-            return Effect::Network;
-        }
+        return graphql_effect(value);
     }
     Effect::Push
+}
+
+fn decoded_path(path: &str) -> String {
+    let path_without_query = path.split_once('?').map_or(path, |(path, _)| path);
+    decode_path_part(path_without_query).unwrap_or_else(|| path_without_query.to_owned())
+}
+
+fn is_forced_ref_update(lower_path: &str, value: &Value) -> bool {
+    (lower_path.contains("/git/refs/") || lower_path.contains("/git/ref/"))
+        && value
+            .get("body")
+            .and_then(Value::as_object)
+            .and_then(|body| body.get("force"))
+            .and_then(Value::as_bool)
+            == Some(true)
+}
+
+fn graphql_effect(value: &Value) -> Effect {
+    let query = value
+        .get("body")
+        .and_then(Value::as_object)
+        .and_then(|body| body.get("query"))
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    let compact_query: String = query
+        .chars()
+        .filter(|character| !character.is_whitespace())
+        .collect();
+    let lower_query = compact_query.to_ascii_lowercase();
+    if ["updateref", "deleteref", "force:true"]
+        .iter()
+        .any(|marker| lower_query.contains(marker))
+    {
+        return Effect::ForcePush;
+    }
+    if contains_word(query, "mutation") {
+        Effect::Push
+    } else {
+        Effect::Network
+    }
 }
 
 fn contains_word(text: &str, word: &str) -> bool {
     text.to_ascii_lowercase()
         .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
         .any(|part| part == word)
+}
+
+fn body_summary(path_decoded: &str, body: &Value) -> String {
+    if path_decoded == "/graphql"
+        && let Some(query) = body
+            .as_object()
+            .and_then(|object| object.get("query"))
+            .and_then(Value::as_str)
+    {
+        return truncate_with_ellipsis(
+            &query.split_whitespace().collect::<Vec<_>>().join(" "),
+            160,
+        );
+    }
+    let mut redacted = body.clone();
+    redact_body_value(&mut redacted);
+    let compact =
+        serde_json::to_string(&redacted).unwrap_or_else(|_| String::from("\"<unserializable>\""));
+    truncate_with_ellipsis(&compact, 200)
+}
+
+fn redact_body_value(value: &mut Value) {
+    match value {
+        Value::Object(object) => object
+            .iter_mut()
+            .for_each(|(key, value)| redact_body_entry(key, value)),
+        Value::Array(values) => values.iter_mut().for_each(redact_body_value),
+        Value::String(text) => *text = truncate_with_ellipsis(text, 60),
+        _ => {}
+    }
+}
+
+fn redact_body_entry(key: &str, value: &mut Value) {
+    if is_sensitive_body_key(key) {
+        *value = Value::String(String::from("<hidden>"));
+    } else {
+        redact_body_value(value);
+    }
+}
+
+fn is_sensitive_body_key(key: &str) -> bool {
+    let lower_key = key.to_ascii_lowercase();
+    [
+        "secret",
+        "token",
+        "password",
+        "passphrase",
+        "key",
+        "encrypted",
+    ]
+    .iter()
+    .any(|marker| lower_key.contains(marker))
+}
+
+fn truncate_with_ellipsis(text: &str, limit: usize) -> String {
+    if text.chars().count() <= limit {
+        return text.to_owned();
+    }
+    let mut truncated: String = text.chars().take(limit.saturating_sub(1)).collect();
+    truncated.push('…');
+    truncated
 }
 
 fn response_text(response: GithubApiResponse) -> String {

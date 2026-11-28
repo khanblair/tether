@@ -77,6 +77,10 @@ fn prepare(args: &str) -> Result<crate::tool_loop::PreparedCall, String> {
     handler.prepare("github_api", args, &PrepareContext { guard: &guard })
 }
 
+fn target(args: &Value) -> String {
+    prepare(&args.to_string()).expect("valid call").target
+}
+
 fn empty_handler() -> GitTools {
     GitTools::new(GitToolsConfig {
         remote_url: None,
@@ -221,6 +225,149 @@ fn effects_match_github_read_write_and_sensitive_calls() {
             "{args}"
         );
     }
+}
+
+#[test]
+fn refs_api_force_updates_always_ask() {
+    let cases = [
+        (
+            r#"{"method":"PATCH","path":"/repos/o/r/git/refs/heads/main","body":{"force":true}}"#,
+            Effect::ForcePush,
+        ),
+        (
+            r#"{"method":"PATCH","path":"/repos/o/r/git/ref/heads/main","body":{"force":true}}"#,
+            Effect::ForcePush,
+        ),
+        (
+            r#"{"method":"PATCH","path":"/repos/o/r/git/%72efs/heads/main","body":{"force":true}}"#,
+            Effect::ForcePush,
+        ),
+        (
+            r#"{"method":"PATCH","path":"/repos/o/r/git/refs/heads/main","body":{"force":false}}"#,
+            Effect::Push,
+        ),
+        (
+            r#"{"method":"PATCH","path":"/repos/o/r/git/refs/heads/main","body":{"sha":"new"}}"#,
+            Effect::Push,
+        ),
+        (
+            r#"{"method":"PATCH","path":"/repos/o/r/git/refs/heads/main","body":{"force":"true"}}"#,
+            Effect::Push,
+        ),
+        (
+            r#"{"method":"PATCH","path":"/repos/o/r/git/refs/heads/main","body":[{"force":true}]}"#,
+            Effect::Push,
+        ),
+    ];
+    for (args, expected) in cases {
+        assert_eq!(
+            prepare(args).expect("valid call").effect,
+            expected,
+            "{args}"
+        );
+    }
+}
+
+#[test]
+fn graphql_ref_mutations_always_ask() {
+    let cases = [
+        ("mutation Update { updateRef }", Effect::ForcePush),
+        ("mutation Delete { deleteRef }", Effect::ForcePush),
+        ("mutation Force { force : true }", Effect::ForcePush),
+        ("mutation Create { createIssue }", Effect::Push),
+        ("query Viewer { viewer { login } }", Effect::Network),
+    ];
+    for (query, expected) in cases {
+        let args = serde_json::json!({
+            "method": "POST",
+            "path": "/graphql",
+            "body": {"query": query}
+        });
+        assert_eq!(
+            prepare(&args.to_string()).expect("valid call").effect,
+            expected,
+            "{query}"
+        );
+    }
+}
+
+#[test]
+fn github_targets_summarize_bodies_safely() {
+    assert_repo_target();
+    assert_graphql_target();
+    assert_redacted_body_target();
+    assert_capped_body_targets();
+}
+
+fn assert_repo_target() {
+    let repo = target(&serde_json::json!({
+        "method": "POST",
+        "path": "/user/repos",
+        "body": {"name": "tether-demo", "private": false}
+    }));
+    assert!(repo.contains("tether-demo"));
+    assert!(repo.contains("false"));
+}
+
+fn assert_graphql_target() {
+    let graphql = target(&serde_json::json!({
+        "method": "POST",
+        "path": "/graphql",
+        "body": {"query": "mutation {\n  updateRef(input: { branch: main })\n}"}
+    }));
+    assert!(graphql.contains("mutation { updateRef(input: { branch: main }) }"));
+    assert!(!graphql.contains('\n'));
+}
+
+fn assert_redacted_body_target() {
+    let secret = target(&serde_json::json!({
+        "method": "POST",
+        "path": "/user/repos",
+        "body": {
+            "encrypted_value": "ciphertext",
+            "nested": [{"token": "nested-secret", "visible": "value"}]
+        }
+    }));
+    assert!(secret.contains("<hidden>"));
+    assert!(!secret.contains("ciphertext"));
+    assert!(!secret.contains("nested-secret"));
+}
+
+fn assert_capped_body_targets() {
+    let long_description = target(&serde_json::json!({
+        "method": "POST",
+        "path": "/user/repos",
+        "body": {
+            "description": "é".repeat(500),
+            "other": "x".repeat(500),
+            "third": "z".repeat(500)
+        }
+    }));
+    let summary = long_description
+        .strip_prefix("POST https://api.github.com/user/repos ")
+        .expect("body summary");
+    assert_eq!(summary.chars().count(), 200);
+    assert!(summary.ends_with('…'));
+    assert!(summary.is_char_boundary(summary.len()));
+    assert!(!long_description.contains('\n'));
+
+    let long_graphql = target(&serde_json::json!({
+        "method": "POST",
+        "path": "/graphql",
+        "body": {"query": "é".repeat(200)}
+    }));
+    let query_summary = long_graphql
+        .strip_prefix("POST https://api.github.com/graphql ")
+        .expect("GraphQL summary");
+    assert_eq!(query_summary.chars().count(), 160);
+    assert!(query_summary.ends_with('…'));
+    assert!(query_summary.is_char_boundary(query_summary.len()));
+
+    let delete = target(&serde_json::json!({
+        "method": "DELETE",
+        "path": "/user/repos"
+    }));
+    assert_eq!(delete, "DELETE https://api.github.com/user/repos");
 }
 
 #[tokio::test]

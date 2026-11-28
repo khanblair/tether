@@ -255,6 +255,39 @@ fn github_api_returns_status_headers_next_path_and_redacted_body() {
 }
 
 #[test]
+fn github_api_trims_each_link_entry_before_parsing() {
+    let cases = [
+        (
+            r#"<https://api.github.com/x?page=1>; rel="prev", <https://api.github.com/x?page=3>; rel="next""#,
+            Some("/x?page=3"),
+        ),
+        (
+            r#"<https://api.github.com/x?page=3>; rel="next", <https://api.github.com/x?page=1>; rel="prev""#,
+            Some("/x?page=3"),
+        ),
+        (
+            r#"<https://api.github.com/x?page=1>; rel="prev", <https://api.github.com/x?page=4>; rel="last""#,
+            None,
+        ),
+        (r#"<https://other.test/x?page=3>; rel="next""#, None),
+    ];
+    for (link, expected) in cases {
+        let http = Arc::new(FakeHttp::new(vec![Ok(HttpResponse {
+            status: 200,
+            headers: [(String::from("Link"), String::from(link))]
+                .into_iter()
+                .collect(),
+            body: b"{}".to_vec(),
+        })]));
+        let response = block_on(
+            GithubClient::new(http, Secret::from_text("token-123")).api("GET", "/x", None),
+        )
+        .expect("API call");
+        assert_eq!(response.next.as_deref(), expected);
+    }
+}
+
+#[test]
 fn github_errors_are_typed_and_do_not_leak_tokens() {
     let cases = [
         (401, "{}", GithubError::BadCredentials),

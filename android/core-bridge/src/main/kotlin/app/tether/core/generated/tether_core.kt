@@ -23195,6 +23195,15 @@ sealed class ExecutorRuntimeException: kotlin.Exception() {
     }
     
     /**
+     * The download did not pass its signature or content check.
+     */
+    class VerificationFailed(
+        ) : ExecutorRuntimeException() {
+        override val message
+            get() = ""
+    }
+    
+    /**
      * The requested project does not exist.
      */
     class ProjectNotFound(
@@ -23242,9 +23251,10 @@ public object FfiConverterTypeExecutorRuntimeError : FfiConverterRustBuffer<Exec
         return when(buf.getInt()) {
             1 -> ExecutorRuntimeException.InvalidConfiguration()
             2 -> ExecutorRuntimeException.Unavailable()
-            3 -> ExecutorRuntimeException.ProjectNotFound()
-            4 -> ExecutorRuntimeException.LinuxNotReady()
-            5 -> ExecutorRuntimeException.LinuxShellAlreadyOpen()
+            3 -> ExecutorRuntimeException.VerificationFailed()
+            4 -> ExecutorRuntimeException.ProjectNotFound()
+            5 -> ExecutorRuntimeException.LinuxNotReady()
+            6 -> ExecutorRuntimeException.LinuxShellAlreadyOpen()
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
     }
@@ -23256,6 +23266,10 @@ public object FfiConverterTypeExecutorRuntimeError : FfiConverterRustBuffer<Exec
                 4UL
             )
             is ExecutorRuntimeException.Unavailable -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is ExecutorRuntimeException.VerificationFailed -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
             )
@@ -23284,16 +23298,20 @@ public object FfiConverterTypeExecutorRuntimeError : FfiConverterRustBuffer<Exec
                 buf.putInt(2)
                 Unit
             }
-            is ExecutorRuntimeException.ProjectNotFound -> {
+            is ExecutorRuntimeException.VerificationFailed -> {
                 buf.putInt(3)
                 Unit
             }
-            is ExecutorRuntimeException.LinuxNotReady -> {
+            is ExecutorRuntimeException.ProjectNotFound -> {
                 buf.putInt(4)
                 Unit
             }
-            is ExecutorRuntimeException.LinuxShellAlreadyOpen -> {
+            is ExecutorRuntimeException.LinuxNotReady -> {
                 buf.putInt(5)
+                Unit
+            }
+            is ExecutorRuntimeException.LinuxShellAlreadyOpen -> {
+                buf.putInt(6)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }

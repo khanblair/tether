@@ -59,6 +59,9 @@ pub enum ExecutorRuntimeError {
     /// The database or local configuration could not be read or written.
     #[error("executor configuration unavailable")]
     Unavailable,
+    /// The download did not pass its signature or content check.
+    #[error("the download did not pass its signature check")]
+    VerificationFailed,
     /// The requested project does not exist.
     #[error("project not found")]
     ProjectNotFound,

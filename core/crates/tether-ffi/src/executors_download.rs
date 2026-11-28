@@ -49,7 +49,7 @@ impl SessionRuntime {
             .runtime
             .block_on(fetch_manifest(&client, &manifest_url))?;
         let manifest = tether_sandbox::verify_manifest(&manifest_bytes, &signature, &key)
-            .map_err(|_| ExecutorRuntimeError::InvalidConfiguration)?;
+            .map_err(|_| ExecutorRuntimeError::VerificationFailed)?;
         let pack = manifest
             .packs
             .iter()
@@ -134,7 +134,7 @@ fn rootfs_image(
     key: &[u8; 32],
 ) -> Result<RootfsImage, ExecutorRuntimeError> {
     let manifest = tether_linux::verify_rootfs_manifest(manifest_bytes, signature, key)
-        .map_err(|_| ExecutorRuntimeError::InvalidConfiguration)?;
+        .map_err(|_| ExecutorRuntimeError::VerificationFailed)?;
     let arch = match std::env::consts::ARCH {
         "aarch64" => "aarch64",
         "x86_64" => "x86_64",
@@ -291,3 +291,7 @@ mod tests {
         assert_eq!(value[31], 0xff);
     }
 }
+
+#[cfg(test)]
+#[path = "executors_http_tests.rs"]
+mod http_tests;

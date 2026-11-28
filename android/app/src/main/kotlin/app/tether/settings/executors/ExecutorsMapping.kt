@@ -23,6 +23,7 @@ fun ExecutorRuntimeException.toFailure(): ExecutorsFailure =
     when (this) {
         is ExecutorRuntimeException.InvalidConfiguration -> ExecutorsFailure.NotConfigured
         is ExecutorRuntimeException.Unavailable -> ExecutorsFailure.Unavailable
+        is ExecutorRuntimeException.VerificationFailed -> ExecutorsFailure.VerificationFailed
         is ExecutorRuntimeException.ProjectNotFound -> ExecutorsFailure.ProjectNotFound
         is ExecutorRuntimeException.LinuxNotReady -> ExecutorsFailure.Unavailable
         is ExecutorRuntimeException.LinuxShellAlreadyOpen -> ExecutorsFailure.Unknown

@@ -37,6 +37,7 @@ Defined in project-structure.md. In short: Rust engine in `core/`, Android app i
 - Kotlin 2.x with the Compose compiler plugin. JVM target 17.
 - Architecture per screen: `Screen` composable, `ViewModel`, immutable `UiState`. Composables receive state and lambdas; they never call the core.
 - State: `StateFlow` in ViewModels; `collectAsStateWithLifecycle()` in UI. No `LiveData`.
+- The database belongs to the core. Kotlin never opens `tether.db`, and never uses `android.database.sqlite` or `SQLiteOpenHelper`. The core links its own SQLite, and a second SQLite library on the same write-ahead-log database in the same process resets the shared WAL index, which kills the core with SIGBUS. Ask the core through the generated bindings. A unit test (`StatusFromCoreTest`) scans the sources for it.
 - Coroutines: structured only; `viewModelScope` or an injected scope. No `GlobalScope`. Core calls run on `Dispatchers.IO` through `CoreClient`.
 - Compose: stateless components where possible; `remember` keys explicit; `LazyColumn` items always have stable `key`s; mark UI models `@Immutable` when they are.
 - No hardcoded user-facing strings; use `strings.xml`. No hardcoded colors, sizes, or durations; use tokens.

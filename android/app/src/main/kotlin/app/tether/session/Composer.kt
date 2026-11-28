@@ -64,9 +64,11 @@ fun Composer(
     supportsImages: Boolean = false,
     sendBlocked: Boolean = false,
     assist: ComposeAssistDeps? = null,
+    initialDraft: String? = null,
 ) {
     var field by rememberSaveable(stateSaver = TextFieldValue.Saver) {
-        mutableStateOf(TextFieldValue(""))
+        val draft = initialDraft.orEmpty()
+        mutableStateOf(TextFieldValue(draft, TextRange(draft.length)))
     }
     val input = field.text
     var image by rememberSaveable { mutableStateOf<String?>(null) }

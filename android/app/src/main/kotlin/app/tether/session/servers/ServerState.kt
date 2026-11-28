@@ -130,10 +130,26 @@ class ServerStateHolder {
     }
 }
 
+/** What the registry needs from an open session to list and stop its background processes. */
+interface SessionProcessControl {
+    /** Reads the session's background processes. */
+    fun listProcesses(): List<ProcessView>
+
+    /** Stops one background process of the session. */
+    fun stopProcess(processId: String)
+}
+
+/** A process that an open session runs, with the session that owns it. */
+data class RegisteredProcess(
+    val sessionId: String,
+    val process: ProcessView,
+)
+
 /** A process status registry keeps a server preview updated while its session is off screen. */
 object ServerProcessRegistry {
     private val mutableStatuses = MutableStateFlow<Map<String, ServerStatus>>(emptyMap())
     private val owners = mutableMapOf<String, String>()
+    private val controls = mutableMapOf<String, SessionProcessControl>()
     private var linuxActivity: LinuxActivity? = null
 
     val statuses: StateFlow<Map<String, ServerStatus>> = mutableStatuses.asStateFlow()
@@ -159,6 +175,35 @@ object ServerProcessRegistry {
         report(sessionId)
     }
 
+    /** Lets the Runs screen list and stop the processes of [sessionId] while it is open. */
+    @Synchronized
+    fun attach(
+        sessionId: String,
+        control: SessionProcessControl,
+    ) {
+        controls[sessionId] = control
+    }
+
+    /** The running processes of every open session. Call it off the main thread. */
+    fun running(): List<RegisteredProcess> {
+        val open = synchronized(this) { controls.toMap() }
+        return open.flatMap { (sessionId, control) ->
+            runCatching { control.listProcesses() }
+                .getOrDefault(emptyList())
+                .filter { it.status == ProcessStatusView.Running }
+                .map { RegisteredProcess(sessionId, it) }
+        }
+    }
+
+    /** Stops one process of an open session. Call it off the main thread. */
+    fun stopProcess(
+        sessionId: String,
+        processId: String,
+    ) {
+        val control = synchronized(this) { controls[sessionId] }
+        control?.stopProcess(processId)
+    }
+
     @Synchronized
     fun onEvent(event: CoreEventView) {
         val changed = event as? CoreEventView.ProcessChanged ?: return
@@ -171,6 +216,7 @@ object ServerProcessRegistry {
 
     @Synchronized
     fun close(sessionId: String) {
+        controls.remove(sessionId)
         val next = mutableStatuses.value.toMutableMap()
         owners.filterValues { it == sessionId }.keys.forEach { processId ->
             next[processId] = ServerStatus.Stopped
@@ -184,6 +230,7 @@ object ServerProcessRegistry {
     fun clearForTests() {
         owners.clear()
         mutableStatuses.value = emptyMap()
+        controls.clear()
         linuxActivity = null
     }
 

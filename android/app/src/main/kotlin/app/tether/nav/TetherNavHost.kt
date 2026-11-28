@@ -34,10 +34,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import app.tether.R
 import app.tether.design.components.TetherSnackbarHost
 import app.tether.design.components.TetherToastHost
@@ -139,11 +141,22 @@ fun TetherNavHost(module: AppModule) {
                         },
                     )
                 }
-                composable("session/{sessionId}") { entry ->
+                composable(
+                    route = "session/{sessionId}?draft={draft}",
+                    arguments =
+                        listOf(
+                            navArgument("draft") {
+                                type = NavType.StringType
+                                nullable = true
+                                defaultValue = null
+                            },
+                        ),
+                ) { entry ->
                     SessionRoute(
                         module = module,
                         nav = nav,
                         sessionId = entry.arguments?.getString("sessionId"),
+                        draft = entry.arguments?.getString("draft"),
                     )
                 }
             }

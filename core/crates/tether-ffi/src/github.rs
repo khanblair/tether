@@ -9,6 +9,10 @@ use crate::git::GitRuntime;
 use crate::git_support::now_ms;
 use crate::git_types::GitRuntimeError;
 use crate::github_token_info::inspect_token;
+
+/// OAuth scopes needed by the GitHub API tool during device flow sign-in.
+const DEVICE_FLOW_SCOPES: &str = "repo workflow gist read:org read:user user:email notifications";
+
 /// The public part of a GitHub device grant.
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct DeviceGrantView {
@@ -113,7 +117,10 @@ impl GitRuntime {
             .ok_or(GitRuntimeError::GithubNotConfigured)?;
         let response = self.http_form(
             "https://github.com/login/device/code",
-            &[("client_id", client_id), ("scope", "repo".into())],
+            &[
+                ("client_id", client_id),
+                ("scope", DEVICE_FLOW_SCOPES.into()),
+            ],
         )?;
         let value: Value =
             serde_json::from_slice(&response).map_err(|_| GitRuntimeError::GithubResponse)?;
@@ -377,3 +384,7 @@ fn field(value: &Value, key: &str) -> Result<String, GitRuntimeError> {
         .map(str::to_owned)
         .ok_or(GitRuntimeError::GithubResponse)
 }
+
+#[cfg(test)]
+#[path = "github_scope_tests.rs"]
+mod scope_tests;

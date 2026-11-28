@@ -26,13 +26,17 @@
     <string name="budgets_cost_failed">Couldn\'t load the cost. Try again.</string>
     <string name="budgets_range_week">7 days</string>
     <string name="budgets_range_month">30 days</string>
-    <string name="budgets_cost_empty">No spend yet.</string>
+    <string name="budgets_cost_empty">No usage yet.</string>
+    <string name="budgets_free_only">No spend so far. Free models cost nothing, but their tokens are counted here.</string>
     <string name="budgets_stat_today">Today</string>
     <string name="budgets_stat_week">Last 7 days</string>
     <string name="budgets_stat_month">Last 30 days</string>
     <string name="budgets_tokens">%1$s in, %2$s out</string>
     <string name="budgets_less_than_a_cent">less than $0.01</string>
     <string name="budgets_chart_description">Daily cost for the last %1$s. Highest on %2$s, at %3$s.</string>
+    <string name="budgets_chart_description_tokens">Daily tokens for the last %1$s. Highest on %2$s, at %3$s.</string>
+    <string name="budgets_chart_title_spend">Spend by day</string>
+    <string name="budgets_chart_title_tokens">Tokens by day</string>
     <plurals name="budgets_days">
         <item quantity="one">%d day</item>
         <item quantity="other">%d days</item>
@@ -41,6 +45,7 @@
     <string name="budgets_by_model">By model</string>
     <string name="budgets_column_project">Project</string>
     <string name="budgets_column_model">Model</string>
-    <string name="budgets_column_cost">Cost</string>
+    <string name="budgets_column_usage">Cost and tokens</string>
+    <string name="budgets_usage_cell">%1$s · %2$s</string>
     <string name="budgets_deleted_project">Deleted project</string>
 </resources>

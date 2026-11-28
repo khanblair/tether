@@ -71,7 +71,7 @@ private fun RangeChoice(
     )
 }
 
-/** The totals, then the chart and tables, or the empty sentence when nothing was spent. */
+/** The totals, then the chart and tables, or the empty sentence when there is no usage. */
 @Composable
 private fun CostBody(
     state: CostUiState,
@@ -93,7 +93,27 @@ private fun CostBody(
         )
         return
     }
-    CostChart(days = summary.byDay)
+    if (state.freeOnly) {
+        Text(
+            text = stringResource(R.string.budgets_free_only),
+            style = MaterialTheme.typography.bodyMedium,
+            color = TetherTheme.colors.text2,
+        )
+    }
+    SectionTitle(
+        text =
+            stringResource(
+                if (state.freeOnly) {
+                    R.string.budgets_chart_title_tokens
+                } else {
+                    R.string.budgets_chart_title_spend
+                },
+            ),
+    )
+    CostChart(
+        days = summary.byDay,
+        metric = if (state.freeOnly) CostMetric.Tokens else CostMetric.Spend,
+    )
     CostTables(summary = summary)
 }
 
@@ -113,20 +133,21 @@ private fun statItem(
             ),
     )
 
-/** Spend by project and by model. A table with no rows is left out. */
+/** Cost and tokens by project and by model. A table with no rows is left out. */
 @Composable
 private fun CostTables(summary: CostSummary) {
     val deleted = stringResource(R.string.budgets_deleted_project)
     val headers =
         stringResource(R.string.budgets_column_project) to
-            stringResource(R.string.budgets_column_cost)
+            stringResource(R.string.budgets_column_usage)
     if (summary.byProject.isNotEmpty()) {
         SectionTitle(text = stringResource(R.string.budgets_by_project))
         DataTable(
             headers = headers,
             rows =
                 summary.byProject.map {
-                    (it.name.ifBlank { deleted }) to dollarsText(it.costMicros)
+                    (it.name.ifBlank { deleted }) to
+                        usageText(it.costMicros, it.tokensIn, it.tokensOut)
                 },
         )
     }
@@ -135,8 +156,24 @@ private fun CostTables(summary: CostSummary) {
         DataTable(
             headers =
                 stringResource(R.string.budgets_column_model) to
-                    stringResource(R.string.budgets_column_cost),
-            rows = summary.byModel.map { it.modelId to dollarsText(it.costMicros) },
+                    stringResource(R.string.budgets_column_usage),
+            rows =
+                summary.byModel.map {
+                    it.modelId to usageText(it.costMicros, it.tokensIn, it.tokensOut)
+                },
         )
     }
 }
+
+/** The cost and the tokens of one row, such as "$0.00 · 92k in, 1.2k out". */
+@Composable
+private fun usageText(
+    costMicros: Long,
+    tokensIn: Long,
+    tokensOut: Long,
+): String =
+    stringResource(
+        R.string.budgets_usage_cell,
+        dollarsText(costMicros),
+        stringResource(R.string.budgets_tokens, formatTokens(tokensIn), formatTokens(tokensOut)),
+    )

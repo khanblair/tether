@@ -9,13 +9,23 @@ internal fun UsageSummaryView.toCostSummary(): CostSummary =
         today = today.toTotals(),
         last7Days = last7Days.toTotals(),
         last30Days = last30Days.toTotals(),
-        byDay = byDay.map { CostDay(day = it.day, costMicros = it.costMicros.toLong()) },
+        byDay =
+            byDay.map {
+                CostDay(
+                    day = it.day,
+                    costMicros = it.costMicros.toLong(),
+                    tokensIn = it.tokensIn.toLong(),
+                    tokensOut = it.tokensOut.toLong(),
+                )
+            },
         byProject =
             byProject.map {
                 ProjectCost(
                     projectId = it.projectId,
                     name = it.projectName,
                     costMicros = it.costMicros.toLong(),
+                    tokensIn = it.tokensIn.toLong(),
+                    tokensOut = it.tokensOut.toLong(),
                 )
             },
         byModel =
@@ -24,6 +34,8 @@ internal fun UsageSummaryView.toCostSummary(): CostSummary =
                     provider = it.provider,
                     modelId = it.modelId,
                     costMicros = it.costMicros.toLong(),
+                    tokensIn = it.tokensIn.toLong(),
+                    tokensOut = it.tokensOut.toLong(),
                 )
             },
     )

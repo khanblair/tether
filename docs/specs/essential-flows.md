@@ -54,7 +54,7 @@ The app does not follow that rule:
 
 ### D4. Blank session rows and hidden rename
 
-- The core already names a session from its first message: `Store::begin_turn` sets the title to the first 80 characters of the text when the title is empty (`tether-store/src/sessions.rs:149-153`). It does not strip line breaks, so a multi-line first message gives a multi-line title.
+- The core already names a session from its first message: `Store::begin_turn` sets the title from the text when the title is empty (80 characters when this was written; since D45 it is at most 60 characters ending at a whole word, with an ellipsis) (`tether-store/src/sessions.rs:149-153`). It does not strip line breaks, so a multi-line first message gives a multi-line title.
 - A session that has no message yet has an empty title (`create_session` stores none, `sessions.rs:128-150`). The lists pass the title through unchanged: `CoreHomeSources.kt:64` and `DrawerContent.kt:205` hand `session.title` to `SessionRow`, so such a session is a blank row. `TranscriptScreen` falls back to "Session" only while the snapshot is null, so an empty title also leaves the top bar blank.
 - Rename exists only in More, then Rename (`SessionMenuSheet.kt`, `RenameViewModel.kt`). It is not offered from the lists.
 
@@ -146,7 +146,7 @@ Done when: rename, model, mode, and Bypass each change what the status line and 
 
 ## 7. Decisions needed (defaults shown)
 
-1. Automatic title from the first message: already built in the core (80 characters). Blair chose to keep it, with rename.
+1. Automatic title from the first message: already built in the core (80 characters, then 60 on a word boundary since D45). Blair chose to keep it, with rename.
 2. Bypass: default per spec (session only, biometric each time). The alternative, a saved Bypass default, would change `product-scope.md:136` and the core rule.
 3. Thinking effort default for new sessions: model default (NULL). The alternative is a saved app default level.
 4. DeepSeek: hide the control (its adapter ignores effort). The alternative is to make the adapter send it, which needs a provider doc check.

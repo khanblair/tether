@@ -53,7 +53,7 @@ All components start as **Planned**. Screenshot tests start with the first featu
 
 | Name | Purpose | Props | States | Phase | Status |
 |---|---|---|---|---|---|
-| `TetherTopBar` | Top app bar | `title`, `subtitle`, `subtitleOnClick`, `navigationIcon`, `actions` | default, clickable subtitle | P0 | Built |
+| `TetherTopBar` | Top app bar. The title and the subtitle each take one line and end in an ellipsis | `title`, `subtitle`, `navigationIcon`, `actions` | default, with subtitle, long title | P0 | Built |
 | `HomeDrawer` | Header with the theme toggle, destinations (Home, Projects, Needs attention, Usage and cost, Runs), session search and sessions by project, an "N archived sessions · Show" line that lists the archived sessions with Unarchive (not in the prototype; chosen by Blair), then New session, Settings, Skills and memory. Lives in the app module | `sessions`, `archived`, `query`, `currentRoute`, `attentionCount`, `themeMode`, `onToggleTheme`, `onDestination`, `onOpenSession`, `onNewSession`, `onOpenSettings`, `onOpenSkills` | with sessions, no sessions, search with no match, each destination selected | P1 | Built |
 | `DrawerItem` | Drawer destination row; the current one is `tonal` | `label`, `icon`, `selected`, `onClick`, `badge` | default, selected, pressed, with badge | P1 | Built |
 | `ThemeToggleButton` | Icon button that shows the theme choice (monitor, sun, moon) and cycles System, Light, Dark | `mode`, `contentDescription`, `onClick` | system, light, dark | P1 | Built |
@@ -223,7 +223,8 @@ All components start as **Planned**. Screenshot tests start with the first featu
 |---|---|---|---|---|---|
 | `EmptyState` | One sentence and one action | `text`, `action` | default | P1 | Planned |
 | `SkeletonRow` | Loading placeholder row | `lines` | 1 line, 2 lines | P1 | Planned |
-| `TetherSnackbarHost` | Snackbars (with an action) and toasts (without one) on the inverse surface of the app theme, announced politely | `hostState` | snackbar with action, toast, light, dark | P1 | Built |
+| `TetherSnackbarHost` | Snackbars (a message with an action) on the inverse surface of the app theme, at the bottom, announced politely | `hostState` | snackbar with action, light, dark | P1 | Built |
+| `TetherToastHost` | Toasts (a short message with no action) as a pill on the raised surface of the app theme with a hairline border, at the top below the status bar, announced politely | `hostState` | toast, light, dark | P1 | Built |
 | `InlineBanner` | Persistent notice in a screen, announced politely to TalkBack | `text`, `tone` (`BannerTone`: info, success, warning, danger), `title`, `actionLabel`, `onAction` | info, success, warning, danger | P1 | Built |
 
 ## Onboarding

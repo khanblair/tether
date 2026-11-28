@@ -101,7 +101,7 @@ Compact (phone portrait), from top to bottom:
 ### Session
 - The transcript reads like a chat, with no "You" or "Agent" labels: the side says who wrote it (decision D39, which replaces the prototype's inset user message).
 - User messages: a bubble aligned to the end, at most 85% of the row, `surface-sunken` background, `radius.lg`, plain text. The accent color is never used for it.
-- Agent text: full width, aligned to the start, no background and no bubble, `type.body-m`, with Markdown (bold, italic, inline code, headings, lists, fenced code).
+- Agent text: full width, aligned to the start, no background and no bubble, `type.body-m`, with Markdown: bold, italic, strikethrough, inline code, headings (levels 3 to 6 share one style), nested lists, quotes, horizontal rules, pipe tables, and fenced code. A table has a soft hairline border and a sunken header row, columns as wide as their content up to 40% of the transcript width, wrapping cells, column alignment from the delimiter row, and sideways scrolling when it is wider than the screen. A link shows its text only.
 - Reasoning is one collapsed row, "Thinking" with a chevron, also while the reply streams. Tapping it shows the text. The state is kept per message.
 - Under a user bubble: Copy and Edit. Under the last message of each finished agent turn: Copy, and Regenerate on the newest turn only. Edit and Regenerate are off while a turn runs. Edit rewinds the conversation to that message and sends the new text; files are not restored.
 - Tool calls, diffs, runs, plans, and reports are cards: full width, `surface-sunken` in light mode or `surface` in dark mode, `radius.md`, no border.
@@ -146,6 +146,7 @@ Compact (phone portrait), from top to bottom:
 
 ### Cost
 - Summary first in a sentence ("This session: $0.84, 212k tokens"), chart second, data table behind "Show data".
+- The Cost screen counts usage, not only spend. The three totals (today, 7 days, 30 days) show the cost and the tokens in and out. Free models cost $0 but their tokens are counted, so the chart and the by-project and by-model tables show them: each table row reads "cost · tokens in, tokens out". When the range has tokens and no spend, the chart shows tokens by day and a line says that free models cost nothing. "No usage yet." appears only when there are no tokens and no spend.
 
 ## 4. Key element anatomy
 

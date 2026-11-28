@@ -112,6 +112,7 @@ with other apps or a computer when needed.
 | `git_status` / `git_diff` / `git_log` | Read repo state | No |
 | `git_commit` / `git_branch` | Change local repo state | Yes |
 | `github_repo_create` | Create a GitHub repository and connect it as `origin` | Always, in every mode except Bypass |
+| `github_api` | Call any GitHub REST or GraphQL endpoint as the signed-in user: repositories, issues, pull requests, comments, Actions, releases, search, gists, other repositories | Reads ask like other network calls; writes ask; deletes and sensitive paths always ask |
 | `git_push` / `pr_create` | Change remote state | Always, in every mode except Bypass; force push asks even in Bypass |
 | `ci_run` / `ci_logs` | Start a workflow run and read its results | Yes |
 | `web_fetch` | Fetch a URL as text | Yes |

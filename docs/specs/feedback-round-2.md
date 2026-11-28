@@ -113,7 +113,7 @@ Fix: each row shows its real state ("Signed in as ...", "No servers", "3 servers
 - The sign-in check needs the classic `repo` scope header, so fine-grained tokens are rejected (`tether-ffi/src/github.rs:188`). `docs/product-scope.md:233` says they work. Decided: accept both. Sign-in checks the token by calling the API for the account and a repository call instead of reading the scope list, and Settings shows what the token can reach.
 - Scopes are held in memory only and are lost on restart.
 - On the test emulator no GitHub token or identity is saved; find out why.
-- Sign in with GitHub needs a client ID that nothing supplies.
+- Sign in with GitHub needs a client ID that nothing supplied. Fixed on 2026-11-28: the build reads `TETHER_GITHUB_CLIENT_ID` and the app passes it to the core; Blair registers the OAuth app and sets the variable (docs/development.md, "GitHub sign-in with a code").
 - The agent cannot init a repo, create a GitHub repository, set a remote, or work with issues. Plan: `git_init`, a create-repo tool with approval, saving the remote, then the existing push and PR tools; later issues and merge.
 
 ## 11. Later track: Linux mode and dev servers

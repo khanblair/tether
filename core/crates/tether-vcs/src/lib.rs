@@ -26,8 +26,8 @@ mod transport_tests;
 
 pub use clone::{CloneError, ClonePhase, CloneProgress, CloneRequest, clone};
 pub use github::{
-    CheckRun, CreatedRepository, GithubClient, GithubError, GithubIdentity, HttpClient,
-    HttpClientError, HttpRequest, HttpResponse, PullRequestComment, PullRequestDraft,
+    CheckRun, CreatedRepository, GithubApiResponse, GithubClient, GithubError, GithubIdentity,
+    HttpClient, HttpClientError, HttpRequest, HttpResponse, PullRequestComment, PullRequestDraft,
     PullRequestInfo, RepoInfo, ReqwestHttpClient, parse_github_url, should_clone_shallow,
 };
 pub use oauth::{DeviceGrant, GithubDeviceAuth, OAuthError, PollState};

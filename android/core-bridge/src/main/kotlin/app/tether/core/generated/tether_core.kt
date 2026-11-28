@@ -23204,6 +23204,21 @@ sealed class ExecutorRuntimeException: kotlin.Exception() {
     }
     
     /**
+     * A setup or install did not finish. `reason` is a short, safe description.
+     */
+    class SetupFailed(
+        
+        /**
+         * What failed, in a sentence. It can include the end of the package installer's output,
+         * which names package repositories but never a token or file contents.
+         */
+        val `reason`: kotlin.String
+        ) : ExecutorRuntimeException() {
+        override val message
+            get() = "reason=${ `reason` }"
+    }
+    
+    /**
      * The requested project does not exist.
      */
     class ProjectNotFound(
@@ -23252,9 +23267,12 @@ public object FfiConverterTypeExecutorRuntimeError : FfiConverterRustBuffer<Exec
             1 -> ExecutorRuntimeException.InvalidConfiguration()
             2 -> ExecutorRuntimeException.Unavailable()
             3 -> ExecutorRuntimeException.VerificationFailed()
-            4 -> ExecutorRuntimeException.ProjectNotFound()
-            5 -> ExecutorRuntimeException.LinuxNotReady()
-            6 -> ExecutorRuntimeException.LinuxShellAlreadyOpen()
+            4 -> ExecutorRuntimeException.SetupFailed(
+                FfiConverterString.read(buf),
+                )
+            5 -> ExecutorRuntimeException.ProjectNotFound()
+            6 -> ExecutorRuntimeException.LinuxNotReady()
+            7 -> ExecutorRuntimeException.LinuxShellAlreadyOpen()
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
     }
@@ -23272,6 +23290,11 @@ public object FfiConverterTypeExecutorRuntimeError : FfiConverterRustBuffer<Exec
             is ExecutorRuntimeException.VerificationFailed -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
+            )
+            is ExecutorRuntimeException.SetupFailed -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`reason`)
             )
             is ExecutorRuntimeException.ProjectNotFound -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
@@ -23302,16 +23325,21 @@ public object FfiConverterTypeExecutorRuntimeError : FfiConverterRustBuffer<Exec
                 buf.putInt(3)
                 Unit
             }
-            is ExecutorRuntimeException.ProjectNotFound -> {
+            is ExecutorRuntimeException.SetupFailed -> {
                 buf.putInt(4)
+                FfiConverterString.write(value.`reason`, buf)
                 Unit
             }
-            is ExecutorRuntimeException.LinuxNotReady -> {
+            is ExecutorRuntimeException.ProjectNotFound -> {
                 buf.putInt(5)
                 Unit
             }
-            is ExecutorRuntimeException.LinuxShellAlreadyOpen -> {
+            is ExecutorRuntimeException.LinuxNotReady -> {
                 buf.putInt(6)
+                Unit
+            }
+            is ExecutorRuntimeException.LinuxShellAlreadyOpen -> {
+                buf.putInt(7)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }

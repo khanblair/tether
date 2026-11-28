@@ -12,6 +12,9 @@ use tokio_util::sync::CancellationToken;
 mod http;
 use http::{HttpPackFetcher, HttpRootfsFetcher, ProgressAdapter, fetch_manifest, http_client};
 
+const SETUP_REASON_LIMIT: usize = 300;
+const PACKAGE_REASON_LIMIT: usize = 280;
+
 /// Progress reported by runtime pack and Linux setup operations.
 #[uniffi::export(with_foreign)]
 pub trait ExecutorProgress: Send + Sync {
@@ -194,9 +197,51 @@ fn run_rootfs_setup(
     });
     runtime
         .block_on(join)
-        .map_err(|_| ExecutorRuntimeError::Unavailable)?
-        .map(|_| ())
-        .map_err(|_| ExecutorRuntimeError::Unavailable)
+        .map_err(|_| ExecutorRuntimeError::SetupFailed {
+            reason: "the setup task stopped".into(),
+        })
+        .and_then(map_setup_result)
+}
+
+fn map_setup_result(
+    result: Result<tether_linux::RootfsManifest, tether_linux::LinuxError>,
+) -> Result<(), ExecutorRuntimeError> {
+    match result {
+        Ok(_) => Ok(()),
+        Err(tether_linux::LinuxError::Signature) => Err(ExecutorRuntimeError::VerificationFailed),
+        Err(tether_linux::LinuxError::Cancelled) => Err(ExecutorRuntimeError::Unavailable),
+        Err(error) => Err(ExecutorRuntimeError::SetupFailed {
+            reason: setup_reason(&error),
+        }),
+    }
+}
+
+fn setup_reason(error: &tether_linux::LinuxError) -> String {
+    match error {
+        tether_linux::LinuxError::Packages(output) => {
+            let output = compact_reason(output);
+            format!(
+                "base packages failed: {}",
+                tail_chars(&output, PACKAGE_REASON_LIMIT)
+            )
+        }
+        _ => compact_reason(&error.to_string())
+            .chars()
+            .take(SETUP_REASON_LIMIT)
+            .collect(),
+    }
+}
+
+fn compact_reason(value: &str) -> String {
+    value.replace(['\r', '\n'], " ").trim().to_owned()
+}
+
+fn tail_chars(value: &str, limit: usize) -> &str {
+    let start = value
+        .char_indices()
+        .nth(value.chars().count().saturating_sub(limit))
+        .map_or(0, |(index, _)| index);
+    &value[start..]
 }
 fn list_packs(root: &Path) -> Result<Vec<RuntimePackView>, ExecutorRuntimeError> {
     let entries = match std::fs::read_dir(root) {
@@ -277,21 +322,9 @@ fn hex_digit(byte: u8) -> Result<u8, ExecutorRuntimeError> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn key_parser_decodes_lower_and_upper_hex() {
-        let value = key_from_hex(Some(
-            "00112233445566778899aabbccddeeff00112233445566778899AABBCCDDEEFF",
-        ))
-        .unwrap();
-        assert_eq!(value[0], 0x00);
-        assert_eq!(value[15], 0xff);
-        assert_eq!(value[31], 0xff);
-    }
-}
-
-#[cfg(test)]
 #[path = "executors_http_tests.rs"]
 mod http_tests;
+
+#[cfg(test)]
+#[path = "executors_download_tests.rs"]
+mod tests;

@@ -19,6 +19,7 @@ internal fun ApprovalKind.labelRes(): Int =
         ApprovalKind.ForcePush -> R.string.approval_kind_force_push
         ApprovalKind.PullRequest -> R.string.approval_kind_pull_request
         ApprovalKind.GithubRepoCreate -> R.string.approval_kind_github_repo_create_private
+        ApprovalKind.GithubApi -> R.string.approval_kind_github_api
         ApprovalKind.Other -> R.string.approval_kind_other
     }
 
@@ -43,6 +44,7 @@ internal fun ApprovalKind.icon(): ImageVector =
         ApprovalKind.Push, ApprovalKind.ForcePush -> TetherIcons.Upload
         ApprovalKind.PullRequest -> TetherIcons.GitBranch
         ApprovalKind.GithubRepoCreate -> TetherIcons.GitBranch
+        ApprovalKind.GithubApi -> TetherIcons.Globe
         ApprovalKind.Other -> TetherIcons.Package
     }
 

@@ -15,13 +15,14 @@ class LinuxServiceControllerImpl(
     override fun apply(action: ServiceAction): Boolean =
         when (action) {
             ServiceAction.Stop -> stop()
-            is ServiceAction.Run -> start(action.text)
+            is ServiceAction.Run -> start(action.notice)
         }
 
-    private fun start(text: String): Boolean {
+    private fun start(notice: LinuxNotice): Boolean {
         val intent =
             Intent(context, LinuxSessionService::class.java)
-                .putExtra(LinuxSessionService.EXTRA_TEXT, text)
+                .putExtra(LinuxSessionService.EXTRA_KIND, notice.kind.name)
+                .putExtra(LinuxSessionService.EXTRA_SERVERS, notice.servers)
         try {
             ContextCompat.startForegroundService(context, intent)
         } catch (_: ForegroundServiceStartNotAllowedException) {

@@ -38,7 +38,7 @@ class LinuxActivityTest {
 
         tracker.openSource("shell")
         tracker.reportShell("shell", true)
-        assertEquals(ServiceAction.Run("Linux shell open"), service.actions.last())
+        assertEquals(run(LinuxNoticeKind.ShellOpen), service.actions.last())
 
         tracker.removeSource("shell")
         assertEquals(ServiceAction.Stop, service.actions.last())
@@ -54,15 +54,15 @@ class LinuxActivityTest {
         tracker.openSource("two")
         tracker.reportServers("one", 1)
         tracker.reportServers("two", 2)
-        assertEquals(ServiceAction.Run("3 servers running"), service.actions.last())
+        assertEquals(run(LinuxNoticeKind.Servers, 3), service.actions.last())
 
         tracker.removeSource("one")
-        assertEquals(ServiceAction.Run("2 servers running"), service.actions.last())
+        assertEquals(run(LinuxNoticeKind.Servers, 2), service.actions.last())
         val actionCount = service.actions.size
         tracker.reportServers("one", 3)
 
         assertEquals(actionCount, service.actions.size)
-        assertEquals(ServiceAction.Run("2 servers running"), service.actions.last())
+        assertEquals(run(LinuxNoticeKind.Servers, 2), service.actions.last())
     }
 
     @Test
@@ -74,7 +74,7 @@ class LinuxActivityTest {
         tracker.reportLinuxReady(true)
 
         settings.set(LinuxBackgroundMode.WhenInstalled)
-        assertEquals(ServiceAction.Run("Linux mode is ready"), service.actions.last())
+        assertEquals(run(LinuxNoticeKind.Ready), service.actions.last())
 
         settings.set(LinuxBackgroundMode.WhileRunning)
         assertEquals(ServiceAction.Stop, service.actions.last())
@@ -89,8 +89,19 @@ class LinuxActivityTest {
         tracker.reportServers("session", 1)
         tracker.reportServers("session", 1)
 
-        assertEquals(listOf(ServiceAction.Run("1 server running")), service.actions)
+        assertEquals(listOf(run(LinuxNoticeKind.Servers, 1)), service.actions)
         assertTrue(service.actions.single() is ServiceAction.Run)
+    }
+
+    @Test
+    fun notice_round_trips_through_its_extras_and_rejects_unknown_kinds() {
+        LinuxNoticeKind.entries.forEach { kind ->
+            val notice = LinuxNotice(kind, 2)
+            assertEquals(notice, LinuxNotice.fromExtras(kind.name, 2))
+        }
+        assertEquals(null, LinuxNotice.fromExtras("Nope", 1))
+        assertEquals(null, LinuxNotice.fromExtras(null, 1))
+        assertEquals(0, LinuxNotice.fromExtras("Servers", -4)?.servers)
     }
 
     private fun expectedAction(
@@ -98,18 +109,19 @@ class LinuxActivityTest {
         mode: LinuxBackgroundMode,
     ): ServiceAction {
         val active = state.shellOpen || state.runningProcesses > 0
-        val text =
+        val notice =
             when {
                 state.shellOpen && state.runningProcesses > 0 ->
-                    "Linux shell and ${serverText(state.runningProcesses)} running"
-                state.runningProcesses > 0 -> "${serverText(state.runningProcesses)} running"
-                mode == LinuxBackgroundMode.WhenInstalled -> "Linux mode is ready"
-                else -> "Linux shell open"
+                    LinuxNotice(LinuxNoticeKind.ShellAndServers, state.runningProcesses)
+                state.runningProcesses > 0 ->
+                    LinuxNotice(LinuxNoticeKind.Servers, state.runningProcesses)
+                mode == LinuxBackgroundMode.WhenInstalled -> LinuxNotice(LinuxNoticeKind.Ready)
+                else -> LinuxNotice(LinuxNoticeKind.ShellOpen)
             }
         return when {
             mode == LinuxBackgroundMode.WhileRunning && !active -> ServiceAction.Stop
             mode == LinuxBackgroundMode.WhenInstalled && !state.linuxReady -> ServiceAction.Stop
-            else -> ServiceAction.Run(text)
+            else -> ServiceAction.Run(notice)
         }
     }
 
@@ -122,7 +134,10 @@ class LinuxActivityTest {
             }
         }
 
-    private fun serverText(count: Int): String = if (count == 1) "1 server" else "$count servers"
+    private fun run(
+        kind: LinuxNoticeKind,
+        servers: Int = 0,
+    ) = ServiceAction.Run(LinuxNotice(kind, servers))
 
     private fun emptyStore() = LinuxBackgroundStore(read = { null }, write = {})
 

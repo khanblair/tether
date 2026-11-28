@@ -48,6 +48,8 @@ fn workspace_arguments(linux: &std::path::Path, workspace: &std::path::Path) -> 
             linux.join("etc/resolv.empty").display()
         ),
         "-b".into(),
+        format!("{}:/etc/hosts", linux.join("etc/hosts").display()),
+        "-b".into(),
         format!("{}:/workspace", workspace.display()),
         "-w".into(),
         "/workspace".into(),
@@ -74,6 +76,8 @@ fn network_arguments(linux: &std::path::Path) -> Vec<String> {
             "{}:/etc/resolv.conf",
             linux.join("etc/resolv.conf").display()
         ),
+        "-b".into(),
+        format!("{}:/etc/hosts", linux.join("etc/hosts").display()),
         "-w".into(),
         "/".into(),
         "true".into(),

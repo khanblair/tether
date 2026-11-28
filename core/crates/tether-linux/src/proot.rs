@@ -2,6 +2,7 @@ use std::path::{Component, Path, PathBuf};
 use std::process::Command;
 
 use crate::LinuxError;
+use crate::rootfs_io::ensure_hosts;
 
 /// Whether guest processes may use the project's network configuration.
 ///
@@ -83,6 +84,9 @@ impl ProotConfig {
         validate_bind_target(&tmp, true)?;
         validate_bind_target(&empty_resolv, false)?;
         validate_bind_target(&network_resolv, false)?;
+        let hosts = self.linux_root.join("etc/hosts");
+        ensure_hosts(&hosts)?;
+        validate_bind_target(&hosts, false)?;
         let mut arguments = vec![
             "-r".into(),
             rootfs.to_string_lossy().into_owned(),
@@ -104,6 +108,7 @@ impl ProotConfig {
             "-b".into(),
             format!("{}:/etc/resolv.conf", resolv.display()),
         ]);
+        arguments.extend(["-b".into(), format!("{}:/etc/hosts", hosts.display())]);
         if let Some(workspace) = &self.workspace {
             validate_workspace(workspace)?;
             arguments.extend(["-b".into(), format!("{}:/workspace", workspace.display())]);

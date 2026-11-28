@@ -105,7 +105,8 @@ fn header<'a>(response: &'a HttpResponse, name: &str) -> Option<&'a str> {
 
 fn next_link(response: &HttpResponse) -> Option<String> {
     let link = header(response, "link")?;
-    link.split(',').find_map(next_link_target)
+    link.split(',')
+        .find_map(|entry| next_link_target(entry.trim()))
 }
 
 fn next_link_target(link: &str) -> Option<String> {

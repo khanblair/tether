@@ -1303,6 +1303,12 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_tether_core_checksum_method_skillsruntime_skill_install_preview_zip(
     ): Int
+    external fun uniffi_tether_core_checksum_method_skillsruntime_install_sample_skill(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_skillsruntime_sample_skills(
+    ): Int
+    external fun uniffi_tether_core_checksum_method_skillsruntime_sample_skills_notice(
+    ): Int
     external fun uniffi_tether_core_checksum_method_downloadprogress_on_progress(
     ): Int
     external fun uniffi_tether_core_checksum_method_updater_cancel(
@@ -1883,6 +1889,12 @@ internal object UniffiLib {
     ): RustBuffer.ByValue
     external fun uniffi_tether_core_fn_method_skillsruntime_skill_install_preview_zip(`ptr`: Long,`zipPath`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    external fun uniffi_tether_core_fn_method_skillsruntime_install_sample_skill(`ptr`: Long,`name`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_tether_core_fn_method_skillsruntime_sample_skills(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_tether_core_fn_method_skillsruntime_sample_skills_notice(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     external fun uniffi_tether_core_fn_clone_downloadprogress(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
     external fun uniffi_tether_core_fn_free_downloadprogress(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -2378,13 +2390,13 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if ((lib.uniffi_tether_core_checksum_method_sessionruntime_set_interactive_approvals() and 0xFFFF) != 55680) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_tether_core_checksum_method_sessionruntime_command_sheet() and 0xFFFF) != 24693) {
+    if ((lib.uniffi_tether_core_checksum_method_sessionruntime_command_sheet() and 0xFFFF) != 10341) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_method_sessionruntime_export_session() and 0xFFFF) != 59569) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if ((lib.uniffi_tether_core_checksum_method_sessionruntime_resolve_command() and 0xFFFF) != 45343) {
+    if ((lib.uniffi_tether_core_checksum_method_sessionruntime_resolve_command() and 0xFFFF) != 52926) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_method_sessionruntime_compact() and 0xFFFF) != 25145) {
@@ -2607,6 +2619,15 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_method_skillsruntime_skill_install_preview_zip() and 0xFFFF) != 14644) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_skillsruntime_install_sample_skill() and 0xFFFF) != 64873) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_skillsruntime_sample_skills() and 0xFFFF) != 10954) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if ((lib.uniffi_tether_core_checksum_method_skillsruntime_sample_skills_notice() and 0xFFFF) != 3506) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if ((lib.uniffi_tether_core_checksum_method_downloadprogress_on_progress() and 0xFFFF) != 47177) {
@@ -11597,7 +11618,7 @@ public interface SessionRuntimeInterface {
     fun `setInteractiveApprovals`(`enabled`: kotlin.Boolean)
     
     /**
-     * Lists built-in commands for the composer.
+     * Lists built-in commands and installed skills for the composer.
      */
     fun `commandSheet`(): List<CommandView>
     
@@ -11610,7 +11631,7 @@ public interface SessionRuntimeInterface {
     fun `exportSession`(`sessionId`: kotlin.String): kotlin.String
     
     /**
-     * Resolves a built-in command for the composer.
+     * Resolves a built-in command or installed skill for the composer.
      *
      * # Errors
      * Returns unknown or unavailable command details.
@@ -12460,7 +12481,7 @@ open class SessionRuntime: Disposable, AutoCloseable, SessionRuntimeInterface
 
     
     /**
-     * Lists built-in commands for the composer.
+     * Lists built-in commands and installed skills for the composer.
      */override fun `commandSheet`(): List<CommandView> {
             return FfiConverterSequenceTypeCommandView.lift(
     callWithHandle {
@@ -12497,7 +12518,7 @@ open class SessionRuntime: Disposable, AutoCloseable, SessionRuntimeInterface
 
     
     /**
-     * Resolves a built-in command for the composer.
+     * Resolves a built-in command or installed skill for the composer.
      *
      * # Errors
      * Returns unknown or unavailable command details.
@@ -13995,6 +14016,27 @@ public interface SkillsRuntimeInterface {
      */
     fun `skillInstallPreviewZip`(`zipPath`: kotlin.String): QuarantineView
     
+    /**
+     * Installs one bundled sample skill into the user skills folder.
+     *
+     * # Errors
+     * Returns NotFound for an unknown sample or a mapped skills storage error.
+     */
+    fun `installSampleSkill`(`name`: kotlin.String)
+    
+    /**
+     * Lists the bundled sample skills and their install state.
+     *
+     * # Errors
+     * Returns InvalidSkill if an embedded sample cannot be parsed.
+     */
+    fun `sampleSkills`(): List<SampleSkillView>
+    
+    /**
+     * Returns the bundled sample attribution notice and license texts.
+     */
+    fun `sampleSkillsNotice`(): kotlin.String
+    
     companion object
 }
 
@@ -14277,6 +14319,62 @@ open class SkillsRuntime: Disposable, AutoCloseable, SkillsRuntimeInterface
         it,
         
         FfiConverterString.lower(`zipPath`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Installs one bundled sample skill into the user skills folder.
+     *
+     * # Errors
+     * Returns NotFound for an unknown sample or a mapped skills storage error.
+     */
+    @Throws(SkillsRuntimeException::class)override fun `installSampleSkill`(`name`: kotlin.String)
+        = 
+    callWithHandle {
+    uniffiRustCallWithError(SkillsRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_skillsruntime_install_sample_skill(
+        it,
+        
+        FfiConverterString.lower(`name`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Lists the bundled sample skills and their install state.
+     *
+     * # Errors
+     * Returns InvalidSkill if an embedded sample cannot be parsed.
+     */
+    @Throws(SkillsRuntimeException::class)override fun `sampleSkills`(): List<SampleSkillView> {
+            return FfiConverterSequenceTypeSampleSkillView.lift(
+    callWithHandle {
+    uniffiRustCallWithError(SkillsRuntimeException) { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_skillsruntime_sample_skills(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Returns the bundled sample attribution notice and license texts.
+     */override fun `sampleSkillsNotice`(): kotlin.String {
+            return FfiConverterString.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_tether_core_fn_method_skillsruntime_sample_skills_notice(
+        it,
+        _status)
 }
     }
     )
@@ -20230,6 +20328,69 @@ public object FfiConverterTypeRuntimePackView: FfiConverterRustBuffer<RuntimePac
             FfiConverterString.write(value.`version`, buf)
             FfiConverterBoolean.write(value.`installed`, buf)
             FfiConverterULong.write(value.`sizeBytes`, buf)
+    }
+}
+
+
+
+/**
+ * A bundled sample skill and its install state.
+ */
+data class SampleSkillView (
+    /**
+     * Sample skill name.
+     */
+    var `name`: kotlin.String
+    , 
+    /**
+     * Trigger description from the sample frontmatter.
+     */
+    var `description`: kotlin.String
+    , 
+    /**
+     * Number of embedded files.
+     */
+    var `fileCount`: kotlin.UInt
+    , 
+    /**
+     * Whether a user skill with this name is installed.
+     */
+    var `installed`: kotlin.Boolean
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeSampleSkillView: FfiConverterRustBuffer<SampleSkillView> {
+    override fun read(buf: ByteBuffer): SampleSkillView {
+        return SampleSkillView(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: SampleSkillView) = (
+            FfiConverterString.allocationSize(value.`name`) +
+            FfiConverterString.allocationSize(value.`description`) +
+            FfiConverterUInt.allocationSize(value.`fileCount`) +
+            FfiConverterBoolean.allocationSize(value.`installed`)
+    )
+
+    override fun write(value: SampleSkillView, buf: ByteBuffer) {
+            FfiConverterString.write(value.`name`, buf)
+            FfiConverterString.write(value.`description`, buf)
+            FfiConverterUInt.write(value.`fileCount`, buf)
+            FfiConverterBoolean.write(value.`installed`, buf)
     }
 }
 
@@ -28975,6 +29136,34 @@ public object FfiConverterSequenceTypeRuntimePackView: FfiConverterRustBuffer<Li
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeRuntimePackView.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeSampleSkillView: FfiConverterRustBuffer<List<SampleSkillView>> {
+    override fun read(buf: ByteBuffer): List<SampleSkillView> {
+        val len = buf.getInt()
+        return List<SampleSkillView>(len) {
+            FfiConverterTypeSampleSkillView.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<SampleSkillView>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeSampleSkillView.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<SampleSkillView>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeSampleSkillView.write(it, buf)
         }
     }
 }

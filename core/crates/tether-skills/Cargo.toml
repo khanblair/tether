@@ -8,3 +8,6 @@ description = "Skills: SKILL.md discovery, on-demand loading, agent authored ski
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

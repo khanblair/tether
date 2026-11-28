@@ -50,7 +50,7 @@ What it needs, in order:
 2. Long-running processes are wired to the session screen. The bar loads the process list, follows `ProcessChanged`, offers Preview and Stop, and reports nonzero exits once.
 3. Port discovery is wired to the bar and the server preview. PRoot shares the phone's loopback, so `127.0.0.1` reaches the server.
 4. Cleartext is allowed only for the exact server origin `http://127.0.0.1:<owned-port>`. The Android network security config denies cleartext by default and permits only the 127.0.0.1 domain. Other HTTP, other hosts, other ports, user info, fragments, and lookalike hosts stay blocked.
-5. The `preview` tool opens a file or an owned server without taking the user away from the transcript. A `PreviewRequested` event shows a message with an Open action and a transcript card line.
+5. The session connection lives with the session screen's back stack entry, not with the transcript being on screen. Opening Preview over the transcript therefore keeps the session's servers running, and they stop when the session leaves the back stack. The `preview` tool opens a file or an owned server without taking the user away from the transcript. A `PreviewRequested` event shows a message with an Open action and a transcript card line.
 
 First step, a spike that decides if stage 2 is feasible: build PRoot for arm64, ship it as `libproot.so`, and run `proot --version` and an Alpine `sh -c 'echo ok'` on the emulator (Android 15 or later). The Rust side is ready for it, so the spike mostly proves the native binaries and the Android launch rules. If a current Android release blocks it, stop and report before anything else is built.
 

@@ -58,14 +58,14 @@ Each feature lists what it is, how it works, and why it exists. IDs (F1 and so o
 ### F2. Projects and workspaces
 
 **What.** A project is a code repository in a workspace folder. Private storage is the default. The
-`full` flavor offers a shared folder after the person grants All files access. Create one empty,
+`full` flavor offers a shared folder on Android 11 and later, after the person grants All files access. Create one empty,
 clone from GitHub, or import a zip from phone storage.
 
 **How.**
 - New projects use the app's private storage by default. Settings and onboarding show the current
   projects folder and the other local data paths. Existing projects keep their roots when the
   folder for new projects changes.
-- The `full` flavor can use a shared folder after `MANAGE_EXTERNAL_STORAGE` is granted. Other apps
+- The `full` flavor can use a shared folder on Android 11 and later, after `MANAGE_EXTERNAL_STORAGE` is granted. Android 10 has no such permission and the app declares no legacy storage access, so the option stays hidden there. Other apps
   and a computer can see files in that folder. The Play flavor stays private.
 - Cloning uses gitoxide over HTTPS with the user's GitHub token. Shallow clone (depth 1) is the default for repos over 200 MB, with an option for full history.
 - Zip import goes through the Android file picker. Export produces a zip through the share sheet.
@@ -233,7 +233,7 @@ Background runs use the same Linux-mode approval as other host runs. The approva
 
 **How.**
 - The `run` tool takes a command and an optional executor. With no executor given, the router picks: the project default from `.tether/config.toml`, then a match table (for example `python`, `pytest` on pure-Python code, and `sqlite3` go to the sandbox; `npm install`, `cargo`, `gradle` go to Linux mode if installed, else CI).
-- `run` accepts `background: true` only with Linux mode. It returns a short process id, initial output, and a loopback URL when port discovery finds one. The process, its last 256 KiB of output, and its detected port belong to the session and stop when the session closes. Sandbox and CI reject background runs with `background runs need Linux mode`.
+- `run` accepts `background: true` only with Linux mode. It returns a short process id, initial output, and a loopback URL when port discovery finds one. The process, its last 256 KiB of output (output keeps flowing for the life of the process, and only the newest 256 KiB is kept), and its detected port belong to the session and stop when the session closes. Sandbox and CI reject background runs with `background runs need Linux mode`.
 - The sandbox gives each run a fresh instance with the workspace mounted read-write at `/workspace`, a memory cap (512 MB default), a time limit (60 s default), and no secrets in its environment. Runtime packs (Python, JavaScript, SQLite) download on first use, are verified against a signed manifest, and are precompiled on the device.
 - Linux mode is opt-in per device. Setup downloads the Alpine mini root filesystem, verifies its checksum against Tether's signed `manifest.json` and detached `manifest.json.sig`, and installs base packages. Each project is bind-mounted at `/workspace`. Network access is a per-project toggle, off by default, and asks on first need.
 - CI uses a workflow file Tether adds to the repo (`.github/workflows/tether.yml`, shown as a diff first) that accepts a command input. The agent pushes to a work branch, dispatches the workflow, polls status, then reads logs. Failures are parsed into file and line references where the format allows.

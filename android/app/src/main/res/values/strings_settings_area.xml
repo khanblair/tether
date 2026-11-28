@@ -8,7 +8,7 @@
     <string name="settings_area_list_permissions">Permissions</string>
     <string name="settings_area_list_permissions_mode">Default mode: %1$s</string>
     <string name="settings_area_list_executors">Executors</string>
-    <string name="settings_area_list_executors_body">Sandbox. Linux mode and CI are not available yet.</string>
+    <string name="settings_area_list_executors_body">Sandbox, Linux mode, and CI. Where commands run.</string>
     <string name="settings_area_list_github">GitHub</string>
     <string name="settings_area_list_mcp">MCP servers</string>
     <string name="settings_area_list_skills">Skills and memory</string>

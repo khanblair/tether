@@ -2,10 +2,15 @@ package app.tether.session
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -16,10 +21,12 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import app.tether.design.TetherTheme
+import app.tether.design.tokens.TetherBorder
 import app.tether.design.tokens.TetherSpace
 import app.tether.preview.PreviewButton
 
-private const val BULLET_MARK = "•"
+/** The bullet of each nesting level, so a nested list reads as nested. */
+private val BULLET_MARKS = listOf("•", "◦", "▪", "▪")
 
 /** The fence language that makes a code block a page, which the Preview button opens. */
 private const val HTML_LANGUAGE = "html"
@@ -83,8 +90,11 @@ private fun MarkdownLineView(
         LineKind.HEADING_1 -> HeadingText(text, MaterialTheme.typography.titleMedium)
         LineKind.HEADING_2 -> HeadingText(text, MaterialTheme.typography.titleSmall)
         LineKind.HEADING_3 -> HeadingText(text, bodyStyle())
-        LineKind.BULLET -> ListItem(BULLET_MARK, text)
-        LineKind.NUMBERED -> ListItem(line.marker, text)
+        LineKind.BULLET -> ListItem(BULLET_MARKS[line.level], text, line.level)
+        LineKind.NUMBERED -> ListItem(line.marker, text, line.level)
+        LineKind.QUOTE -> QuoteText(text)
+        LineKind.RULE -> RuleLine()
+        LineKind.TABLE -> line.table?.let { MarkdownTableView(it, styles) }
     }
 }
 
@@ -104,18 +114,55 @@ private fun HeadingText(
     )
 }
 
-/** A list item: the marker, then the text. Wrapped lines stay under the text, not the marker. */
+/**
+ * A list item: the marker, then the text. Wrapped lines stay under the text, not the marker. A
+ * nested item is indented one step per [level].
+ */
 @Composable
 private fun ListItem(
     marker: String,
     text: AnnotatedString,
+    level: Int,
 ) {
     val style = bodyStyle()
     val color = TetherTheme.colors.text
-    Row(horizontalArrangement = Arrangement.spacedBy(TetherSpace.space2)) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(TetherSpace.space2),
+        modifier = Modifier.padding(start = TetherSpace.space4 * level),
+    ) {
         Text(marker, style = style, color = color)
         Text(text, style = style, color = color)
     }
+}
+
+/** A quote: a soft bar at the start and the text in the secondary color. */
+@Composable
+private fun QuoteText(text: AnnotatedString) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(TetherSpace.space3),
+        modifier = Modifier.height(IntrinsicSize.Min),
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxHeight()
+                    .width(TetherSpace.space1)
+                    .background(TetherTheme.colors.line),
+        )
+        Text(text, style = bodyStyle(), color = TetherTheme.colors.text2)
+    }
+}
+
+/** A horizontal rule: one hairline across the message. */
+@Composable
+private fun RuleLine() {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(TetherBorder.hairline)
+                .background(TetherTheme.colors.line),
+    )
 }
 
 /** One run of prose or code. [lang] is the fence's language, such as `html`, or empty. */

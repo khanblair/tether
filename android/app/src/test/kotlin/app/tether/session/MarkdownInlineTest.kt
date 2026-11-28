@@ -93,4 +93,16 @@ class MarkdownInlineTest {
 
         assertEquals(FontWeight.Light, span.item.fontWeight)
     }
+
+    @Test fun doubleTildesStrikeTheTextThrough() {
+        val result = inlineMarkdown("a ~~gone~~ b")
+        val span = result.spanStyles.single()
+
+        assertEquals("a gone b", result.text)
+        assertEquals(TextDecoration.LineThrough, span.item.textDecoration)
+    }
+
+    @Test fun anUnclosedStrikeStaysPlainWhileStreaming() {
+        assertEquals("a ~~gone", inlineMarkdown("a ~~gone").text)
+    }
 }

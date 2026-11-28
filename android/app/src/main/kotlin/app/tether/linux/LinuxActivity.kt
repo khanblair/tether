@@ -21,16 +21,41 @@ enum class LinuxBackgroundMode {
     WhenInstalled,
 }
 
+/** What the Linux notification reports. The Android boundary turns it into text. */
+enum class LinuxNoticeKind {
+    ShellOpen,
+    Ready,
+    Servers,
+    ShellAndServers,
+}
+
+/** The notification state: a [kind] and the number of running [servers] it names. */
+data class LinuxNotice(
+    val kind: LinuxNoticeKind,
+    val servers: Int = 0,
+) {
+    companion object {
+        /** Rebuilds a notice from its stable kind name and count. Null for an unknown kind. */
+        fun fromExtras(
+            kindName: String?,
+            servers: Int,
+        ): LinuxNotice? =
+            LinuxNoticeKind.entries
+                .firstOrNull { it.name == kindName }
+                ?.let { LinuxNotice(it, servers.coerceAtLeast(0)) }
+    }
+}
+
 /** The service change requested by the Linux activity tracker. */
 sealed interface ServiceAction {
     data object Stop : ServiceAction
 
     data class Run(
-        val text: String,
+        val notice: LinuxNotice,
     ) : ServiceAction
 }
 
-/** Chooses the service state and notification text for the current Linux activity. */
+/** Chooses the service state and notification for the current Linux activity. */
 fun desiredService(
     state: LinuxActivityState,
     mode: LinuxBackgroundMode,
@@ -39,23 +64,21 @@ fun desiredService(
     return when {
         mode == LinuxBackgroundMode.WhileRunning && !running -> ServiceAction.Stop
         mode == LinuxBackgroundMode.WhenInstalled && !state.linuxReady -> ServiceAction.Stop
-        else -> ServiceAction.Run(activityText(state, mode))
+        else -> ServiceAction.Run(activityNotice(state, mode))
     }
 }
 
-private fun activityText(
+private fun activityNotice(
     state: LinuxActivityState,
     mode: LinuxBackgroundMode,
-): String =
+): LinuxNotice =
     when {
         state.shellOpen && state.runningProcesses > 0 ->
-            "Linux shell and ${serverCountText(state.runningProcesses)} running"
-        state.runningProcesses > 0 -> "${serverCountText(state.runningProcesses)} running"
-        mode == LinuxBackgroundMode.WhenInstalled -> "Linux mode is ready"
-        else -> "Linux shell open"
+            LinuxNotice(LinuxNoticeKind.ShellAndServers, state.runningProcesses)
+        state.runningProcesses > 0 -> LinuxNotice(LinuxNoticeKind.Servers, state.runningProcesses)
+        mode == LinuxBackgroundMode.WhenInstalled -> LinuxNotice(LinuxNoticeKind.Ready)
+        else -> LinuxNotice(LinuxNoticeKind.ShellOpen)
     }
-
-private fun serverCountText(count: Int): String = if (count == 1) "1 server" else "$count servers"
 
 /** Stores the mode through a small platform-free read and write seam. */
 class LinuxBackgroundStore(

@@ -1,4 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="linux_background_notification_title">Linux mode</string>
+    <string name="linux_notification_shell_open">Linux shell open</string>
+    <string name="linux_notification_ready">Linux mode is ready</string>
+    <plurals name="linux_notification_servers">
+        <item quantity="one">%1$d server running</item>
+        <item quantity="other">%1$d servers running</item>
+    </plurals>
+    <plurals name="linux_notification_shell_and_servers">
+        <item quantity="one">Linux shell and %1$d server running</item>
+        <item quantity="other">Linux shell and %1$d servers running</item>
+    </plurals>
 </resources>

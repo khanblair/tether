@@ -18,20 +18,42 @@ class LinuxSessionService : Service() {
         if (intent?.action == ACTION_STOP) {
             stopSelf()
         } else {
-            val text = intent?.getStringExtra(EXTRA_TEXT) ?: return START_NOT_STICKY
-            startForeground(NOTIFICATION_ID, notification(text))
+            val notice =
+                LinuxNotice.fromExtras(
+                    kindName = intent?.getStringExtra(EXTRA_KIND),
+                    servers = intent?.getIntExtra(EXTRA_SERVERS, 0) ?: 0,
+                ) ?: return START_NOT_STICKY
+            startForeground(NOTIFICATION_ID, notification(notice))
         }
         return START_NOT_STICKY
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    private fun notification(text: String) =
+    private fun noticeText(notice: LinuxNotice): String =
+        when (notice.kind) {
+            LinuxNoticeKind.ShellOpen -> getString(R.string.linux_notification_shell_open)
+            LinuxNoticeKind.Ready -> getString(R.string.linux_notification_ready)
+            LinuxNoticeKind.Servers ->
+                resources.getQuantityString(
+                    R.plurals.linux_notification_servers,
+                    notice.servers,
+                    notice.servers,
+                )
+            LinuxNoticeKind.ShellAndServers ->
+                resources.getQuantityString(
+                    R.plurals.linux_notification_shell_and_servers,
+                    notice.servers,
+                    notice.servers,
+                )
+        }
+
+    private fun notification(notice: LinuxNotice) =
         NotificationCompat
             .Builder(this, LINUX_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_monochrome)
             .setContentTitle(getString(R.string.linux_background_notification_title))
-            .setContentText(text)
+            .setContentText(noticeText(notice))
             .setOngoing(true)
             .setContentIntent(contentIntent())
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
@@ -49,7 +71,8 @@ class LinuxSessionService : Service() {
 
     companion object {
         const val ACTION_STOP = "app.tether.linux.STOP"
-        const val EXTRA_TEXT = "notification_text"
+        const val EXTRA_KIND = "notification_kind"
+        const val EXTRA_SERVERS = "notification_servers"
         const val LINUX_CHANNEL_ID = "linux_session"
         private const val NOTIFICATION_ID = 7101
         private const val NOTIFICATION_REQUEST_CODE = 7102

@@ -11,10 +11,13 @@ use tether_vcs::{GithubClient, Identity, Transport};
 use super::registry::{ExecuteContext, PrepareContext, PreparedCall, ToolHandler, ToolOutput};
 use crate::permissions::Effect;
 
+mod github_api;
 mod local;
 mod remote;
 mod validation;
 
+#[cfg(test)]
+mod github_api_tests;
 #[cfg(test)]
 mod tests;
 
@@ -203,6 +206,10 @@ impl GitTools {
                 let result = run_local(root, call, deps).await?;
                 Ok(ToolOutput { text: result })
             }
+            "github_api" => {
+                let result = github_api::execute(&call, &self.config.github, &cancel).await?;
+                Ok(ToolOutput { text: result })
+            }
             "git_push" | "pr_create" | "pr_status" | "github_repo_create" => {
                 let (remote_url, default_branch) = self
                     .remote
@@ -241,6 +248,7 @@ fn specs() -> Vec<ToolSpec> {
     local_specs()
         .into_iter()
         .chain(remote_specs())
+        .chain(std::iter::once(github_api::spec()))
         .map(|(name, description, schema)| ToolSpec {
             name: name.to_owned(),
             description: description.to_owned(),

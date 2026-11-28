@@ -93,6 +93,7 @@ Compact (phone portrait), from top to bottom:
 - A name that is too long or has a control character shows the reason in `danger` under the field as the user types. Create opens the new project's home. A failure to create the folder shows an inline block with **Try again** and creates nothing.
 
 ### Starting a session
+- Every way to start a session creates it and opens the real session screen, so there is one composer with its model and mode sheets, slash commands, and mentions. These are the drawer's **New session**, **New session** on a project home, and `/new`. The drawer starts in the only project, or opens a project picker first when there are several, or opens New project when there are none. The empty transcript of a new session shows what it loads: the instructions file, memory entries, skills, and the last session. A session left with no message is deleted when its screen closes.
 - **New session** on a project home takes the first provider that has a saved key and the first model in that provider's saved list, creates the session, and opens it. The composer row shows the model name. The session opens without tools until approvals ship (P3).
 - No provider has a key: no session is created. An inline block says "No provider key yet. Add one to start a session." with **Add a key**, which opens Providers.
 - A key is saved but its model list is empty: no session is created. The block says "Test the connection in Providers so the model list is saved." with **Open Providers**.

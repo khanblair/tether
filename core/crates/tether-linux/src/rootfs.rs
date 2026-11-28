@@ -10,7 +10,7 @@ use crate::error::io_error;
 use crate::extract::{ExtractReport, IndexedFile, extract_archive, repair_archive};
 use crate::manifest::{RootfsFetcher, RootfsImage, hex_digest};
 use crate::rootfs_io::{
-    check_index, error_to_io, file_missing_or_changed, is_cached, remove_path, touch,
+    check_index, error_to_io, file_missing_or_changed, is_cached, prune_changed, remove_path, touch,
 };
 
 /// The observable state of the Alpine root filesystem.
@@ -170,6 +170,9 @@ impl RootfsManager {
 
     pub(crate) fn mark_ready(&self) -> Result<(), LinuxError> {
         let mut state = self.read_state()?;
+        // Package installs rewrite some indexed files on purpose. Stop tracking
+        // them, so status and repair keep the package manager's version.
+        prune_changed(&self.rootfs_path(), &mut state.files)?;
         state.ready = true;
         self.write_state(&state)
     }
